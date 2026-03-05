@@ -1,24 +1,18 @@
 /**
  * ULTRA-OPTIMIZED App Component
- * Target: Sub-second initial render
+ * Target: Sub-2ms cached response, minimal wrapper overhead
+ * Translation/i18n removed - plain English only
  */
 
 import { lazy, Suspense, memo, startTransition, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { TranslationProvider } from "@/contexts/TranslationContext";
-import { preloadBaseFonts } from "@/lib/fonts";
-// Browser-based translation removed - using edge function
 
 // Critical components - no lazy for stability
 import AuthScreen from "./pages/AuthScreen";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { I18nProvider } from "@/components/I18nProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-// Preload base fonts immediately (non-blocking)
-preloadBaseFonts();
 
 // Defer non-critical imports
 const Toaster = lazy(() => import("@/components/ui/toaster").then(m => ({ default: m.Toaster })));
@@ -27,8 +21,6 @@ const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
 const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
-const DirectionToggle = lazy(() => import("@/components/DirectionToggle"));
-// TranslationLoadingIndicator removed - browser-based models no longer used
 
 // Preload dashboard routes immediately after first paint
 if (typeof window !== 'undefined') {
@@ -140,25 +132,20 @@ const LazyRoute = memo(({ component: Component }: { component: React.ComponentTy
 ));
 LazyRoute.displayName = 'LazyRoute';
 
-// Minimal shell for fastest possible render
+// Minimal shell - zero translation overhead
 const AppShell = memo(({ children }: { children: React.ReactNode }) => (
   <ErrorBoundary>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <I18nProvider>
-          <TranslationProvider>
-            <TooltipProvider>
-              <Suspense fallback={null}>
-                <Toaster />
-                <Sonner />
-                <PWAInstallPrompt />
-                <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
-                <DirectionToggle />
-              </Suspense>
-              {children}
-            </TooltipProvider>
-          </TranslationProvider>
-        </I18nProvider>
+        <TooltipProvider>
+          <Suspense fallback={null}>
+            <Toaster />
+            <Sonner />
+            <PWAInstallPrompt />
+            <NetworkStatusIndicator className="fixed bottom-4 left-4 z-50" />
+          </Suspense>
+          {children}
+        </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </ErrorBoundary>

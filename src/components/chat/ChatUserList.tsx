@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/contexts/TranslationContext';
 import { cn } from '@/lib/utils';
 import { Globe, Users } from 'lucide-react';
 
