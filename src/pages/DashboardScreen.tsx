@@ -1150,7 +1150,7 @@ const DashboardScreen = () => {
             {/* Admin Messages */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => navigate('/admin/messaging')}
+              onClick={() => navigate('/user-admin-messages')}
               title="Admin Messages"
             >
               <Mail className="w-[18px] h-[18px] text-foreground/70" />
@@ -1159,7 +1159,7 @@ const DashboardScreen = () => {
             {/* Admin Chat */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => navigate('/admin/messaging?view=chat')}
+              onClick={() => navigate('/user-admin-chat')}
               title="Chat with Admin"
             >
               <Shield className="w-[18px] h-[18px] text-foreground/70" />
