@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import {
   Heart, 
   Users, 
   Bell, 
@@ -58,7 +58,11 @@ import {
   Gift,
   Shield,
   Sliders,
-  Mail
+  Mail,
+  FileText,
+  History,
+  ArrowLeft,
+  Home
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
@@ -1125,6 +1129,24 @@ const DashboardScreen = () => {
           </div>
           
           <div className="flex items-center gap-0.5">
+            {/* Transaction Statement */}
+            <button 
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              onClick={() => navigate('/transaction-history?tab=statement')}
+              title="Transaction Statement"
+            >
+              <FileText className="w-[18px] h-[18px] text-foreground/70" />
+            </button>
+
+            {/* Transaction History */}
+            <button 
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              onClick={() => navigate('/transaction-history')}
+              title="Transaction History"
+            >
+              <History className="w-[18px] h-[18px] text-foreground/70" />
+            </button>
+
             {/* Admin Messages */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
