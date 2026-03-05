@@ -1,7 +1,7 @@
 import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/contexts/TranslationContext';
 import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2, Languages, Globe } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
