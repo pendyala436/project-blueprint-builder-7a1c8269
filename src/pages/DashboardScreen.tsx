@@ -1141,7 +1141,7 @@ const DashboardScreen = () => {
             {/* Transaction History */}
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
-              onClick={() => window.open('/transaction-history', '_blank')}
+              onClick={() => window.open('/transaction-history?tab=chats', '_blank')}
               title="Transaction History"
             >
               <History className="w-[18px] h-[18px] text-foreground/70" />
