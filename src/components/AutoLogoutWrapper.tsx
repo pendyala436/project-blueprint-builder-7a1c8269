@@ -64,22 +64,9 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
     
     const userId = userIdRef.current;
     if (userId) {
-      // Set user offline
-      await supabase
-        .from('user_status')
-        .update({ is_online: false, last_seen: new Date().toISOString() })
-        .eq('user_id', userId);
-      
-      // End any active chat sessions
-      await supabase
-        .from('active_chat_sessions')
-        .update({ 
-          status: 'ended', 
-          ended_at: new Date().toISOString(),
-          end_reason: `user_inactive_${idleMinutes}min`
-        })
-        .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`)
-        .eq('status', 'active');
+      // Clean up all active sessions (chats, video calls, private groups)
+      const { cleanupAllUserSessions } = await import('@/services/session-cleanup.service');
+      await cleanupAllUserSessions(userId);
     }
     
     toast.info(`You have been logged out due to ${idleMinutes} minutes of inactivity`);

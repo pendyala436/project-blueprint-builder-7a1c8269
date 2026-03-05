@@ -671,7 +671,9 @@ const WomenDashboardScreen = () => {
   };
 
   const handleLogout = async () => {
-    await updateUserOnlineStatus(false);
+    // Clean up all active sessions before logging out
+    const { cleanupAllUserSessions } = await import('@/services/session-cleanup.service');
+    await cleanupAllUserSessions(currentUserId);
     await supabase.auth.signOut();
     toast({
       title: t('loggedOut', 'Logged out'),
