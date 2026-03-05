@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -121,6 +121,7 @@ interface UnifiedTransaction {
 
 const TransactionHistoryScreen = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userGender, setUserGender] = useState<string | null>(null);
@@ -135,7 +136,7 @@ const TransactionHistoryScreen = () => {
   const [unifiedTransactions, setUnifiedTransactions] = useState<UnifiedTransaction[]>([]);
   const [privateCalls, setPrivateCalls] = useState<any[]>([]);
   const [chatPricing, setChatPricing] = useState<{ ratePerMinute: number; videoRatePerMinute: number; womenEarningRate: number; videoWomenEarningRate: number } | null>(null);
-  const [activeTab, setActiveTab] = useState("statement");
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "statement");
   const [openingBalance, setOpeningBalance] = useState<number>(0);
 
   useEffect(() => {
