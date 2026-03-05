@@ -30,8 +30,6 @@ export default defineConfig(({ mode }) => ({
           'query-vendor': ['@tanstack/react-query'],
           // Supabase client
           'supabase-vendor': ['@supabase/supabase-js'],
-          // i18n
-          'i18n-vendor': ['i18next', 'react-i18next'],
         },
       },
     },
@@ -55,8 +53,6 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom', 
       '@tanstack/react-query',
       '@supabase/supabase-js',
-      'i18next',
-      'react-i18next',
     ],
     // Exclude heavy optional deps from pre-bundling
     exclude: ['face-api.js', '@huggingface/transformers'],
