@@ -12,18 +12,12 @@ import 'widgets/men_stats_section.dart';
 import 'widgets/quick_actions_grid.dart';
 import 'widgets/notifications_section.dart';
 import 'widgets/wallet_recharge_section.dart';
+import 'widgets/admin_messages_section.dart';
+import 'widgets/admin_chat_section.dart';
 
 /// Home Tab - Main dashboard content for men
-/// Synced with React DashboardScreen sections:
-/// 1. Welcome & Status (online toggle, status badge)
-/// 2. Online Women (same language + other languages)
-/// 3. Your Matches (horizontal scroll cards)
-/// 4. Key Stats (online, matches, notifications)
-/// 5. Wallet & Primary Actions (balance, random chat, recharge)
-/// 6. Quick Actions grid
-/// 7. Free Minutes Badge
-/// 8. Notifications
-/// 9. Transaction History link
+/// Synced with React DashboardScreen (mobile-optimized version)
+/// Includes admin messages icon and admin chat icon in AppBar
 class MenHomeTab extends ConsumerStatefulWidget {
   const MenHomeTab({super.key});
 
@@ -123,7 +117,6 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
         .where((w) => w.motherTongue.toLowerCase() != _userLanguage.toLowerCase())
         .toList();
 
-    // Sort: earning eligible first, then by load
     same.sort(_sortByBadgeAndLoad);
     other.sort(_sortByBadgeAndLoad);
 
@@ -219,6 +212,90 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
     }
   }
 
+  void _showAdminMessages() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.mail, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text('Admin Messages',
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(12),
+                child: AdminMessagesSection(userId: _userId),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAdminChat() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.65,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.shield, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text('Chat with Admin',
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: AdminChatSection(
+                userId: _userId,
+                userName: _userName,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     if (_userId.isNotEmpty) {
@@ -248,17 +325,29 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
             },
             activeColor: AppColors.success,
           ),
+          // Admin Messages icon (synced with React dashboard header)
           IconButton(
-            icon: const Icon(Icons.people),
+            icon: const Icon(Icons.mail_outline, size: 20),
+            onPressed: _showAdminMessages,
+            tooltip: 'Admin Messages',
+          ),
+          // Admin Chat icon (synced with React dashboard header)
+          IconButton(
+            icon: const Icon(Icons.shield_outlined, size: 20),
+            onPressed: _showAdminChat,
+            tooltip: 'Chat with Admin',
+          ),
+          IconButton(
+            icon: const Icon(Icons.people, size: 20),
             onPressed: () {},
             tooltip: 'Friends & Blocked',
           ),
           IconButton(
-            icon: const Icon(Icons.account_balance_wallet),
+            icon: const Icon(Icons.account_balance_wallet, size: 20),
             onPressed: () => context.push(AppRoutes.wallet),
           ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings, size: 20),
             onPressed: () => context.push(AppRoutes.settings),
           ),
         ],
@@ -267,15 +356,20 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
         onRefresh: _loadDashboard,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Welcome & Status
               _buildWelcomeSection(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Wallet & Recharge (vertical stack: balance, random chat, recharge)
+              // Admin Messages (inline, non-blocking)
+              if (_userId.isNotEmpty)
+                AdminMessagesSection(userId: _userId),
+              const SizedBox(height: 16),
+
+              // Wallet & Recharge
               WalletRechargeSection(
                 walletBalance: _walletBalance,
                 userId: _userId,
@@ -283,9 +377,9 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
                 dashboardService: _dashboardService,
                 onBalanceUpdated: (balance) => setState(() => _walletBalance = balance),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Online Women (same language first, then other languages)
+              // Online Women
               OnlineWomenSection(
                 sameLanguageWomen: _sameLanguageWomen,
                 otherLanguageWomen: _otherLanguageWomen,
@@ -295,9 +389,9 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
                 onStartChat: _handleStartChat,
                 onViewProfile: (userId) => context.push('/profile/$userId'),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Your Matches (horizontal scrollable cards)
+              // Matches
               MatchesSection(
                 matches: _matchedWomen,
                 isLoading: false,
@@ -311,19 +405,19 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
                 },
                 onViewProfile: (userId) => context.push('/profile/$userId'),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Stats (Online Now, Matches, Notifications)
+              // Stats
               MenStatsSection(stats: _stats, activeChatCount: _activeChatCount),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Free Minutes Badge
+              // Free Minutes
               if (_freeMinutes.hasFreeMinutes) ...[
                 _buildFreeMinutesBadge(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
               ],
 
-              // Quick Actions (Find Match, Messages, Matches, Profile)
+              // Quick Actions
               QuickActionsGrid(
                 actions: [
                   QuickAction(icon: Icons.search, label: 'Find Match', onTap: () => context.push(AppRoutes.findMatch)),
@@ -332,42 +426,43 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
                   QuickAction(icon: Icons.person, label: 'Profile', onTap: () {}),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Notifications
               NotificationsSection(
                 notifications: _notifications,
                 onViewAll: () {},
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Transaction History link
+              // Transaction History
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.receipt_long),
+                  leading: const Icon(Icons.receipt_long, size: 20),
                   title: const Text('Transaction History'),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  dense: true,
                   onTap: () => context.push(AppRoutes.transactionHistory),
                 ),
               ),
 
-              // CTA Banner - Boost your profile
-              const SizedBox(height: 20),
+              // CTA Banner
+              const SizedBox(height: 16),
               Card(
                 color: AppColors.primary.withOpacity(0.1),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.auto_awesome, color: Colors.white),
+                        child: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,6 +475,10 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
                       ),
                       FilledButton(
                         onPressed: () => context.push(AppRoutes.wallet),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          textStyle: const TextStyle(fontSize: 12),
+                        ),
                         child: const Text('Upgrade'),
                       ),
                     ],
@@ -400,52 +499,53 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
         AppAvatar(
           imageUrl: _userPhoto,
           name: _userName,
-          radius: 24,
+          radius: 22,
           isOnline: _isOnline,
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Welcome, $_userName! 👋',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleSmall,
               ),
               Text(
-                'Ready to make new connections today?',
+                'Ready to make new connections?',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      fontSize: 11,
                     ),
               ),
             ],
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: _activeChatCount >= 3
                 ? Colors.red.withOpacity(0.1)
                 : AppColors.success.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 8,
-                height: 8,
+                width: 6,
+                height: 6,
                 decoration: BoxDecoration(
                   color: _activeChatCount >= 3 ? Colors.red : AppColors.success,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               Text(
                 _activeChatCount >= 3 ? 'Busy(3)' : 'Available',
                 style: TextStyle(
                   color: _activeChatCount >= 3 ? Colors.red : AppColors.success,
-                  fontSize: 12,
+                  fontSize: 10,
                 ),
               ),
             ],
@@ -459,18 +559,18 @@ class _MenHomeTabState extends ConsumerState<MenHomeTab> {
     return Card(
       color: AppColors.info.withOpacity(0.1),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Row(
           children: [
-            Icon(Icons.timer, color: AppColors.info),
-            const SizedBox(width: 12),
+            Icon(Icons.timer, color: AppColors.info, size: 18),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Free Chat Minutes', style: Theme.of(context).textTheme.titleSmall),
                   Text(
-                    '${_freeMinutes.freeMinutesRemaining} of ${_freeMinutes.freeMinutesTotal} minutes remaining',
+                    '${_freeMinutes.freeMinutesRemaining} of ${_freeMinutes.freeMinutesTotal} remaining',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (_freeMinutes.nextResetAt != null)
