@@ -92,6 +92,9 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
           if (call.status === 'ringing') {
             const callerId = call[callerColumn];
             
+            // Skip if this user initiated the call (avoid showing own outgoing call as incoming)
+            if (callerId === currentUserId) return;
+            
             // Fetch caller info from profiles
             const { data: callerProfile } = await supabase
               .from('profiles')
