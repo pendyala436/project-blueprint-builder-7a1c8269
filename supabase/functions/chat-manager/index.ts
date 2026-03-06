@@ -1307,13 +1307,38 @@ serve(async (req) => {
 
         // Calculate time elapsed since last activity (using 'now' from above)
         const lastActivity = new Date(session.last_activity_at);
-        const minutesElapsed = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
+        const secondsElapsed = (now.getTime() - lastActivity.getTime()) / 1000;
+
+        // MINUTE-WISE BILLING: Only bill when >= 60 seconds have elapsed
+        // This prevents fractional/incremental entries and ensures exactly 1 entry per minute
+        if (secondsElapsed < 60) {
+          console.log(`[HEARTBEAT] Only ${secondsElapsed.toFixed(0)}s elapsed for chat ${chat_id} - waiting for full minute`);
+          return new Response(
+            JSON.stringify({
+              success: true,
+              billing_started: true,
+              minutes_elapsed: 0,
+              men_charged: 0,
+              women_earned: 0,
+              remaining_balance: wallet?.balance || 0,
+              waiting_for_full_minute: true,
+              seconds_elapsed: Math.floor(secondsElapsed)
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Bill exactly in whole minutes (floor), carry forward remainder via last_activity_at
+        const wholeMinutes = Math.floor(secondsElapsed / 60);
+        const billedSeconds = wholeMinutes * 60;
+        // Set last_activity_at to lastActivity + billedSeconds (NOT now) so remainder carries forward
+        const newLastActivity = new Date(lastActivity.getTime() + billedSeconds * 1000);
 
         // RACE CONDITION GUARD: Atomically update last_activity_at only if it hasn't changed
         // This prevents two concurrent heartbeats from both billing for the same period
         const { data: lockResult, error: lockError } = await supabase
           .from("active_chat_sessions")
-          .update({ last_activity_at: now.toISOString() })
+          .update({ last_activity_at: newLastActivity.toISOString() })
           .eq("chat_id", chat_id)
           .eq("last_activity_at", session.last_activity_at)
           .select("id")
@@ -1336,9 +1361,9 @@ serve(async (req) => {
           );
         }
 
-        // Calculate charges and earnings for this period (different rates)
-        const menCharge = minutesElapsed * session.rate_per_minute;
-        const newTotalMinutes = session.total_minutes + minutesElapsed;
+        // Calculate charges for whole minutes
+        const menCharge = wholeMinutes * session.rate_per_minute;
+        const newTotalMinutes = session.total_minutes + wholeMinutes;
         const newTotalEarned = session.total_earned + menCharge;
 
         // Check if man is a super user by email - they don't get charged
@@ -1370,7 +1395,7 @@ serve(async (req) => {
         // Super users don't get charged but Indian women still earn
         if (isSuperUser) {
           // Only credit Indian women
-          const womenEarnings = womanIsIndian ? minutesElapsed * womenEarningRate : 0;
+          const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
           
           if (womenEarnings > 0) {
             await supabase
@@ -1380,7 +1405,7 @@ serve(async (req) => {
                 chat_session_id: session.id,
                 amount: womenEarnings,
                 earning_type: "chat",
-                description: `Chat earning (super user) - ${minutesElapsed.toFixed(2)} min at ₹${womenEarningRate}/min`
+                description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
               });
           }
 
@@ -1399,7 +1424,7 @@ serve(async (req) => {
               success: true,
               billing_started: true,
               super_user: true,
-              minutes_elapsed: minutesElapsed,
+              minutes_elapsed: wholeMinutes,
               women_earned: womenEarnings,
               woman_is_indian: womanIsIndian,
               message: "Super user - no charge applied"
@@ -1423,7 +1448,7 @@ serve(async (req) => {
           .update({ balance: newBalance })
           .eq("id", wallet.id);
 
-        // Record transaction (what men paid) - include rate for transparency
+        // Record transaction - exactly N minute(s) per entry for clean statement
         await supabase
           .from("wallet_transactions")
           .insert({
@@ -1431,12 +1456,12 @@ serve(async (req) => {
             user_id: session.man_user_id,
             type: "debit",
             amount: menCharge,
-            description: `Chat debit - ${minutesElapsed.toFixed(2)} min at ₹${session.rate_per_minute}/min`,
+            description: `Chat debit - ${wholeMinutes} min at ₹${session.rate_per_minute}/min`,
             status: "completed"
           });
 
         // Only Indian women earn from chats
-        const womenEarnings = womanIsIndian ? minutesElapsed * womenEarningRate : 0;
+        const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
         
         if (womenEarnings > 0) {
           await supabase
@@ -1446,11 +1471,11 @@ serve(async (req) => {
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
-              description: `Chat earning - ${minutesElapsed.toFixed(2)} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
             });
         }
 
-        // Update session totals (last_activity_at already updated by the lock)
+        // Update session totals
         await supabase
           .from("active_chat_sessions")
           .update({
@@ -1459,13 +1484,13 @@ serve(async (req) => {
           })
           .eq("chat_id", chat_id);
 
-        console.log(`Heartbeat processed: ${chat_id}, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
+        console.log(`Heartbeat processed: ${chat_id}, ${wholeMinutes} min billed, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
 
         return new Response(
           JSON.stringify({
             success: true, 
             billing_started: true,
-            minutes_elapsed: minutesElapsed,
+            minutes_elapsed: wholeMinutes,
             men_charged: menCharge,
             women_earned: womenEarnings,
             remaining_balance: newBalance
