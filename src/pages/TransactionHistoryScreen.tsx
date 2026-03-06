@@ -637,25 +637,47 @@ const TransactionHistoryScreen = () => {
     }
 
     // Remove duplicate billing rows (chat, video, group) created within the same billing window
-    const dedupedUnified = unified
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      .filter((tx, index, arr) => {
-        if (index === 0) return true;
-        const prev = arr[index - 1];
+    // Uses sliding-window approach: checks ALL prior entries within 50s, not just the consecutive one
+    const sortedForDedup = unified
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    
+    const dedupedUnified: UnifiedTransaction[] = [];
+    for (let i = 0; i < sortedForDedup.length; i++) {
+      const tx = sortedForDedup[i];
+      const descLower = (tx.description || '').toLowerCase();
+      const isBillingLine = descLower.includes('group call') || descLower.includes('group tip') 
+        || descLower.includes('chat debit') || descLower.includes('chat earning')
+        || descLower.includes('video call debit') || descLower.includes('video call earning')
+        || descLower.includes('video debit') || descLower.includes('video earning');
+      
+      if (!isBillingLine) {
+        dedupedUnified.push(tx);
+        continue;
+      }
 
-        const sameDirection = prev.is_credit === tx.is_credit;
-        const sameType = prev.type === tx.type;
-        const sameAmount = Math.abs(prev.amount - tx.amount) < 0.0001;
-        const sameDescription = (prev.description || '').trim().toLowerCase() === (tx.description || '').trim().toLowerCase();
-        const descLower = (tx.description || '').toLowerCase();
-        const isBillingLine = descLower.includes('group call') || descLower.includes('group tip') 
-          || descLower.includes('chat debit') || descLower.includes('chat earning')
-          || descLower.includes('video call debit') || descLower.includes('video call earning')
-          || descLower.includes('video debit') || descLower.includes('video earning');
-        const closeInTime = Math.abs(new Date(tx.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
-
-        return !(sameDirection && sameType && sameAmount && sameDescription && isBillingLine && closeInTime);
-      });
+      const txTime = new Date(tx.created_at).getTime();
+      let isDuplicate = false;
+      
+      // Check against ALL already-accepted entries within the 50s window
+      for (let j = dedupedUnified.length - 1; j >= 0; j--) {
+        const accepted = dedupedUnified[j];
+        const acceptedTime = new Date(accepted.created_at).getTime();
+        if (txTime - acceptedTime > 50000) break; // Beyond window, stop checking
+        
+        const sameDirection = accepted.is_credit === tx.is_credit;
+        const sameAmount = Math.abs(accepted.amount - tx.amount) < 0.0001;
+        const sameDescription = (accepted.description || '').trim().toLowerCase() === descLower.trim();
+        
+        if (sameDirection && sameAmount && sameDescription) {
+          isDuplicate = true;
+          break;
+        }
+      }
+      
+      if (!isDuplicate) {
+        dedupedUnified.push(tx);
+      }
+    }
 
     // Current month boundaries
     const currentMonthStart = new Date();

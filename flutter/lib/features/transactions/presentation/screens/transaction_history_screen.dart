@@ -46,34 +46,48 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
   }
 
   /// Deduplicate billing rows: same amount, description, direction within 50s
+  /// Uses sliding-window approach: checks ALL accepted entries within 50s, not just consecutive
   List<Map<String, dynamic>> _deduplicateTransactions(List<Map<String, dynamic>> txns) {
     if (txns.isEmpty) return txns;
     final sorted = List<Map<String, dynamic>>.from(txns)
       ..sort((a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''));
 
-    final result = <Map<String, dynamic>>[sorted.first];
-    for (int i = 1; i < sorted.length; i++) {
+    final result = <Map<String, dynamic>>[];
+    for (int i = 0; i < sorted.length; i++) {
       final curr = sorted[i];
-      final prev = sorted[i - 1];
-
       final descA = (curr['description'] ?? '').toString().trim().toLowerCase();
-      final descB = (prev['description'] ?? '').toString().trim().toLowerCase();
-      final sameAmount = ((curr['amount'] ?? 0).toDouble() - (prev['amount'] ?? 0).toDouble()).abs() < 0.0001;
-      final sameDesc = descA == descB;
       final isBillingLine = descA.contains('chat debit') || descA.contains('chat earning') ||
           descA.contains('video call debit') || descA.contains('video call earning') ||
           descA.contains('video debit') || descA.contains('video earning') ||
           descA.contains('group call') || descA.contains('group tip');
 
-      final dateA = DateTime.tryParse(curr['created_at'] ?? '');
-      final dateB = DateTime.tryParse(prev['created_at'] ?? '');
-      final closeInTime = dateA != null && dateB != null &&
-          (dateA.difference(dateB).inMilliseconds.abs() <= 50000);
-
-      if (sameAmount && sameDesc && isBillingLine && closeInTime) {
-        continue; // Skip duplicate
+      if (!isBillingLine) {
+        result.add(curr);
+        continue;
       }
-      result.add(curr);
+
+      final dateA = DateTime.tryParse(curr['created_at'] ?? '');
+      bool isDuplicate = false;
+
+      // Check against ALL already-accepted entries within 50s window
+      for (int j = result.length - 1; j >= 0; j--) {
+        final accepted = result[j];
+        final dateB = DateTime.tryParse(accepted['created_at'] ?? '');
+        if (dateA != null && dateB != null && dateA.difference(dateB).inMilliseconds.abs() > 50000) break;
+
+        final descB = (accepted['description'] ?? '').toString().trim().toLowerCase();
+        final sameAmount = ((curr['amount'] ?? 0).toDouble() - (accepted['amount'] ?? 0).toDouble()).abs() < 0.0001;
+        final sameDesc = descA == descB;
+
+        if (sameAmount && sameDesc) {
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate) {
+        result.add(curr);
+      }
     }
     return result.reversed.toList(); // Return newest first
   }
