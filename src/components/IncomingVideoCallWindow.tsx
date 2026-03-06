@@ -58,6 +58,7 @@ const IncomingVideoCallWindow = ({
 }: IncomingVideoCallWindowProps) => {
   const { toast } = useToast();
   const [isAnswered, setIsAnswered] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [pausedChatCount, setPausedChatCount] = useState(0);
   const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,9 +78,11 @@ const IncomingVideoCallWindow = ({
 
   // Countdown timer and auto-decline - use ref to avoid stale closure
   const handleDeclineRef = useRef<() => void>(() => {});
+  const isProcessingRef = useRef(false);
   
   useEffect(() => {
     handleDeclineRef.current = handleDecline;
+    isProcessingRef.current = isProcessing;
   });
 
   useEffect(() => {
@@ -88,7 +91,10 @@ const IncomingVideoCallWindow = ({
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          handleDeclineRef.current();
+          // Don't auto-decline if user is actively processing accept/reject
+          if (!isProcessingRef.current) {
+            handleDeclineRef.current();
+          }
           return 0;
         }
         return prev - 1;
@@ -140,6 +146,8 @@ const IncomingVideoCallWindow = ({
   };
 
   const handleAnswer = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     stopRing();
     try {
       // First, pause all active chats - VIDEO CALL HAS PRIORITY
@@ -161,6 +169,7 @@ const IncomingVideoCallWindow = ({
           description: "Failed to answer call. Please try again.",
           variant: "destructive",
         });
+        setIsProcessing(false);
         return;
       }
 
@@ -179,10 +188,13 @@ const IncomingVideoCallWindow = ({
         description: "Failed to answer call",
         variant: "destructive",
       });
+      setIsProcessing(false);
     }
   };
 
   const handleDecline = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     stopRing();
     try {
       const { error } = await supabase
