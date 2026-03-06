@@ -56,6 +56,44 @@ class MatchProfileModel {
     this.commonLanguages = const [],
     this.commonInterests = const [],
   });
+
+  MatchProfileModel copyWith({
+    String? id,
+    String? userId,
+    String? fullName,
+    int? age,
+    String? gender,
+    String? country,
+    String? state,
+    String? bio,
+    String? photoUrl,
+    List<String>? interests,
+    String? occupation,
+    bool? isVerified,
+    bool? isOnline,
+    int? matchScore,
+    List<String>? commonLanguages,
+    List<String>? commonInterests,
+  }) {
+    return MatchProfileModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      fullName: fullName ?? this.fullName,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
+      country: country ?? this.country,
+      state: state ?? this.state,
+      bio: bio ?? this.bio,
+      photoUrl: photoUrl ?? this.photoUrl,
+      interests: interests ?? this.interests,
+      occupation: occupation ?? this.occupation,
+      isVerified: isVerified ?? this.isVerified,
+      isOnline: isOnline ?? this.isOnline,
+      matchScore: matchScore ?? this.matchScore,
+      commonLanguages: commonLanguages ?? this.commonLanguages,
+      commonInterests: commonInterests ?? this.commonInterests,
+    );
+  }
 }
 
 /// Match Filter Options

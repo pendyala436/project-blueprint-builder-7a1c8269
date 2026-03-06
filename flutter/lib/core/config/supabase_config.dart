@@ -7,9 +7,15 @@ class SupabaseConfig {
 
   /// Supabase Project URL
   static const String url = 'https://tvneohngeracipjajzos.supabase.co';
+  
+  /// Alias for backward compatibility
+  static const String supabaseUrl = url;
 
   /// Supabase Anonymous Key (safe to expose in client)
   static const String anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2bmVvaG5nZXJhY2lwamFqem9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5ODgxNDEsImV4cCI6MjA4MDU2NDE0MX0.3YgATF-HMODDQe5iJbpiUuL2SlycM5Z5XmAdKbnjg_A';
+  
+  /// Alias for backward compatibility
+  static const String supabaseAnonKey = anonKey;
 
   /// Storage bucket names
   static const String profilePhotosBucket = 'profile-photos';
