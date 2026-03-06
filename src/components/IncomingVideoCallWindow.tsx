@@ -190,6 +190,17 @@ const IncomingVideoCallWindow = ({
         console.error('Error declining call:', error);
       }
 
+      // Resume any chats that were paused for this call
+      await supabase
+        .from('active_chat_sessions')
+        .update({ 
+          status: 'active',
+          end_reason: null
+        })
+        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
+        .eq('status', 'paused')
+        .eq('end_reason', 'video_call_priority');
+
       toast({
         title: "Call Declined",
         description: "You declined the video call",

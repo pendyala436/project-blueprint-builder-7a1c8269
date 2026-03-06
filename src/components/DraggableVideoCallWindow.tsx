@@ -331,6 +331,17 @@ const DraggableVideoCallWindow = ({
         })
         .eq('call_id', callId);
       
+      // Resume any chats that were paused for this video call
+      await supabase
+        .from('active_chat_sessions')
+        .update({ 
+          status: 'active',
+          end_reason: null
+        })
+        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
+        .eq('status', 'paused')
+        .eq('end_reason', 'video_call_priority');
+      
       console.log('[VideoCall] Database updated, calling endCall');
       // End the P2P call
       await endCall();
