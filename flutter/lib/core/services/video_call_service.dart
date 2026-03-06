@@ -10,18 +10,18 @@ final videoCallServiceProvider = Provider<VideoCallService>((ref) {
 /// Video Call Service
 ///
 /// Handles video call session management via Supabase.
-/// Agora RTC integration happens in the screen layer.
-/// Synced with React useP2PCall / useSRSCall hooks.
+/// Synced with React DirectVideoCallButton, VideoCallMiniButton, IncomingVideoCallWindow.
+/// DB columns: call_id, man_user_id, woman_user_id, status, rate_per_minute,
+///   started_at, ended_at, end_reason, total_earned, total_minutes
 class VideoCallService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  /// Initiate a video call
+  /// Initiate a video call via edge function
   Future<VideoCallResult> initiateCall({
     required String callerId,
     required String receiverId,
   }) async {
     try {
-      // Create video call session via edge function
       final response = await _client.functions.invoke(
         'video-call-server',
         body: {
@@ -39,8 +39,7 @@ class VideoCallService {
       return VideoCallResult(
         success: data['success'] as bool? ?? false,
         sessionId: data['sessionId'] as String?,
-        channelName: data['channelName'] as String?,
-        token: data['token'] as String?,
+        callId: data['call_id'] as String?,
         error: data['error'] as String?,
       );
     } catch (e) {
@@ -49,37 +48,26 @@ class VideoCallService {
   }
 
   /// Accept incoming call
-  Future<VideoCallResult> acceptCall(String sessionId) async {
+  Future<bool> acceptCall(String callId) async {
     try {
-      final response = await _client.functions.invoke(
-        'video-call-server',
-        body: {
-          'action': 'accept',
-          'sessionId': sessionId,
-        },
-      );
-
-      final data = response.data as Map<String, dynamic>?;
-      return VideoCallResult(
-        success: data?['success'] as bool? ?? false,
-        sessionId: sessionId,
-        channelName: data?['channelName'] as String?,
-        token: data?['token'] as String?,
-        error: data?['error'] as String?,
-      );
+      await _client.from('video_call_sessions').update({
+        'status': 'active',
+        'started_at': DateTime.now().toIso8601String(),
+      }).eq('call_id', callId);
+      return true;
     } catch (e) {
-      return VideoCallResult(success: false, error: e.toString());
+      return false;
     }
   }
 
   /// Reject/decline incoming call
-  Future<bool> rejectCall(String sessionId) async {
+  Future<bool> rejectCall(String callId) async {
     try {
       await _client.from('video_call_sessions').update({
-        'status': 'rejected',
+        'status': 'declined',
         'ended_at': DateTime.now().toIso8601String(),
-        'end_reason': 'rejected',
-      }).eq('id', sessionId);
+        'end_reason': 'declined',
+      }).eq('call_id', callId);
       return true;
     } catch (e) {
       return false;
@@ -87,26 +75,26 @@ class VideoCallService {
   }
 
   /// End active call
-  Future<bool> endCall(String sessionId) async {
+  Future<bool> endCall(String callId) async {
     try {
       await _client.from('video_call_sessions').update({
         'status': 'ended',
         'ended_at': DateTime.now().toIso8601String(),
         'end_reason': 'user_ended',
-      }).eq('id', sessionId);
+      }).eq('call_id', callId);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  /// Get call session details
-  Future<VideoCallSessionModel?> getSession(String sessionId) async {
+  /// Get call session details by call_id
+  Future<VideoCallSessionModel?> getSession(String callId) async {
     try {
       final response = await _client
           .from('video_call_sessions')
           .select()
-          .eq('id', sessionId)
+          .eq('call_id', callId)
           .maybeSingle();
 
       if (response == null) return null;
@@ -135,22 +123,26 @@ class VideoCallService {
   }
 
   /// Subscribe to incoming calls
+  /// Men receive calls on man_user_id, women on woman_user_id
   RealtimeChannel subscribeToIncomingCalls(
     String userId,
+    String userGender,
     void Function(VideoCallSessionModel session) onIncomingCall,
   ) {
+    final filterColumn = userGender == 'male' ? 'man_user_id' : 'woman_user_id';
+
     return _client.channel('video_calls:$userId').onPostgresChanges(
       event: PostgresChangeEvent.insert,
       schema: 'public',
       table: 'video_call_sessions',
       filter: PostgresChangeFilter(
         type: PostgresChangeFilterType.eq,
-        column: 'woman_user_id',
+        column: filterColumn,
         value: userId,
       ),
       callback: (payload) {
         final session = VideoCallSessionModel.fromJson(payload.newRecord);
-        if (session.status == 'pending') {
+        if (session.status == 'ringing') {
           onIncomingCall(session);
         }
       },
