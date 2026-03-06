@@ -822,17 +822,35 @@ const DraggableMiniChatWindow = ({
   };
 
   const handleClose = async () => {
+    // Stop billing timers immediately
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+
     try {
-      await supabase
-        .from("active_chat_sessions")
-        .update({
-          status: "ended",
-          ended_at: new Date().toISOString(),
-          end_reason: "user_closed"
-        })
-        .eq("id", sessionId);
+      // Call chat-manager end_chat for proper final billing and cleanup
+      await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "end_chat",
+          chat_id: chatId,
+          end_reason: userGender === "male" ? "man_closed" : "woman_closed",
+          user_id: currentUserId
+        }
+      });
     } catch (error) {
-      console.error("Error closing chat:", error);
+      console.error("Error closing chat via chat-manager:", error);
+      // Fallback: directly update session
+      try {
+        await supabase
+          .from("active_chat_sessions")
+          .update({
+            status: "ended",
+            ended_at: new Date().toISOString(),
+            end_reason: userGender === "male" ? "man_closed" : "woman_closed"
+          })
+          .eq("id", sessionId);
+      } catch (fallbackError) {
+        console.error("Fallback close also failed:", fallbackError);
+      }
     }
     onClose();
   };
@@ -1108,7 +1126,14 @@ const DraggableMiniChatWindow = ({
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-destructive/20 hover:text-destructive"
-            onClick={(e) => { e.stopPropagation(); handleClose(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleClose();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           >
             <X className="h-2.5 w-2.5" />
           </Button>
