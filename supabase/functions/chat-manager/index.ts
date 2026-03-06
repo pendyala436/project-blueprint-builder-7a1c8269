@@ -1400,7 +1400,7 @@ serve(async (req) => {
           .update({ balance: newBalance })
           .eq("id", wallet.id);
 
-        // Record transaction (what men paid)
+        // Record transaction (what men paid) - include rate for transparency
         await supabase
           .from("wallet_transactions")
           .insert({
@@ -1408,7 +1408,7 @@ serve(async (req) => {
             user_id: session.man_user_id,
             type: "debit",
             amount: menCharge,
-            description: `Chat with partner - ${minutesElapsed.toFixed(2)} minutes`,
+            description: `Chat debit - ${minutesElapsed.toFixed(2)} min at ₹${session.rate_per_minute}/min`,
             status: "completed"
           });
 
@@ -1422,7 +1422,7 @@ serve(async (req) => {
             chat_session_id: session.id,
             amount: womenEarnings,
             earning_type: "chat",
-            description: `Chat earnings - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
+            description: `Chat earning - ${minutesElapsed.toFixed(2)} min at ₹${womenEarningRate}/min`
           });
 
         // Update session totals (last_activity_at already updated by the lock)
