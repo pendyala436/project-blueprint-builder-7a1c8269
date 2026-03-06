@@ -516,8 +516,12 @@ export function PrivateGroupCallWindow({
   };
 
   const handleEndStream = async () => {
-    // Use endStream to broadcast stream-ended to participants, then cleanup
-    await endStream(true);
+    // Broadcast stream-ended, cleanup WebRTC, then notify parent
+    try {
+      await endStream(true);
+    } catch (err) {
+      console.error('[PrivateGroupCallWindow] endStream error:', err);
+    }
     toast.success('Stream ended');
     onClose();
   };
@@ -536,11 +540,14 @@ export function PrivateGroupCallWindow({
   };
 
   const handleClose = async () => {
-    if (isOwner && isLive) {
-      // Broadcast stream-ended to participants before cleanup
-      await endStream(true);
-    } else {
-      cleanup();
+    try {
+      if (isOwner && isLive) {
+        await endStream(true);
+      } else {
+        cleanup();
+      }
+    } catch (err) {
+      console.error('[PrivateGroupCallWindow] handleClose error:', err);
     }
     onClose();
   };
@@ -659,7 +666,7 @@ export function PrivateGroupCallWindow({
           <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)}>
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleClose}>
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleClose(); }}>
             <X className="h-4 w-4" />
           </Button>
         </div>

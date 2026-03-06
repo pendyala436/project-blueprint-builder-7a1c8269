@@ -801,14 +801,19 @@ export function usePrivateGroupCall({
   // DB cleanup is handled by the parent component's handleStopLive
   const endStream = useCallback(async (processRefundsFlag = true) => {
     // Notify all participants before cleanup
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'stream-ended',
-      payload: { refunded: processRefundsFlag },
-    });
-
-    // Small delay to ensure broadcast is sent before channel cleanup
-    await new Promise(resolve => setTimeout(resolve, 200));
+    try {
+      if (channelRef.current) {
+        await channelRef.current.send({
+          type: 'broadcast',
+          event: 'stream-ended',
+          payload: { refunded: processRefundsFlag },
+        });
+        // Small delay to ensure broadcast is delivered before channel cleanup
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    } catch (err) {
+      console.warn('[PrivateGroupCall] Broadcast send failed (channel may be closed):', err);
+    }
 
     cleanup();
     onSessionEnd?.(processRefundsFlag);
