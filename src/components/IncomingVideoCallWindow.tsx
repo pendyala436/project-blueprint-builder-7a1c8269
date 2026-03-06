@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -290,9 +291,10 @@ const IncomingVideoCallWindow = ({
               variant="destructive"
               size="lg"
               className="rounded-full w-14 h-14"
-              onClick={(e) => { e.stopPropagation(); handleDecline(); }}
+              disabled={isProcessing}
+              onClick={async (e) => { e.stopPropagation(); await handleDecline(); }}
             >
-              <PhoneOff className="w-6 h-6" />
+              {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <PhoneOff className="w-6 h-6" />}
             </Button>
             <span className="text-xs text-destructive font-medium">Reject</span>
           </div>
@@ -302,9 +304,10 @@ const IncomingVideoCallWindow = ({
               variant="success"
               size="lg"
               className="rounded-full w-14 h-14"
-              onClick={(e) => { e.stopPropagation(); handleAnswer(); }}
+              disabled={isProcessing}
+              onClick={async (e) => { e.stopPropagation(); await handleAnswer(); }}
             >
-              <Phone className="w-6 h-6" />
+              {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Phone className="w-6 h-6" />}
             </Button>
             <span className="text-xs text-success font-medium">Accept</span>
           </div>
