@@ -265,23 +265,29 @@ const IncomingVideoCallWindow = ({
         <p className="text-xs text-muted-foreground mb-4">Auto-decline in {timeRemaining}s</p>
 
         <div className="flex items-center gap-4">
-          <Button
-            variant="destructive"
-            size="lg"
-            className="rounded-full w-14 h-14"
-            onClick={(e) => { e.stopPropagation(); handleDecline(); }}
-          >
-            <PhoneOff className="w-6 h-6" />
-          </Button>
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              variant="destructive"
+              size="lg"
+              className="rounded-full w-14 h-14"
+              onClick={(e) => { e.stopPropagation(); handleDecline(); }}
+            >
+              <PhoneOff className="w-6 h-6" />
+            </Button>
+            <span className="text-xs text-destructive font-medium">Reject</span>
+          </div>
 
-          <Button
-            variant="success"
-            size="lg"
-            className="rounded-full w-14 h-14"
-            onClick={(e) => { e.stopPropagation(); handleAnswer(); }}
-          >
-            <Phone className="w-6 h-6" />
-          </Button>
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              variant="success"
+              size="lg"
+              className="rounded-full w-14 h-14"
+              onClick={(e) => { e.stopPropagation(); handleAnswer(); }}
+            >
+              <Phone className="w-6 h-6" />
+            </Button>
+            <span className="text-xs text-success font-medium">Accept</span>
+          </div>
         </div>
       </div>
     </Card>
