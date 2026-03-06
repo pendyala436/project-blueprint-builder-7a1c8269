@@ -244,14 +244,28 @@ const EnhancedParallelChatsContainer = ({
           existingPartnersRef.current.delete(chat.partnerId);
         }
         
-        await supabase
-          .from("active_chat_sessions")
-          .update({
-            status: "ended",
-            ended_at: new Date().toISOString(),
-            end_reason: userGender === "male" ? "man_closed" : "woman_closed"
-          })
-          .eq("id", sessionId);
+        // Call chat-manager for proper final billing and cleanup
+        try {
+          await supabase.functions.invoke("chat-manager", {
+            body: {
+              action: "end_chat",
+              chat_id: chatId,
+              end_reason: userGender === "male" ? "man_closed" : "woman_closed",
+              user_id: currentUserId
+            }
+          });
+        } catch (invokeError) {
+          console.error("Error calling chat-manager:", invokeError);
+          // Fallback: directly update session
+          await supabase
+            .from("active_chat_sessions")
+            .update({
+              status: "ended",
+              ended_at: new Date().toISOString(),
+              end_reason: userGender === "male" ? "man_closed" : "woman_closed"
+            })
+            .eq("id", sessionId);
+        }
       }
       
       acceptedSessionsRef.current.delete(sessionId || "");
@@ -263,7 +277,7 @@ const EnhancedParallelChatsContainer = ({
     } catch (error) {
       console.error("Error closing chat:", error);
     }
-  }, [userGender, loadActiveChats, activeChats]);
+  }, [userGender, currentUserId, loadActiveChats, activeChats]);
 
   // Handle accepting incoming chat - check for duplicate partner
   const handleAcceptChat = useCallback((sessionId: string) => {
