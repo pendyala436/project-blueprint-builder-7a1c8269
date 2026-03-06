@@ -562,139 +562,78 @@ const DashboardScreen = () => {
     setIsConnecting(true);
 
     try {
-      // Get current user email to check if super user
       const { data: { user } } = await supabase.auth.getUser();
-      const userEmail = user?.email || '';
-      
-      // Super users (matching email pattern) bypass balance check entirely
-      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
-      
-      // Note: Photo validation not needed at runtime - photos are mandatory during registration
+      if (!user) return;
 
-      // Check wallet balance using admin-configured pricing (skip for super users)
-      if (!isSuperUser) {
-        const minBalance = pricing.ratePerMinute * 2; // Need at least 2 minutes worth
-        if (!hasSufficientBalance(walletBalance, 2)) {
+      // Route through chat-manager edge function for proper security checks
+      // (balance verification, block check, parallel chat limits, super user bypass)
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "start_chat",
+          man_user_id: user.id,
+          woman_user_id: womanUserId
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        // If woman is busy, try auto-reconnect
+        if (data.message?.includes("capacity") || data.message?.includes("Maximum")) {
+          toast({
+            title: t('userBusy', 'User Busy'),
+            description: t('findingAnotherUser', 'Finding another available user...'),
+          });
+
+          const nextWoman = await initiateReconnect(womanUserId);
+          if (nextWoman) {
+            await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
+          } else {
+            toast({
+              title: t('noOneAvailable', 'No One Available'),
+              description: t('tryAgainLater', 'All users are busy. Please try again later.'),
+              variant: "destructive",
+            });
+          }
+          return;
+        }
+
+        // Insufficient balance - show recharge dialog
+        if (data.message?.includes("balance") || data.message?.includes("Insufficient")) {
           toast({
             title: t('insufficientBalance', 'Insufficient Balance'),
-            description: t('pleaseRechargeToChat', `Please recharge at least ${formatPrice(minBalance)} to start chatting`),
+            description: data.message,
             variant: "destructive",
           });
           setRechargeDialogOpen(true);
-          setIsConnecting(false);
           return;
         }
-      }
 
-      // Check if already in active chat with this user
-      const { data: existingChat } = await supabase
-        .from("active_chat_sessions")
-        .select("id")
-        .eq("man_user_id", currentUserId)
-        .eq("woman_user_id", womanUserId)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (existingChat) {
-        // Chat already exists - parallel chat container will show it
         toast({
-          title: t('chatActive', 'Chat Active'),
-          description: `${t('alreadyChattingWith', 'Already chatting with')} ${womanName}`,
-        });
-        setIsConnecting(false);
-        return;
-      }
-
-      // Check parallel chat limit - use constant from LIMITS
-      const MAX_PARALLEL_CHATS = 3; // Maximum allowed parallel chats
-      const { count: activeChats } = await supabase
-        .from("active_chat_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("man_user_id", currentUserId)
-        .eq("status", "active");
-
-      const currentActiveCount = activeChats || 0;
-      console.log(`[ParallelChats] Current active: ${currentActiveCount}, Max allowed: ${MAX_PARALLEL_CHATS}`);
-
-      if (currentActiveCount >= MAX_PARALLEL_CHATS) {
-        toast({
-          title: t('maxChatsReached', 'Max Chats Reached'),
-          description: t('canOnlyHave3Chats', `You can only have ${MAX_PARALLEL_CHATS} active chats at a time. Close an existing chat to start a new one.`),
+          title: t('cannotStartChat', 'Cannot Start Chat'),
+          description: data.message || "Unable to start chat session",
           variant: "destructive",
         });
-        setIsConnecting(false);
         return;
       }
 
-      // Check if selected woman is available (not busy)
-      const { data: womanAvailability } = await supabase
-        .from("women_availability")
-        .select("current_chat_count, max_concurrent_chats, is_available")
-        .eq("user_id", womanUserId)
-        .maybeSingle();
-
-      const maxChats = womanAvailability?.max_concurrent_chats || 3;
-      const currentChats = womanAvailability?.current_chat_count || 0;
-      const isAvailable = womanAvailability?.is_available !== false;
-
-      // If woman is busy, auto-reconnect to another available woman
-      if (!isAvailable || currentChats >= maxChats) {
-        toast({
-          title: t('userBusy', 'User Busy'),
-          description: t('findingAnotherUser', 'Finding another available user...'),
+      // Send initial message so the incoming chat hook doesn't show popup for the initiator
+      if (data.chat_id) {
+        await supabase.from("chat_messages").insert({
+          chat_id: data.chat_id,
+          sender_id: user.id,
+          receiver_id: womanUserId,
+          message: "👋 Hi!"
         });
-
-        // Use auto-reconnect to find next available woman
-        const nextWoman = await initiateReconnect(womanUserId);
-        
-        if (nextWoman) {
-          // Recursively try with the new woman
-          await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
-        } else {
-          toast({
-            title: t('noOneAvailable', 'No One Available'),
-            description: t('tryAgainLater', 'All users are busy. Please try again later.'),
-            variant: "destructive",
-          });
-        }
-        setIsConnecting(false);
-        return;
       }
-
-      // Use admin-configured rate per minute
-      const ratePerMinute = pricing.ratePerMinute;
-
-      // Create active chat session
-      const chatId = `chat_${currentUserId}_${womanUserId}_${Date.now()}`;
-      const { error: sessionError } = await supabase
-        .from("active_chat_sessions")
-        .insert({
-          chat_id: chatId,
-          man_user_id: currentUserId,
-          woman_user_id: womanUserId,
-          status: "active",
-          rate_per_minute: ratePerMinute
-        });
-
-      if (sessionError) throw sessionError;
-
-      // Update woman's chat count
-      await supabase
-        .from("women_availability")
-        .update({ 
-          current_chat_count: currentChats + 1,
-          last_assigned_at: new Date().toISOString()
-        })
-        .eq("user_id", womanUserId);
 
       toast({
         title: t('chatStarted', 'Chat Started'),
-        description: `${t('startingChatWith', 'Starting chat with')} ${womanName} (${formatPrice(ratePerMinute)}/min)`,
+        description: `${t('startingChatWith', 'Starting chat with')} ${womanName} (${formatPrice(data.rate_per_minute || pricing.ratePerMinute)}/min)`,
       });
 
       // Chat session created - parallel chat container will display it automatically
-      // No navigation needed - stay on dashboard
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting chat:", error);
       
       // On error, try to auto-reconnect to another woman
@@ -704,7 +643,7 @@ const DashboardScreen = () => {
       } else {
         toast({
           title: t('error', 'Error'),
-          description: t('failedToStartChat', 'Failed to start chat'),
+          description: error.message || t('failedToStartChat', 'Failed to start chat'),
           variant: "destructive",
         });
       }
