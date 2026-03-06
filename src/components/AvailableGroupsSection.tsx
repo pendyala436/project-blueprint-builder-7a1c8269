@@ -22,6 +22,9 @@ interface PrivateGroup {
   participant_count: number;
   current_host_id: string | null;
   current_host_name: string | null;
+  owner_language: string | null;
+  updated_at: string;
+  created_at: string;
   owner_name?: string;
   owner_photo?: string;
 }
@@ -64,7 +67,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, (payload) => {
         // If a group we're watching goes offline, auto-close
         if (payload.eventType === 'UPDATE') {
-          const updated = payload.new as any;
+          const updated = payload.new as PrivateGroup;
           if (!updated.is_live && activeGroupVideo?.id === updated.id) {
             toast.info('Host ended the live session');
             setActiveGroupVideo(null);
@@ -95,12 +98,11 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const enrichedGroups = data.map(group => ({
+        const enrichedGroups: PrivateGroup[] = data.map(group => ({
           ...group,
-          owner_id: group.current_host_id || group.owner_id,
           owner_name: group.current_host_name || 'Host',
         }));
-        setGroups(enrichedGroups as PrivateGroup[]);
+        setGroups(enrichedGroups);
       } else {
         setGroups([]);
       }
@@ -281,10 +283,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       {/* Private Group Call Window */}
       {activeGroupVideo && (
         <PrivateGroupCallWindow
-          group={{
-            ...activeGroupVideo,
-            owner_id: activeGroupVideo.current_host_id || activeGroupVideo.owner_id,
-          }}
+          group={activeGroupVideo}
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
