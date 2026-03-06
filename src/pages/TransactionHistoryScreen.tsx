@@ -441,9 +441,10 @@ const TransactionHistoryScreen = () => {
               const descB = (prev.description || '').trim().toLowerCase();
               const sameAmount = Math.abs(Number(earning.amount) - Number(prev.amount)) < 0.0001;
               const sameDescription = descA === descB;
-              const isGroupBillingLine = descA.includes('group call') || descA.includes('group tip');
+              const isBillingLine = descA.includes('group call') || descA.includes('group tip')
+                || descA.includes('chat earning') || descA.includes('video call earning') || descA.includes('video earning');
               const closeInTime = Math.abs(new Date(earning.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
-              return !(sameAmount && sameDescription && isGroupBillingLine && closeInTime);
+              return !(sameAmount && sameDescription && isBillingLine && closeInTime);
             })
             .reverse();
         };
@@ -635,7 +636,7 @@ const TransactionHistoryScreen = () => {
       });
     }
 
-    // Remove known duplicate group-billing rows created within the same billing window
+    // Remove duplicate billing rows (chat, video, group) created within the same billing window
     const dedupedUnified = unified
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
       .filter((tx, index, arr) => {
@@ -646,10 +647,14 @@ const TransactionHistoryScreen = () => {
         const sameType = prev.type === tx.type;
         const sameAmount = Math.abs(prev.amount - tx.amount) < 0.0001;
         const sameDescription = (prev.description || '').trim().toLowerCase() === (tx.description || '').trim().toLowerCase();
-        const isGroupBillingLine = (tx.description || '').toLowerCase().includes('group call') || (tx.description || '').toLowerCase().includes('group tip');
+        const descLower = (tx.description || '').toLowerCase();
+        const isBillingLine = descLower.includes('group call') || descLower.includes('group tip') 
+          || descLower.includes('chat debit') || descLower.includes('chat earning')
+          || descLower.includes('video call debit') || descLower.includes('video call earning')
+          || descLower.includes('video debit') || descLower.includes('video earning');
         const closeInTime = Math.abs(new Date(tx.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
 
-        return !(sameDirection && sameType && sameAmount && sameDescription && isGroupBillingLine && closeInTime);
+        return !(sameDirection && sameType && sameAmount && sameDescription && isBillingLine && closeInTime);
       });
 
     // Current month boundaries
@@ -894,7 +899,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {chatSessions.length} sessions • from transaction records
+              {chatSessions.length} sessions • {isMale ? `₹${chatPricing?.ratePerMinute || 4}/min charged` : `₹${chatPricing?.womenEarningRate || 2}/min earned`}
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
@@ -907,7 +912,7 @@ const TransactionHistoryScreen = () => {
               ).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {videoCallSessions.length + privateCalls.length} calls • from transaction records
+              {videoCallSessions.length + privateCalls.length} calls • {isMale ? `₹${chatPricing?.videoRatePerMinute || 8}/min charged` : `₹${chatPricing?.videoWomenEarningRate || 4}/min earned`}
             </p>
           </Card>
           <Card className="p-3 text-center bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
