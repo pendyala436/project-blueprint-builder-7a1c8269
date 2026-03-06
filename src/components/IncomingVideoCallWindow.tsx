@@ -1,12 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, PhoneOff, Video, MessageSquare, PauseCircle } from "lucide-react";
+import { Phone, PhoneOff, Video, PauseCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { cn } from "@/lib/utils";
+
+// Audio context for ringtone
+let ringCtx: AudioContext | null = null;
+
+const playRingTone = () => {
+  try {
+    if (!ringCtx) {
+      ringCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const osc = ringCtx.createOscillator();
+    const gain = ringCtx.createGain();
+    osc.connect(gain);
+    gain.connect(ringCtx.destination);
+    osc.frequency.setValueAtTime(440, ringCtx.currentTime);
+    osc.frequency.setValueAtTime(520, ringCtx.currentTime + 0.15);
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0.3, ringCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ringCtx.currentTime + 0.4);
+    osc.start(ringCtx.currentTime);
+    osc.stop(ringCtx.currentTime + 0.4);
+  } catch (e) {
+    console.error("Ring tone error:", e);
+  }
+};
 
 interface IncomingVideoCallWindowProps {
   callId: string;
@@ -29,6 +53,20 @@ const IncomingVideoCallWindow = ({
   const [isAnswered, setIsAnswered] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [pausedChatCount, setPausedChatCount] = useState(0);
+  const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Continuous ring sound until answered/declined
+  useEffect(() => {
+    if (isAnswered) return;
+    playRingTone();
+    ringIntervalRef.current = setInterval(playRingTone, 2000);
+    return () => {
+      if (ringIntervalRef.current) {
+        clearInterval(ringIntervalRef.current);
+        ringIntervalRef.current = null;
+      }
+    };
+  }, [isAnswered]);
 
   // Countdown timer and auto-decline
   useEffect(() => {
@@ -53,10 +91,11 @@ const IncomingVideoCallWindow = ({
   }, []);
 
   const checkActiveChats = async () => {
+    // Check for both man_user_id and woman_user_id since either gender can receive calls
     const { count } = await supabase
       .from('active_chat_sessions')
       .select('*', { count: 'exact', head: true })
-      .eq('woman_user_id', currentUserId)
+      .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
       .eq('status', 'active');
     
     setPausedChatCount(count || 0);
@@ -65,27 +104,29 @@ const IncomingVideoCallWindow = ({
   // Pause all active chats when answering video call
   const pauseActiveChats = async () => {
     try {
-      // Update all active chat sessions to paused status
-      const { error } = await supabase
+      // Pause chats where user is either man or woman
+      await supabase
         .from('active_chat_sessions')
         .update({ 
           status: 'paused',
           end_reason: 'video_call_priority'
         })
-        .eq('woman_user_id', currentUserId)
+        .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .eq('status', 'active');
-
-      if (error) {
-        console.error('[VideoCall] Error pausing chats:', error);
-      } else {
-        console.log('[VideoCall] All active chats paused for video call priority');
-      }
     } catch (err) {
       console.error('[VideoCall] Failed to pause chats:', err);
     }
   };
 
+  const stopRing = () => {
+    if (ringIntervalRef.current) {
+      clearInterval(ringIntervalRef.current);
+      ringIntervalRef.current = null;
+    }
+  };
+
   const handleAnswer = async () => {
+    stopRing();
     try {
       // First, pause all active chats - VIDEO CALL HAS PRIORITY
       await pauseActiveChats();
@@ -118,6 +159,7 @@ const IncomingVideoCallWindow = ({
   };
 
   const handleDecline = async () => {
+    stopRing();
     try {
       await supabase
         .from('video_call_sessions')

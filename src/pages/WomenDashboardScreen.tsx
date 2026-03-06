@@ -119,7 +119,7 @@ const WomenDashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null);
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, "female");
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);

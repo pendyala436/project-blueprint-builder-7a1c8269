@@ -67,17 +67,15 @@ const IncomingChatPopup = ({
   const [isExiting, setIsExiting] = useState(false);
   const buzzIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Play buzz sound on mount and every 2 seconds for women
+  // Play buzz sound on mount and every 2 seconds for BOTH genders
   useEffect(() => {
     // Play initial sound
     playBuzzSound();
 
-    // For women: continuous buzz until accepted/rejected
-    if (userGender === "female") {
-      buzzIntervalRef.current = setInterval(() => {
-        playBuzzSound();
-      }, 2000);
-    }
+    // Continuous buzz until accepted/rejected - for both men and women
+    buzzIntervalRef.current = setInterval(() => {
+      playBuzzSound();
+    }, 2000);
 
     return () => {
       if (buzzIntervalRef.current) {
@@ -85,7 +83,7 @@ const IncomingChatPopup = ({
         buzzIntervalRef.current = null;
       }
     };
-  }, [userGender]);
+  }, []);
 
   // Calculate elapsed time since chat started
   useEffect(() => {
