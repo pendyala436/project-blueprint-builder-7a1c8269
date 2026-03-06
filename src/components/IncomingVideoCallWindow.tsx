@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, PhoneOff, Video, PauseCircle } from "lucide-react";
+import { Phone, PhoneOff, Video, PauseCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
@@ -58,6 +58,7 @@ const IncomingVideoCallWindow = ({
 }: IncomingVideoCallWindowProps) => {
   const { toast } = useToast();
   const [isAnswered, setIsAnswered] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [pausedChatCount, setPausedChatCount] = useState(0);
   const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,9 +78,11 @@ const IncomingVideoCallWindow = ({
 
   // Countdown timer and auto-decline - use ref to avoid stale closure
   const handleDeclineRef = useRef<() => void>(() => {});
+  const isProcessingRef = useRef(false);
   
   useEffect(() => {
     handleDeclineRef.current = handleDecline;
+    isProcessingRef.current = isProcessing;
   });
 
   useEffect(() => {
@@ -88,7 +91,10 @@ const IncomingVideoCallWindow = ({
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          handleDeclineRef.current();
+          // Don't auto-decline if user is actively processing accept/reject
+          if (!isProcessingRef.current) {
+            handleDeclineRef.current();
+          }
           return 0;
         }
         return prev - 1;
@@ -140,6 +146,8 @@ const IncomingVideoCallWindow = ({
   };
 
   const handleAnswer = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     stopRing();
     try {
       // First, pause all active chats - VIDEO CALL HAS PRIORITY
@@ -161,6 +169,7 @@ const IncomingVideoCallWindow = ({
           description: "Failed to answer call. Please try again.",
           variant: "destructive",
         });
+        setIsProcessing(false);
         return;
       }
 
@@ -179,10 +188,13 @@ const IncomingVideoCallWindow = ({
         description: "Failed to answer call",
         variant: "destructive",
       });
+      setIsProcessing(false);
     }
   };
 
   const handleDecline = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
     stopRing();
     try {
       const { error } = await supabase
@@ -278,9 +290,10 @@ const IncomingVideoCallWindow = ({
               variant="destructive"
               size="lg"
               className="rounded-full w-14 h-14"
-              onClick={(e) => { e.stopPropagation(); handleDecline(); }}
+              disabled={isProcessing}
+              onClick={async (e) => { e.stopPropagation(); await handleDecline(); }}
             >
-              <PhoneOff className="w-6 h-6" />
+              {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <PhoneOff className="w-6 h-6" />}
             </Button>
             <span className="text-xs text-destructive font-medium">Reject</span>
           </div>
@@ -290,9 +303,10 @@ const IncomingVideoCallWindow = ({
               variant="success"
               size="lg"
               className="rounded-full w-14 h-14"
-              onClick={(e) => { e.stopPropagation(); handleAnswer(); }}
+              disabled={isProcessing}
+              onClick={async (e) => { e.stopPropagation(); await handleAnswer(); }}
             >
-              <Phone className="w-6 h-6" />
+              {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Phone className="w-6 h-6" />}
             </Button>
             <span className="text-xs text-success font-medium">Accept</span>
           </div>
