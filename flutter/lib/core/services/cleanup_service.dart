@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../config/supabase_config.dart';
+// Edge functions invoked via Supabase client - no direct URL needed
 
 /// Cleanup Service Provider
 final cleanupServiceProvider = Provider<CleanupService>((ref) {
@@ -13,15 +13,7 @@ final cleanupServiceProvider = Provider<CleanupService>((ref) {
 class CleanupService {
   final SupabaseClient _client = Supabase.instance.client;
 
-  String get _supabaseUrl => SupabaseConfig.supabaseUrl;
-
-  Future<Map<String, String>> get _authHeaders async {
-    final session = _client.auth.currentSession;
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${session?.accessToken ?? ''}',
-    };
-  }
+  // Edge function calls use _client.functions.invoke() which handles URL/auth automatically
 
   /// Trigger data cleanup edge function
   Future<CleanupResult> triggerDataCleanup() async {
