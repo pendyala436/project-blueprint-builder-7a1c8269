@@ -232,15 +232,10 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
       }
     }
 
-    // Deduplicate billing rows
+    // Deduplicate billing rows using sliding-window (not just consecutive)
     unified.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     final deduped = <UnifiedTransaction>[];
     for (int i = 0; i < unified.length; i++) {
-      if (i == 0) {
-        deduped.add(unified[i]);
-        continue;
-      }
-      final prev = deduped.last;
       final tx = unified[i];
       final descLower = tx.description.toLowerCase();
       final isBilling = descLower.contains('group call') ||
@@ -248,18 +243,34 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
           descLower.contains('chat debit') ||
           descLower.contains('chat earning') ||
           descLower.contains('video call debit') ||
-          descLower.contains('video call earning');
+          descLower.contains('video call earning') ||
+          descLower.contains('video debit') ||
+          descLower.contains('video earning');
 
-      final sameDirection = prev.isCredit == tx.isCredit;
-      final sameType = prev.type == tx.type;
-      final sameAmount = (prev.amount - tx.amount).abs() < 0.0001;
-      final sameDesc = prev.description.trim().toLowerCase() == descLower.trim();
-      final closeInTime = tx.createdAt.difference(prev.createdAt).inMilliseconds.abs() <= 50000;
-
-      if (sameDirection && sameType && sameAmount && sameDesc && isBilling && closeInTime) {
-        continue; // Skip duplicate
+      if (!isBilling) {
+        deduped.add(tx);
+        continue;
       }
-      deduped.add(tx);
+
+      bool isDuplicate = false;
+      // Check ALL already-accepted entries within 50s window
+      for (int j = deduped.length - 1; j >= 0; j--) {
+        final accepted = deduped[j];
+        if (tx.createdAt.difference(accepted.createdAt).inMilliseconds.abs() > 50000) break;
+
+        final sameDirection = accepted.isCredit == tx.isCredit;
+        final sameAmount = (accepted.amount - tx.amount).abs() < 0.0001;
+        final sameDesc = accepted.description.trim().toLowerCase() == descLower.trim();
+
+        if (sameDirection && sameAmount && sameDesc) {
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate) {
+        deduped.add(tx);
+      }
     }
 
     // Filter to current month
