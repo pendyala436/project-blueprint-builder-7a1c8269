@@ -348,6 +348,16 @@ export const RandomChatButton = ({
           });
           return;
         }
+
+        // Send initial message so the incoming chat hook doesn't treat it as "incoming" for the man
+        if (data.chat_id) {
+          await supabase.from("chat_messages").insert({
+            chat_id: data.chat_id,
+            sender_id: user.id,
+            receiver_id: matchedUser.userId,
+            message: "👋 Hi!"
+          });
+        }
       } else if (userGender === "female") {
         // Woman with Golden Badge initiating chat with man
         const { data, error } = await supabase.functions.invoke("chat-manager", {

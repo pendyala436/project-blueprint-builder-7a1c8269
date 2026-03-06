@@ -775,6 +775,16 @@ const WomenDashboardScreen = () => {
         return;
       }
 
+      // Send initial message so the incoming chat hook doesn't treat it as "incoming" for the woman
+      if (data.chat_id) {
+        await supabase.from("chat_messages").insert({
+          chat_id: data.chat_id,
+          sender_id: currentUserId,
+          receiver_id: userId,
+          message: "👋 Hi!"
+        });
+      }
+
       toast({
         title: t('chatStarted', 'Chat Started!'),
         description: t('chatInitiated', 'Chat session started successfully'),
