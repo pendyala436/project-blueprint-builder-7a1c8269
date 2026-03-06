@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Phone, PhoneOff, Video, PauseCircle } from "lucide-react";
+import { Phone, PhoneOff, Video, PauseCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
