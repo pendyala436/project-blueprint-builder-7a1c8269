@@ -1359,7 +1359,7 @@ serve(async (req) => {
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
-              description: `Chat earnings (super user) - ${minutesElapsed.toFixed(2)} minutes at ₹${womenEarningRate}/min`
+              description: `Chat earning (super user) - ${minutesElapsed.toFixed(2)} min at ₹${womenEarningRate}/min`
             });
 
           await supabase
