@@ -200,7 +200,7 @@ const IncomingVideoCallWindow = ({
 
   // Incoming call UI
   return (
-    <Card className="fixed bottom-20 right-4 w-72 sm:w-80 p-4 bg-gradient-to-br from-gray-900 to-gray-800 border-gray-700 shadow-2xl z-[80] animate-in slide-in-from-right-5">
+    <Card className="fixed bottom-20 right-4 w-72 sm:w-80 p-4 bg-gradient-to-br from-card to-muted border-border shadow-2xl z-[80] animate-in slide-in-from-right-5">
       <div className="flex flex-col items-center text-center">
         {/* Animated ring effect */}
         <div className="relative mb-4">
@@ -208,7 +208,7 @@ const IncomingVideoCallWindow = ({
           <div className="absolute inset-2 rounded-full bg-success/30 animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.3s' }} />
           <Avatar className="w-20 h-20 relative z-10 border-4 border-success">
             <AvatarImage src={callerPhoto || undefined} />
-            <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-secondary text-white">
+            <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground">
               {callerName.charAt(0)}
             </AvatarFallback>
           </Avatar>
@@ -219,8 +219,8 @@ const IncomingVideoCallWindow = ({
           <span className="text-xs font-medium">Incoming Video Call</span>
         </div>
 
-        <h3 className="text-lg font-semibold text-white mb-1">{callerName}</h3>
-        <p className="text-gray-400 text-sm mb-1">wants to video call you</p>
+        <h3 className="text-lg font-semibold text-foreground mb-1">{callerName}</h3>
+        <p className="text-muted-foreground text-sm mb-1">wants to video call you</p>
         
         {/* Show chat pause warning */}
         {pausedChatCount > 0 && (
@@ -230,7 +230,7 @@ const IncomingVideoCallWindow = ({
           </div>
         )}
         
-        <p className="text-xs text-gray-500 mb-4">Auto-decline in {timeRemaining}s</p>
+        <p className="text-xs text-muted-foreground mb-4">Auto-decline in {timeRemaining}s</p>
 
         <div className="flex items-center gap-4">
           <Button
