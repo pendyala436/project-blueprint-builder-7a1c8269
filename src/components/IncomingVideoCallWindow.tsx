@@ -269,7 +269,7 @@ const IncomingVideoCallWindow = ({
             variant="destructive"
             size="lg"
             className="rounded-full w-14 h-14"
-            onClick={handleDecline}
+            onClick={(e) => { e.stopPropagation(); handleDecline(); }}
           >
             <PhoneOff className="w-6 h-6" />
           </Button>
@@ -278,7 +278,7 @@ const IncomingVideoCallWindow = ({
             variant="success"
             size="lg"
             className="rounded-full w-14 h-14"
-            onClick={handleAnswer}
+            onClick={(e) => { e.stopPropagation(); handleAnswer(); }}
           >
             <Phone className="w-6 h-6" />
           </Button>

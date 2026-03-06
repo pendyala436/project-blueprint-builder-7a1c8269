@@ -195,6 +195,14 @@ const DraggableMiniChatWindow = ({
   // Dragging handlers
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
+
+    // Don't start dragging when interacting with buttons or interactive elements
+    const target = e.target as HTMLElement | null;
+    const interactive = target?.closest?.(
+      'button, a, input, textarea, select, [role="button"], [data-no-drag]'
+    );
+    if (interactive) return;
+
     e.preventDefault();
     setIsDragging(true);
     
@@ -1046,7 +1054,7 @@ const DraggableMiniChatWindow = ({
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-0.5" onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5" data-no-drag onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
           <Button
             variant="ghost"
             size="icon"
@@ -1092,7 +1100,7 @@ const DraggableMiniChatWindow = ({
             variant="ghost"
             size="icon"
             className="h-5 w-5"
-            onClick={toggleMinimize}
+            onClick={(e) => { e.stopPropagation(); toggleMinimize(); }}
           >
             {isMinimized ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
           </Button>
@@ -1100,7 +1108,7 @@ const DraggableMiniChatWindow = ({
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-destructive/20 hover:text-destructive"
-            onClick={handleClose}
+            onClick={(e) => { e.stopPropagation(); handleClose(); }}
           >
             <X className="h-2.5 w-2.5" />
           </Button>
