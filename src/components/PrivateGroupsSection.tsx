@@ -318,10 +318,12 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           userName={userName}
           userPhoto={userPhoto}
           onClose={() => {
-            // The hook's endStream/cleanup already handles WebRTC teardown
-            // and broadcasts stream-ended to participants.
-            // We handle DB cleanup and UI state here.
-            handleStopLive(activeGroup);
+            // Capture group ref before state changes clear it
+            const groupToStop = activeGroup;
+            setActiveGroup(null);
+            if (groupToStop) {
+              handleStopLive(groupToStop);
+            }
           }}
           isOwner={true}
         />
