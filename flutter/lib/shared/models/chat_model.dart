@@ -74,7 +74,7 @@ class ChatPricingModel {
     this.womenEarningRate = 2.0,
     this.videoRatePerMinute = 8.0,
     this.videoWomenEarningRate = 4.0,
-    this.minWithdrawalBalance = 10000.0,
+    this.minWithdrawalBalance = 5000.0, // Synced with React DEFAULT_PRICING
     this.currency = 'INR',
   });
 }

@@ -31,7 +31,7 @@ class ChatService {
         womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 2.0, // Indian women earn ₹2/min for chat
         videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 8.0, // ₹8/min video
         videoWomenEarningRate: (response['video_women_earning_rate'] as num?)?.toDouble() ?? 4.0, // ₹4/min video earning
-        minWithdrawalBalance: (response['min_withdrawal_balance'] as num?)?.toDouble() ?? 10000.0,
+        minWithdrawalBalance: (response['min_withdrawal_balance'] as num?)?.toDouble() ?? 5000.0,
         currency: response['currency'] as String? ?? 'INR',
         // Note: Non-Indian women earn ₹0/min - checked via is_earning_eligible flag
       );
