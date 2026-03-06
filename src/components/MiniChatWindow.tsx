@@ -169,6 +169,40 @@ const MiniChatWindow = ({
     loadMessages();
     const unsubscribe = subscribeToMessages();
 
+    // Subscribe to session status changes - auto-close when partner ends chat
+    const sessionChannel = supabase
+      .channel(`session-status-mini-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'active_chat_sessions',
+          filter: `id=eq.${sessionId}`
+        },
+        (payload: any) => {
+          const session = payload.new;
+          if (session.status === 'ended') {
+            let message = "Chat session ended";
+            if (session.end_reason === 'user_closed' || session.end_reason === 'user_ended' || session.end_reason === 'man_closed' || session.end_reason === 'woman_closed') {
+              message = `${partnerName} ended the chat`;
+            } else if (session.end_reason === 'inactivity_timeout') {
+              message = "Chat ended due to inactivity";
+            } else if (session.end_reason === 'insufficient_balance') {
+              message = "Chat ended - insufficient balance";
+            } else if (session.end_reason === 'user_blocked') {
+              message = "Chat ended - user blocked";
+            }
+            toast({
+              title: "Chat Disconnected",
+              description: message + ". You are now available for new chats.",
+            });
+            onClose();
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
@@ -176,8 +210,9 @@ const MiniChatWindow = ({
       if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
       unsubscribe?.();
+      supabase.removeChannel(sessionChannel);
     };
-  }, [chatId]);
+  }, [chatId, sessionId]);
 
   useEffect(() => {
     if (!isMinimized) {
@@ -187,7 +222,8 @@ const MiniChatWindow = ({
 
   useEffect(() => {
     const hasSentMessage = messages.some(m => m.senderId === currentUserId);
-    if (hasSentMessage && !billingStarted) {
+    const hasReceivedMessage = messages.some(m => m.senderId !== currentUserId);
+    if (hasSentMessage && hasReceivedMessage && !billingStarted) {
       setBillingStarted(true);
       setLastActivityTime(Date.now());
       startBilling();
@@ -485,7 +521,7 @@ const MiniChatWindow = ({
   };
 
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
-  const estimatedEarning = billingStarted ? totalEarned + ((elapsedSeconds / 60) * (ratePerMinute * 0.5)) : 0;
+  const estimatedEarning = billingStarted ? totalEarned + ((elapsedSeconds / 60) * earningRate) : 0;
 
   return (
     <Card 
@@ -554,7 +590,7 @@ const MiniChatWindow = ({
             )}
             {!billingStarted && (
               <p className="text-[10px] text-muted-foreground">
-                {userGender === "male" ? `₹${ratePerMinute}/min - Type to start` : "Type to start earning"}
+                {userGender === "male" ? `₹${ratePerMinute}/min - Both must reply to start billing` : "Both must reply to start earning"}
               </p>
             )}
           </div>
