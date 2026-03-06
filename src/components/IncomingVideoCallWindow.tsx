@@ -13,7 +13,7 @@ let ringCtx: AudioContext | null = null;
 
 const playRingTone = () => {
   try {
-    if (!ringCtx) {
+    if (!ringCtx || ringCtx.state === 'closed') {
       ringCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
     const osc = ringCtx.createOscillator();
@@ -29,6 +29,13 @@ const playRingTone = () => {
     osc.stop(ringCtx.currentTime + 0.4);
   } catch (e) {
     console.error("Ring tone error:", e);
+  }
+};
+
+const stopRingSound = () => {
+  if (ringCtx && ringCtx.state !== 'closed') {
+    try { ringCtx.close(); } catch (_) {}
+    ringCtx = null;
   }
 };
 
@@ -129,6 +136,7 @@ const IncomingVideoCallWindow = ({
       clearInterval(ringIntervalRef.current);
       ringIntervalRef.current = null;
     }
+    stopRingSound();
   };
 
   const handleAnswer = async () => {

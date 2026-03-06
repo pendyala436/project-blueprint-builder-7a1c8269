@@ -25,7 +25,7 @@ let audioContext: AudioContext | null = null;
 
 const playBuzzSound = () => {
   try {
-    if (!audioContext) {
+    if (!audioContext || audioContext.state === 'closed') {
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
@@ -48,6 +48,13 @@ const playBuzzSound = () => {
     oscillator.stop(audioContext.currentTime + 0.4);
   } catch (error) {
     console.error("Error playing buzz sound:", error);
+  }
+};
+
+const stopBuzzSound = () => {
+  if (audioContext && audioContext.state !== 'closed') {
+    try { audioContext.close(); } catch (_) {}
+    audioContext = null;
   }
 };
 
@@ -109,25 +116,25 @@ const IncomingChatPopup = ({
   }, [startedAt]);
 
   const handleAccept = () => {
-    // Stop buzz sound
+    // Stop buzz sound completely
     if (buzzIntervalRef.current) {
       clearInterval(buzzIntervalRef.current);
       buzzIntervalRef.current = null;
     }
+    stopBuzzSound();
     
-    // Call onAccept immediately - don't delay behind animation
     onAccept(sessionId);
     setIsExiting(true);
   };
 
   const handleReject = () => {
-    // Stop buzz sound
+    // Stop buzz sound completely
     if (buzzIntervalRef.current) {
       clearInterval(buzzIntervalRef.current);
       buzzIntervalRef.current = null;
     }
+    stopBuzzSound();
     
-    // Call onReject immediately - don't delay behind animation
     onReject(sessionId);
     setIsExiting(true);
   };
