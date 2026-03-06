@@ -529,66 +529,44 @@ class DashboardService {
   }
 
   /// Start chat session (men only)
+  /// Routes through chat-manager edge function for security
+  /// (wallet checks, block list, parallel limits enforced server-side)
+  /// Synced with React DashboardScreen.handleStartChatWithWoman
   Future<({bool success, String? chatId, String? error})> startChatSession({
     required String manUserId,
     required String womanUserId,
-    required double ratePerMinute,
+    bool goldenBadgeOverride = false,
   }) async {
     try {
-      // Check existing
-      final existing = await _client
-          .from('active_chat_sessions')
-          .select('id')
-          .eq('man_user_id', manUserId)
-          .eq('woman_user_id', womanUserId)
-          .eq('status', 'active')
-          .maybeSingle();
+      final response = await _client.functions.invoke(
+        'chat-manager',
+        body: {
+          'action': 'start_chat',
+          'man_user_id': manUserId,
+          'woman_user_id': womanUserId,
+          'golden_badge_override': goldenBadgeOverride,
+        },
+      );
 
-      if (existing != null) {
-        return (success: false, chatId: null, error: 'Already chatting with this user');
+      final data = response.data as Map<String, dynamic>?;
+      if (data == null) {
+        return (success: false, chatId: null, error: 'No response from server');
       }
 
-      // Check parallel limit
-      final activeChats = await _client
-          .from('active_chat_sessions')
-          .select('id')
-          .eq('man_user_id', manUserId)
-          .eq('status', 'active');
-
-      if ((activeChats as List).length >= 3) {
-        return (success: false, chatId: null, error: 'Max 3 parallel chats reached');
+      if (data['error'] != null) {
+        return (success: false, chatId: null, error: data['error'] as String);
       }
 
-      // Check woman availability
-      final avail = await _client
-          .from('women_availability')
-          .select('current_chat_count, max_concurrent_chats, is_available')
-          .eq('user_id', womanUserId)
-          .maybeSingle();
-
-      final maxChats = avail?['max_concurrent_chats'] ?? 3;
-      final currentChats = avail?['current_chat_count'] ?? 0;
-      final isAvailable = avail?['is_available'] != false;
-
-      if (!isAvailable || currentChats >= maxChats) {
-        return (success: false, chatId: null, error: 'User is busy');
+      final chatId = data['chat_id'] as String?;
+      if (chatId != null) {
+        // Send initial greeting message (same as React frontend)
+        await _client.from('chat_messages').insert({
+          'chat_id': chatId,
+          'sender_id': manUserId,
+          'receiver_id': womanUserId,
+          'message': '👋 Hi!',
+        });
       }
-
-      // Create session
-      final chatId = 'chat_${manUserId}_${womanUserId}_${DateTime.now().millisecondsSinceEpoch}';
-      await _client.from('active_chat_sessions').insert({
-        'chat_id': chatId,
-        'man_user_id': manUserId,
-        'woman_user_id': womanUserId,
-        'status': 'active',
-        'rate_per_minute': ratePerMinute,
-      });
-
-      // Update woman's chat count
-      await _client.from('women_availability').update({
-        'current_chat_count': currentChats + 1,
-        'last_assigned_at': DateTime.now().toIso8601String(),
-      }).eq('user_id', womanUserId);
 
       return (success: true, chatId: chatId, error: null);
     } catch (e) {

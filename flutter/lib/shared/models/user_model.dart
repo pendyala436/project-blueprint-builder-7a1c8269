@@ -43,6 +43,11 @@ class UserModel {
   final int? avgResponseTimeSeconds;
   final int? totalChatsCount;
   final int? profileCompleteness;
+  final bool? isEarningEligible;
+  final bool? hasGoldenBadge;
+  final String? goldenBadgeExpiresAt;
+  final String? earningBadgeType;
+  final int? monthlyChatMinutes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? lastActiveAt;
@@ -90,10 +95,104 @@ class UserModel {
     this.avgResponseTimeSeconds,
     this.totalChatsCount,
     this.profileCompleteness,
+    this.isEarningEligible,
+    this.hasGoldenBadge,
+    this.goldenBadgeExpiresAt,
+    this.earningBadgeType,
+    this.monthlyChatMinutes,
     this.createdAt,
     this.updatedAt,
     this.lastActiveAt,
   });
+
+  /// Factory from profiles table JSON
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      fullName: json['full_name'] as String?,
+      age: json['age'] as int?,
+      gender: json['gender'] as String?,
+      dateOfBirth: json['date_of_birth'] as String?,
+      country: json['country'] as String?,
+      state: json['state'] as String?,
+      city: json['city'] as String?,
+      bio: json['bio'] as String?,
+      photoUrl: json['photo_url'] as String?,
+      interests: (json['interests'] as List?)?.cast<String>() ?? [],
+      lifeGoals: (json['life_goals'] as List?)?.cast<String>() ?? [],
+      occupation: json['occupation'] as String?,
+      educationLevel: json['education_level'] as String?,
+      religion: json['religion'] as String?,
+      maritalStatus: json['marital_status'] as String?,
+      heightCm: json['height_cm'] as int?,
+      bodyType: json['body_type'] as String?,
+      preferredLanguage: json['preferred_language'] as String?,
+      primaryLanguage: json['primary_language'] as String?,
+      smokingHabit: json['smoking_habit'] as String?,
+      drinkingHabit: json['drinking_habit'] as String?,
+      dietaryPreference: json['dietary_preference'] as String?,
+      fitnessLevel: json['fitness_level'] as String?,
+      hasChildren: json['has_children'] as bool?,
+      petPreference: json['pet_preference'] as String?,
+      travelFrequency: json['travel_frequency'] as String?,
+      personalityType: json['personality_type'] as String?,
+      zodiacSign: json['zodiac_sign'] as String?,
+      isVerified: json['is_verified'] as bool? ?? false,
+      isPremium: json['is_premium'] as bool? ?? false,
+      approvalStatus: json['approval_status'] as String? ?? 'pending',
+      accountStatus: json['account_status'] as String? ?? 'active',
+      aiApproved: json['ai_approved'] as bool?,
+      aiDisapprovalReason: json['ai_disapproval_reason'] as String?,
+      performanceScore: json['performance_score'] as int?,
+      avgResponseTimeSeconds: json['avg_response_time_seconds'] as int?,
+      totalChatsCount: json['total_chats_count'] as int?,
+      profileCompleteness: json['profile_completeness'] as int?,
+      isEarningEligible: json['is_earning_eligible'] as bool?,
+      hasGoldenBadge: json['has_golden_badge'] as bool?,
+      goldenBadgeExpiresAt: json['golden_badge_expires_at'] as String?,
+      earningBadgeType: json['earning_badge_type'] as String?,
+      monthlyChatMinutes: json['monthly_chat_minutes'] as int?,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      lastActiveAt: json['last_active_at'] != null ? DateTime.parse(json['last_active_at']) : null,
+    );
+  }
+
+  /// Convert to JSON for updates
+  Map<String, dynamic> toJson() {
+    return {
+      'full_name': fullName,
+      'age': age,
+      'date_of_birth': dateOfBirth,
+      'country': country,
+      'state': state,
+      'city': city,
+      'bio': bio,
+      'photo_url': photoUrl,
+      'interests': interests,
+      'life_goals': lifeGoals,
+      'occupation': occupation,
+      'education_level': educationLevel,
+      'religion': religion,
+      'marital_status': maritalStatus,
+      'height_cm': heightCm,
+      'body_type': bodyType,
+      'preferred_language': preferredLanguage,
+      'primary_language': primaryLanguage,
+      'smoking_habit': smokingHabit,
+      'drinking_habit': drinkingHabit,
+      'dietary_preference': dietaryPreference,
+      'fitness_level': fitnessLevel,
+      'has_children': hasChildren,
+      'pet_preference': petPreference,
+      'travel_frequency': travelFrequency,
+      'personality_type': personalityType,
+      'zodiac_sign': zodiacSign,
+    };
+  }
 
   UserModel copyWith({
     String? id,
@@ -160,6 +259,18 @@ class UserModel {
       lastActiveAt: lastActiveAt ?? this.lastActiveAt,
     );
   }
+
+  /// Check if user has active golden badge
+  bool get hasActiveGoldenBadge {
+    if (hasGoldenBadge != true || goldenBadgeExpiresAt == null) return false;
+    return DateTime.parse(goldenBadgeExpiresAt!).isAfter(DateTime.now());
+  }
+
+  /// Check if profile is female
+  bool get isFemale => gender?.toLowerCase() == 'female';
+
+  /// Check if profile is male  
+  bool get isMale => gender?.toLowerCase() == 'male';
 }
 
 /// User Status Model

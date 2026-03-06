@@ -1,4 +1,4 @@
-/// Wallet Model
+/// Wallet Model - Synced with wallets table
 class WalletModel {
   final String id;
   final String userId;
@@ -15,9 +15,20 @@ class WalletModel {
     this.createdAt,
     this.updatedAt,
   });
+
+  factory WalletModel.fromJson(Map<String, dynamic> json) {
+    return WalletModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      balance: (json['balance'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'INR',
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+    );
+  }
 }
 
-/// Wallet Transaction Model
+/// Wallet Transaction Model - Synced with wallet_transactions table
 class WalletTransactionModel {
   final String id;
   final String walletId;
@@ -40,9 +51,23 @@ class WalletTransactionModel {
     this.status = 'completed',
     this.createdAt,
   });
+
+  factory WalletTransactionModel.fromJson(Map<String, dynamic> json) {
+    return WalletTransactionModel(
+      id: json['id'] as String,
+      walletId: json['wallet_id'] as String? ?? '',
+      userId: json['user_id'] as String,
+      type: json['type'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      description: json['description'] as String?,
+      referenceId: json['reference_id'] as String?,
+      status: json['status'] as String? ?? 'completed',
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+    );
+  }
 }
 
-/// Women Earnings Model
+/// Women Earnings Model - Synced with women_earnings table
 class WomenEarningsModel {
   final String id;
   final String userId;
@@ -61,9 +86,21 @@ class WomenEarningsModel {
     this.description,
     this.createdAt,
   });
+
+  factory WomenEarningsModel.fromJson(Map<String, dynamic> json) {
+    return WomenEarningsModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      earningType: json['earning_type'] as String,
+      chatSessionId: json['chat_session_id'] as String?,
+      description: json['description'] as String?,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+    );
+  }
 }
 
-/// Withdrawal Request Model
+/// Withdrawal Request Model - Synced with withdrawal_requests table
 class WithdrawalRequestModel {
   final String id;
   final String userId;
@@ -88,6 +125,21 @@ class WithdrawalRequestModel {
     this.notes,
     this.createdAt,
   });
+
+  factory WithdrawalRequestModel.fromJson(Map<String, dynamic> json) {
+    return WithdrawalRequestModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      paymentMethod: json['payment_method'] as String?,
+      paymentDetails: json['payment_details'] as Map<String, dynamic>?,
+      status: json['status'] as String? ?? 'pending',
+      processedBy: json['processed_by'] as String?,
+      processedAt: json['processed_at'] != null ? DateTime.parse(json['processed_at']) : null,
+      notes: json['notes'] as String?,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+    );
+  }
 }
 
 /// Transaction Result
