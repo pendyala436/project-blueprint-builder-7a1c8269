@@ -1514,13 +1514,14 @@ serve(async (req) => {
           .maybeSingle();
 
         if (session && (session.status === "active" || session.status === "billing_paused")) {
-          // FINAL BILLING: Bill remaining partial period since last heartbeat
+          // FINAL BILLING: Bill remaining time since last heartbeat (whole minutes only, drop partial)
           const now = new Date();
           const lastActivity = new Date(session.last_activity_at);
-          const minutesRemaining = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
+          const secondsRemaining = (now.getTime() - lastActivity.getTime()) / 1000;
+          const wholeMinutesRemaining = Math.floor(secondsRemaining / 60);
 
-          // Only bill if meaningful time (>5s) and session was actively billing
-          if (minutesRemaining > 0.083 && session.status === "active") {
+          // Only bill if at least 1 whole minute and session was actively billing
+          if (wholeMinutesRemaining >= 1 && session.status === "active") {
             // Check both parties messaged (billing prerequisite)
             const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
               supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.man_user_id).limit(1),
@@ -1536,7 +1537,7 @@ serve(async (req) => {
 
               const finalRate = endPricing?.rate_per_minute || session.rate_per_minute || 4;
               const finalWomenRate = endPricing?.women_earning_rate || 2;
-              const finalMenCharge = minutesRemaining * finalRate;
+              const finalMenCharge = wholeMinutesRemaining * finalRate;
 
               // Check if the woman is Indian (only Indian women earn)
               let endWomanIsIndian = false;
@@ -1556,7 +1557,7 @@ serve(async (req) => {
                 endWomanIsIndian = endFemaleProfile?.is_indian === true;
               }
 
-              const finalWomenEarning = endWomanIsIndian ? minutesRemaining * finalWomenRate : 0;
+              const finalWomenEarning = endWomanIsIndian ? wholeMinutesRemaining * finalWomenRate : 0;
 
               const isManSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
 
@@ -1574,10 +1575,10 @@ serve(async (req) => {
                     user_id: session.man_user_id,
                     type: "debit",
                     amount: finalMenCharge,
-                    description: `Chat debit - ${minutesRemaining.toFixed(2)} min at ₹${finalRate}/min`,
+                    description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`,
                     status: "completed"
                   });
-                  console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)}`);
+                  console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
                 }
               }
 
@@ -1588,13 +1589,13 @@ serve(async (req) => {
                   chat_session_id: session.id,
                   amount: finalWomenEarning,
                   earning_type: "chat",
-                  description: `Chat earning - ${minutesRemaining.toFixed(2)} min at ₹${finalWomenRate}/min`
+                  description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
                 });
               }
 
               // Update session totals
               await supabase.from("active_chat_sessions").update({
-                total_minutes: session.total_minutes + minutesRemaining,
+                total_minutes: session.total_minutes + wholeMinutesRemaining,
                 total_earned: session.total_earned + finalWomenEarning
               }).eq("chat_id", chat_id);
 
