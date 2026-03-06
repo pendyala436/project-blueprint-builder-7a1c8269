@@ -1,4 +1,4 @@
-/// Gift Model
+/// Gift Model - Synced with gifts table
 class GiftModel {
   final String id;
   final String name;
@@ -25,9 +25,25 @@ class GiftModel {
     this.createdAt,
     this.updatedAt,
   });
+
+  factory GiftModel.fromJson(Map<String, dynamic> json) {
+    return GiftModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      emoji: json['emoji'] as String? ?? '🎁',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'INR',
+      category: json['category'] as String? ?? 'general',
+      description: json['description'] as String?,
+      isActive: json['is_active'] as bool? ?? true,
+      sortOrder: json['sort_order'] as int? ?? 0,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+    );
+  }
 }
 
-/// Gift Transaction Model
+/// Gift Transaction Model - Synced with gift_transactions table
 class GiftTransactionModel {
   final String id;
   final String senderId;
@@ -50,6 +66,20 @@ class GiftTransactionModel {
     this.status = 'completed',
     this.createdAt,
   });
+
+  factory GiftTransactionModel.fromJson(Map<String, dynamic> json) {
+    return GiftTransactionModel(
+      id: json['id'] as String,
+      senderId: json['sender_id'] as String,
+      receiverId: json['receiver_id'] as String,
+      giftId: json['gift_id'] as String,
+      pricePaid: (json['price_paid'] as num).toDouble(),
+      currency: json['currency'] as String? ?? 'INR',
+      message: json['message'] as String?,
+      status: json['status'] as String? ?? 'completed',
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+    );
+  }
 }
 
 /// Gift with Sender Info (for display)

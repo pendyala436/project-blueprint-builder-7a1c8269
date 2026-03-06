@@ -237,65 +237,10 @@ class ProfileService {
   }
 
   /// Map database response to UserModel
-  /// All fields from profiles table are mapped here
+  /// Uses UserModel.fromJson for consistent mapping
   UserModel? _mapToUserModel(Map<String, dynamic> json) {
     try {
-      return UserModel(
-        id: json['id'] ?? '',
-        userId: json['user_id'] ?? '',
-        email: json['email'],
-        phone: json['phone'],
-        fullName: json['full_name'],
-        age: json['age'],
-        gender: json['gender'],
-        dateOfBirth: json['date_of_birth'],
-        country: json['country'],
-        state: json['state'],
-        city: json['city'],
-        bio: json['bio'],
-        photoUrl: json['photo_url'],
-        interests: (json['interests'] as List?)?.cast<String>() ?? [],
-        lifeGoals: (json['life_goals'] as List?)?.cast<String>() ?? [],
-        occupation: json['occupation'],
-        educationLevel: json['education_level'],
-        religion: json['religion'],
-        maritalStatus: json['marital_status'],
-        heightCm: json['height_cm'],
-        bodyType: json['body_type'],
-        preferredLanguage: json['preferred_language'],
-        primaryLanguage: json['primary_language'],
-        // Lifestyle fields
-        smokingHabit: json['smoking_habit'],
-        drinkingHabit: json['drinking_habit'],
-        dietaryPreference: json['dietary_preference'],
-        fitnessLevel: json['fitness_level'],
-        hasChildren: json['has_children'],
-        petPreference: json['pet_preference'],
-        travelFrequency: json['travel_frequency'],
-        personalityType: json['personality_type'],
-        zodiacSign: json['zodiac_sign'],
-        // Status fields
-        isVerified: json['is_verified'] ?? false,
-        isPremium: json['is_premium'] ?? false,
-        approvalStatus: json['approval_status'] ?? 'pending',
-        accountStatus: json['account_status'] ?? 'active',
-        aiApproved: json['ai_approved'],
-        aiDisapprovalReason: json['ai_disapproval_reason'],
-        performanceScore: json['performance_score'],
-        avgResponseTimeSeconds: json['avg_response_time_seconds'],
-        totalChatsCount: json['total_chats_count'],
-        profileCompleteness: json['profile_completeness'],
-        // Timestamps
-        createdAt: json['created_at'] != null
-            ? DateTime.parse(json['created_at'])
-            : null,
-        updatedAt: json['updated_at'] != null
-            ? DateTime.parse(json['updated_at'])
-            : null,
-        lastActiveAt: json['last_active_at'] != null
-            ? DateTime.parse(json['last_active_at'])
-            : null,
-      );
+      return UserModel.fromJson(json);
     } catch (e) {
       return null;
     }

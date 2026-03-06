@@ -6,7 +6,7 @@ final adminServiceProvider = Provider<AdminService>((ref) {
   return AdminService();
 });
 
-/// Platform Metrics Model
+/// Platform Metrics Model - Synced with platform_metrics table
 class PlatformMetrics {
   final int totalUsers;
   final int activeUsers;
@@ -16,6 +16,10 @@ class PlatformMetrics {
   final int totalChats;
   final int activeChats;
   final int totalMessages;
+  final int totalMatches;
+  final int totalVideoCalls;
+  final double videoCallMinutes;
+  final double videoCallRevenue;
   final double menRecharges;
   final double menSpent;
   final double womenEarnings;
@@ -33,6 +37,10 @@ class PlatformMetrics {
     this.totalChats = 0,
     this.activeChats = 0,
     this.totalMessages = 0,
+    this.totalMatches = 0,
+    this.totalVideoCalls = 0,
+    this.videoCallMinutes = 0,
+    this.videoCallRevenue = 0,
     this.menRecharges = 0,
     this.menSpent = 0,
     this.womenEarnings = 0,
@@ -112,6 +120,10 @@ class AdminService {
         totalChats: response['total_chats'] ?? 0,
         activeChats: response['active_chats'] ?? 0,
         totalMessages: response['total_messages'] ?? 0,
+        totalMatches: response['total_matches'] ?? 0,
+        totalVideoCalls: response['total_video_calls'] ?? 0,
+        videoCallMinutes: (response['video_call_minutes'] as num?)?.toDouble() ?? 0,
+        videoCallRevenue: (response['video_call_revenue'] as num?)?.toDouble() ?? 0,
         menRecharges: (response['men_recharges'] as num?)?.toDouble() ?? 0,
         menSpent: (response['men_spent'] as num?)?.toDouble() ?? 0,
         womenEarnings: (response['women_earnings'] as num?)?.toDouble() ?? 0,

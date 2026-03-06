@@ -1,4 +1,4 @@
-/// Match Model
+/// Match Model - Synced with matches table
 class MatchModel {
   final String id;
   final String userId;
@@ -17,6 +17,18 @@ class MatchModel {
     this.matchedAt,
     this.createdAt,
   });
+
+  factory MatchModel.fromJson(Map<String, dynamic> json) {
+    return MatchModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      matchedUserId: json['matched_user_id'] as String,
+      matchScore: json['match_score'] as int?,
+      status: json['status'] as String? ?? 'pending',
+      matchedAt: json['matched_at'] != null ? DateTime.parse(json['matched_at']) : null,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+    );
+  }
 }
 
 /// Match Profile (with calculated score)
@@ -56,6 +68,23 @@ class MatchProfileModel {
     this.commonLanguages = const [],
     this.commonInterests = const [],
   });
+
+  factory MatchProfileModel.fromJson(Map<String, dynamic> json) {
+    return MatchProfileModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      fullName: json['full_name'] as String?,
+      age: json['age'] as int?,
+      gender: json['gender'] as String?,
+      country: json['country'] as String?,
+      state: json['state'] as String?,
+      bio: json['bio'] as String?,
+      photoUrl: json['photo_url'] as String?,
+      interests: (json['interests'] as List?)?.cast<String>() ?? [],
+      occupation: json['occupation'] as String?,
+      isVerified: json['is_verified'] as bool? ?? false,
+    );
+  }
 
   MatchProfileModel copyWith({
     String? id,
