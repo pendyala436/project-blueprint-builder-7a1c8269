@@ -317,7 +317,7 @@ export const MiniChatActions = ({
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 hover:bg-primary/20"
-                onClick={() => setShowUnfriendDialog(true)}
+                onClick={(e) => { e.stopPropagation(); setShowUnfriendDialog(true); }}
                 disabled={isLoading}
               >
                 <UserMinus className="h-2.5 w-2.5 text-primary" />
@@ -334,7 +334,7 @@ export const MiniChatActions = ({
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 hover:bg-primary/20"
-                onClick={handleAddFriend}
+                onClick={(e) => { e.stopPropagation(); handleAddFriend(); }}
                 disabled={isLoading || isBlocked}
               >
                 <UserPlus className="h-2.5 w-2.5 text-primary" />
@@ -354,7 +354,7 @@ export const MiniChatActions = ({
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 hover:bg-primary/20"
-                onClick={handleUnblock}
+                onClick={(e) => { e.stopPropagation(); handleUnblock(); }}
                 disabled={isLoading}
               >
                 <ShieldOff className="h-2.5 w-2.5 text-primary" />
@@ -371,7 +371,7 @@ export const MiniChatActions = ({
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 hover:bg-destructive/20"
-                onClick={() => setShowBlockDialog(true)}
+                onClick={(e) => { e.stopPropagation(); setShowBlockDialog(true); }}
                 disabled={isLoading}
               >
                 <Shield className="h-2.5 w-2.5 text-destructive" />
@@ -390,7 +390,7 @@ export const MiniChatActions = ({
               variant="ghost"
               size="icon"
               className="h-5 w-5 hover:bg-destructive/20"
-              onClick={() => setShowStopDialog(true)}
+              onClick={(e) => { e.stopPropagation(); setShowStopDialog(true); }}
               disabled={isLoading}
             >
               <PhoneOff className="h-2.5 w-2.5 text-destructive" />
@@ -408,7 +408,7 @@ export const MiniChatActions = ({
               variant="ghost"
               size="icon"
               className="h-5 w-5 hover:bg-primary/20"
-              onClick={() => setShowLogOffDialog(true)}
+              onClick={(e) => { e.stopPropagation(); setShowLogOffDialog(true); }}
               disabled={isLoading}
             >
               <LogOut className="h-2.5 w-2.5 text-primary" />
