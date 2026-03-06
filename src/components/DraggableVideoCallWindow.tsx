@@ -662,7 +662,12 @@ const DraggableVideoCallWindow = ({
                         "rounded-full w-10 h-10",
                         !isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                       )}
-                      onClick={toggleAudio}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggleAudio();
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
                     </Button>
@@ -679,7 +684,12 @@ const DraggableVideoCallWindow = ({
                         "rounded-full w-10 h-10",
                         !isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                       )}
-                      onClick={toggleVideo}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        toggleVideo();
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
                     </Button>
@@ -694,6 +704,7 @@ const DraggableVideoCallWindow = ({
                       variant="destructive"
                       size="sm"
                       className="rounded-full w-12 h-12"
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={async (e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -720,7 +731,8 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onClick={() => setShowUnfriendDialog(true)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setShowUnfriendDialog(true); }}
                         disabled={isActionLoading}
                       >
                         <UserMinus className="w-4 h-4" />
@@ -749,7 +761,8 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onClick={handleAddFriend}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); handleAddFriend(); }}
                         disabled={isActionLoading || isBlocked}
                       >
                         <UserPlus className="w-4 h-4" />
@@ -767,7 +780,8 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onClick={handleUnblock}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); handleUnblock(); }}
                         disabled={isActionLoading}
                       >
                         <ShieldOff className="w-4 h-4" />
@@ -782,7 +796,8 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-destructive hover:bg-destructive/20"
-                        onClick={() => setShowBlockDialog(true)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setShowBlockDialog(true); }}
                         disabled={isActionLoading}
                       >
                         <Shield className="w-4 h-4" />
