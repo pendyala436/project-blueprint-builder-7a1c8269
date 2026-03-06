@@ -1170,7 +1170,9 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              ₹{Number(session.rate_per_minute) || 0}/min (session rate)
+                              {isMale 
+                                ? `₹${Number(session.rate_per_minute) || chatPricing?.ratePerMinute || 4}/min (charged)`
+                                : `₹${chatPricing?.womenEarningRate || 2}/min (earned)`}
                             </span>
                             <span className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -1260,7 +1262,9 @@ const TransactionHistoryScreen = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <IndianRupee className="h-3 w-3" />
-                              ₹{Number(session.rate_per_minute) || 0}/min (session rate)
+                              {isMale
+                                ? `₹${Number(session.rate_per_minute) || chatPricing?.videoRatePerMinute || 8}/min (charged)`
+                                : `₹${chatPricing?.videoWomenEarningRate || 4}/min (earned)`}
                             </span>
                             {session.started_at && (
                               <span className="flex items-center gap-1">
