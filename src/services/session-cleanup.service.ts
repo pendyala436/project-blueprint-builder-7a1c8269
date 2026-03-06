@@ -54,7 +54,7 @@ export async function cleanupAllUserSessions(userId: string): Promise<void> {
           current_host_id: null,
           current_host_name: null,
           participant_count: 0,
-        } as any)
+        })
         .eq('current_host_id', userId)
         .eq('is_live', true),
 

@@ -36,6 +36,9 @@ interface PrivateGroup {
   created_at: string;
   current_host_id: string | null;
   current_host_name: string | null;
+  owner_id: string;
+  owner_language: string | null;
+  updated_at: string;
 }
 
 interface PrivateGroupsSectionProps {
@@ -128,7 +131,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           current_host_id: null,
           current_host_name: null,
           participant_count: 0,
-        } as any)
+        })
         .eq('id', group.id);
 
       if (error) throw error;
@@ -174,7 +177,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     staleGroups.forEach(async (g) => {
       await supabase.from('private_groups').update({
         is_live: false, stream_id: null, current_host_id: null, current_host_name: null, participant_count: 0,
-      } as any).eq('id', g.id);
+      }).eq('id', g.id);
     });
     if (staleGroups.length > 0) fetchGroups();
   }, [groups]);
@@ -310,10 +313,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
       {activeGroup && (
         <PrivateGroupCallWindow
-          group={{
-            ...activeGroup,
-            owner_id: currentUserId,
-          }}
+          group={activeGroup}
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
