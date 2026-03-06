@@ -394,7 +394,7 @@ export function usePrivateGroupCall({
         const session = sessionRef.current;
 
         // Call atomic server-side billing RPC
-        const { data, error } = await supabase.rpc('process_group_billing' as any, {
+        const { data, error } = await supabase.rpc('process_group_billing', {
           p_group_id: session.groupId,
         });
 

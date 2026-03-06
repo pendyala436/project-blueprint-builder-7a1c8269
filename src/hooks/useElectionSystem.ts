@@ -340,7 +340,7 @@ export const useElectionSystem = (
           filter: `election_id=eq.${currentElection.id}`
         },
         (payload) => {
-          const updated = payload.new as any;
+          const updated = payload.new as { id: string; vote_count: number };
           setLiveVoteCounts(prev => ({
             ...prev,
             [updated.id]: updated.vote_count

@@ -242,7 +242,7 @@ export const useIncomingChats = (
           filter: `${column}=eq.${currentUserId}`
         },
         (payload) => {
-          const session = payload.new as any;
+          const session = payload.new as { id: string; status: string };
           if (session.status === "ended") {
             setIncomingChats(prev => prev.filter(c => c.sessionId !== session.id));
           }

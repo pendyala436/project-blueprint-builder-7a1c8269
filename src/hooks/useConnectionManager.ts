@@ -101,9 +101,9 @@ export function useConnectionManager(currentUserId: string): ConnectionManagerRe
         async (payload) => {
           // If session ended by woman, trigger auto-reconnect
           if (payload.eventType === 'UPDATE') {
-            const session = payload.new as any;
+            const session = payload.new as { status?: string; end_reason?: string; woman_user_id?: string };
             if (session.status === 'ended' && session.end_reason === 'woman_closed') {
-              await autoReconnect([session.woman_user_id]);
+              await autoReconnect([session.woman_user_id!]);
             }
           }
           debouncedRefresh();
