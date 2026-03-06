@@ -636,10 +636,17 @@ const TransactionHistoryScreen = () => {
       });
     }
 
-    // Remove duplicate billing rows (chat, video, group) created within the same billing window
-    // Uses sliding-window approach: checks ALL prior entries within 50s, not just the consecutive one
+    // Remove duplicate & incremental billing rows (chat, video, group) within the same billing window.
+    // Extracts a "billing key" by stripping numeric amounts/durations, then within a 90-second window
+    // keeps only the LARGEST amount entry per key+direction — collapsing per-second ticks into one per-minute entry.
     const sortedForDedup = unified
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const getBillingKey = (desc: string): string => {
+      // Strip numbers (durations, amounts, rates) to get a stable pattern key
+      // e.g. "Chat debit - 1.50 min at ₹4/min (₹0.07/sec)" → "chat debit - min at ₹/min (₹/sec)"
+      return desc.replace(/[\d.,]+/g, '').replace(/\s+/g, ' ').trim();
+    };
     
     const dedupedUnified: UnifiedTransaction[] = [];
     for (let i = 0; i < sortedForDedup.length; i++) {
@@ -656,25 +663,29 @@ const TransactionHistoryScreen = () => {
       }
 
       const txTime = new Date(tx.created_at).getTime();
-      let isDuplicate = false;
+      const txKey = getBillingKey(descLower);
+      let replacedExisting = false;
       
-      // Check against ALL already-accepted entries within the 50s window
+      // Check ALL already-accepted entries within 90s window for same billing key
       for (let j = dedupedUnified.length - 1; j >= 0; j--) {
         const accepted = dedupedUnified[j];
         const acceptedTime = new Date(accepted.created_at).getTime();
-        if (txTime - acceptedTime > 50000) break; // Beyond window, stop checking
+        if (txTime - acceptedTime > 90000) break; // Beyond 90s window
         
         const sameDirection = accepted.is_credit === tx.is_credit;
-        const sameAmount = Math.abs(accepted.amount - tx.amount) < 0.0001;
-        const sameDescription = (accepted.description || '').trim().toLowerCase() === descLower.trim();
+        const acceptedKey = getBillingKey((accepted.description || '').toLowerCase());
         
-        if (sameDirection && sameAmount && sameDescription) {
-          isDuplicate = true;
+        if (sameDirection && txKey === acceptedKey) {
+          // Keep the larger amount (latest billing tick supersedes earlier ones)
+          if (tx.amount >= accepted.amount) {
+            dedupedUnified[j] = tx; // Replace with larger/newer entry
+          }
+          replacedExisting = true;
           break;
         }
       }
       
-      if (!isDuplicate) {
+      if (!replacedExisting) {
         dedupedUnified.push(tx);
       }
     }

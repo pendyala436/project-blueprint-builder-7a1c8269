@@ -45,12 +45,17 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
     super.dispose();
   }
 
-  /// Deduplicate billing rows: same amount, description, direction within 50s
-  /// Uses sliding-window approach: checks ALL accepted entries within 50s, not just consecutive
+  /// Deduplicate & consolidate incremental billing rows.
+  /// Strips numeric values to get a stable "billing key", then within a 90s window
+  /// keeps only the LARGEST amount per key+direction — collapsing per-second ticks into one entry.
   List<Map<String, dynamic>> _deduplicateTransactions(List<Map<String, dynamic>> txns) {
     if (txns.isEmpty) return txns;
     final sorted = List<Map<String, dynamic>>.from(txns)
       ..sort((a, b) => (a['created_at'] ?? '').compareTo(b['created_at'] ?? ''));
+
+    String getBillingKey(String desc) {
+      return desc.replaceAll(RegExp(r'[\d.,]+'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
 
     final result = <Map<String, dynamic>>[];
     for (int i = 0; i < sorted.length; i++) {
@@ -67,25 +72,32 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
       }
 
       final dateA = DateTime.tryParse(curr['created_at'] ?? '');
-      bool isDuplicate = false;
+      final keyA = getBillingKey(descA);
+      final typeA = curr['type']?.toString();
+      bool replacedExisting = false;
 
-      // Check against ALL already-accepted entries within 50s window
       for (int j = result.length - 1; j >= 0; j--) {
         final accepted = result[j];
         final dateB = DateTime.tryParse(accepted['created_at'] ?? '');
-        if (dateA != null && dateB != null && dateA.difference(dateB).inMilliseconds.abs() > 50000) break;
+        if (dateA != null && dateB != null && dateA.difference(dateB).inMilliseconds.abs() > 90000) break;
 
         final descB = (accepted['description'] ?? '').toString().trim().toLowerCase();
-        final sameAmount = ((curr['amount'] ?? 0).toDouble() - (accepted['amount'] ?? 0).toDouble()).abs() < 0.0001;
-        final sameDesc = descA == descB;
+        final keyB = getBillingKey(descB);
+        final typeB = accepted['type']?.toString();
+        final sameDirection = typeA == typeB;
 
-        if (sameAmount && sameDesc) {
-          isDuplicate = true;
+        if (sameDirection && keyA == keyB) {
+          final currAmount = (curr['amount'] ?? 0).toDouble();
+          final acceptedAmount = (accepted['amount'] ?? 0).toDouble();
+          if (currAmount >= acceptedAmount) {
+            result[j] = curr;
+          }
+          replacedExisting = true;
           break;
         }
       }
 
-      if (!isDuplicate) {
+      if (!replacedExisting) {
         result.add(curr);
       }
     }

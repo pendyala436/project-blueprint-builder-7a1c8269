@@ -232,8 +232,15 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
       }
     }
 
-    // Deduplicate billing rows using sliding-window (not just consecutive)
+    // Deduplicate & consolidate incremental billing rows.
+    // Strips numeric values to get a stable "billing key", then within a 90s window
+    // keeps only the LARGEST amount per key+direction — collapsing per-second ticks into one entry.
     unified.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    String getBillingKey(String desc) {
+      return desc.replaceAll(RegExp(r'[\d.,]+'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
+
     final deduped = <UnifiedTransaction>[];
     for (int i = 0; i < unified.length; i++) {
       final tx = unified[i];
@@ -252,23 +259,26 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
         continue;
       }
 
-      bool isDuplicate = false;
-      // Check ALL already-accepted entries within 50s window
+      final txKey = getBillingKey(descLower);
+      bool replacedExisting = false;
+
       for (int j = deduped.length - 1; j >= 0; j--) {
         final accepted = deduped[j];
-        if (tx.createdAt.difference(accepted.createdAt).inMilliseconds.abs() > 50000) break;
+        if (tx.createdAt.difference(accepted.createdAt).inMilliseconds.abs() > 90000) break;
 
         final sameDirection = accepted.isCredit == tx.isCredit;
-        final sameAmount = (accepted.amount - tx.amount).abs() < 0.0001;
-        final sameDesc = accepted.description.trim().toLowerCase() == descLower.trim();
+        final acceptedKey = getBillingKey(accepted.description.toLowerCase());
 
-        if (sameDirection && sameAmount && sameDesc) {
-          isDuplicate = true;
+        if (sameDirection && txKey == acceptedKey) {
+          if (tx.amount >= accepted.amount) {
+            deduped[j] = tx;
+          }
+          replacedExisting = true;
           break;
         }
       }
 
-      if (!isDuplicate) {
+      if (!replacedExisting) {
         deduped.add(tx);
       }
     }
