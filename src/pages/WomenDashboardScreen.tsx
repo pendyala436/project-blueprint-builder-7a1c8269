@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -256,6 +256,25 @@ const WomenDashboardScreen = () => {
   });
 
   // Real-time subscription for online users, chat sessions, video calls, and earnings
+  // Use refs for throttled callbacks to avoid excessive refetching
+  const lastFetchMenRef = useRef<number>(0);
+  const fetchMenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const throttledFetchOnlineMen = useCallback(() => {
+    const now = Date.now();
+    if (now - lastFetchMenRef.current < 5000) {
+      // Debounce: schedule one fetch after quiet period
+      if (fetchMenTimeoutRef.current) clearTimeout(fetchMenTimeoutRef.current);
+      fetchMenTimeoutRef.current = setTimeout(() => {
+        lastFetchMenRef.current = Date.now();
+        fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
+      }, 3000);
+      return;
+    }
+    lastFetchMenRef.current = now;
+    fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
+  }, [currentWomanLanguage, currentWomanCountry]);
+
   useEffect(() => {
     if (!currentUserId) return;
     
@@ -264,7 +283,7 @@ const WomenDashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_status' },
-        () => { fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry); }
+        () => { throttledFetchOnlineMen(); }
       )
       .on(
         'postgres_changes',

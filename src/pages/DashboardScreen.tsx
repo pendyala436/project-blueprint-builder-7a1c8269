@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -283,7 +283,26 @@ const DashboardScreen = () => {
     };
   }, []);
 
-  // Real-time subscription for online users, chat sessions, wallet, women availability, and language changes
+  // Real-time subscription with throttled callbacks to avoid excessive DB calls
+  const lastFetchWomenRef = useRef<number>(0);
+  const fetchWomenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const throttledFetchOnlineWomen = useCallback(() => {
+    const now = Date.now();
+    if (now - lastFetchWomenRef.current < 5000) {
+      if (fetchWomenTimeoutRef.current) clearTimeout(fetchWomenTimeoutRef.current);
+      fetchWomenTimeoutRef.current = setTimeout(() => {
+        lastFetchWomenRef.current = Date.now();
+        fetchOnlineUsersCount();
+        if (userLanguage) fetchOnlineWomen(userLanguage);
+      }, 3000);
+      return;
+    }
+    lastFetchWomenRef.current = now;
+    fetchOnlineUsersCount();
+    if (userLanguage) fetchOnlineWomen(userLanguage);
+  }, [userLanguage]);
+
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -292,13 +311,7 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_status' },
-        () => { 
-          fetchOnlineUsersCount(); 
-          // Refresh women list when any user's online status changes
-          if (userLanguage) {
-            fetchOnlineWomen(userLanguage);
-          }
-        }
+        () => { throttledFetchOnlineWomen(); }
       )
       .on(
         'postgres_changes',
@@ -313,11 +326,7 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'women_availability' },
-        () => { 
-          if (userLanguage) {
-            fetchOnlineWomen(userLanguage);
-          }
-        }
+        () => { throttledFetchOnlineWomen(); }
       )
       // Note: We don't listen to all female_profiles changes as that would cause
       // cross-dashboard interference. The women list is refreshed when:
