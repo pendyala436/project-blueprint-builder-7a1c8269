@@ -76,12 +76,12 @@ const EnhancedParallelChatsContainer = ({
   const { incomingChats, acceptChat, rejectChat } = useIncomingChats(currentUserId, userGender);
 
   // Load active chats - OPTIMIZED for high concurrency
-  const loadActiveChats = useCallback(async () => {
+  const loadActiveChats = useCallback(async (force = false) => {
     if (!currentUserId || isLoadingRef.current) return;
     
-    // Throttle: minimum 500ms between loads for lakhs of users
+    // Throttle: minimum 500ms between loads for lakhs of users (bypass with force)
     const now = Date.now();
-    if (now - lastLoadTimeRef.current < 500) return;
+    if (!force && now - lastLoadTimeRef.current < 500) return;
     lastLoadTimeRef.current = now;
     isLoadingRef.current = true;
 
@@ -302,7 +302,8 @@ const EnhancedParallelChatsContainer = ({
       }
     }
     
-    loadActiveChats();
+    // Force reload to bypass throttle - critical for accept flow
+    loadActiveChats(true);
   }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat, userGender]);
 
   // Handle rejecting incoming chat - trigger fallback search

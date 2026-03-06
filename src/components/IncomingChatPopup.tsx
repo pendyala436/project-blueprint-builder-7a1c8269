@@ -115,10 +115,9 @@ const IncomingChatPopup = ({
       buzzIntervalRef.current = null;
     }
     
+    // Call onAccept immediately - don't delay behind animation
+    onAccept(sessionId);
     setIsExiting(true);
-    setTimeout(() => {
-      onAccept(sessionId);
-    }, 200);
   };
 
   const handleReject = () => {
@@ -128,10 +127,9 @@ const IncomingChatPopup = ({
       buzzIntervalRef.current = null;
     }
     
+    // Call onReject immediately - don't delay behind animation
+    onReject(sessionId);
     setIsExiting(true);
-    setTimeout(() => {
-      onReject(sessionId);
-    }, 200);
   };
 
   const formatTime = (seconds: number) => {
