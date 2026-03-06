@@ -68,14 +68,20 @@ const IncomingVideoCallWindow = ({
     };
   }, [isAnswered]);
 
-  // Countdown timer and auto-decline
+  // Countdown timer and auto-decline - use ref to avoid stale closure
+  const handleDeclineRef = useRef<() => void>(() => {});
+  
+  useEffect(() => {
+    handleDeclineRef.current = handleDecline;
+  });
+
   useEffect(() => {
     if (isAnswered) return;
 
     const timer = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
-          handleDecline();
+          handleDeclineRef.current();
           return 0;
         }
         return prev - 1;
@@ -132,13 +138,23 @@ const IncomingVideoCallWindow = ({
       await pauseActiveChats();
 
       // Update call status to active
-      await supabase
+      const { error } = await supabase
         .from('video_call_sessions')
         .update({ 
           status: 'active',
           started_at: new Date().toISOString()
         })
         .eq('call_id', callId);
+
+      if (error) {
+        console.error('Error updating call status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to answer call. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setIsAnswered(true);
       
@@ -161,7 +177,7 @@ const IncomingVideoCallWindow = ({
   const handleDecline = async () => {
     stopRing();
     try {
-      await supabase
+      const { error } = await supabase
         .from('video_call_sessions')
         .update({ 
           status: 'declined',
@@ -169,6 +185,10 @@ const IncomingVideoCallWindow = ({
           end_reason: 'declined'
         })
         .eq('call_id', callId);
+
+      if (error) {
+        console.error('Error declining call:', error);
+      }
 
       toast({
         title: "Call Declined",
@@ -178,6 +198,7 @@ const IncomingVideoCallWindow = ({
       onClose();
     } catch (error) {
       console.error('Error declining call:', error);
+      onClose();
     }
   };
 
