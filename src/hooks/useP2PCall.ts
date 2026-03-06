@@ -830,11 +830,28 @@ export const useP2PCall = ({
     // Update database - only if not already ended (prevent double-update)
     const { data: currentSession } = await supabase
       .from('video_call_sessions')
-      .select('status')
+      .select('id, status, total_minutes')
       .eq('call_id', callId)
       .single();
 
     if (currentSession && currentSession.status !== 'ended') {
+      // FINAL BILLING: Bill remaining partial minute since last billing interval
+      const billedMinutes = currentSession.total_minutes || 0;
+      const remainingMinutes = durationMinutes - billedMinutes;
+      
+      if (remainingMinutes > 0.083) { // More than 5 seconds unbilled
+        console.log(`[P2P] Final billing: ${remainingMinutes.toFixed(2)} remaining minutes`);
+        try {
+          await supabase.rpc('process_video_billing', {
+            p_session_id: currentSession.id,
+            p_minutes: Math.max(1, Math.ceil(remainingMinutes))
+          });
+          console.log('[P2P] Final billing processed');
+        } catch (err) {
+          console.error('[P2P] Final billing failed:', err);
+        }
+      }
+
       await supabase
         .from('video_call_sessions')
         .update({
@@ -842,7 +859,6 @@ export const useP2PCall = ({
           ended_at: new Date().toISOString(),
           end_reason: 'user_ended',
           total_minutes: durationMinutes,
-          // total_earned stores the man's charge amount (rate_per_minute * minutes)
           total_earned: Math.ceil(durationMinutes) * ratePerMinute,
         })
         .eq('call_id', callId);

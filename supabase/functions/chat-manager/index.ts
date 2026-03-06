@@ -1463,7 +1463,74 @@ serve(async (req) => {
           .eq("chat_id", chat_id)
           .maybeSingle();
 
-        if (session) {
+        if (session && (session.status === "active" || session.status === "billing_paused")) {
+          // FINAL BILLING: Bill remaining partial period since last heartbeat
+          const now = new Date();
+          const lastActivity = new Date(session.last_activity_at);
+          const minutesRemaining = (now.getTime() - lastActivity.getTime()) / (1000 * 60);
+
+          // Only bill if meaningful time (>5s) and session was actively billing
+          if (minutesRemaining > 0.083 && session.status === "active") {
+            // Check both parties messaged (billing prerequisite)
+            const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
+              supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.man_user_id).limit(1),
+              supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.woman_user_id).limit(1)
+            ]);
+
+            if (manMsgs?.length && womanMsgs?.length) {
+              const { data: endPricing } = await supabase
+                .from("chat_pricing")
+                .select("rate_per_minute, women_earning_rate")
+                .eq("is_active", true)
+                .maybeSingle();
+
+              const finalRate = endPricing?.rate_per_minute || session.rate_per_minute || 4;
+              const finalWomenRate = endPricing?.women_earning_rate || 2;
+              const finalMenCharge = minutesRemaining * finalRate;
+              const finalWomenEarning = minutesRemaining * finalWomenRate;
+
+              const isManSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
+
+              if (!isManSuperUser) {
+                const { data: manWallet } = await supabase
+                  .from("wallets")
+                  .select("id, balance")
+                  .eq("user_id", session.man_user_id)
+                  .maybeSingle();
+
+                if (manWallet && manWallet.balance >= finalMenCharge) {
+                  await supabase.from("wallets").update({ balance: manWallet.balance - finalMenCharge }).eq("id", manWallet.id);
+                  await supabase.from("wallet_transactions").insert({
+                    wallet_id: manWallet.id,
+                    user_id: session.man_user_id,
+                    type: "debit",
+                    amount: finalMenCharge,
+                    description: `Chat debit - ${minutesRemaining.toFixed(2)} min at ₹${finalRate}/min`,
+                    status: "completed"
+                  });
+                  console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)}`);
+                }
+              }
+
+              // Credit woman's earnings
+              await supabase.from("women_earnings").insert({
+                user_id: session.woman_user_id,
+                chat_session_id: session.id,
+                amount: finalWomenEarning,
+                earning_type: "chat",
+                description: `Chat earning - ${minutesRemaining.toFixed(2)} min at ₹${finalWomenRate}/min`
+              });
+
+              // Update session totals
+              await supabase.from("active_chat_sessions").update({
+                total_minutes: session.total_minutes + minutesRemaining,
+                total_earned: session.total_earned + finalWomenEarning
+              }).eq("chat_id", chat_id);
+
+              console.log(`[END_CHAT] Final billing: women earned ₹${finalWomenEarning.toFixed(2)}`);
+            }
+          }
+
           await endChatSession(supabase, chat_id, end_reason || "user_ended", session);
         }
 
