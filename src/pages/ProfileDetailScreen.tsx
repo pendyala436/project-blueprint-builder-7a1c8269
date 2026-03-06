@@ -113,12 +113,39 @@ const ProfileDetailScreen = () => {
       }
       setCurrentUserId(user.id);
 
-      // Fetch current user's gender and golden badge status
-      const { data: currentUserProfile } = await supabase
-        .from("profiles")
-        .select("gender, has_golden_badge, golden_badge_expires_at")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // PARALLEL: Fetch all data at once instead of sequential
+      const [
+        currentUserResult,
+        profileResult,
+        languagesResult,
+        photosResult,
+        statusResult,
+        matchResult
+      ] = await Promise.all([
+        supabase.from("profiles")
+          .select("gender, has_golden_badge, golden_badge_expires_at")
+          .eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles")
+          .select("*")
+          .eq("user_id", targetUserId).maybeSingle(),
+        supabase.from("user_languages")
+          .select("language_name")
+          .eq("user_id", targetUserId),
+        supabase.from("user_photos")
+          .select("*")
+          .eq("user_id", targetUserId)
+          .order("display_order", { ascending: true }),
+        supabase.from("user_status")
+          .select("is_online, last_seen")
+          .eq("user_id", targetUserId).maybeSingle(),
+        supabase.from("matches")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("matched_user_id", targetUserId).maybeSingle(),
+      ]);
+
+      const currentUserProfile = currentUserResult.data;
+      const profileData = profileResult.data;
 
       const gender = currentUserProfile?.gender?.toLowerCase() || "";
       setCurrentUserGender(gender);
@@ -130,13 +157,6 @@ const ProfileDetailScreen = () => {
         setHasGoldenBadge(!!badgeActive);
       }
 
-      // Fetch profile data
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", targetUserId)
-        .maybeSingle();
-
       if (!profileData) {
         toast({
           title: "Profile not found",
@@ -147,53 +167,22 @@ const ProfileDetailScreen = () => {
         return;
       }
 
-      // Fetch user languages
-      const { data: languages } = await supabase
-        .from("user_languages")
-        .select("language_name")
-        .eq("user_id", targetUserId);
+      setIsLiked(!!matchResult.data);
 
-      // Fetch all user photos
-      const { data: userPhotos } = await supabase
-        .from("user_photos")
-        .select("*")
-        .eq("user_id", targetUserId)
-        .order("display_order", { ascending: true });
-
-      // Fetch online status
-      const { data: statusData } = await supabase
-        .from("user_status")
-        .select("is_online, last_seen")
-        .eq("user_id", targetUserId)
-        .maybeSingle();
-
-      // Check if already liked
-      const { data: existingMatch } = await supabase
-        .from("matches")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("matched_user_id", targetUserId)
-        .maybeSingle();
-
-      setIsLiked(!!existingMatch);
-
-      // Calculate age from date of birth
+      // Calculate age
       let age: number | null = null;
       if (profileData.date_of_birth) {
         const birthDate = new Date(profileData.date_of_birth);
         const today = new Date();
         age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
       }
 
-      const allLanguages = languages?.map(l => l.language_name) || [];
+      const allLanguages = languagesResult.data?.map(l => l.language_name) || [];
       let motherTongue = profileData.preferred_language || allLanguages[0] || "Not specified";
       let optionalLanguages = allLanguages.filter(l => l !== motherTongue);
 
-      // Translate language names and location if not English
       if (currentLanguage !== 'English') {
         const textsToTranslate = [
           motherTongue,
@@ -219,12 +208,12 @@ const ProfileDetailScreen = () => {
           motherTongue,
           optionalLanguages: translatedOptionalLangs,
           interests: profileData.interests || [],
-          isOnline: statusData?.is_online || false,
-          lastSeen: statusData?.last_seen || "",
+          isOnline: statusResult.data?.is_online || false,
+          lastSeen: statusResult.data?.last_seen || "",
           isVerified: profileData.verification_status || false,
           bio: profileData.bio || null,
           occupation: profileData.occupation || null,
-          photos: (userPhotos as UserPhoto[]) || [],
+          photos: (photosResult.data as UserPhoto[]) || [],
         });
       } else {
         setProfile({
@@ -238,12 +227,12 @@ const ProfileDetailScreen = () => {
           motherTongue,
           optionalLanguages,
           interests: profileData.interests || [],
-          isOnline: statusData?.is_online || false,
-          lastSeen: statusData?.last_seen || "",
+          isOnline: statusResult.data?.is_online || false,
+          lastSeen: statusResult.data?.last_seen || "",
           isVerified: profileData.verification_status || false,
           bio: profileData.bio || null,
           occupation: profileData.occupation || null,
-          photos: (userPhotos as UserPhoto[]) || [],
+          photos: (photosResult.data as UserPhoto[]) || [],
         });
       }
 

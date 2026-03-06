@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseActivityBasedStatusOptions {
-  inactivityTimeout?: number; // in milliseconds, default 10 minutes
+  inactivityTimeout?: number;
   userId: string;
   onStatusChange?: (isOnline: boolean) => void;
 }
 
 export const useActivityBasedStatus = ({
-  inactivityTimeout = 10 * 60 * 1000, // 10 minutes default
+  inactivityTimeout = 10 * 60 * 1000,
   userId,
   onStatusChange
 }: UseActivityBasedStatusOptions) => {
@@ -16,166 +16,114 @@ export const useActivityBasedStatus = ({
   const [isManuallyOffline, setIsManuallyOffline] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const lastDbUpdateRef = useRef<number>(0);
 
-  // Update online status in database with proper status_text
+  // LIGHTWEIGHT status update - only sets is_online + last_seen.
+  // Busy/online status_text is handled by the DB trigger
+  // 'sync_user_availability_on_session_change' which monitors
+  // active_chat_sessions and video_call_sessions automatically.
   const updateOnlineStatus = useCallback(async (online: boolean) => {
     if (!userId) return;
     
+    // Throttle DB updates to max once per 10s when staying online
+    const now = Date.now();
+    if (online && now - lastDbUpdateRef.current < 10000) return;
+    lastDbUpdateRef.current = now;
+    
     try {
-      let statusText = 'offline';
-      
-      if (online) {
-        // Check active sessions to determine busy vs online
-        const [{ count: chatCount }, { count: videoCount }] = await Promise.all([
-          supabase.from('active_chat_sessions').select('*', { count: 'exact', head: true })
-            .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`).eq('status', 'active'),
-          supabase.from('video_call_sessions').select('*', { count: 'exact', head: true })
-            .or(`man_user_id.eq.${userId},woman_user_id.eq.${userId}`).eq('status', 'active'),
-        ]);
-        
-        const totalChats = chatCount || 0;
-        const totalVideoCalls = videoCount || 0;
-        
-        statusText = (totalVideoCalls > 0 || totalChats >= 3) ? 'busy' : 'online';
-      }
-
       await supabase
         .from('user_status')
-        .update({
+        .upsert({
+          user_id: userId,
           is_online: online,
           last_seen: new Date().toISOString(),
-          status_text: statusText,
-        })
-        .eq('user_id', userId);
+        }, { onConflict: 'user_id' });
     } catch (error) {
       console.error('Error updating online status:', error);
     }
   }, [userId]);
 
-  // Handle going online
   const goOnline = useCallback(() => {
-    if (isManuallyOffline) return; // Don't auto-online if manually offline
-    
+    if (isManuallyOffline) return;
     if (!isOnline) {
       setIsOnline(true);
+      lastDbUpdateRef.current = 0;
       updateOnlineStatus(true);
       onStatusChange?.(true);
     }
     lastActivityRef.current = Date.now();
   }, [isOnline, isManuallyOffline, updateOnlineStatus, onStatusChange]);
 
-  // Handle going offline (auto)
   const goOffline = useCallback(() => {
     if (isOnline && !isManuallyOffline) {
       setIsOnline(false);
+      lastDbUpdateRef.current = 0;
       updateOnlineStatus(false);
       onStatusChange?.(false);
     }
   }, [isOnline, isManuallyOffline, updateOnlineStatus, onStatusChange]);
 
-  // Manual toggle
   const toggleOnlineStatus = useCallback((online: boolean) => {
     setIsManuallyOffline(!online);
     setIsOnline(online);
+    lastDbUpdateRef.current = 0;
     updateOnlineStatus(online);
     onStatusChange?.(online);
-    
-    if (online) {
-      // Reset activity timer when manually going online
-      lastActivityRef.current = Date.now();
-    }
+    if (online) lastActivityRef.current = Date.now();
   }, [updateOnlineStatus, onStatusChange]);
 
-  // Reset inactivity timer
   const resetInactivityTimer = useCallback(() => {
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-    
-    // If manually offline, don't set auto-offline timer
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     if (isManuallyOffline) return;
-    
-    // Go online on activity
     goOnline();
-    
-    // Set new timeout
-    inactivityTimerRef.current = setTimeout(() => {
-      goOffline();
-    }, inactivityTimeout);
+    inactivityTimerRef.current = setTimeout(goOffline, inactivityTimeout);
   }, [inactivityTimeout, goOnline, goOffline, isManuallyOffline]);
 
-  // Activity event handler
   const handleActivity = useCallback(() => {
     resetInactivityTimer();
   }, [resetInactivityTimer]);
 
-  // Setup activity listeners
   useEffect(() => {
     if (!userId) return;
 
-    const events = [
-      'mousedown',
-      'mousemove',
-      'keydown',
-      'scroll',
-      'touchstart',
-      'click',
-      'wheel'
-    ];
-
-    // Throttle activity events to avoid excessive updates
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click', 'wheel'];
     let lastEventTime = 0;
     const throttledHandler = () => {
       const now = Date.now();
-      if (now - lastEventTime > 1000) { // Throttle to once per second
+      if (now - lastEventTime > 5000) { // 5s throttle (was 1s)
         lastEventTime = now;
         handleActivity();
       }
     };
 
-    // Add event listeners
-    events.forEach(event => {
-      window.addEventListener(event, throttledHandler, { passive: true });
-    });
+    events.forEach(e => window.addEventListener(e, throttledHandler, { passive: true }));
 
-    // Also listen for visibility change
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        handleActivity();
-      }
+      if (document.visibilityState === 'visible') handleActivity();
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Initial online status
     resetInactivityTimer();
 
-    // Cleanup
     return () => {
-      events.forEach(event => {
-        window.removeEventListener(event, throttledHandler);
-      });
+      events.forEach(e => window.removeEventListener(e, throttledHandler));
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
   }, [userId, handleActivity, resetInactivityTimer]);
 
-  // Cleanup on unmount - set offline
+  // Set offline on unmount
   useEffect(() => {
     return () => {
       if (userId) {
-        updateOnlineStatus(false);
+        supabase.from('user_status').upsert({
+          user_id: userId,
+          is_online: false,
+          last_seen: new Date().toISOString(),
+        }, { onConflict: 'user_id' }).then(() => {});
       }
     };
-  }, [userId, updateOnlineStatus]);
+  }, [userId]);
 
-  return {
-    isOnline,
-    isManuallyOffline,
-    toggleOnlineStatus,
-    goOnline,
-    goOffline
-  };
+  return { isOnline, isManuallyOffline, toggleOnlineStatus, goOnline, goOffline };
 };
