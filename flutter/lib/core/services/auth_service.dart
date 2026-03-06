@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'session_cleanup_service.dart';
 
 /// Auth Service Provider
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -90,31 +91,17 @@ class AuthService {
     }
   }
 
-  /// Sign out - sets offline status and ends active chats (synced with React)
+  /// Sign out - centralized session cleanup synced with React session-cleanup.service.ts
+  /// Handles: active chats, video calls, private groups, user status, women availability
   Future<void> signOut() async {
     try {
       final user = _client.auth.currentUser;
       if (user != null) {
-        final now = DateTime.now().toIso8601String();
-        // Set user offline
-        await _client.from('user_status').update({
-          'is_online': false,
-          'last_seen': now,
-          'updated_at': now,
-        }).eq('user_id', user.id);
-
-        // End active chat sessions
-        await _client
-            .from('active_chat_sessions')
-            .update({
-              'status': 'ended',
-              'ended_at': now,
-              'end_reason': 'user_logout',
-            })
-            .or('man_user_id.eq.${user.id},woman_user_id.eq.${user.id}')
-            .eq('status', 'active');
+        await SessionCleanupService.cleanupAllUserSessions(user.id);
       }
-    } catch (_) {}
+    } catch (_) {
+      // Don't block logout if cleanup fails
+    }
 
     await _client.auth.signOut();
   }
