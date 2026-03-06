@@ -431,22 +431,35 @@ const TransactionHistoryScreen = () => {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
-        const dedupeWomenEarnings = (rows: WomenEarning[]) => {
-          return [...rows]
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-            .filter((earning, index, arr) => {
-              if (index === 0) return true;
-              const prev = arr[index - 1];
-              const descA = (earning.description || '').trim().toLowerCase();
-              const descB = (prev.description || '').trim().toLowerCase();
-              const sameAmount = Math.abs(Number(earning.amount) - Number(prev.amount)) < 0.0001;
-              const sameDescription = descA === descB;
-              const isBillingLine = descA.includes('group call') || descA.includes('group tip')
-                || descA.includes('chat earning') || descA.includes('video call earning') || descA.includes('video earning');
-              const closeInTime = Math.abs(new Date(earning.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
-              return !(sameAmount && sameDescription && isBillingLine && closeInTime);
-            })
-            .reverse();
+      const dedupeWomenEarnings = (rows: WomenEarning[]) => {
+          const sorted = [...rows].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          const getBillingKey = (desc: string) => desc.replace(/[\d.,]+/g, '').replace(/\s+/g, ' ').trim();
+          const result: WomenEarning[] = [];
+          
+          for (const earning of sorted) {
+            const descA = (earning.description || '').trim().toLowerCase();
+            const isBillingLine = descA.includes('group call') || descA.includes('group tip')
+              || descA.includes('chat earning') || descA.includes('video call earning') || descA.includes('video earning');
+            
+            if (!isBillingLine) { result.push(earning); continue; }
+            
+            const keyA = getBillingKey(descA);
+            const timeA = new Date(earning.created_at).getTime();
+            let replaced = false;
+            
+            for (let j = result.length - 1; j >= 0; j--) {
+              const accepted = result[j];
+              if (timeA - new Date(accepted.created_at).getTime() > 90000) break;
+              const keyB = getBillingKey((accepted.description || '').trim().toLowerCase());
+              if (keyA === keyB) {
+                if (Number(earning.amount) >= Number(accepted.amount)) result[j] = earning;
+                replaced = true;
+                break;
+              }
+            }
+            if (!replaced) result.push(earning);
+          }
+          return result.reverse();
         };
 
         if (earnings && earnings.length > 0) {
@@ -636,10 +649,17 @@ const TransactionHistoryScreen = () => {
       });
     }
 
-    // Remove duplicate billing rows (chat, video, group) created within the same billing window
-    // Uses sliding-window approach: checks ALL prior entries within 50s, not just the consecutive one
+    // Remove duplicate & incremental billing rows (chat, video, group) within the same billing window.
+    // Extracts a "billing key" by stripping numeric amounts/durations, then within a 90-second window
+    // keeps only the LARGEST amount entry per key+direction — collapsing per-second ticks into one per-minute entry.
     const sortedForDedup = unified
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const getBillingKey = (desc: string): string => {
+      // Strip numbers (durations, amounts, rates) to get a stable pattern key
+      // e.g. "Chat debit - 1.50 min at ₹4/min (₹0.07/sec)" → "chat debit - min at ₹/min (₹/sec)"
+      return desc.replace(/[\d.,]+/g, '').replace(/\s+/g, ' ').trim();
+    };
     
     const dedupedUnified: UnifiedTransaction[] = [];
     for (let i = 0; i < sortedForDedup.length; i++) {
@@ -656,25 +676,29 @@ const TransactionHistoryScreen = () => {
       }
 
       const txTime = new Date(tx.created_at).getTime();
-      let isDuplicate = false;
+      const txKey = getBillingKey(descLower);
+      let replacedExisting = false;
       
-      // Check against ALL already-accepted entries within the 50s window
+      // Check ALL already-accepted entries within 90s window for same billing key
       for (let j = dedupedUnified.length - 1; j >= 0; j--) {
         const accepted = dedupedUnified[j];
         const acceptedTime = new Date(accepted.created_at).getTime();
-        if (txTime - acceptedTime > 50000) break; // Beyond window, stop checking
+        if (txTime - acceptedTime > 90000) break; // Beyond 90s window
         
         const sameDirection = accepted.is_credit === tx.is_credit;
-        const sameAmount = Math.abs(accepted.amount - tx.amount) < 0.0001;
-        const sameDescription = (accepted.description || '').trim().toLowerCase() === descLower.trim();
+        const acceptedKey = getBillingKey((accepted.description || '').toLowerCase());
         
-        if (sameDirection && sameAmount && sameDescription) {
-          isDuplicate = true;
+        if (sameDirection && txKey === acceptedKey) {
+          // Keep the larger amount (latest billing tick supersedes earlier ones)
+          if (tx.amount >= accepted.amount) {
+            dedupedUnified[j] = tx; // Replace with larger/newer entry
+          }
+          replacedExisting = true;
           break;
         }
       }
       
-      if (!isDuplicate) {
+      if (!replacedExisting) {
         dedupedUnified.push(tx);
       }
     }
