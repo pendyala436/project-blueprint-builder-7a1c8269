@@ -9,8 +9,9 @@ final walletServiceProvider = Provider<WalletService>((ref) {
 });
 
 /// Wallet Service
-/// 
-/// Handles all wallet and transaction operations.
+///
+/// Handles all wallet, transaction, session, and pricing operations.
+/// Synced with React TransactionHistoryScreen data fetching.
 class WalletService {
   final SupabaseClient _client = Supabase.instance.client;
 
@@ -24,48 +25,296 @@ class WalletService {
           .maybeSingle();
 
       if (response == null) return null;
-
-      return WalletModel(
-        id: response['id'],
-        userId: response['user_id'],
-        balance: (response['balance'] as num?)?.toDouble() ?? 0,
-        currency: response['currency'] ?? 'INR',
-        createdAt: response['created_at'] != null
-            ? DateTime.parse(response['created_at'])
-            : null,
-        updatedAt: response['updated_at'] != null
-            ? DateTime.parse(response['updated_at'])
-            : null,
-      );
+      return WalletModel.fromJson(response);
     } catch (e) {
       return null;
     }
   }
 
-  /// Get wallet transactions
+  /// Get men's wallet balance via server-side RPC
+  Future<double> getMenWalletBalance(String userId) async {
+    try {
+      final response = await _client.rpc('get_men_wallet_balance', params: {
+        'p_user_id': userId,
+      });
+      final data = response as Map<String, dynamic>?;
+      return (data?['balance'] as num?)?.toDouble() ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get women's wallet balance via server-side RPC
+  Future<double> getWomenWalletBalance(String userId) async {
+    try {
+      final response = await _client.rpc('get_women_wallet_balance', params: {
+        'p_user_id': userId,
+      });
+      final data = response as Map<String, dynamic>?;
+      return (data?['available_balance'] as num?)?.toDouble() ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get wallet transactions (all, no limit for statement)
   Future<List<WalletTransactionModel>> getTransactions(String userId, {int limit = 50}) async {
     try {
+      // First get wallet id
+      final wallet = await _client
+          .from('wallets')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (wallet == null) return [];
+
       final response = await _client
           .from('wallet_transactions')
+          .select()
+          .eq('wallet_id', wallet['id'])
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return (response as List)
+          .map((json) => WalletTransactionModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get ALL wallet transactions (no limit, for statement computation)
+  Future<List<WalletTransactionModel>> getAllTransactions(String userId) async {
+    try {
+      final wallet = await _client
+          .from('wallets')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (wallet == null) return [];
+
+      final response = await _client
+          .from('wallet_transactions')
+          .select()
+          .eq('wallet_id', wallet['id'])
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => WalletTransactionModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get chat pricing config
+  Future<ChatPricingModel> getChatPricing() async {
+    try {
+      final response = await _client
+          .from('chat_pricing')
+          .select()
+          .eq('is_active', true)
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return const ChatPricingModel();
+      return ChatPricingModel.fromJson(response);
+    } catch (e) {
+      return const ChatPricingModel();
+    }
+  }
+
+  /// Get chat sessions for user
+  Future<List<ChatSessionModel>> getChatSessions(String userId, String gender) async {
+    try {
+      final field = gender == 'male' ? 'man_user_id' : 'woman_user_id';
+      final partnerField = gender == 'male' ? 'woman_user_id' : 'man_user_id';
+
+      final response = await _client
+          .from('active_chat_sessions')
+          .select()
+          .eq(field, userId)
+          .order('started_at', ascending: false)
+          .limit(100);
+
+      final sessions = (response as List)
+          .map((json) => ChatSessionModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Enrich with partner names
+      if (sessions.isNotEmpty) {
+        final partnerIds = sessions.map((s) => gender == 'male' ? s.womanUserId : s.manUserId).toSet().toList();
+        final profiles = await _client
+            .from('profiles')
+            .select('user_id, full_name, photo_url')
+            .inFilter('user_id', partnerIds);
+
+        final profileMap = <String, Map<String, dynamic>>{};
+        for (final p in profiles) {
+          profileMap[p['user_id'] as String] = p;
+        }
+
+        for (final s in sessions) {
+          final partnerId = gender == 'male' ? s.womanUserId : s.manUserId;
+          s.partnerName = profileMap[partnerId]?['full_name'] as String? ?? 'Anonymous';
+          s.partnerPhoto = profileMap[partnerId]?['photo_url'] as String?;
+        }
+      }
+
+      return sessions;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get video call sessions for user
+  Future<List<VideoCallSessionModel>> getVideoCallSessions(String userId, String gender) async {
+    try {
+      final field = gender == 'male' ? 'man_user_id' : 'woman_user_id';
+
+      final response = await _client
+          .from('video_call_sessions')
+          .select()
+          .eq(field, userId)
+          .order('created_at', ascending: false)
+          .limit(100);
+
+      final sessions = (response as List)
+          .map((json) => VideoCallSessionModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Enrich with partner names
+      if (sessions.isNotEmpty) {
+        final partnerIds = sessions.map((s) => gender == 'male' ? s.womanUserId : s.manUserId).toSet().toList();
+        final profiles = await _client
+            .from('profiles')
+            .select('user_id, full_name, photo_url')
+            .inFilter('user_id', partnerIds);
+
+        final profileMap = <String, Map<String, dynamic>>{};
+        for (final p in profiles) {
+          profileMap[p['user_id'] as String] = p;
+        }
+
+        for (final s in sessions) {
+          final partnerId = gender == 'male' ? s.womanUserId : s.manUserId;
+          s.partnerName = profileMap[partnerId]?['full_name'] as String? ?? 'Anonymous';
+          s.partnerPhoto = profileMap[partnerId]?['photo_url'] as String?;
+        }
+      }
+
+      return sessions;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get women's earnings
+  Future<List<WomenEarningsModel>> getWomenEarnings(String userId, {int limit = 50}) async {
+    try {
+      final response = await _client
+          .from('women_earnings')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false)
           .limit(limit);
 
       return (response as List)
-          .map((json) => WalletTransactionModel(
-                id: json['id'],
-                walletId: json['wallet_id'],
-                userId: json['user_id'],
-                type: json['type'],
-                amount: (json['amount'] as num).toDouble(),
-                description: json['description'],
-                referenceId: json['reference_id'],
-                status: json['status'] ?? 'completed',
-                createdAt: json['created_at'] != null
-                    ? DateTime.parse(json['created_at'])
-                    : null,
-              ))
+          .map((json) => WomenEarningsModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get ALL women's earnings (no limit)
+  Future<List<WomenEarningsModel>> getAllWomenEarnings(String userId) async {
+    try {
+      final response = await _client
+          .from('women_earnings')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => WomenEarningsModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get gift transactions
+  Future<List<GiftTransactionModel>> getGiftTransactions(String userId) async {
+    try {
+      final response = await _client
+          .from('gift_transactions')
+          .select()
+          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .order('created_at', ascending: false)
+          .limit(100);
+
+      final gifts = (response as List)
+          .map((json) => GiftTransactionModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      if (gifts.isNotEmpty) {
+        // Get gift details
+        final giftIds = gifts.map((g) => g.giftId).toSet().toList();
+        final giftDetails = await _client
+            .from('gifts')
+            .select('id, name, emoji')
+            .inFilter('id', giftIds);
+
+        final giftMap = <String, Map<String, dynamic>>{};
+        for (final g in giftDetails) {
+          giftMap[g['id'] as String] = g;
+        }
+
+        // Get partner profiles
+        final partnerIds = gifts
+            .map((g) => g.senderId == userId ? g.receiverId : g.senderId)
+            .toSet()
+            .toList();
+        final profiles = await _client
+            .from('profiles')
+            .select('user_id, full_name')
+            .inFilter('user_id', partnerIds);
+
+        final profileMap = <String, String>{};
+        for (final p in profiles) {
+          profileMap[p['user_id'] as String] = p['full_name'] as String? ?? 'Anonymous';
+        }
+
+        for (final g in gifts) {
+          g.giftName = giftMap[g.giftId]?['name'] as String? ?? 'Gift';
+          g.giftEmoji = giftMap[g.giftId]?['emoji'] as String? ?? '🎁';
+          g.isSender = g.senderId == userId;
+          final partnerId = g.isSender ? g.receiverId : g.senderId;
+          g.partnerName = profileMap[partnerId] ?? 'Anonymous';
+        }
+      }
+
+      return gifts;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get withdrawal requests
+  Future<List<WithdrawalRequestModel>> getWithdrawalRequests(String userId) async {
+    try {
+      final response = await _client
+          .from('withdrawal_requests')
+          .select('id, amount, status, payment_method, created_at, processed_at, rejection_reason')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => WithdrawalRequestModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       return [];
@@ -180,34 +429,6 @@ class WalletService {
       );
     } catch (e) {
       return TransactionResult(success: false, error: e.toString());
-    }
-  }
-
-  /// Get women's earnings
-  Future<List<WomenEarningsModel>> getWomenEarnings(String userId, {int limit = 50}) async {
-    try {
-      final response = await _client
-          .from('women_earnings')
-          .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false)
-          .limit(limit);
-
-      return (response as List)
-          .map((json) => WomenEarningsModel(
-                id: json['id'],
-                userId: json['user_id'],
-                amount: (json['amount'] as num).toDouble(),
-                earningType: json['earning_type'],
-                chatSessionId: json['chat_session_id'],
-                description: json['description'],
-                createdAt: json['created_at'] != null
-                    ? DateTime.parse(json['created_at'])
-                    : null,
-              ))
-          .toList();
-    } catch (e) {
-      return [];
     }
   }
 
