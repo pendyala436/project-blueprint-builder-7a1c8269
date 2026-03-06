@@ -78,6 +78,8 @@ import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
+import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 
 
 import { isIndianLanguage, INDIAN_LANGUAGES as INDIAN_NLLB200_LANGUAGES, NON_INDIAN_LANGUAGES as NON_INDIAN_NLLB200_LANGUAGES, ALL_SUPPORTED_LANGUAGES as ALL_NLLB200_LANGUAGES } from "@/data/supportedLanguages";
@@ -150,6 +152,7 @@ const DashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, "male");
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for NLLB feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
@@ -1916,6 +1919,18 @@ const DashboardScreen = () => {
           currentUserId={currentUserId}
           userGender="male"
           currentUserLanguage={userLanguage}
+        />
+      )}
+
+      {/* Incoming Video Call Window - for Golden Badge women calling men */}
+      {incomingCall && (
+        <IncomingVideoCallWindow
+          callId={incomingCall.callId}
+          callerUserId={incomingCall.callerUserId}
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          currentUserId={currentUserId}
+          onClose={clearIncomingCall}
         />
       )}
 
