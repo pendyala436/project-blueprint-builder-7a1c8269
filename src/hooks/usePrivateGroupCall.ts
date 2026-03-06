@@ -684,7 +684,7 @@ export function usePrivateGroupCall({
           stream_id: sessionId,
           current_host_id: currentUserId,
           current_host_name: userName,
-        } as any)
+        })
         .eq('id', groupId);
 
       // Set host (woman) status to busy during live stream
