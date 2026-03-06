@@ -431,22 +431,35 @@ const TransactionHistoryScreen = () => {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
-        const dedupeWomenEarnings = (rows: WomenEarning[]) => {
-          return [...rows]
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-            .filter((earning, index, arr) => {
-              if (index === 0) return true;
-              const prev = arr[index - 1];
-              const descA = (earning.description || '').trim().toLowerCase();
-              const descB = (prev.description || '').trim().toLowerCase();
-              const sameAmount = Math.abs(Number(earning.amount) - Number(prev.amount)) < 0.0001;
-              const sameDescription = descA === descB;
-              const isBillingLine = descA.includes('group call') || descA.includes('group tip')
-                || descA.includes('chat earning') || descA.includes('video call earning') || descA.includes('video earning');
-              const closeInTime = Math.abs(new Date(earning.created_at).getTime() - new Date(prev.created_at).getTime()) <= 50000;
-              return !(sameAmount && sameDescription && isBillingLine && closeInTime);
-            })
-            .reverse();
+      const dedupeWomenEarnings = (rows: WomenEarning[]) => {
+          const sorted = [...rows].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          const getBillingKey = (desc: string) => desc.replace(/[\d.,]+/g, '').replace(/\s+/g, ' ').trim();
+          const result: WomenEarning[] = [];
+          
+          for (const earning of sorted) {
+            const descA = (earning.description || '').trim().toLowerCase();
+            const isBillingLine = descA.includes('group call') || descA.includes('group tip')
+              || descA.includes('chat earning') || descA.includes('video call earning') || descA.includes('video earning');
+            
+            if (!isBillingLine) { result.push(earning); continue; }
+            
+            const keyA = getBillingKey(descA);
+            const timeA = new Date(earning.created_at).getTime();
+            let replaced = false;
+            
+            for (let j = result.length - 1; j >= 0; j--) {
+              const accepted = result[j];
+              if (timeA - new Date(accepted.created_at).getTime() > 90000) break;
+              const keyB = getBillingKey((accepted.description || '').trim().toLowerCase());
+              if (keyA === keyB) {
+                if (Number(earning.amount) >= Number(accepted.amount)) result[j] = earning;
+                replaced = true;
+                break;
+              }
+            }
+            if (!replaced) result.push(earning);
+          }
+          return result.reverse();
         };
 
         if (earnings && earnings.length > 0) {
