@@ -182,7 +182,8 @@ serve(async (req) => {
     // Load dynamic settings from admin_settings
     await loadAdminSettings(supabase);
 
-    const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country, exclude_user_ids }: ChatRequest = await req.json();
+    const requestBody = await req.json();
+    const { action, man_user_id, woman_user_id, user_id, chat_id, end_reason, preferred_language, man_country, exclude_user_ids }: ChatRequest = requestBody;
 
     // SECURITY: Verify the user_id in request matches authenticated user (prevent impersonation)
     // For actions with both man_user_id and woman_user_id (e.g. start_chat), 
@@ -937,7 +938,7 @@ serve(async (req) => {
               goldenBadgeCheck?.golden_badge_expires_at &&
               new Date(goldenBadgeCheck.golden_badge_expires_at) > new Date();
 
-            if (!hasActiveBadge && !body.golden_badge_override) {
+            if (!hasActiveBadge && !requestBody.golden_badge_override) {
               console.log(`[SECURITY] Woman ${authenticatedUserId} attempted to initiate chat without Golden Badge - BLOCKED`);
               return new Response(
                 JSON.stringify({ 
@@ -982,7 +983,7 @@ serve(async (req) => {
             initiatorProfile?.golden_badge_expires_at &&
             new Date(initiatorProfile.golden_badge_expires_at) > new Date();
           
-          if (!hasActiveBadge && !body.golden_badge_override) {
+          if (!hasActiveBadge && !requestBody.golden_badge_override) {
             console.log(`[SECURITY] Female user ${man_user_id} attempted to initiate chat without Golden Badge - BLOCKED`);
             return new Response(
               JSON.stringify({ 
