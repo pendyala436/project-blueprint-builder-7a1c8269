@@ -291,6 +291,8 @@ const PhotoUploadScreen = () => {
       });
       return;
     }
+
+    toast({
       title: "Photos saved!",
       description: "Your photos have been saved",
     });
