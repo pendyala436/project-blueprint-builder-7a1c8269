@@ -69,8 +69,8 @@ const DirectVideoCallButton = ({
     }
 
     // Check super user
-    const { data: { user } } = await supabase.auth.getUser();
-    const userEmail = user?.email || '';
+    const { data: { session } } = await supabase.auth.getSession();
+    const userEmail = session?.user?.email || '';
     const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
 
     if (!isSuperUser) {

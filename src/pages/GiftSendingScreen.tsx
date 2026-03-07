@@ -83,8 +83,9 @@ const GiftSendingScreen = () => {
       setGifts(giftsData || []);
 
       // Load wallet balance and store user ID
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const user = session.user;
         setCurrentUserId(user.id);
         const { data: wallet } = await supabase
           .from("wallets")

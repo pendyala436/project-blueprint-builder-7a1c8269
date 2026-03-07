@@ -96,8 +96,8 @@ export const RandomChatButton = ({
       const minBalance = 8; // Minimum balance required to start chat
       
       // Get current user email to check if super user
-      const { data: { user } } = await supabase.auth.getUser();
-      const userEmail = user?.email || '';
+      const { data: { session: s } } = await supabase.auth.getSession();
+      const userEmail = s?.user?.email || '';
       
       // Super users (matching email pattern) bypass balance check entirely
       const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
@@ -123,13 +123,14 @@ export const RandomChatButton = ({
     setMatchedUser(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         toast({
           title: "Error",
           description: "You must be logged in to start a chat",
           variant: "destructive"
         });
+      const user = session!.user;
         setSearchDialogOpen(false);
         return;
       }
@@ -325,8 +326,9 @@ export const RandomChatButton = ({
     if (!matchedUser) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       if (userGender === "male") {
         // Man initiating chat with woman

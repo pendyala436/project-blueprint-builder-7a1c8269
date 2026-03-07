@@ -168,10 +168,10 @@ const MatchDiscoveryScreen = () => {
       setIsLoading(true);
       
       // Get currently authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
       // If no user logged in, redirect to auth screen
-      if (!user) {
+      if (!session?.user) {
         navigate("/");
         return;
       }
@@ -535,8 +535,9 @@ const MatchDiscoveryScreen = () => {
   const handleLike = async (matchUser: MatchUser) => {
     try {
       // Get current authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       // Trigger swipe right animation
       setSwipeDirection("right");

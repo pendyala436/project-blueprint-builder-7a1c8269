@@ -89,8 +89,9 @@ const ShiftComplianceScreen = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       // Load shifts
       const { data: shiftsData, error } = await supabase
@@ -152,8 +153,9 @@ const ShiftComplianceScreen = () => {
   const startShift = async () => {
     setStartingShift(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
+      const user = session.user;
 
       const { data, error } = await supabase
         .from("shifts")
