@@ -58,6 +58,7 @@ interface DraggableVideoCallWindowProps {
   zIndex?: number;
   onFocus?: () => void;
   ratePerMinute?: number;
+  preAcquiredStream?: MediaStream | null;
 }
 
 const DraggableVideoCallWindow = ({
@@ -71,7 +72,8 @@ const DraggableVideoCallWindow = ({
   initialPosition = { x: 20, y: 20 },
   zIndex = 60,
   onFocus,
-  ratePerMinute = 8
+  ratePerMinute = 8,
+  preAcquiredStream = null,
 }: DraggableVideoCallWindowProps) => {
   const { toast } = useToast();
   const [isMinimized, setIsMinimized] = useState(false);
@@ -105,6 +107,7 @@ const DraggableVideoCallWindow = ({
     isInitiator,
     ratePerMinute,
     onCallEnded: onClose,
+    preAcquiredStream,
   });
 
   // Check block status

@@ -87,6 +87,7 @@ interface PrivateGroupCallWindowProps {
   userPhoto: string | null;
   onClose: () => void;
   isOwner: boolean;
+  preAcquiredStream?: MediaStream | null;
 }
 
 export function PrivateGroupCallWindow({
@@ -95,7 +96,8 @@ export function PrivateGroupCallWindow({
   userName,
   userPhoto,
   onClose,
-  isOwner
+  isOwner,
+  preAcquiredStream = null,
 }: PrivateGroupCallWindowProps) {
   // Chat state
   const [messages, setMessages] = useState<GroupMessage[]>([]);
@@ -177,6 +179,7 @@ export function PrivateGroupCallWindow({
     userPhoto,
     isOwner,
     giftAmountRequired: group.min_gift_amount,
+    preAcquiredStream,
     onParticipantJoin: (participant) => {
       toast.success(`${participant.name} joined`);
     },

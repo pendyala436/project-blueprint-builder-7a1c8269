@@ -55,6 +55,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGroupVideo, setActiveGroupVideo] = useState<PrivateGroup | null>(null);
+  const [activeGroupStream, setActiveGroupStream] = useState<MediaStream | null>(null);
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
 
@@ -136,8 +137,24 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
 
     setJoiningGroupId(group.id);
+    
+    // CRITICAL: Acquire audio NOW in click handler (user gesture context)
+    let preStream: MediaStream | null = null;
     try {
-      // Add membership
+      preStream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+      // Mute by default for participants
+      preStream.getAudioTracks().forEach(t => { t.enabled = false; });
+    } catch (mediaErr) {
+      console.error('[AvailableGroups] Pre-acquire audio failed:', mediaErr);
+      toast.error('Could not access microphone. Please allow access.');
+      setJoiningGroupId(null);
+      return;
+    }
+
+    try {
       const { error } = await supabase
         .from('group_memberships')
         .upsert({
@@ -149,13 +166,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
       if (error) throw error;
 
-      // Update participant count
       await supabase
         .from('private_groups')
         .update({ participant_count: group.participant_count + 1 })
         .eq('id', group.id);
 
-      // Open call window directly
+      setActiveGroupStream(preStream);
       setActiveGroupVideo(group);
     } catch (error: any) {
       toast.error(error.message || 'Failed to join group');
