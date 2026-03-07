@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { registerOutgoingCall } from "@/hooks/useIncomingCalls";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet, ShieldAlert } from "lucide-react";
@@ -122,6 +123,7 @@ const DirectVideoCallButton = ({
 
       // Create call session via edge function (bypasses RLS)
       const callId = `call_${currentUserId}_${targetUserId}_${Date.now()}`;
+      registerOutgoingCall(callId);
       
       // Determine man/woman roles based on gender
       const { data: currentProfile } = await supabase

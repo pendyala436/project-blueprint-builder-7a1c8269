@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { registerOutgoingCall } from "@/hooks/useIncomingCalls";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
@@ -91,6 +92,7 @@ const VideoCallButton = ({
 
       // Create video call session
       const callId = `call_${currentUserId}_${result.woman.user_id}_${Date.now()}`;
+      registerOutgoingCall(callId);
       
       const { error: sessionError } = await supabase
         .from('video_call_sessions')
