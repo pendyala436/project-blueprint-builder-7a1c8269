@@ -973,8 +973,8 @@ const AdminChatMonitoring = () => {
                           key={msg.id}
                           className={`p-3 rounded-lg max-w-[80%] ${
                             profiles[msg.sender_id]?.gender === "male"
-                              ? "bg-blue-500/10 ml-0"
-                              : "bg-pink-500/10 ml-auto"
+                              ? "bg-primary/10 ml-0"
+                              : "bg-secondary/10 ml-auto"
                           }`}
                         >
                           <div className="flex items-center gap-2 mb-1">
@@ -1476,7 +1476,7 @@ const AdminChatMonitoring = () => {
               <>
                 <Button
                   variant="outline"
-                  className="text-green-600"
+                  className="text-primary"
                   onClick={() => {
                     handleResolve(selectedMessage, "cleared");
                     setViewDialogOpen(false);
