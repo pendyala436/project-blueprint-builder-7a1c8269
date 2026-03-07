@@ -703,7 +703,7 @@ const WomenDashboardScreen = () => {
       title: t('loggedOut', 'Logged out'),
       description: t('seeYouSoon', 'See you soon!'),
     });
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   const handleChatWithUser = async (userId: string) => {
