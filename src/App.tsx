@@ -183,43 +183,43 @@ const App = () => (
             <Route path="/ai-processing" element={<LazyRoute component={AIProcessingScreen} />} />
             <Route path="/welcome-tutorial" element={<LazyRoute component={WelcomeTutorialScreen} />} />
             <Route path="/registration-complete" element={<LazyRoute component={RegistrationCompleteScreen} />} />
-            <Route path="/dashboard" element={<LazyRoute component={DashboardScreen} />} />
-            <Route path="/online-users" element={<LazyRoute component={OnlineUsersScreen} />} />
-            <Route path="/find-match" element={<LazyRoute component={MatchingScreen} />} />
-            <Route path="/match-discovery" element={<LazyRoute component={MatchDiscoveryScreen} />} />
-            <Route path="/profile/:userId" element={<LazyRoute component={ProfileDetailScreen} />} />
+            <Route path="/dashboard" element={<LazyRoute component={DashboardScreen} requiredRole="male" />} />
+            <Route path="/online-users" element={<LazyRoute component={OnlineUsersScreen} requiredRole="male" />} />
+            <Route path="/find-match" element={<LazyRoute component={MatchingScreen} requiredRole="male" />} />
+            <Route path="/match-discovery" element={<LazyRoute component={MatchDiscoveryScreen} requiredRole="male" />} />
+            <Route path="/profile/:userId" element={<LazyRoute component={ProfileDetailScreen} requiredRole="authenticated" />} />
             {/* Chat route removed - chats handled via parallel chat windows on dashboard */}
-            <Route path="/wallet" element={<LazyRoute component={WalletScreen} />} />
-            <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} />} />
-            <Route path="/transactions" element={<LazyRoute component={TransactionHistoryScreen} />} />
-            <Route path="/settings" element={<LazyRoute component={SettingsScreen} />} />
+            <Route path="/wallet" element={<LazyRoute component={WalletScreen} requiredRole="authenticated" />} />
+            <Route path="/transaction-history" element={<LazyRoute component={TransactionHistoryScreen} requiredRole="authenticated" />} />
+            <Route path="/transactions" element={<LazyRoute component={TransactionHistoryScreen} requiredRole="authenticated" />} />
+            <Route path="/settings" element={<LazyRoute component={SettingsScreen} requiredRole="authenticated" />} />
             
-            <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} />} />
-            <Route path="/women-wallet" element={<LazyRoute component={WomenWalletScreen} />} />
-            <Route path="/approval-pending" element={<LazyRoute component={ApprovalPendingScreen} />} />
-            <Route path="/admin" element={<LazyRoute component={AdminDashboard} />} />
-            <Route path="/admin/analytics" element={<LazyRoute component={AdminAnalyticsDashboard} />} />
-            <Route path="/admin/users" element={<LazyRoute component={AdminUserManagement} />} />
-            <Route path="/admin/gifts" element={<LazyRoute component={AdminGiftPricing} />} />
-            <Route path="/admin/languages" element={<LazyRoute component={AdminLanguageGroups} />} />
-            <Route path="/admin/chat-monitoring" element={<LazyRoute component={AdminChatMonitoring} />} />
-            <Route path="/admin/finance" element={<LazyRoute component={AdminFinanceDashboard} />} />
-            <Route path="/admin/finance-reports" element={<LazyRoute component={AdminFinanceReports} />} />
-            <Route path="/admin/backups" element={<LazyRoute component={AdminBackupManagement} />} />
-            <Route path="/admin/legal-documents" element={<LazyRoute component={AdminLegalDocuments} />} />
-            <Route path="/admin/chat-pricing" element={<LazyRoute component={AdminChatPricing} />} />
-            <Route path="/admin/performance" element={<LazyRoute component={AdminPerformanceMonitoring} />} />
-            <Route path="/admin/settings" element={<LazyRoute component={AdminSettings} />} />
-            <Route path="/admin/audit-logs" element={<LazyRoute component={AdminAuditLogs} />} />
-            <Route path="/send-gift/:receiverId" element={<LazyRoute component={GiftSendingScreen} />} />
-            <Route path="/shift-compliance" element={<LazyRoute component={ShiftComplianceScreen} />} />
-            <Route path="/admin/moderation" element={<LazyRoute component={AdminModerationScreen} />} />
-            <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} />} />
-            <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} />} />
-            <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} />} />
-            <Route path="/admin/kyc" element={<LazyRoute component={AdminKYCManagement} />} />
-            <Route path="/admin/user-lookup" element={<LazyRoute component={AdminUserLookup} />} />
-            <Route path="/admin/messaging" element={<LazyRoute component={AdminMessaging} />} />
+            <Route path="/women-dashboard" element={<LazyRoute component={WomenDashboardScreen} requiredRole="female" />} />
+            <Route path="/women-wallet" element={<LazyRoute component={WomenWalletScreen} requiredRole="female" />} />
+            <Route path="/approval-pending" element={<LazyRoute component={ApprovalPendingScreen} requiredRole="female" />} />
+            <Route path="/admin" element={<LazyRoute component={AdminDashboard} requiredRole="admin" />} />
+            <Route path="/admin/analytics" element={<LazyRoute component={AdminAnalyticsDashboard} requiredRole="admin" />} />
+            <Route path="/admin/users" element={<LazyRoute component={AdminUserManagement} requiredRole="admin" />} />
+            <Route path="/admin/gifts" element={<LazyRoute component={AdminGiftPricing} requiredRole="admin" />} />
+            <Route path="/admin/languages" element={<LazyRoute component={AdminLanguageGroups} requiredRole="admin" />} />
+            <Route path="/admin/chat-monitoring" element={<LazyRoute component={AdminChatMonitoring} requiredRole="admin" />} />
+            <Route path="/admin/finance" element={<LazyRoute component={AdminFinanceDashboard} requiredRole="admin" />} />
+            <Route path="/admin/finance-reports" element={<LazyRoute component={AdminFinanceReports} requiredRole="admin" />} />
+            <Route path="/admin/backups" element={<LazyRoute component={AdminBackupManagement} requiredRole="admin" />} />
+            <Route path="/admin/legal-documents" element={<LazyRoute component={AdminLegalDocuments} requiredRole="admin" />} />
+            <Route path="/admin/chat-pricing" element={<LazyRoute component={AdminChatPricing} requiredRole="admin" />} />
+            <Route path="/admin/performance" element={<LazyRoute component={AdminPerformanceMonitoring} requiredRole="admin" />} />
+            <Route path="/admin/settings" element={<LazyRoute component={AdminSettings} requiredRole="admin" />} />
+            <Route path="/admin/audit-logs" element={<LazyRoute component={AdminAuditLogs} requiredRole="admin" />} />
+            <Route path="/send-gift/:receiverId" element={<LazyRoute component={GiftSendingScreen} requiredRole="authenticated" />} />
+            <Route path="/shift-compliance" element={<LazyRoute component={ShiftComplianceScreen} requiredRole="female" />} />
+            <Route path="/admin/moderation" element={<LazyRoute component={AdminModerationScreen} requiredRole="admin" />} />
+            <Route path="/admin/policy-alerts" element={<LazyRoute component={AdminPolicyAlerts} requiredRole="admin" />} />
+            <Route path="/admin/language-limits" element={<LazyRoute component={AdminLanguageLimits} requiredRole="admin" />} />
+            <Route path="/admin/transactions" element={<LazyRoute component={AdminTransactionHistory} requiredRole="admin" />} />
+            <Route path="/admin/kyc" element={<LazyRoute component={AdminKYCManagement} requiredRole="admin" />} />
+            <Route path="/admin/user-lookup" element={<LazyRoute component={AdminUserLookup} requiredRole="admin" />} />
+            <Route path="/admin/messaging" element={<LazyRoute component={AdminMessaging} requiredRole="admin" />} />
             <Route path="/install" element={<LazyRoute component={InstallApp} />} />
             {/* Translation test routes removed */}
             <Route path="*" element={<LazyRoute component={NotFound} />} />
