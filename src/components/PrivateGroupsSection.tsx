@@ -100,8 +100,22 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
 
     setGoingLive(group.id);
+    
+    // CRITICAL: Acquire media NOW in click handler (user gesture context)
+    let preStream: MediaStream | null = null;
     try {
-      // Add owner as member first
+      preStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (mediaErr) {
+      console.error('[PrivateGroups] Pre-acquire media failed:', mediaErr);
+      toast.error('Could not access camera/microphone. Please allow access.');
+      setGoingLive(null);
+      return;
+    }
+
+    try {
       await supabase.from('group_memberships').upsert({
         group_id: group.id,
         user_id: currentUserId,
@@ -109,10 +123,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         gift_amount_paid: 0,
       }, { onConflict: 'group_id,user_id' });
 
-      // Just open the call window - the hook's goLive() will handle
-      // all DB updates (is_live, current_host_id, signaling, media, etc.)
-      // This prevents the race condition of double DB updates.
       const updatedGroup = { ...group, participant_count: 1 };
+      setActiveGroupStream(preStream);
       setActiveGroup(updatedGroup);
     } catch (error: any) {
       toast.error(error.message || 'Failed to go live');
@@ -318,10 +330,11 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
+          preAcquiredStream={activeGroupStream}
           onClose={() => {
-            // Capture group ref before state changes clear it
             const groupToStop = activeGroup;
             setActiveGroup(null);
+            setActiveGroupStream(null);
             if (groupToStop) {
               handleStopLive(groupToStop);
             }
