@@ -1315,7 +1315,7 @@ const DashboardScreen = () => {
                 </div>
                 
                 {sameLanguageWomen.length > 0 ? (
-                  <ScrollableUserList items={sameLanguageWomen}>
+                  <ScrollableUserList>
                     {sameLanguageWomen.map((woman) => (
                       <Card
                         key={woman.id}
@@ -1409,7 +1409,7 @@ const DashboardScreen = () => {
                 </div>
                 
                 {indianTranslatedWomen.length > 0 ? (
-                  <ScrollableUserList items={indianTranslatedWomen}>
+                  <ScrollableUserList>
                     {indianTranslatedWomen.map((woman) => (
                       <Card
                         key={woman.id}
@@ -1579,7 +1579,7 @@ const DashboardScreen = () => {
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <LanguageCommunityPanel
             currentUserId={currentUserId}
-            userLanguage={userLanguage}
+            motherTongue={userLanguage}
           />
         </div>
 
