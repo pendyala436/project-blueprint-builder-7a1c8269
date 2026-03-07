@@ -196,9 +196,9 @@ const AdminUserManagement = () => {
 
   const checkAdminAccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/");
         return;
       }
 
@@ -605,8 +605,9 @@ const AdminUserManagement = () => {
     }
     setSendingChat(true);
     try {
-      const { data: { user: adminUser } } = await supabase.auth.getUser();
-      if (!adminUser) throw new Error("Not authenticated");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
+      const adminUser = session.user;
 
       if (chatTargetUser) {
         // Send to individual user
@@ -666,7 +667,8 @@ const AdminUserManagement = () => {
         return;
       }
 
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const currentUser = currentSession?.user;
       
       const { error } = await supabase
         .from("user_friends")

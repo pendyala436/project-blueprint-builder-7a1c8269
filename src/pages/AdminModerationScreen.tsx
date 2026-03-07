@@ -440,7 +440,8 @@ const AdminModerationScreen = () => {
   const handleWarnUser = async () => {
     if (!targetUserId || !warningMessage) return;
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     
     // Insert warning record
     const { error } = await supabase
