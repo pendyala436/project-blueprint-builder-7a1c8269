@@ -229,7 +229,7 @@ const PhotoUploadScreen = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (verificationState !== "verified") {
       toast({
         title: "Selfie not verified",
