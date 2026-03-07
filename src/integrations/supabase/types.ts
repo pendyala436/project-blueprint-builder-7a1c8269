@@ -214,7 +214,7 @@ export type Database = {
       }
       admin_user_messages: {
         Row: {
-          admin_id: string
+          admin_id: string | null
           created_at: string
           id: string
           is_read: boolean
@@ -225,7 +225,7 @@ export type Database = {
           target_user_id: string | null
         }
         Insert: {
-          admin_id: string
+          admin_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
@@ -236,7 +236,7 @@ export type Database = {
           target_user_id?: string | null
         }
         Update: {
-          admin_id?: string
+          admin_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
@@ -495,6 +495,8 @@ export type Database = {
         Row: {
           created_at: string
           currency: string
+          group_call_rate_per_minute: number
+          group_call_women_earning_rate: number
           id: string
           is_active: boolean
           min_withdrawal_balance: number
@@ -507,6 +509,8 @@ export type Database = {
         Insert: {
           created_at?: string
           currency?: string
+          group_call_rate_per_minute?: number
+          group_call_women_earning_rate?: number
           id?: string
           is_active?: boolean
           min_withdrawal_balance?: number
@@ -519,6 +523,8 @@ export type Database = {
         Update: {
           created_at?: string
           currency?: string
+          group_call_rate_per_minute?: number
+          group_call_women_earning_rate?: number
           id?: string
           is_active?: boolean
           min_withdrawal_balance?: number
@@ -2248,6 +2254,7 @@ export type Database = {
         Row: {
           access_expires_at: string | null
           admin_earnings: number | null
+          billing_last_tick_at: string | null
           call_type: string
           caller_id: string
           created_at: string
@@ -2256,15 +2263,21 @@ export type Database = {
           gift_amount: number | null
           gift_id: string | null
           id: string
+          rate_per_minute: number | null
           receiver_id: string
           started_at: string | null
           status: string
+          total_charged_man: number | null
+          total_earned_woman: number | null
+          total_minutes: number | null
           updated_at: string
           woman_earnings: number | null
+          women_earning_rate: number | null
         }
         Insert: {
           access_expires_at?: string | null
           admin_earnings?: number | null
+          billing_last_tick_at?: string | null
           call_type?: string
           caller_id: string
           created_at?: string
@@ -2273,15 +2286,21 @@ export type Database = {
           gift_amount?: number | null
           gift_id?: string | null
           id?: string
+          rate_per_minute?: number | null
           receiver_id: string
           started_at?: string | null
           status?: string
+          total_charged_man?: number | null
+          total_earned_woman?: number | null
+          total_minutes?: number | null
           updated_at?: string
           woman_earnings?: number | null
+          women_earning_rate?: number | null
         }
         Update: {
           access_expires_at?: string | null
           admin_earnings?: number | null
+          billing_last_tick_at?: string | null
           call_type?: string
           caller_id?: string
           created_at?: string
@@ -2290,11 +2309,16 @@ export type Database = {
           gift_amount?: number | null
           gift_id?: string | null
           id?: string
+          rate_per_minute?: number | null
           receiver_id?: string
           started_at?: string | null
           status?: string
+          total_charged_man?: number | null
+          total_earned_woman?: number | null
+          total_minutes?: number | null
           updated_at?: string
           woman_earnings?: number | null
+          women_earning_rate?: number | null
         }
         Relationships: [
           {
@@ -3175,6 +3199,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_fcm_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_friends: {
         Row: {
           created_at: string
@@ -3353,6 +3404,7 @@ export type Database = {
           last_seen: string
           max_parallel_calls: number | null
           max_parallel_chats: number | null
+          status: string
           status_text: string | null
           updated_at: string
           user_id: string
@@ -3366,6 +3418,7 @@ export type Database = {
           last_seen?: string
           max_parallel_calls?: number | null
           max_parallel_chats?: number | null
+          status?: string
           status_text?: string | null
           updated_at?: string
           user_id: string
@@ -3379,6 +3432,7 @@ export type Database = {
           last_seen?: string
           max_parallel_calls?: number | null
           max_parallel_chats?: number | null
+          status?: string
           status_text?: string | null
           updated_at?: string
           user_id?: string
@@ -3504,7 +3558,10 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          idempotency_key: string | null
           reference_id: string | null
+          session_id: string | null
+          session_type: string | null
           status: string
           type: string
           user_id: string
@@ -3515,7 +3572,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          idempotency_key?: string | null
           reference_id?: string | null
+          session_id?: string | null
+          session_type?: string | null
           status?: string
           type: string
           user_id: string
@@ -3526,7 +3586,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          idempotency_key?: string | null
           reference_id?: string | null
+          session_id?: string | null
+          session_type?: string | null
           status?: string
           type?: string
           user_id?: string
@@ -3708,8 +3771,15 @@ export type Database = {
           created_at: string
           description: string | null
           earning_type: string
+          group_id: string | null
           id: string
+          idempotency_key: string | null
+          man_user_id: string | null
+          minutes_billed: number | null
+          private_call_id: string | null
+          rate_per_minute: number | null
           user_id: string
+          video_session_id: string | null
         }
         Insert: {
           amount: number
@@ -3717,8 +3787,15 @@ export type Database = {
           created_at?: string
           description?: string | null
           earning_type?: string
+          group_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          man_user_id?: string | null
+          minutes_billed?: number | null
+          private_call_id?: string | null
+          rate_per_minute?: number | null
           user_id: string
+          video_session_id?: string | null
         }
         Update: {
           amount?: number
@@ -3726,8 +3803,15 @@ export type Database = {
           created_at?: string
           description?: string | null
           earning_type?: string
+          group_id?: string | null
           id?: string
+          idempotency_key?: string | null
+          man_user_id?: string | null
+          minutes_billed?: number | null
+          private_call_id?: string | null
+          rate_per_minute?: number | null
           user_id?: string
+          video_session_id?: string | null
         }
         Relationships: [
           {
@@ -3885,7 +3969,78 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      men_transaction_statement: {
+        Row: {
+          chat_session_count: number | null
+          currency: string | null
+          current_balance: number | null
+          email: string | null
+          first_transaction_at: string | null
+          full_name: string | null
+          group_session_count: number | null
+          last_transaction_at: string | null
+          private_call_count: number | null
+          total_chat_spent: number | null
+          total_debits_count: number | null
+          total_group_spent: number | null
+          total_private_call_spent: number | null
+          total_recharged: number | null
+          total_recharges_count: number | null
+          total_spent: number | null
+          total_transactions: number | null
+          total_video_spent: number | null
+          user_id: string | null
+          video_session_count: number | null
+          wallet_created_at: string | null
+        }
+        Relationships: []
+      }
+      transaction_statement: {
+        Row: {
+          currency: string | null
+          current_balance: number | null
+          email: string | null
+          first_transaction_at: string | null
+          full_name: string | null
+          gender: string | null
+          last_transaction_at: string | null
+          net_amount: number | null
+          total_credited: number | null
+          total_credits_count: number | null
+          total_debited: number | null
+          total_debits_count: number | null
+          total_transactions: number | null
+          user_id: string | null
+          wallet_created_at: string | null
+          wallet_updated_at: string | null
+        }
+        Relationships: []
+      }
+      women_transaction_statement: {
+        Row: {
+          chat_sessions: number | null
+          currency: string | null
+          current_balance: number | null
+          email: string | null
+          first_earning_at: string | null
+          full_name: string | null
+          group_sessions: number | null
+          last_earning_at: string | null
+          private_calls: number | null
+          total_chat_earned: number | null
+          total_earned: number | null
+          total_earning_records: number | null
+          total_gift_earned: number | null
+          total_group_earned: number | null
+          total_private_call_earned: number | null
+          total_video_earned: number | null
+          total_withdrawn: number | null
+          user_id: string | null
+          video_sessions: number | null
+          wallet_created_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_friend_request: { Args: { p_request_id: string }; Returns: Json }
@@ -3916,6 +4071,34 @@ export type Database = {
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
+      credit_women_earning_atomic: {
+        Args: {
+          p_amount: number
+          p_chat_session_id?: string
+          p_description: string
+          p_earning_type: string
+          p_group_id?: string
+          p_idempotency_key?: string
+          p_man_id: string
+          p_minutes?: number
+          p_private_call_id?: string
+          p_rate_per_minute: number
+          p_video_session_id?: string
+          p_woman_id: string
+        }
+        Returns: Json
+      }
+      debit_wallet_atomic: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_idempotency_key?: string
+          p_session_id?: string
+          p_session_type?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       expire_group_video_access: { Args: never; Returns: undefined }
       get_current_chat_rate: {
         Args: never
@@ -3966,6 +4149,13 @@ export type Database = {
           state: string
         }[]
       }
+      get_men_statement: {
+        Args: { p_month?: number; p_user_id: string; p_year?: number }
+        Returns: Json
+      }
+      get_men_transaction_history:
+        | { Args: { p_user_id: string }; Returns: Json }
+        | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
       get_men_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       get_men_with_balance: {
         Args: { p_user_ids: string[] }
@@ -4039,6 +4229,13 @@ export type Database = {
         Args: { p_month_start: string; p_user_id: string }
         Returns: number
       }
+      get_women_statement: {
+        Args: { p_month?: number; p_user_id: string; p_year?: number }
+        Returns: Json
+      }
+      get_women_transaction_history:
+        | { Args: { p_user_id: string }; Returns: Json }
+        | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
       get_women_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       has_role: {
         Args: {
@@ -4051,8 +4248,19 @@ export type Database = {
         Args: { candidate_uuid: string }
         Returns: undefined
       }
-      is_indian_woman: { Args: { p_country: string }; Returns: boolean }
+      is_indian_woman:
+        | { Args: { p_country: string }; Returns: boolean }
+        | { Args: { user_id_param: string }; Returns: boolean }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
+      make_billing_key: {
+        Args: {
+          p_minute_ts: string
+          p_session_id: string
+          p_session_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       perform_monthly_earning_rotation: { Args: never; Returns: Json }
       process_atomic_transfer: {
         Args: {
@@ -4064,7 +4272,7 @@ export type Database = {
         Returns: Json
       }
       process_chat_billing: {
-        Args: { p_minutes: number; p_session_id: string }
+        Args: { p_minutes?: number; p_session_id: string }
         Returns: Json
       }
       process_gift_transaction: {
@@ -4076,7 +4284,9 @@ export type Database = {
         }
         Returns: Json
       }
-      process_group_billing: { Args: { p_group_id: string }; Returns: Json }
+      process_group_billing:
+        | { Args: { p_group_id: string }; Returns: Json }
+        | { Args: { p_group_id: string; p_minutes?: number }; Returns: Json }
       process_group_gift: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
         Returns: Json
@@ -4087,6 +4297,10 @@ export type Database = {
       }
       process_group_video_gift: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
+      process_private_call_billing: {
+        Args: { p_call_id: string; p_minutes?: number }
         Returns: Json
       }
       process_private_call_gift: {
@@ -4109,7 +4323,7 @@ export type Database = {
       }
       process_video_billing:
         | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
-        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
+        | { Args: { p_minutes?: number; p_session_id: string }; Returns: Json }
       process_wallet_transaction: {
         Args: {
           p_amount: number
@@ -4130,12 +4344,15 @@ export type Database = {
         Returns: Json
       }
       purchase_golden_badge: { Args: { p_user_id: string }; Returns: Json }
+      r2: { Args: { v: number }; Returns: number }
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       reset_private_group_counts: { Args: never; Returns: undefined }
+      revert_busy_to_online: { Args: { p_user_id: string }; Returns: undefined }
       rotate_monthly_shifts: { Args: never; Returns: undefined }
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
+      sweep_stale_statuses: { Args: never; Returns: number }
       unblock_user: { Args: { p_target_user_id: string }; Returns: Json }
       unfriend_user: { Args: { p_target_user_id: string }; Returns: Json }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
