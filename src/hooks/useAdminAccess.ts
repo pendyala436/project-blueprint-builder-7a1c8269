@@ -17,12 +17,14 @@ export const useAdminAccess = () => {
 
   const checkAdminAccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Use getSession() to restore from localStorage first (prevents refresh logout)
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) {
+      if (!session?.user) {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       setAdminEmail(user.email || "");
       setUserId(user.id);

@@ -327,9 +327,19 @@ const DashboardScreen = () => {
   };
 
   useEffect(() => {
-    loadDashboardData();
-    updateUserOnlineStatus(true);
-    loadActiveChatCount();
+    // Wait for session to be restored from localStorage before checking auth
+    // This prevents false redirects to "/" on page refresh
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/");
+        return;
+      }
+      loadDashboardData();
+      updateUserOnlineStatus(true);
+      loadActiveChatCount();
+    };
+    init();
 
     // Cleanup: set offline when leaving
     return () => {

@@ -205,9 +205,11 @@ const WomenDashboardScreen = () => {
 
   useEffect(() => {
     // Quick approval check before loading heavy dashboard data
+    // Use getSession() first to restore from localStorage (prevents refresh logout)
     const initDashboard = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate("/"); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) { navigate("/"); return; }
+      const user = session.user;
       
       // Quick approval gate - redirect immediately if not approved
       const { data: profile } = await supabase
