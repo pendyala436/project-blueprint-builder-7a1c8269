@@ -132,7 +132,6 @@ const AdminDashboard = () => {
       description: "Manage users, roles, and permissions",
       icon: <Users className="h-6 w-6" />,
       path: "/admin/users",
-      color: "from-blue-500 to-blue-600",
       badge: stats.pendingApprovals > 0 ? `${stats.pendingApprovals} pending` : undefined
     },
     {
@@ -140,28 +139,24 @@ const AdminDashboard = () => {
       description: "Search users by name, email, or phone",
       icon: <MessageCircle className="h-6 w-6" />,
       path: "/admin/user-lookup",
-      color: "from-violet-500 to-violet-600"
     },
     {
       title: "KYC Management",
       description: "Review and approve KYC submissions",
       icon: <Shield className="h-6 w-6" />,
       path: "/admin/kyc",
-      color: "from-rose-500 to-rose-600"
     },
     {
       title: "Analytics Dashboard",
       description: "View platform analytics and insights",
       icon: <BarChart3 className="h-6 w-6" />,
       path: "/admin/analytics",
-      color: "from-green-500 to-green-600"
     },
     {
       title: "Chat Monitoring",
       description: "Monitor active chats and conversations",
       icon: <MessageSquare className="h-6 w-6" />,
       path: "/admin/chat-monitoring",
-      color: "from-purple-500 to-purple-600",
       badge: stats.activeChats > 0 ? `${stats.activeChats} active` : undefined
     },
     {
@@ -169,63 +164,54 @@ const AdminDashboard = () => {
       description: "Inbox, broadcast, and direct user messaging",
       icon: <Bell className="h-6 w-6" />,
       path: "/admin/messaging",
-      color: "from-sky-500 to-sky-600"
     },
     {
       title: "Finance Dashboard",
       description: "Revenue, transactions, and payouts",
       icon: <DollarSign className="h-6 w-6" />,
       path: "/admin/finance",
-      color: "from-emerald-500 to-emerald-600"
     },
     {
       title: "Transaction History",
       description: "View all user transactions",
       icon: <Activity className="h-6 w-6" />,
       path: "/admin/transactions",
-      color: "from-lime-500 to-lime-600"
     },
     {
       title: "Chat Pricing",
       description: "Configure chat and video call rates",
       icon: <Clock className="h-6 w-6" />,
       path: "/admin/chat-pricing",
-      color: "from-amber-500 to-amber-600"
     },
     {
       title: "Gift Management",
       description: "Manage virtual gifts and pricing",
       icon: <Gift className="h-6 w-6" />,
       path: "/admin/gifts",
-      color: "from-pink-500 to-pink-600"
     },
     {
       title: "Language Groups",
       description: "Manage language-based user groups",
       icon: <Globe className="h-6 w-6" />,
       path: "/admin/languages",
-      color: "from-cyan-500 to-cyan-600"
     },
     {
       title: "Language Limits",
       description: "Set language capacity limits",
       icon: <Languages className="h-6 w-6" />,
       path: "/admin/language-limits",
-      color: "from-indigo-500 to-indigo-600"
     },
     {
       title: "Content Moderation",
       description: "Review flagged content and reports",
       icon: <Shield className="h-6 w-6" />,
       path: "/admin/moderation",
-      color: "from-red-500 to-red-600"
     },
     {
       title: "Policy Alerts",
       description: "View policy violation alerts",
       icon: <AlertTriangle className="h-6 w-6" />,
       path: "/admin/policy-alerts",
-      color: "from-orange-500 to-orange-600",
       badge: stats.policyAlerts > 0 ? `${stats.policyAlerts} alerts` : undefined
     },
     {
@@ -233,42 +219,36 @@ const AdminDashboard = () => {
       description: "System performance metrics",
       icon: <Activity className="h-6 w-6" />,
       path: "/admin/performance",
-      color: "from-teal-500 to-teal-600"
     },
     {
       title: "Finance Reports",
       description: "Detailed financial reports",
       icon: <FileText className="h-6 w-6" />,
       path: "/admin/finance-reports",
-      color: "from-slate-500 to-slate-600"
     },
     {
       title: "Legal Documents",
       description: "Manage terms, policies, and legal docs",
       icon: <FileText className="h-6 w-6" />,
       path: "/admin/legal-documents",
-      color: "from-gray-500 to-gray-600"
     },
     {
       title: "Backup Management",
       description: "Database backups and restoration",
       icon: <Database className="h-6 w-6" />,
       path: "/admin/backups",
-      color: "from-stone-500 to-stone-600"
     },
     {
       title: "Audit Logs",
       description: "View admin activity logs",
       icon: <Clock className="h-6 w-6" />,
       path: "/admin/audit-logs",
-      color: "from-zinc-500 to-zinc-600"
     },
     {
       title: "Admin Settings",
       description: "Platform configuration settings",
       icon: <Settings className="h-6 w-6" />,
       path: "/admin/settings",
-      color: "from-neutral-500 to-neutral-600"
     }
   ];
 
@@ -388,10 +368,10 @@ const AdminDashboard = () => {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-4 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-info/10 to-info/5 border-info/20">
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-info/20">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-info" />
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/20">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold">{stats.totalUsers}</p>
@@ -400,10 +380,10 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-success/20">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/20">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold">{stats.onlineUsers}</p>
@@ -412,10 +392,10 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-secondary/20">
-                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/20">
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold">{stats.activeChats}</p>
@@ -424,10 +404,10 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-success/20">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/20">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold">₹{stats.todayEarnings}</p>
@@ -449,7 +429,7 @@ const AdminDashboard = () => {
               >
                 <CardContent className="p-3 sm:p-5">
                   <div className="flex items-start justify-between">
-                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br ${module.color} text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
                       {module.icon}
                     </div>
                     {module.badge && (
