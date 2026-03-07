@@ -1136,6 +1136,65 @@ const DashboardScreen = () => {
         </div>
       </header>
 
+  const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
+    const listScrollRef = useRef<HTMLDivElement>(null);
+    const [canScrollUp, setCanScrollUp] = useState(false);
+    const [canScrollDown, setCanScrollDown] = useState(false);
+
+    const checkScroll = useCallback(() => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      setCanScrollUp(el.scrollTop > 10);
+      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
+    }, []);
+
+    useEffect(() => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      checkScroll();
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      return () => el.removeEventListener('scroll', checkScroll);
+    }, [checkScroll, sameLanguageWomen, indianTranslatedWomen]);
+
+    const scrollByAmount = (direction: 'up' | 'down') => {
+      listScrollRef.current?.scrollBy({ top: direction === 'up' ? -200 : 200, behavior: 'smooth' });
+    };
+
+    return (
+      <div className="relative">
+        {canScrollUp && (
+          <div className="sticky top-0 z-10 flex justify-center pb-1">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 w-7 rounded-full shadow-md p-0"
+              onClick={() => scrollByAmount('up')}
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <div
+          ref={listScrollRef}
+          className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scroll-smooth"
+        >
+          {children}
+        </div>
+        {canScrollDown && (
+          <div className="sticky bottom-0 z-10 flex justify-center pt-1">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 w-7 rounded-full shadow-md p-0"
+              onClick={() => scrollByAmount('down')}
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
       {/* Main Content */}
       <main className="px-3 py-3 space-y-4 sm:max-w-4xl sm:mx-auto sm:px-6 sm:py-8 sm:space-y-8">
