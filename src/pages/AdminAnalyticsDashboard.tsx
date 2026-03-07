@@ -797,7 +797,7 @@ const AdminAnalyticsDashboard = () => {
                 className="h-auto p-4 flex flex-col items-center gap-2"
                 onClick={() => navigate("/admin/moderation")}
               >
-                <Shield className="h-6 w-6 text-yellow-500" />
+                <Shield className="h-6 w-6 text-primary" />
                 <span className="text-sm font-medium">Moderation</span>
                 <span className="text-xs text-muted-foreground">Reports & blocks</span>
               </Button>
@@ -806,7 +806,7 @@ const AdminAnalyticsDashboard = () => {
                 className="h-auto p-4 flex flex-col items-center gap-2"
                 onClick={() => navigate("/admin/chat-monitoring")}
               >
-                <Bell className="h-6 w-6 text-blue-500" />
+                <Bell className="h-6 w-6 text-primary" />
                 <span className="text-sm font-medium">Broadcast</span>
                 <span className="text-xs text-muted-foreground">Send notifications</span>
               </Button>

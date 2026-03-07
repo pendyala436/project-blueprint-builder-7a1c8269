@@ -50,10 +50,10 @@ interface InboxThread {
 
 const GROUP_CONFIG: { key: TargetGroup; label: string; icon: React.ReactNode; color: string }[] = [
   { key: 'all', label: 'All Users', icon: <Users className="h-4 w-4" />, color: 'bg-primary/10 text-primary' },
-  { key: 'indian_women', label: 'Indian Women', icon: <Crown className="h-4 w-4" />, color: 'bg-pink-500/10 text-pink-600' },
-  { key: 'world_women', label: 'World Women', icon: <Globe className="h-4 w-4" />, color: 'bg-purple-500/10 text-purple-600' },
-  { key: 'indian_men', label: 'Indian Men', icon: <UserCheck className="h-4 w-4" />, color: 'bg-blue-500/10 text-blue-600' },
-  { key: 'world_men', label: 'World Men', icon: <Globe className="h-4 w-4" />, color: 'bg-teal-500/10 text-teal-600' },
+  { key: 'indian_women', label: 'Indian Women', icon: <Crown className="h-4 w-4" />, color: 'bg-primary/10 text-primary' },
+  { key: 'world_women', label: 'World Women', icon: <Globe className="h-4 w-4" />, color: 'bg-primary/10 text-primary' },
+  { key: 'indian_men', label: 'Indian Men', icon: <UserCheck className="h-4 w-4" />, color: 'bg-primary/10 text-primary' },
+  { key: 'world_men', label: 'World Men', icon: <Globe className="h-4 w-4" />, color: 'bg-primary/10 text-primary' },
 ];
 
 const AdminMessaging = () => {

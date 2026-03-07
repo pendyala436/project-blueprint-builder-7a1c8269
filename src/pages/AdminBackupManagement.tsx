@@ -410,7 +410,7 @@ const AdminBackupManagement = () => {
                             )}
                           </div>
                           {backup.error_message && (
-                            <p className="text-sm text-red-400 mt-1">{backup.error_message}</p>
+                            <p className="text-sm text-destructive mt-1">{backup.error_message}</p>
                           )}
                         </div>
                       </div>

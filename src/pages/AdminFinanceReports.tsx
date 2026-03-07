@@ -701,8 +701,8 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-500" />
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Men</p>
@@ -715,8 +715,8 @@ const AdminFinanceReports = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-pink-500/10 rounded-lg">
-                  <Users className="h-6 w-6 text-pink-500" />
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Users className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Active Women</p>
@@ -885,7 +885,7 @@ const AdminFinanceReports = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-orange-500" />
+                <Clock className="h-5 w-5 text-primary" />
                 Chat Wait Queue by Country
               </CardTitle>
             </CardHeader>
@@ -933,7 +933,7 @@ const AdminFinanceReports = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Languages className="h-5 w-5 text-purple-500" />
+                <Languages className="h-5 w-5 text-primary" />
                 Chat Wait Queue by Language
               </CardTitle>
             </CardHeader>
@@ -1072,7 +1072,7 @@ const AdminFinanceReports = () => {
                           <TableCell>{w.language}</TableCell>
                           <TableCell className="text-right">₹{w.chat_earnings.toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{w.gift_earnings.toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-bold text-green-600">₹{w.total_earned.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-bold text-primary">₹{w.total_earned.toFixed(2)}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -1121,7 +1121,7 @@ const AdminFinanceReports = () => {
                           </TableCell>
                           <TableCell className="text-right">₹{c.men_spending.toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{c.women_earnings.toFixed(2)}</TableCell>
-                          <TableCell className={`text-right font-bold ${c.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          <TableCell className={`text-right font-bold ${c.profit >= 0 ? "text-primary" : "text-destructive"}`}>
                             {c.profit >= 0 ? "+" : ""}₹{c.profit.toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right">{c.user_count}</TableCell>
@@ -1173,7 +1173,7 @@ const AdminFinanceReports = () => {
                           </TableCell>
                           <TableCell className="text-right">₹{l.men_spending.toFixed(2)}</TableCell>
                           <TableCell className="text-right">₹{l.women_earnings.toFixed(2)}</TableCell>
-                          <TableCell className={`text-right font-bold ${l.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          <TableCell className={`text-right font-bold ${l.profit >= 0 ? "text-primary" : "text-destructive"}`}>
                             {l.profit >= 0 ? "+" : ""}₹{l.profit.toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right">{l.user_count}</TableCell>
