@@ -1580,6 +1580,8 @@ const DashboardScreen = () => {
           <LanguageCommunityPanel
             currentUserId={currentUserId}
             motherTongue={userLanguage}
+            userName={userName || 'User'}
+            userPhoto={userPhoto}
           />
         </div>
 
