@@ -522,7 +522,7 @@ const AdminChatPricing = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-amber-500" />
+                <Wallet className="h-5 w-5 text-primary" />
                 Withdrawal Settings
               </CardTitle>
               <CardDescription>
@@ -584,14 +584,14 @@ const AdminChatPricing = () => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10">
-                    <Wallet className="h-5 w-5 text-amber-500" />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Wallet className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Minimum Withdrawal Balance</p>
-                    <p className="text-2xl font-bold text-amber-600">₹{parseInt(formData.min_withdrawal_balance).toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-primary">₹{parseInt(formData.min_withdrawal_balance).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
