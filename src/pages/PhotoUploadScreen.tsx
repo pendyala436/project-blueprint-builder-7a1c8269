@@ -283,10 +283,13 @@ const PhotoUploadScreen = () => {
         localStorage.setItem("pendingAdditionalPhotos", JSON.stringify(compressedPhotos));
       }
     } catch (storageError) {
-      console.warn("localStorage quota exceeded, storing flag only:", storageError);
-      // Store just a flag - photos will need to be re-uploaded after auth
-      localStorage.setItem("pendingPhotoData", "pending");
-      localStorage.setItem("pendingAdditionalPhotos", "pending");
+      console.warn("Failed to save photos:", storageError);
+      toast({
+        title: "Storage Error",
+        description: "Unable to save photos. Your device storage may be full. Please free up space and try again.",
+        variant: "destructive",
+      });
+      return;
     }
 
     toast({
