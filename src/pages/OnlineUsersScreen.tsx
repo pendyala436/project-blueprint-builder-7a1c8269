@@ -81,12 +81,13 @@ const OnlineUsersScreen = () => {
 
   const loadOnlineUsers = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) {
+      if (!session?.user) {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       // Get current user's gender
       const { data: currentProfile } = await supabase
@@ -172,8 +173,9 @@ const OnlineUsersScreen = () => {
 
   const handleLike = async (user: OnlineUser) => {
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const currentUser = session.user;
 
       // Check if match already exists
       const { data: existingMatch } = await supabase

@@ -24,11 +24,12 @@ const ApprovalPendingScreen = () => {
 
   const checkApprovalStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       const { data: profile, error } = await supabase
         .from("profiles")
@@ -84,8 +85,9 @@ const ApprovalPendingScreen = () => {
 
   const handleLogout = async () => {
     // Get current user to set offline status
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const user = session.user;
       const now = new Date().toISOString();
       await supabase
         .from('user_status')
@@ -99,8 +101,9 @@ const ApprovalPendingScreen = () => {
   const handleReapply = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (!s?.user) return;
+      const user = s.user;
 
       // Show processing message
       toast({

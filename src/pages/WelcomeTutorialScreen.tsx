@@ -125,9 +125,10 @@ const WelcomeTutorialScreen = () => {
 
   const saveTutorialProgress = async (skipped: boolean) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) return;
+      if (!session?.user) return;
+      const user = session.user;
 
       // Always mark completed=true so user goes directly to dashboard on next login
       await supabase

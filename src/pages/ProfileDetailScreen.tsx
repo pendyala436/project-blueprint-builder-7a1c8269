@@ -106,11 +106,12 @@ const ProfileDetailScreen = () => {
     try {
       setIsLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         navigate("/");
         return;
       }
+      const user = session.user;
       setCurrentUserId(user.id);
 
       // PARALLEL: Fetch all data at once instead of sequential

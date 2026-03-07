@@ -178,9 +178,10 @@ const AIProcessingScreen = () => {
   // Save verification result to Supabase
   const saveVerificationResult = async (result: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (user) {
+      if (session?.user) {
+        const user = session.user;
         await supabase
           .from("processing_logs")
           .insert({
