@@ -1529,7 +1529,7 @@ const DashboardScreen = () => {
                     <div className="relative">
                       <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/20">
                         <AvatarImage src={woman.photoUrl || undefined} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white">
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
                           {woman.fullName?.charAt(0) || "?"}
                         </AvatarFallback>
                       </Avatar>
