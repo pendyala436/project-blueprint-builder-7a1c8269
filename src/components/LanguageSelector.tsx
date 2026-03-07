@@ -73,8 +73,9 @@ export const LanguageSelector = ({
   useEffect(() => {
     if (!gender) {
       const fetchUserGender = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const user = session.user;
           const { data: profile } = await supabase
             .from("profiles")
             .select("gender")
@@ -138,8 +139,8 @@ export const LanguageSelector = ({
     
     setIsUpdating(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         toast({
           title: "Error",
           description: "Please log in to change language",

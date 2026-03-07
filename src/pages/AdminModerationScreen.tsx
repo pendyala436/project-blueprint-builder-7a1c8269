@@ -343,7 +343,8 @@ const AdminModerationScreen = () => {
    */
   const handleResolveReport = async (reportId: string, action: string) => {
     // Get current admin user
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     
     // Update report in database
     const { error } = await supabase
@@ -379,7 +380,8 @@ const AdminModerationScreen = () => {
   const handleBlockUser = async () => {
     if (!targetUserId) return;
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     
     // Insert block record
     const { error } = await supabase
