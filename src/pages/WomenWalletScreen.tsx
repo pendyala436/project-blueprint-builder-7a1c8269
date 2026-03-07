@@ -121,11 +121,12 @@ const WomenWalletScreen = () => {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         navigate("/");
         return;
       }
+      const user = session.user;
       setCurrentUserId(user.id);
 
       // Fetch pricing config

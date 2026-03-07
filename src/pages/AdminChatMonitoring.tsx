@@ -578,8 +578,9 @@ const AdminChatMonitoring = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
+      const user = session.user;
 
       const { error } = await supabase
         .from("chat_messages")

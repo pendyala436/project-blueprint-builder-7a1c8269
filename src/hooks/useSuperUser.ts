@@ -112,10 +112,10 @@ export const useSuperUser = () => {
   useEffect(() => {
     const checkSuperStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (user?.id) {
-          const result = await checkUserRoles(user.id);
+        if (session?.user?.id) {
+          const result = await checkUserRoles(session.user.id);
           setIsSuperUser(result.isSuperUser);
           setSuperUserType(result.type);
           setIsAdmin(result.isAdmin);

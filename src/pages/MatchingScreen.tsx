@@ -107,12 +107,13 @@ const MatchingScreen = () => {
 
   const loadMatchableWomen = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) {
+      if (!session?.user) {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       setCurrentUserId(user.id);
 

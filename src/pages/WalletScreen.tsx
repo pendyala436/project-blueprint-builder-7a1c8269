@@ -185,11 +185,12 @@ const WalletScreen = () => {
 
   const fetchWalletData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/");
         return;
       }
+      const user = session.user;
       
       // Store user ID for atomic transactions
       setUserId(user.id);

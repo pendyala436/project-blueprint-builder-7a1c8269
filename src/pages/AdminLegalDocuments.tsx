@@ -197,7 +197,8 @@ const AdminLegalDocuments = () => {
     setUploadProgress(0);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       
       // Generate unique file path
       const fileExt = selectedFile.name.split('.').pop();

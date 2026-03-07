@@ -94,9 +94,10 @@ const AdminNav = ({ children }: AdminNavProps) => {
   };
 
   const handleLogout = async () => {
-    // Get current user to set offline status
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    // Get current user from session to set offline status
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const user = session.user;
       const now = new Date().toISOString();
       await supabase
         .from('user_status')

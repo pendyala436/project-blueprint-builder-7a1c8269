@@ -104,8 +104,8 @@ const AdminMessaging = () => {
   }, [threadMessages]);
 
   const loadAdmin = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) setAdminId(user.id);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) setAdminId(session.user.id);
   };
 
   const fetchInboxThreads = async () => {

@@ -627,8 +627,9 @@ const DashboardScreen = () => {
     setIsConnecting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       // Route through chat-manager edge function for proper security checks
       // (balance verification, block check, parallel chat limits, super user bypass)
@@ -1009,8 +1010,9 @@ const DashboardScreen = () => {
 
   const updateUserOnlineStatus = async (online: boolean) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       // First try to update existing record
       const { error: updateError } = await supabase
@@ -1061,8 +1063,9 @@ const DashboardScreen = () => {
     // Use atomic transaction for ACID compliance
     setTimeout(async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        const user = session.user;
 
         // Use atomic transaction function
         const result = await creditWallet(

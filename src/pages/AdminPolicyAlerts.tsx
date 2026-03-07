@@ -118,11 +118,12 @@ const AdminPolicyAlerts = () => {
 
   const checkAdminAccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/");
         return;
       }
+      const user = session.user;
 
       const { data: roleData } = await supabase
         .from("user_roles")
@@ -273,7 +274,8 @@ const AdminPolicyAlerts = () => {
     if (!selectedAlert) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       
       const { error } = await supabase
         .from("policy_violation_alerts")
@@ -303,7 +305,8 @@ const AdminPolicyAlerts = () => {
     if (!selectedAlert || !messageContent.trim()) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session: s2 } } = await supabase.auth.getSession();
+      const user = s2?.user;
 
       // Insert notification for the user
       const { error } = await supabase.from("notifications").insert({

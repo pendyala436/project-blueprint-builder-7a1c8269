@@ -128,11 +128,12 @@ const AdminGiftPricing = () => {
 
   const checkAdminAccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/");
         return;
       }
+      const user = session.user;
 
       const { data: roleData } = await supabase
         .from("user_roles")

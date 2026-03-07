@@ -89,11 +89,12 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
 
   const fetchSettings = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/");
         return;
       }
+      const user = session.user;
 
       setCurrentUserId(user.id);
 
@@ -170,12 +171,13 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        toast.error("You must be logged in to save settings");
-        navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast.error("Session expired. Please log in again.");
+        navigate("/");
         return;
       }
+      const user = session.user;
 
       // Only send columns that exist in user_settings table
       const updatePayload = {
