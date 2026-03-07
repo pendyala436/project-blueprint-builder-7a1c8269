@@ -51,6 +51,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGroup, setActiveGroup] = useState<PrivateGroup | null>(null);
+  const [activeGroupStream, setActiveGroupStream] = useState<MediaStream | null>(null);
   const [goingLive, setGoingLive] = useState<string | null>(null);
 
   useEffect(() => {
