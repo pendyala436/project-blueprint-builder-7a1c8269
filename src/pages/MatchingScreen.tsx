@@ -113,6 +113,7 @@ const MatchingScreen = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       setCurrentUserId(user.id);
 

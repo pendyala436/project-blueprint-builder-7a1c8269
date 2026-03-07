@@ -148,6 +148,7 @@ export const LanguageSelector = ({
         });
         return;
       }
+      const user = session.user;
 
       // Update profile preferred language
       await supabase
