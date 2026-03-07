@@ -800,21 +800,23 @@ export function usePrivateGroupCall({
   // End stream (host only) - broadcasts to participants and cleans up WebRTC
   // DB cleanup is handled by the parent component's handleStopLive
   const endStream = useCallback(async (processRefundsFlag = true) => {
-    // Notify all participants before cleanup
+    // Broadcast stream-ended BEFORE cleanup so channel is still available
     try {
       if (channelRef.current) {
-        await channelRef.current.send({
+        // Fire-and-forget broadcast - don't let it block cleanup
+        channelRef.current.send({
           type: 'broadcast',
           event: 'stream-ended',
           payload: { refunded: processRefundsFlag },
-        });
-        // Small delay to ensure broadcast is delivered before channel cleanup
-        await new Promise(resolve => setTimeout(resolve, 300));
+        }).catch(err => console.warn('[PrivateGroupCall] Broadcast failed:', err));
+        // Brief delay to let broadcast propagate, but don't block
+        await new Promise(resolve => setTimeout(resolve, 150));
       }
     } catch (err) {
       console.warn('[PrivateGroupCall] Broadcast send failed (channel may be closed):', err);
     }
 
+    // Always cleanup regardless of broadcast success
     cleanup();
     onSessionEnd?.(processRefundsFlag);
   }, [cleanup, onSessionEnd]);

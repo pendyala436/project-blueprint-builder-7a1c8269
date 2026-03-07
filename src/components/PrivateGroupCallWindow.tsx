@@ -107,6 +107,7 @@ export function PrivateGroupCallWindow({
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner); // Host has mic on by default, participants off
+  const isStoppingRef = useRef(false); // Guard to prevent double-stop
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
@@ -516,6 +517,10 @@ export function PrivateGroupCallWindow({
   };
 
   const handleEndStream = async () => {
+    // Guard: prevent double invocation
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+    
     // Broadcast stream-ended, cleanup WebRTC, then notify parent
     try {
       await endStream(true);
@@ -523,6 +528,7 @@ export function PrivateGroupCallWindow({
       console.error('[PrivateGroupCallWindow] endStream error:', err);
     }
     toast.success('Stream ended');
+    // Always call onClose regardless of errors
     onClose();
   };
 
@@ -540,6 +546,10 @@ export function PrivateGroupCallWindow({
   };
 
   const handleClose = async () => {
+    // Guard: prevent double invocation
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+    
     try {
       if (isOwner && isLive) {
         await endStream(true);
@@ -549,6 +559,7 @@ export function PrivateGroupCallWindow({
     } catch (err) {
       console.error('[PrivateGroupCallWindow] handleClose error:', err);
     }
+    // Always call onClose regardless of errors
     onClose();
   };
 
