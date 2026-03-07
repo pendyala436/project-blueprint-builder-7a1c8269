@@ -919,7 +919,7 @@ const WomenDashboardScreen = () => {
           <div className="relative flex-shrink-0">
             <Avatar className="h-11 w-11 sm:h-14 sm:w-14 border-2 border-background shadow-md">
               <AvatarImage src={user.photoUrl || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm sm:text-lg">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-sm sm:text-lg">
                 {user.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
@@ -1145,7 +1145,7 @@ const WomenDashboardScreen = () => {
                       {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
                     </span>
                   </div>
-                  <Badge className={cn("text-[10px] sm:text-xs text-white flex items-center gap-1", getStatusColor())}>
+                  <Badge className={cn("text-[10px] sm:text-xs text-primary-foreground flex items-center gap-1", getStatusColor())}>
                     <span className={cn("w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse", 
                       activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
                     )} />
@@ -1529,7 +1529,7 @@ const WomenDashboardScreen = () => {
                 onClick={action.action}
                 className="group flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
                   {action.icon}
                 </div>
                 <p className="text-[11px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
