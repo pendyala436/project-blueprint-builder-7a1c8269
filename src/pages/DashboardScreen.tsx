@@ -1241,7 +1241,7 @@ const DashboardScreen = () => {
                 className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all duration-200 border border-border/20"
                 onClick={action.action}
               >
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${action.color} text-white`}>
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${action.color} text-primary-foreground`}>
                   {action.icon}
                 </div>
                 <span className="text-[10px] sm:text-xs font-medium text-foreground">{action.label}</span>
@@ -1326,7 +1326,7 @@ const DashboardScreen = () => {
                           <div className="relative">
                             <Avatar className="w-10 h-10 border-2 border-background shadow-md">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm">
+                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-sm">
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
@@ -1420,7 +1420,7 @@ const DashboardScreen = () => {
                           <div className="relative">
                             <Avatar className="w-10 h-10 border-2 border-background shadow-md">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-white text-sm">
+                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-primary-foreground text-sm">
                                 {woman.full_name?.charAt(0) || "?"}
                               </AvatarFallback>
                             </Avatar>
