@@ -761,7 +761,7 @@ const AdminTransactionHistory = () => {
                                 <TableCell className="font-semibold text-destructive">
                                   {isDebit ? `₹${amount.toFixed(2)}` : ""}
                                 </TableCell>
-                                <TableCell className="font-semibold text-green-600">
+                                <TableCell className="font-semibold text-primary">
                                   {!isDebit ? `₹${amount.toFixed(2)}` : ""}
                                 </TableCell>
                                 <TableCell className={cn(
@@ -806,7 +806,7 @@ const AdminTransactionHistory = () => {
                           <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border/50">
                             <div className="flex items-center gap-2">
                               {tx.type === "credit" ? (
-                                <ArrowDownLeft className="h-4 w-4 text-green-600" />
+                                <ArrowDownLeft className="h-4 w-4 text-primary" />
                               ) : (
                                 <ArrowUpRight className="h-4 w-4 text-destructive" />
                               )}
@@ -817,7 +817,7 @@ const AdminTransactionHistory = () => {
                             </div>
                             <span className={cn(
                               "font-semibold",
-                              tx.type === "credit" ? "text-green-600" : "text-destructive"
+                              tx.type === "credit" ? "text-primary" : "text-destructive"
                             )}>
                               {tx.type === "credit" ? "+" : "-"}₹{Number(tx.amount).toFixed(0)}
                             </span>
@@ -890,7 +890,7 @@ const AdminTransactionHistory = () => {
                           </TableCell>
                           <TableCell className={cn(
                             "font-semibold",
-                            tx.type === "credit" ? "text-green-600" : "text-destructive"
+                            tx.type === "credit" ? "text-primary" : "text-destructive"
                           )}>
                             {tx.type === "credit" ? "+" : "-"}₹{Number(tx.amount).toFixed(2)}
                           </TableCell>
