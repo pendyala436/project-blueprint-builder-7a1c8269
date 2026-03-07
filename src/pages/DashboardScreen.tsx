@@ -82,6 +82,7 @@ import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
 
 import { isIndianLanguage, INDIAN_LANGUAGES as INDIAN_NLLB200_LANGUAGES, NON_INDIAN_LANGUAGES as NON_INDIAN_NLLB200_LANGUAGES, ALL_SUPPORTED_LANGUAGES as ALL_NLLB200_LANGUAGES } from "@/data/supportedLanguages";
 import { useChatPricing } from "@/hooks/useChatPricing";
@@ -1468,22 +1469,22 @@ const DashboardScreen = () => {
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 sm:gap-3 max-h-[350px] overflow-y-auto pr-1">
               {matchedWomen.map((woman) => (
                 <Card
-                  key={woman.id}
+                  key={woman.matchId}
                   className="p-2 sm:p-3 hover:shadow-lg transition-all cursor-pointer group"
-                  onClick={() => navigate(`/profile/${woman.user_id}`)}
+                  onClick={() => navigate(`/profile/${woman.userId}`)}
                 >
                   <div className="flex flex-col items-center text-center gap-1.5">
                     <div className="relative">
                       <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/20">
-                        <AvatarImage src={woman.photo_url || undefined} />
+                        <AvatarImage src={woman.photoUrl || undefined} />
                         <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white">
-                          {woman.full_name?.charAt(0) || "?"}
+                          {woman.fullName?.charAt(0) || "?"}
                         </AvatarFallback>
                       </Avatar>
                     </div>
                     <div>
                       <p className="font-medium text-xs sm:text-sm text-foreground truncate max-w-[80px] sm:max-w-[120px]">
-                        {woman.full_name || "User"}
+                        {woman.fullName || "User"}
                       </p>
                       {woman.age && (
                         <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
@@ -1495,7 +1496,7 @@ const DashboardScreen = () => {
                       className="w-full h-7 text-[10px] sm:text-xs gap-1"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                        handleStartChatWithWoman(woman.userId, woman.fullName || "User");
                       }}
                     >
                       <MessageCircle className="w-3 h-3" />
@@ -1541,6 +1542,53 @@ const DashboardScreen = () => {
             />
           </div>
         )}
+
+  const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
+    const listScrollRef = useRef<HTMLDivElement>(null);
+    const [canUp, setCanUp] = useState(false);
+    const [canDown, setCanDown] = useState(false);
+
+    const checkScroll = useCallback(() => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      setCanUp(el.scrollTop > 10);
+      setCanDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
+    }, []);
+
+    useEffect(() => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      checkScroll();
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      return () => el.removeEventListener('scroll', checkScroll);
+    }, [checkScroll, sameLanguageWomen, indianTranslatedWomen]);
+
+    const doScroll = (dir: 'up' | 'down') => {
+      listScrollRef.current?.scrollBy({ top: dir === 'up' ? -200 : 200, behavior: 'smooth' });
+    };
+
+    return (
+      <div className="relative">
+        {canUp && (
+          <div className="sticky top-0 z-10 flex justify-center pb-1">
+            <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => doScroll('up')}>
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <div ref={listScrollRef} className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scroll-smooth">
+          {children}
+        </div>
+        {canDown && (
+          <div className="sticky bottom-0 z-10 flex justify-center pt-1">
+            <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => doScroll('down')}>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
 
 
