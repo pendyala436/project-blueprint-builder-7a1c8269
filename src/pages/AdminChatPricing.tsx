@@ -352,10 +352,10 @@ const AdminChatPricing = () => {
                 </div>
 
                 {/* Display Mode - Women Rate */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                      <Users className="h-5 w-5 text-emerald-500" />
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Users className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Women Earning Per Minute</p>
@@ -508,7 +508,7 @@ const AdminChatPricing = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Platform Profit Per Minute (Video)</p>
-                      <p className="text-2xl font-bold text-indigo-600">₹{videoPlatformProfit.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-primary">₹{videoPlatformProfit.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
