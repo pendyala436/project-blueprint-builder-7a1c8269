@@ -31,6 +31,7 @@ interface UseP2PCallProps {
   isInitiator: boolean;
   ratePerMinute?: number;
   onCallEnded?: () => void;
+  preAcquiredStream?: MediaStream | null;
 }
 
 // STUN + TURN servers for NAT traversal reliability
@@ -68,8 +69,9 @@ export const useP2PCall = ({
   currentUserId,
   remoteUserId,
   isInitiator,
-  ratePerMinute = 8, // ₹8/min for video calls (spec default)
+  ratePerMinute = 8,
   onCallEnded,
+  preAcquiredStream = null,
 }: UseP2PCallProps) => {
   const { toast } = useToast();
   
@@ -253,21 +255,30 @@ export const useP2PCall = ({
   }, [state.callStatus, ratePerMinute]);
 
   // Initialize local media (camera + microphone)
+  // If preAcquiredStream is available, use it directly instead of calling getUserMedia
   const initLocalMedia = useCallback(async () => {
     try {
       console.log('[P2P] Initializing local media...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
-      });
+      
+      // Use pre-acquired stream if available (acquired in user gesture context)
+      let stream: MediaStream;
+      if (preAcquiredStream && preAcquiredStream.active && preAcquiredStream.getTracks().length > 0) {
+        console.log('[P2P] Using pre-acquired media stream');
+        stream = preAcquiredStream;
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+      }
       
       localStreamRef.current = stream;
       
@@ -286,7 +297,7 @@ export const useP2PCall = ({
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, preAcquiredStream]);
 
   // Process queued ICE candidates after remote description is set
   const processIceCandidateQueue = useCallback(async () => {
