@@ -123,6 +123,7 @@ const DirectVideoCallButton = ({
 
       // Create call session via edge function (bypasses RLS)
       const callId = `call_${currentUserId}_${targetUserId}_${Date.now()}`;
+      registerOutgoingCall(callId);
       
       // Determine man/woman roles based on gender
       const { data: currentProfile } = await supabase

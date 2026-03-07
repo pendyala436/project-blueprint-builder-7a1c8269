@@ -92,6 +92,7 @@ const VideoCallButton = ({
 
       // Create video call session
       const callId = `call_${currentUserId}_${result.woman.user_id}_${Date.now()}`;
+      registerOutgoingCall(callId);
       
       const { error: sessionError } = await supabase
         .from('video_call_sessions')
