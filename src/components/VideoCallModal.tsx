@@ -27,6 +27,7 @@ interface VideoCallModalProps {
   remotePhoto: string | null;
   isInitiator: boolean;
   currentUserId: string;
+  preAcquiredStream?: MediaStream | null;
 }
 
 const VideoCallModal = ({
@@ -37,7 +38,8 @@ const VideoCallModal = ({
   remoteName,
   remotePhoto,
   isInitiator,
-  currentUserId
+  currentUserId,
+  preAcquiredStream
 }: VideoCallModalProps) => {
   const { toast } = useToast();
   const {
@@ -61,6 +63,7 @@ const VideoCallModal = ({
     isInitiator,
     ratePerMinute: 8,
     onCallEnded: onClose,
+    preAcquiredStream,
   });
 
   // Check block status - auto-close if blocked
