@@ -42,6 +42,11 @@ const ForgotPasswordScreen = () => {
     setPhoneError(phoneErr);
 
     if (emailErr || phoneErr) {
+      toast({
+        title: "Please fix the errors",
+        description: [emailErr, phoneErr].filter(Boolean).join(". "),
+        variant: "destructive",
+      });
       return;
     }
 

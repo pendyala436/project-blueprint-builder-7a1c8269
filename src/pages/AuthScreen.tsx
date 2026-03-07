@@ -143,6 +143,12 @@ const AuthScreen = () => {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
+      const { toast } = await import("@/hooks/use-toast");
+      toast({
+        title: "Login Error",
+        description: Object.values(newErrors).filter(Boolean).join(". "),
+        variant: "destructive",
+      });
       return;
     }
 
