@@ -71,7 +71,7 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
     
     toast.info(`You have been logged out due to ${idleMinutes} minutes of inactivity`);
     await supabase.auth.signOut();
-    navigate('/');
+    navigate('/', { replace: true });
   }, [navigate, isAuthenticated, idleMinutes]);
 
   const resetTimer = useCallback(() => {

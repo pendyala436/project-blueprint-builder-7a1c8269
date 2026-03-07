@@ -1045,7 +1045,7 @@ const DashboardScreen = () => {
       title: t('loggedOut', 'Logged out'),
       description: t('seeYouSoon', 'See you soon!'),
     });
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   const handleRecharge = async (amountINR: number) => {
