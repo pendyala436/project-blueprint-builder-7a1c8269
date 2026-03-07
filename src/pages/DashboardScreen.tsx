@@ -1167,7 +1167,7 @@ const DashboardScreen = () => {
           {/* Key Stats */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
-              <p className="text-lg font-bold text-foreground">{stats.totalOnlineMen + sameLanguageWomen.length + indianTranslatedWomen.length}</p>
+              <p className="text-lg font-bold text-foreground">{stats.onlineUsersCount}</p>
               <p className="text-[10px] text-muted-foreground">{t('online', 'Online')}</p>
             </Card>
             <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
@@ -1199,13 +1199,30 @@ const DashboardScreen = () => {
 
         {/* Quick Connect & Video Call Buttons */}
         <div className="grid grid-cols-2 gap-2 animate-fade-in" style={{ animationDelay: "0.03s" }}>
-          <RandomChatButton onQuickConnect={handleQuickConnect} isConnecting={isConnecting} />
-          <VideoCallMiniButton />
+          <RandomChatButton 
+            userGender="male"
+            userLanguage={userLanguage}
+            userCountry={userCountry}
+            walletBalance={walletBalance}
+            onInsufficientBalance={() => setRechargeDialogOpen(true)}
+          />
+          <VideoCallMiniButton 
+            currentUserId={currentUserId}
+            userLanguage={userLanguage}
+            walletBalance={walletBalance}
+            onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+          />
         </div>
 
         {/* Free Minutes Badge */}
         <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
-          {currentUserId && <MenFreeMinutesBadge userId={currentUserId} />}
+          <MenFreeMinutesBadge 
+            hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
+            freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
+            freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
+            nextResetDate={menFreeMinutes.nextResetDate}
+            isLoading={menFreeMinutes.isLoading}
+          />
         </div>
 
         {/* Section 2: Women Online */}
