@@ -133,6 +133,7 @@ const AdminGiftPricing = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       const { data: roleData } = await supabase
         .from("user_roles")
