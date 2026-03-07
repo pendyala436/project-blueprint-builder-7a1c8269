@@ -301,23 +301,29 @@ export function usePrivateGroupCall({
   }, [createPeerConnection, currentUserId]);
 
   // Initialize host media (video + audio)
+  // Uses pre-acquired stream if available to maintain user gesture context
   const initHostMedia = useCallback(async () => {
     try {
-      // Use lower resolution to reduce bandwidth - 50 participants means conservative settings
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640, max: 960 },
-          height: { ideal: 480, max: 720 },
-          frameRate: { ideal: 24, max: 30 },
-          facingMode: 'user',
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 22050, // Lower sample rate for group calls
-        },
-      });
+      let stream: MediaStream;
+      if (preAcquiredStream && preAcquiredStream.active && preAcquiredStream.getTracks().length > 0) {
+        console.log('[PrivateGroupCall] Using pre-acquired media stream for host');
+        stream = preAcquiredStream;
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640, max: 960 },
+            height: { ideal: 480, max: 720 },
+            frameRate: { ideal: 24, max: 30 },
+            facingMode: 'user',
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 22050,
+          },
+        });
+      }
       localStream.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
@@ -328,19 +334,26 @@ export function usePrivateGroupCall({
       setState(prev => ({ ...prev, error: 'Could not access camera/microphone' }));
       return null;
     }
-  }, []);
+  }, [preAcquiredStream]);
 
   // Initialize participant media (audio only - no video, mic disabled by default)
+  // Uses pre-acquired stream if available to maintain user gesture context
   const initParticipantMedia = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: false, // Participants don't share video
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      let stream: MediaStream;
+      if (preAcquiredStream && preAcquiredStream.active && preAcquiredStream.getTracks().length > 0) {
+        console.log('[PrivateGroupCall] Using pre-acquired media stream for participant');
+        stream = preAcquiredStream;
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      }
       
       // Mic is disabled by default for participants
       stream.getAudioTracks().forEach(track => {
@@ -354,7 +367,7 @@ export function usePrivateGroupCall({
       setState(prev => ({ ...prev, error: 'Could not access microphone' }));
       return null;
     }
-  }, []);
+  }, [preAcquiredStream]);
 
   // Check if user can join (balance check) - uses chat rates (₹4/min men, ₹2/min women)
   const checkCanJoin = useCallback(async (): Promise<{ canJoin: boolean; balance: number }> => {
