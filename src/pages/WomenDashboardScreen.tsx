@@ -37,7 +37,9 @@ import {
   Eye,
   Sparkles,
   Mail,
-  Shield
+  Shield,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
