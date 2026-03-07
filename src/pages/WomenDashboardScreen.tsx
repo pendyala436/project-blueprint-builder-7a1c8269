@@ -905,6 +905,7 @@ const WomenDashboardScreen = () => {
     );
   };
 
+  const UserCard = ({ user, isPremium = false }: { user: OnlineMan; isPremium?: boolean }) => (
     <Card 
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
