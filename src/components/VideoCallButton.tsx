@@ -42,6 +42,7 @@ const VideoCallButton = ({
     womanUserId: string;
     womanName: string;
     womanPhoto: string | null;
+    stream: MediaStream | null;
   } | null>(null);
 
   const startVideoCall = async () => {
@@ -65,6 +66,19 @@ const VideoCallButton = ({
         setShowRechargeDialog(true);
         return;
       }
+    }
+
+    // Pre-acquire media in click handler (user gesture context)
+    let preStream: MediaStream | null = null;
+    try {
+      preStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (mediaErr) {
+      console.error('[VideoCallButton] Pre-acquire media failed:', mediaErr);
+      toast({ title: "Camera/Mic Error", description: "Please allow camera and microphone access.", variant: "destructive" });
+      return;
     }
 
     setIsSearching(true);
@@ -110,7 +124,8 @@ const VideoCallButton = ({
         callId,
         womanUserId: result.woman.user_id,
         womanName: result.woman.full_name || 'User',
-        womanPhoto: result.woman.photo_url
+        womanPhoto: result.woman.photo_url,
+        stream: preStream
       });
 
       toast({
@@ -120,6 +135,7 @@ const VideoCallButton = ({
 
     } catch (error) {
       console.error("Error starting video call:", error);
+      preStream?.getTracks().forEach(t => t.stop());
       toast({
         title: "Error",
         description: "Failed to start video call. Please try again.",
@@ -176,6 +192,7 @@ const VideoCallButton = ({
           remotePhoto={callSession.womanPhoto}
           isInitiator={true}
           currentUserId={currentUserId}
+          preAcquiredStream={callSession.stream}
         />
       )}
 

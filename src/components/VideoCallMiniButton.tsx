@@ -29,6 +29,7 @@ interface ActiveVideoCall {
   womanUserId: string;
   womanName: string;
   womanPhoto: string | null;
+  stream: MediaStream | null;
 }
 
 const VideoCallMiniButton = ({ 
@@ -68,6 +69,19 @@ const VideoCallMiniButton = ({
       }
     }
 
+    // Pre-acquire media in click handler (user gesture context)
+    let preStream: MediaStream | null = null;
+    try {
+      preStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (mediaErr) {
+      console.error('[VideoCallMiniButton] Pre-acquire media failed:', mediaErr);
+      toast({ title: "Camera/Mic Error", description: "Please allow camera and microphone access.", variant: "destructive" });
+      return;
+    }
+
     setIsSearching(true);
 
     try {
@@ -98,12 +112,12 @@ const VideoCallMiniButton = ({
         throw new Error('Server failed to create video call session');
       }
 
-      // Set active call - will show draggable window
       setActiveCall({
         callId,
         womanUserId: result.woman.user_id,
         womanName: result.woman.full_name || 'User',
-        womanPhoto: result.woman.photo_url
+        womanPhoto: result.woman.photo_url,
+        stream: preStream
       });
 
       toast({
@@ -113,6 +127,7 @@ const VideoCallMiniButton = ({
 
     } catch (error) {
       console.error("Error starting video call:", error);
+      preStream?.getTracks().forEach(t => t.stop());
       toast({
         title: "Error",
         description: "Failed to start video call. Please try again.",
@@ -177,6 +192,7 @@ const VideoCallMiniButton = ({
           initialPosition={{ x: window.innerWidth - 400, y: 80 }}
           zIndex={70}
           ratePerMinute={pricing.videoRatePerMinute}
+          preAcquiredStream={activeCall.stream}
         />
       )}
 
