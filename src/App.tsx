@@ -21,6 +21,7 @@ const SecurityProvider = lazy(() => import("@/components/SecurityProvider"));
 const PWAInstallPrompt = lazy(() => import("@/components/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
 const NetworkStatusIndicator = lazy(() => import("@/components/NetworkStatusIndicator").then(m => ({ default: m.NetworkStatusIndicator })));
 const AutoLogoutWrapper = lazy(() => import("@/components/AutoLogoutWrapper"));
+const ProtectedRoute = lazy(() => import("@/components/ProtectedRoute"));
 
 // Preload dashboard routes immediately after first paint
 if (typeof window !== 'undefined') {
