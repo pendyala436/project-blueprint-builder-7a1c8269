@@ -79,9 +79,10 @@ const RegistrationCompleteScreen = () => {
 
   const finalizeRegistration = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) return;
+      if (!session?.user) return;
+      const user = session.user;
 
       // Fetch profile to get gender
       const { data: profile } = await supabase

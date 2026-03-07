@@ -56,9 +56,9 @@ const LanguagePreferencesScreen = () => {
     setIsLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (!session?.user) {
         toast({
           title: "Not authenticated",
           description: "Please sign in to continue.",
