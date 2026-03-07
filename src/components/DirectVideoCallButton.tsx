@@ -51,6 +51,7 @@ const DirectVideoCallButton = ({
   const [rechargeMessage, setRechargeMessage] = useState("");
   const [activeCall, setActiveCall] = useState<{
     callId: string;
+    stream: MediaStream | null;
   } | null>(null);
 
   const startDirectVideoCall = async (e: React.MouseEvent) => {
@@ -87,6 +88,22 @@ const DirectVideoCallButton = ({
     }
 
     setIsSearching(true);
+    
+    // CRITICAL: Acquire media stream NOW in the click handler (user gesture context)
+    // This prevents browser security policy failures on 2nd+ attempts
+    let preStream: MediaStream | null = null;
+    try {
+      preStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (mediaErr) {
+      console.error('[DirectVideoCall] Pre-acquire media failed:', mediaErr);
+      toast({ title: "Camera/Mic Error", description: "Please allow camera and microphone access.", variant: "destructive" });
+      setIsSearching(false);
+      return;
+    }
+
     try {
       // Check if target user is online and idle
       const { data: targetStatus } = await supabase
@@ -169,7 +186,7 @@ const DirectVideoCallButton = ({
         }
       }
 
-      setActiveCall({ callId });
+      setActiveCall({ callId, stream: preStream });
 
       toast({
         title: "Calling...",
@@ -177,6 +194,8 @@ const DirectVideoCallButton = ({
       });
     } catch (error) {
       console.error("Error starting direct video call:", error);
+      // Stop pre-acquired stream on failure
+      preStream?.getTracks().forEach(t => t.stop());
       toast({
         title: "Error",
         description: "Failed to start video call. Please try again.",
@@ -235,6 +254,7 @@ const DirectVideoCallButton = ({
           initialPosition={{ x: window.innerWidth - 400, y: 80 }}
           zIndex={70}
           ratePerMinute={pricing.videoRatePerMinute}
+          preAcquiredStream={activeCall.stream}
         />
       )}
 
