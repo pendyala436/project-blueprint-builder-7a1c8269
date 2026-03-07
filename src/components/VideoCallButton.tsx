@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { registerOutgoingCall } from "@/hooks/useIncomingCalls";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
