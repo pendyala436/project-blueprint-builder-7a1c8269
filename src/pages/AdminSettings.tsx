@@ -146,8 +146,13 @@ const AdminSettings = () => {
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast({ title: "Error", description: "Session expired. Please log in again.", variant: "destructive" });
+        navigate("/");
+        return;
+      }
+      const user = session.user;
       for (const [key, value] of Object.entries(modifiedSettings)) {
         const { error } = await supabase
           .from("admin_settings")

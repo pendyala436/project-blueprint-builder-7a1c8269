@@ -332,9 +332,10 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
   const loadProfile = async () => {
     setIsLoading(true);
     try {
-      // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // Get authenticated user from session (more reliable than getUser on refresh)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       // Set user ID and email
       setCurrentUserId(user.id);
@@ -425,8 +426,9 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
 
       // Note: phone and gender are NOT included as they are protected fields
       const profileData = {
