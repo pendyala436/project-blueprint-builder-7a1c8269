@@ -1,4 +1,4 @@
-import { useState, useCallback, memo, lazy, Suspense } from "react";
+import { useState, useCallback, useEffect, memo, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,33 @@ const AuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  // On mount, check if user is already logged in (e.g. page refresh)
+  // Redirect to appropriate dashboard so refresh doesn't force re-login
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { preloadUserContext } = await import("@/hooks/useOptimizedAuth");
+        const context = await preloadUserContext(session.user.id);
+        if (context.isAdmin) {
+          navigate("/admin");
+        } else if (context.isFemale) {
+          const approvalStatus = context.femaleProfile?.approval_status || context.profile?.approval_status;
+          if (approvalStatus === 'pending') {
+            navigate("/approval-pending");
+          } else {
+            navigate("/women-dashboard");
+          }
+        } else {
+          navigate("/dashboard");
+        }
+      }
+    };
+    checkExistingSession();
+  }, [navigate]);
+
 
   const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
