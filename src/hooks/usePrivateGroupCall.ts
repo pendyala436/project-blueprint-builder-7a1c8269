@@ -51,6 +51,7 @@ interface UsePrivateGroupCallProps {
   userPhoto?: string | null;
   isOwner: boolean;
   giftAmountRequired: number;
+  preAcquiredStream?: MediaStream | null;
   onParticipantJoin?: (participant: Participant) => void;
   onParticipantLeave?: (participantId: string, reason: string) => void;
   onSessionEnd?: (refunded: boolean) => void;
@@ -77,6 +78,7 @@ export function usePrivateGroupCall({
   userPhoto,
   isOwner,
   giftAmountRequired,
+  preAcquiredStream,
   onParticipantJoin,
   onParticipantLeave,
   onSessionEnd,
