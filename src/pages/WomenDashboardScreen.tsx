@@ -875,9 +875,9 @@ const WomenDashboardScreen = () => {
             )}
           </div>
 
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 overflow-hidden">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate max-w-[120px] sm:max-w-none">{user.fullName}</h3>
+              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate max-w-[100px] sm:max-w-none">{user.fullName}</h3>
               {user.age && (
                 <Badge variant="outline" className="text-[10px] sm:text-xs font-medium px-1.5">
                   {user.age}
@@ -922,8 +922,8 @@ const WomenDashboardScreen = () => {
               )}
             </div>
 
-            {/* Action buttons - horizontal on mobile for better fit */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 sm:gap-1.5 mt-2 flex-wrap">
               {hasGoldenBadge && (
                 <>
                   <Button 
@@ -1303,7 +1303,7 @@ const WomenDashboardScreen = () => {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+              <ScrollableUserList>
                 {rechargedMen.map((user, index) => (
                   <div 
                     key={user.userId}
@@ -1313,7 +1313,7 @@ const WomenDashboardScreen = () => {
                     <UserCard user={user} isPremium={true} />
                   </div>
                 ))}
-              </div>
+              </ScrollableUserList>
             )}
           </TabsContent>
 
@@ -1329,7 +1329,7 @@ const WomenDashboardScreen = () => {
                 <p className="text-muted-foreground">{t('noRegularUsersOnline', 'No regular users online')}</p>
               </Card>
             ) : (
-              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+              <ScrollableUserList>
                 {nonRechargedMen.map((user, index) => (
                   <div 
                     key={user.userId}
@@ -1339,7 +1339,7 @@ const WomenDashboardScreen = () => {
                     <UserCard user={user} isPremium={false} />
                   </div>
                 ))}
-              </div>
+              </ScrollableUserList>
             )}
           </TabsContent>
         </Tabs>
