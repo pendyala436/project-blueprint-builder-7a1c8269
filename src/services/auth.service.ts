@@ -22,8 +22,8 @@ export interface AuthResponse {
  * Get current authenticated user
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user ? { id: user.id, email: user.email ?? null } : null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user ? { id: session.user.id, email: session.user.email ?? null } : null;
 }
 
 /**
@@ -85,10 +85,11 @@ export async function signUp(email: string, password: string): Promise<AuthRespo
  */
 export async function signOut(): Promise<{ success: boolean; error?: string }> {
   try {
-    // Get current user to set offline status
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get current user from session to set offline status
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (user) {
+    if (session?.user) {
+      const user = session.user;
       // Set user offline before signing out
       const now = new Date().toISOString();
       await supabase
