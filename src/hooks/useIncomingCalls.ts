@@ -46,6 +46,16 @@ const stopRingLoop = () => {
   }
 };
 
+// Global set to track call IDs initiated by the current user
+// This prevents the initiator from seeing their own call as incoming
+const outgoingCallIds = new Set<string>();
+
+export const registerOutgoingCall = (callId: string) => {
+  outgoingCallIds.add(callId);
+  // Auto-cleanup after 2 minutes
+  setTimeout(() => outgoingCallIds.delete(callId), 120_000);
+};
+
 export const useIncomingCalls = (currentUserId: string | null, userGender?: "male" | "female") => {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const incomingCallRef = useRef<IncomingCall | null>(null);
@@ -69,8 +79,6 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
     if (!currentUserId) return;
 
     // Determine which column to listen on based on gender
-    // Men receive calls on man_user_id (from golden badge women)
-    // Women receive calls on woman_user_id (from men)
     const gender = userGender || "female";
     const filterColumn = gender === "male" ? "man_user_id" : "woman_user_id";
     const callerColumn = gender === "male" ? "woman_user_id" : "man_user_id";
@@ -90,9 +98,15 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
           const call = payload.new as any;
           
           if (call.status === 'ringing') {
+            // Skip if this is a call the current user initiated
+            if (outgoingCallIds.has(call.call_id)) {
+              console.log('[IncomingCalls] Skipping own outgoing call:', call.call_id);
+              return;
+            }
+
             const callerId = call[callerColumn];
             
-            // Skip if this user initiated the call (avoid showing own outgoing call as incoming)
+            // Double-check: skip if caller is somehow the current user
             if (callerId === currentUserId) return;
             
             // Fetch caller info from profiles
