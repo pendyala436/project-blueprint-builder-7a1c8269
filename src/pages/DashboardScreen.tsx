@@ -58,7 +58,9 @@ import {
   Gift,
   Shield,
   Sliders,
-  Mail
+  Mail,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
@@ -80,7 +82,7 @@ import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
-
+import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
 
 import { isIndianLanguage, INDIAN_LANGUAGES as INDIAN_NLLB200_LANGUAGES, NON_INDIAN_LANGUAGES as NON_INDIAN_NLLB200_LANGUAGES, ALL_SUPPORTED_LANGUAGES as ALL_NLLB200_LANGUAGES } from "@/data/supportedLanguages";
 import { useChatPricing } from "@/hooks/useChatPricing";
@@ -223,6 +225,58 @@ const DashboardScreen = () => {
 
   // Men's free chat minutes (10 min every 15 days)
   const menFreeMinutes = useMenFreeMinutes(currentUserId || null);
+
+  // Scrollable user list with up/down navigation buttons
+  const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const listScrollRef = useRef<HTMLDivElement>(null);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [canUp, setCanUp] = useState(false);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [canDown, setCanDown] = useState(false);
+
+    const checkScroll = () => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      setCanUp(el.scrollTop > 10);
+      setCanDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
+    };
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      const el = listScrollRef.current;
+      if (!el) return;
+      checkScroll();
+      el.addEventListener('scroll', checkScroll, { passive: true });
+      return () => el.removeEventListener('scroll', checkScroll);
+    }, []);
+
+    const doScroll = (dir: 'up' | 'down') => {
+      listScrollRef.current?.scrollBy({ top: dir === 'up' ? -200 : 200, behavior: 'smooth' });
+    };
+
+    return (
+      <div className="relative">
+        {canUp && (
+          <div className="sticky top-0 z-10 flex justify-center pb-1">
+            <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => doScroll('up')}>
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <div ref={listScrollRef} className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scroll-smooth" onScroll={checkScroll}>
+          {children}
+        </div>
+        {canDown && (
+          <div className="sticky bottom-0 z-10 flex justify-center pt-1">
+            <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => doScroll('down')}>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
@@ -1135,7 +1189,6 @@ const DashboardScreen = () => {
         </div>
       </header>
 
-
       {/* Main Content */}
       <main className="px-3 py-3 space-y-4 sm:max-w-4xl sm:mx-auto sm:px-6 sm:py-8 sm:space-y-8">
         {/* Section 1: Welcome & Status */}
@@ -1143,48 +1196,89 @@ const DashboardScreen = () => {
           <div className="flex flex-col gap-2 mb-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                  <div className="flex items-center gap-1">
-                    <Switch
-                      checked={isOnline}
-                      onCheckedChange={(checked) => {
-                        toggleOnlineStatus(checked);
-                        toast({
-                          title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
-                          description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
-                        });
-                      }}
-                      className="data-[state=checked]:bg-primary scale-90"
-                    />
-                    <Power className={`w-3.5 h-3.5 shrink-0 ${isOnline ? "text-online" : "text-muted-foreground"}`} />
-                    <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                      {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
-                    </span>
-                  </div>
-                  <Badge className={cn("text-[9px] px-1.5 py-0.5 text-white flex items-center gap-0.5", getStatusColor())}>
-                    <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", 
-                      activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
-                    )} />
-                    {getStatusText()}
-                  </Badge>
-                </div>
-                <h1 className="text-base sm:text-3xl font-bold text-foreground leading-tight">
-                  {t('welcome', 'Welcome')}{userName ? `, ${userName}` : ""}! 👋
+                <h1 className="text-base sm:text-xl font-bold text-foreground truncate">
+                  {t('welcome', 'Welcome')}, {userName || t('user', 'User')}! 👋
                 </h1>
-                <p className="text-xs sm:text-base text-muted-foreground mt-0.5">
-                  {t('readyToConnect', 'Ready to make new connections today?')}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('findYourPerfectMatch', 'Find your perfect match today')}
                 </p>
               </div>
-              <MatchFiltersPanel 
-                filters={matchFilters} 
-                onFiltersChange={setMatchFilters}
-                userCountry={userCountryName}
-              />
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="auroraOutline" 
+                  size="sm" 
+                  className="gap-1 text-xs h-8"
+                  onClick={() => setRechargeDialogOpen(true)}
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  ₹{walletBalance.toFixed(0)}
+                </Button>
+              </div>
             </div>
+          </div>
+
+          {/* Key Stats */}
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
+              <p className="text-lg font-bold text-foreground">{stats.onlineUsersCount}</p>
+              <p className="text-[10px] text-muted-foreground">{t('online', 'Online')}</p>
+            </Card>
+            <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
+              <p className="text-lg font-bold text-foreground">{stats.matchCount}</p>
+              <p className="text-[10px] text-muted-foreground">{t('matches', 'Matches')}</p>
+            </Card>
+            <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
+              <p className="text-lg font-bold text-foreground">{activeChatCount}/3</p>
+              <p className="text-[10px] text-muted-foreground">{t('activeChats', 'Active')}</p>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-3 gap-2">
+            {quickActions.map((action, index) => (
+              <button
+                key={index}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all duration-200 border border-border/20"
+                onClick={action.action}
+              >
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${action.color} text-white`}>
+                  {action.icon}
+                </div>
+                <span className="text-[10px] sm:text-xs font-medium text-foreground">{action.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Section 2: Online Women */}
+        {/* Quick Connect & Video Call Buttons */}
+        <div className="grid grid-cols-2 gap-2 animate-fade-in" style={{ animationDelay: "0.03s" }}>
+          <RandomChatButton 
+            userGender="male"
+            userLanguage={userLanguage}
+            userCountry={userCountry}
+            walletBalance={walletBalance}
+            onInsufficientBalance={() => setRechargeDialogOpen(true)}
+          />
+          <VideoCallMiniButton 
+            currentUserId={currentUserId}
+            userLanguage={userLanguage}
+            walletBalance={walletBalance}
+            onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+          />
+        </div>
+
+        {/* Free Minutes Badge */}
+        <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
+          <MenFreeMinutesBadge 
+            hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
+            freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
+            freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
+            nextResetDate={menFreeMinutes.nextResetDate}
+            isLoading={menFreeMinutes.isLoading}
+          />
+        </div>
+
+        {/* Section 2: Women Online */}
         <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
           <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
@@ -1195,7 +1289,7 @@ const DashboardScreen = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fetchOnlineWomen(userLanguage)}
+              onClick={() => currentUserId && fetchOnlineWomen(currentUserId)}
               disabled={loadingOnlineWomen}
               className="gap-1 h-7 text-xs px-2"
             >
@@ -1210,7 +1304,7 @@ const DashboardScreen = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6">
-              {/* Left Column: Same Language Women */}
+              {/* Same Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
@@ -1221,7 +1315,7 @@ const DashboardScreen = () => {
                 </div>
                 
                 {sameLanguageWomen.length > 0 ? (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                  <ScrollableUserList>
                     {sameLanguageWomen.map((woman) => (
                       <Card
                         key={woman.id}
@@ -1267,7 +1361,6 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3 h-3" />
                             </Button>
-                            {/* Video call: Indian man + Indian woman + same language (already in same-language section) */}
                             {userCountry === "IN" && woman.country?.toLowerCase().includes('india') && (
                               <DirectVideoCallButton
                                 currentUserId={currentUserId}
@@ -1299,7 +1392,7 @@ const DashboardScreen = () => {
                         </div>
                       </Card>
                     ))}
-                  </div>
+                  </ScrollableUserList>
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
@@ -1308,7 +1401,7 @@ const DashboardScreen = () => {
                 )}
               </div>
 
-              {/* Right Column: Other Language Women */}
+              {/* Other Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
                   <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
@@ -1316,7 +1409,7 @@ const DashboardScreen = () => {
                 </div>
                 
                 {indianTranslatedWomen.length > 0 ? (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                  <ScrollableUserList>
                     {indianTranslatedWomen.map((woman) => (
                       <Card
                         key={woman.id}
@@ -1388,7 +1481,7 @@ const DashboardScreen = () => {
                         </div>
                       </Card>
                     ))}
-                  </div>
+                  </ScrollableUserList>
                 ) : (
                   <Card className="p-6 text-center">
                     <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
@@ -1429,205 +1522,68 @@ const DashboardScreen = () => {
               {matchedWomen.map((woman) => (
                 <Card
                   key={woman.matchId}
-                  className="p-2.5 hover:shadow-lg transition-all cursor-pointer group border-primary/20"
+                  className="p-2 sm:p-3 hover:shadow-lg transition-all cursor-pointer group"
                   onClick={() => navigate(`/profile/${woman.userId}`)}
                 >
                   <div className="flex flex-col items-center text-center gap-1.5">
                     <div className="relative">
-                      <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/30 shadow-md">
-                        <AvatarImage src={woman.photoUrl || undefined} alt={woman.fullName} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-sm sm:text-lg">
-                          {woman.fullName.charAt(0)}
+                      <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/20">
+                        <AvatarImage src={woman.photoUrl || undefined} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white">
+                          {woman.fullName?.charAt(0) || "?"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className={cn(
-                        "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background",
-                        woman.isOnline ? "bg-online" : "bg-muted-foreground/40"
-                      )} />
                     </div>
-                    <div className="min-w-0 w-full">
-                      <p className="font-medium text-sm text-foreground truncate">
-                        {woman.fullName}
+                    <div>
+                      <p className="font-medium text-xs sm:text-sm text-foreground truncate max-w-[80px] sm:max-w-[120px]">
+                        {woman.fullName || "User"}
                       </p>
                       {woman.age && (
-                        <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
-                      )}
-                      {woman.primaryLanguage && (
-                        <span className="block px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded-full mt-1 truncate">
-                          {woman.primaryLanguage}
-                        </span>
+                        <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
                       )}
                     </div>
-                    <div className="flex gap-1.5 w-full">
-                      <Button
-                        variant="aurora"
-                        size="sm"
-                        className="flex-1 gap-1 text-xs h-7"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartChatWithWoman(woman.userId, woman.fullName);
-                        }}
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        {t('chat', 'Chat')}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/profile/${woman.userId}`);
-                        }}
-                      >
-                        <Eye className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="aurora"
+                      size="sm"
+                      className="w-full h-7 text-[10px] sm:text-xs gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartChatWithWoman(woman.userId, woman.fullName || "User");
+                      }}
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      Chat
+                    </Button>
                   </div>
                 </Card>
               ))}
             </div>
           ) : (
-            <Card className="p-6 text-center">
-              <Heart className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">{t('noMatchesYet', 'No matches yet')}</p>
-              <p className="text-xs text-muted-foreground mt-1">{t('likeProfilesToMatch', 'Like profiles to start matching!')}</p>
+            <Card className="p-5 sm:p-8 text-center">
+              <Heart className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('noMatchesYet', 'No matches yet')}</p>
+              <Button
+                variant="aurora"
+                size="sm"
+                className="mt-3 gap-1"
+                onClick={() => navigate("/match-discovery")}
+              >
+                <Compass className="w-4 h-4" />
+                {t('discoverMatches', 'Discover Matches')}
+              </Button>
             </Card>
           )}
         </div>
 
-        {/* Section 3: Key Stats */}
-        <div className="grid grid-cols-3 gap-2 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          {/* Online Users */}
-          <Card className="p-2 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <div className="flex flex-col items-center gap-1">
-              <div className="p-1.5 sm:p-2.5 rounded-full bg-primary/15">
-                <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-base sm:text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
-                <p className="text-[9px] sm:text-[11px] text-muted-foreground">{t('onlineNow', 'Online')}</p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Matches */}
-          <Card className="p-2 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <div className="flex flex-col items-center gap-1">
-              <div className="p-1.5 sm:p-2.5 rounded-full bg-primary/15">
-                <Heart className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-base sm:text-xl font-bold text-foreground">{stats.matchCount}</p>
-                <p className="text-[9px] sm:text-[11px] text-muted-foreground">{t('matches', 'Matches')}</p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Notifications */}
-          <Card className="p-2 sm:p-4 text-center bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-            <div className="flex flex-col items-center gap-1">
-              <div className="p-1.5 sm:p-2.5 rounded-full bg-primary/15">
-                <BellRing className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-base sm:text-xl font-bold text-foreground">{stats.unreadNotifications}</p>
-                <p className="text-[9px] sm:text-[11px] text-muted-foreground">{t('notifications', 'Alerts')}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Section 3: Wallet & Primary Actions */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.15s" }}>
-          <Card className="p-2.5 sm:p-5 bg-gradient-to-br from-primary/8 to-accent/5 border-primary/20">
-            <div className="flex flex-col items-center gap-3">
-              {/* Balance */}
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
-                  <WalletCards className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
-                </div>
-                <div className="text-center sm:text-left min-w-0">
-                  <p className="text-[9px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">{t('walletBalance', 'Wallet Balance')}</p>
-                  <p className="text-lg sm:text-2xl font-bold text-foreground">
-                    ₹{walletBalance.toLocaleString()}
-                    <span className="text-[9px] sm:text-sm font-normal text-muted-foreground ml-1 block sm:inline">
-                      ({formatLocalCurrency(walletBalance)})
-                    </span>
-                  </p>
-                </div>
-              </div>
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-2 w-full">
-                <RandomChatButton 
-                  userGender="male"
-                  userLanguage={userLanguage}
-                  userCountry={userCountryName}
-                  walletBalance={walletBalance}
-                  variant="aurora"
-                  size="lg"
-                  onInsufficientBalance={() => setRechargeDialogOpen(true)}
-                  className="w-full"
-                />
-                {userCountry === "IN" && (
-                  <VideoCallMiniButton
-                    currentUserId={currentUserId}
-                    userLanguage={userLanguage}
-                    walletBalance={walletBalance}
-                    onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                  />
-                )}
-                <Button 
-                  variant="aurora" 
-                  size="default"
-                  onClick={() => setRechargeDialogOpen(true)}
-                  className="gap-1.5 w-full text-sm"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  {t('rechargeWallet', 'Recharge')}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Section 4: Quick Actions */}
+        {/* Section 5: Language Community */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <h2 className="text-sm sm:text-lg font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
-            <Zap className="w-4 h-4 text-primary" />
-            {t('quickActions', 'Quick Actions')}
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={action.action}
-                className="group flex flex-col items-center gap-1 p-2 sm:p-4 rounded-xl bg-card hover:bg-accent/50 border border-border/30 hover:border-primary/30 transition-all duration-200"
-              >
-                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-all duration-200`}>
-                  {action.icon}
-                </div>
-                <p className="text-[10px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
-              </button>
-            ))}
-          </div>
+          <LanguageCommunityPanel
+            currentUserId={currentUserId}
+            motherTongue={userLanguage}
+            userName={userName || 'User'}
+            userPhoto={userPhoto}
+          />
         </div>
-
-        {/* Active Chats now handled via EnhancedParallelChatsContainer at bottom of screen */}
-
-        {/* Men's Free Chat Minutes */}
-        {currentUserId && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.23s" }}>
-            <MenFreeMinutesBadge
-              hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
-              freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
-              freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
-              nextResetDate={menFreeMinutes.nextResetDate}
-              isLoading={menFreeMinutes.isLoading}
-            />
-          </div>
-        )}
-
 
         {/* Section 6: Transaction History */}
         {currentUserId && (
@@ -1640,6 +1596,7 @@ const DashboardScreen = () => {
             />
           </div>
         )}
+
 
 
 
