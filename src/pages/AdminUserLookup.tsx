@@ -315,7 +315,7 @@ const AdminUserLookup = () => {
                             <Badge variant={selectedUser.account_status === "active" ? "default" : "destructive"}>
                               {selectedUser.account_status}
                             </Badge>
-                            {selectedUser.is_verified && <Badge className="bg-green-500">Verified</Badge>}
+                            {selectedUser.is_verified && <Badge className="bg-primary text-primary-foreground">Verified</Badge>}
                           </div>
                         </div>
                       </div>
@@ -418,7 +418,7 @@ const AdminUserLookup = () => {
                                   <p className="font-medium">{tx.description || tx.type}</p>
                                   <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleString()}</p>
                                 </div>
-                                <span className={tx.type === "credit" ? "text-green-600 font-semibold" : "text-red-500 font-semibold"}>
+                                <span className={tx.type === "credit" ? "text-primary font-semibold" : "text-destructive font-semibold"}>
                                   {tx.type === "credit" ? "+" : "-"}₹{tx.amount.toFixed(2)}
                                 </span>
                               </div>
@@ -483,7 +483,7 @@ const AdminUserLookup = () => {
                                 {kycData.verification_status}
                               </Badge>
                               {kycData.rejection_reason && (
-                                <span className="text-xs text-red-500">Reason: {kycData.rejection_reason}</span>
+                                <span className="text-xs text-destructive">Reason: {kycData.rejection_reason}</span>
                               )}
                             </div>
 

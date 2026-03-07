@@ -1127,8 +1127,8 @@ const AdminUserManagement = () => {
                               <Badge
                                 variant="outline"
                                 className={cn(
-                                  user.gender?.toLowerCase() === "male" && "border-blue-500 text-blue-500",
-                                  user.gender?.toLowerCase() === "female" && "border-pink-500 text-pink-500"
+                                  user.gender?.toLowerCase() === "male" && "border-primary text-primary",
+                                  user.gender?.toLowerCase() === "female" && "border-primary text-primary"
                                 )}
                               >
                                 {user.gender || "N/A"}
@@ -1246,7 +1246,7 @@ const AdminUserManagement = () => {
                                         onClick={() => handleToggleGoldenBadge(user)}
                                         disabled={assigningBadge === user.user_id}
                                       >
-                                        <Crown className="h-4 w-4 mr-2 text-yellow-500" />
+                                        <Crown className="h-4 w-4 mr-2 text-primary" />
                                         {assigningBadge === user.user_id ? 'Processing...' : 'Toggle Golden Badge'}
                                       </DropdownMenuItem>
                                     </>
@@ -1266,7 +1266,7 @@ const AdminUserManagement = () => {
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onClick={() => handleDeleteUser(user)}
-                                    className="text-red-500 focus:text-red-500"
+                                    className="text-destructive focus:text-destructive"
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete User
@@ -1366,7 +1366,7 @@ const AdminUserManagement = () => {
                             <TableCell>
                               <span className={cn(
                                 "font-medium",
-                                group.current_women_count >= group.max_women_users && "text-red-500"
+                                group.current_women_count >= group.max_women_users && "text-destructive"
                               )}>
                                 {group.current_women_count}
                               </span>
@@ -1378,7 +1378,7 @@ const AdminUserManagement = () => {
                               {group.current_women_count >= group.max_women_users ? (
                                 <Badge variant="destructive">Full</Badge>
                               ) : (
-                                <Badge className="bg-green-500">Available</Badge>
+                                <Badge className="bg-primary text-primary-foreground">Available</Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -1527,7 +1527,7 @@ const AdminUserManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-pink-500" />
+              <Heart className="h-5 w-5 text-primary" />
               Add Friend for {friendTargetUser?.full_name || "User"}
             </DialogTitle>
             <DialogDescription>

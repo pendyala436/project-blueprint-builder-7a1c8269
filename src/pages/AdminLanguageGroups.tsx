@@ -330,7 +330,7 @@ const AdminLanguageGroups = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-primary">
                 {groups.filter((g) => g.is_active).length}
               </div>
               <div className="text-sm text-muted-foreground">Active</div>

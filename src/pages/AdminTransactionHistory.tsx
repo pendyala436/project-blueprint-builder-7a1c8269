@@ -664,7 +664,7 @@ const AdminTransactionHistory = () => {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total Earned</p>
-                  <p className="text-lg font-bold text-green-600">₹{womenStats.earned.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-primary">₹{womenStats.earned.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Withdrawals</p>
@@ -717,7 +717,7 @@ const AdminTransactionHistory = () => {
                           <TableHead className="font-bold">Description</TableHead>
                           <TableHead className="font-bold">Reference Number</TableHead>
                           <TableHead className="font-bold text-destructive">Withdrawals</TableHead>
-                          <TableHead className="font-bold text-green-600">Deposits</TableHead>
+                          <TableHead className="font-bold text-primary">Deposits</TableHead>
                           <TableHead className="font-bold">Running Balance</TableHead>
                         </TableRow>
                       </TableHeader>
