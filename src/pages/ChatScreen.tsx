@@ -500,6 +500,7 @@ const ChatScreen = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
       setCurrentUserId(user.id);
 
       // ============= GENERATE CHAT ID =============
