@@ -494,8 +494,8 @@ const ChatScreen = () => {
 
       // ============= GET CURRENT USER =============
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
         // Not logged in - redirect to auth
         navigate("/");
         return;
