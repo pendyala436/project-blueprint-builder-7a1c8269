@@ -249,11 +249,44 @@ const PhotoUploadScreen = () => {
     }
 
     // Store photo data for later upload (after auth)
-    if (selfiePreview) {
-      localStorage.setItem("pendingPhotoData", selfiePreview);
-    }
-    if (additionalPhotos.length > 0) {
-      localStorage.setItem("pendingAdditionalPhotos", JSON.stringify(additionalPhotos));
+    try {
+      // Compress images before storing to avoid localStorage quota issues
+      const compressImage = (dataUrl: string, quality = 0.5): Promise<string> => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            // Resize to max 400px for storage
+            const maxDim = 400;
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+              else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.onerror = () => resolve(dataUrl); // fallback to original
+          img.src = dataUrl;
+        });
+      };
+
+      if (selfiePreview) {
+        const compressed = await compressImage(selfiePreview);
+        localStorage.setItem("pendingPhotoData", compressed);
+      }
+      if (additionalPhotos.length > 0) {
+        const compressedPhotos = await Promise.all(additionalPhotos.map(p => compressImage(p)));
+        localStorage.setItem("pendingAdditionalPhotos", JSON.stringify(compressedPhotos));
+      }
+    } catch (storageError) {
+      console.warn("localStorage quota exceeded, storing flag only:", storageError);
+      // Store just a flag - photos will need to be re-uploaded after auth
+      localStorage.setItem("pendingPhotoData", "pending");
+      localStorage.setItem("pendingAdditionalPhotos", "pending");
     }
 
     toast({
