@@ -67,6 +67,7 @@ const LanguagePreferencesScreen = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       // Delete existing language preferences
       await supabase
