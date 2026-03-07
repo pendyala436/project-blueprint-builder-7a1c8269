@@ -288,7 +288,7 @@ const AdminLanguageLimits = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Video className="h-5 w-5 text-purple-500" />
+                <Video className="h-5 w-5 text-primary" />
                 <div>
                   <div className="text-2xl font-bold">{currentCallWomen}/{totalCallCapacity}</div>
                   <div className="text-sm text-muted-foreground">Video Women</div>

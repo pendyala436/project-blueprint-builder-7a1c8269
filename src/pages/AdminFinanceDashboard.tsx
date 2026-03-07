@@ -573,17 +573,17 @@ const AdminFinanceDashboard = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {txn.type === "credit" ? (
-                            <ArrowDownRight className="h-4 w-4 text-green-500" />
+                             <ArrowDownRight className="h-4 w-4 text-primary" />
                           ) : txn.type === "debit" ? (
-                            <ArrowUpRight className="h-4 w-4 text-red-500" />
+                            <ArrowUpRight className="h-4 w-4 text-destructive" />
                           ) : (
-                            <Gift className="h-4 w-4 text-pink-500" />
+                            <Gift className="h-4 w-4 text-primary" />
                           )}
                           <span className="capitalize">{txn.type}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className={`font-medium ${txn.type === "credit" ? "text-green-600" : txn.type === "debit" ? "text-red-600" : "text-pink-600"}`}>
+                        <span className={`font-medium ${txn.type === "credit" ? "text-primary" : txn.type === "debit" ? "text-destructive" : "text-primary"}`}>
                           {txn.type === "credit" ? "+" : txn.type === "debit" ? "-" : ""}₹{Number(txn.amount).toLocaleString("en-IN")}
                         </span>
                       </TableCell>
