@@ -98,16 +98,25 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
           const call = payload.new as any;
           
           if (call.status === 'ringing') {
-            // Skip if this is a call the current user initiated
+            // Skip if this is a call the current user initiated (by call_id tracking)
             if (outgoingCallIds.has(call.call_id)) {
-              console.log('[IncomingCalls] Skipping own outgoing call:', call.call_id);
+              console.log('[IncomingCalls] Skipping own outgoing call (by call_id):', call.call_id);
               return;
             }
 
             const callerId = call[callerColumn];
             
-            // Double-check: skip if caller is somehow the current user
-            if (callerId === currentUserId) return;
+            // Skip if the caller is the current user — this means WE initiated it
+            if (callerId === currentUserId) {
+              console.log('[IncomingCalls] Skipping own outgoing call (caller is self):', call.call_id);
+              return;
+            }
+
+            // Additional check: if the call_id contains our user ID as initiator pattern
+            if (call.call_id && call.call_id.startsWith(`call_${currentUserId}_`)) {
+              console.log('[IncomingCalls] Skipping own outgoing call (call_id pattern):', call.call_id);
+              return;
+            }
             
             // Fetch caller info from profiles
             const { data: callerProfile } = await supabase
