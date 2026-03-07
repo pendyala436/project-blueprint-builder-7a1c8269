@@ -130,10 +130,10 @@ export const RandomChatButton = ({
           description: "You must be logged in to start a chat",
           variant: "destructive"
         });
-      const user = session!.user;
         setSearchDialogOpen(false);
         return;
       }
+      const user = session.user;
 
       if (userGender === "male") {
         // Men looking for women

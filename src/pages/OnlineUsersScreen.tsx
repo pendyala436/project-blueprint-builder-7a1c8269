@@ -87,6 +87,7 @@ const OnlineUsersScreen = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       // Get current user's gender
       const { data: currentProfile } = await supabase

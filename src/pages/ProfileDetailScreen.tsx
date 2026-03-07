@@ -111,6 +111,7 @@ const ProfileDetailScreen = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
       setCurrentUserId(user.id);
 
       // PARALLEL: Fetch all data at once instead of sequential

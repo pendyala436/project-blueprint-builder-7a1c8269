@@ -175,6 +175,7 @@ const MatchDiscoveryScreen = () => {
         navigate("/");
         return;
       }
+      const user = session.user;
 
       // ============= FETCH CURRENT USER DATA =============
       
