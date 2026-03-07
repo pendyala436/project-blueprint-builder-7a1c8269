@@ -407,10 +407,10 @@ const AdminSettings = () => {
                           : 'border-border hover:border-primary/50'
                       } ${
                         theme.value === 'dark' 
-                          ? 'bg-zinc-900 text-white' 
+                          ? 'bg-card text-foreground' 
                           : theme.value === 'light' 
-                            ? 'bg-white text-zinc-900' 
-                            : 'bg-gradient-to-br from-white to-zinc-900'
+                            ? 'bg-background text-foreground' 
+                            : 'bg-gradient-to-br from-background to-card'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3">

@@ -359,20 +359,20 @@ const AdminChatPricing = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Women Earning Per Minute</p>
-                      <p className="text-2xl font-bold text-emerald-600">₹{parseFloat(formData.women_earning_rate).toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-primary">₹{parseFloat(formData.women_earning_rate).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Platform Profit */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-blue-500/10">
-                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <TrendingUp className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Platform Profit Per Minute</p>
-                      <p className="text-2xl font-bold text-blue-600">₹{chatPlatformProfit.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-primary">₹{chatPlatformProfit.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -386,7 +386,7 @@ const AdminChatPricing = () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Video className="h-5 w-5 text-purple-500" />
+                <Video className="h-5 w-5 text-primary" />
                 Video Call Pricing Rates
               </CardTitle>
               <CardDescription>
@@ -475,10 +475,10 @@ const AdminChatPricing = () => {
             ) : (
               <div className="space-y-4">
                 {/* Display Mode - Men Video Rate */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-purple-500/10">
-                      <Video className="h-5 w-5 text-purple-500" />
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Video className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Men Charged Per Minute (Video)</p>
@@ -488,23 +488,23 @@ const AdminChatPricing = () => {
                 </div>
 
                 {/* Display Mode - Women Video Rate */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-pink-500/5 border border-pink-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-pink-500/10">
-                      <Users className="h-5 w-5 text-pink-500" />
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Users className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Women Earning Per Minute (Video)</p>
-                      <p className="text-2xl font-bold text-pink-600">₹{parseFloat(formData.video_women_earning_rate).toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-primary">₹{parseFloat(formData.video_women_earning_rate).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Platform Profit - Video */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-500/10">
-                      <TrendingUp className="h-5 w-5 text-indigo-500" />
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <TrendingUp className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Platform Profit Per Minute (Video)</p>

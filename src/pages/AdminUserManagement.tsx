@@ -835,7 +835,7 @@ const AdminUserManagement = () => {
           </div>
         );
       case "pending":
-        return <Badge className="bg-yellow-500"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return <Badge className="bg-warning text-warning-foreground"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       default:
         return <Badge variant="secondary">{approval_status}</Badge>;
     }
@@ -974,19 +974,19 @@ const AdminUserManagement = () => {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Pending Approval</p>
-                  <p className="text-2xl font-bold text-orange-500">{stats.pendingApproval}</p>
+                  <p className="text-2xl font-bold text-primary">{stats.pendingApproval}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">Approved Women</p>
-                  <p className="text-2xl font-bold text-pink-500">{stats.approvedWomen}</p>
+                  <p className="text-2xl font-bold text-primary">{stats.approvedWomen}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">AI Approved</p>
-                  <p className="text-2xl font-bold text-purple-500">{stats.aiApprovedWomen}</p>
+                  <p className="text-2xl font-bold text-primary">{stats.aiApprovedWomen}</p>
                 </CardContent>
               </Card>
             </div>
