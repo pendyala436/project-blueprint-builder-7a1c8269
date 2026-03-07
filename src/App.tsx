@@ -126,9 +126,15 @@ const RouteLoader = memo(() => (
 RouteLoader.displayName = 'RouteLoader';
 
 // Optimized lazy route wrapper
-const LazyRoute = memo(({ component: Component }: { component: React.ComponentType }) => (
+const LazyRoute = memo(({ component: Component, requiredRole }: { component: React.ComponentType; requiredRole?: 'male' | 'female' | 'admin' | 'authenticated' }) => (
   <Suspense fallback={<RouteLoader />}>
-    <Component />
+    {requiredRole ? (
+      <ProtectedRoute requiredRole={requiredRole}>
+        <Component />
+      </ProtectedRoute>
+    ) : (
+      <Component />
+    )}
   </Suspense>
 ));
 LazyRoute.displayName = 'LazyRoute';
