@@ -1543,52 +1543,6 @@ const DashboardScreen = () => {
           </div>
         )}
 
-  const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
-    const listScrollRef = useRef<HTMLDivElement>(null);
-    const [canUp, setCanUp] = useState(false);
-    const [canDown, setCanDown] = useState(false);
-
-    const checkScroll = useCallback(() => {
-      const el = listScrollRef.current;
-      if (!el) return;
-      setCanUp(el.scrollTop > 10);
-      setCanDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
-    }, []);
-
-    useEffect(() => {
-      const el = listScrollRef.current;
-      if (!el) return;
-      checkScroll();
-      el.addEventListener('scroll', checkScroll, { passive: true });
-      return () => el.removeEventListener('scroll', checkScroll);
-    }, [checkScroll, sameLanguageWomen, indianTranslatedWomen]);
-
-    const doScroll = (dir: 'up' | 'down') => {
-      listScrollRef.current?.scrollBy({ top: dir === 'up' ? -200 : 200, behavior: 'smooth' });
-    };
-
-    return (
-      <div className="relative">
-        {canUp && (
-          <div className="sticky top-0 z-10 flex justify-center pb-1">
-            <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => doScroll('up')}>
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        <div ref={listScrollRef} className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scroll-smooth">
-          {children}
-        </div>
-        {canDown && (
-          <div className="sticky bottom-0 z-10 flex justify-center pt-1">
-            <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => doScroll('down')}>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  };
 
 
 
