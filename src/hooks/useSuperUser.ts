@@ -115,7 +115,7 @@ export const useSuperUser = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user?.id) {
-          const result = await checkUserRoles(user.id);
+          const result = await checkUserRoles(session.user.id);
           setIsSuperUser(result.isSuperUser);
           setSuperUserType(result.type);
           setIsAdmin(result.isAdmin);

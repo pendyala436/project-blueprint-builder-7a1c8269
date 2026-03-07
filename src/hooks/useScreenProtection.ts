@@ -52,6 +52,7 @@ export const useScreenProtection = (options: UseScreenProtectionOptions = {}) =>
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
+      const user = session.user;
 
       // Log to audit_logs table
       await supabase.from('audit_logs').insert({
