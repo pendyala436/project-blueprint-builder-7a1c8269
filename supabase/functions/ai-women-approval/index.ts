@@ -113,6 +113,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Auth guard: require authenticated user
@@ -123,7 +124,12 @@ serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
+
+    // Use anon-key auth client for proper JWT verification (not service role)
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
     if (authError || !caller) {
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
