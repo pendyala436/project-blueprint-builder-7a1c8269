@@ -200,7 +200,7 @@ const AdminLanguageGroups = () => {
         .eq("id", group.id);
 
       if (error) throw error;
-      toast({ title: "Success", description: "Language group deleted" });
+      toast.success("Success", { description: "Language group deleted" });
       loadGroups();
     } catch (error) {
       console.error("Error deleting language group:", error);
