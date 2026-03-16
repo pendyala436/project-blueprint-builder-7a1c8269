@@ -1,0 +1,601 @@
+import { useState, useEffect, useCallback } from "react";
+import AdminNav from "@/components/AdminNav";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { cn } from "@/lib/utils";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { 
+  ArrowLeft, 
+  TrendingUp, 
+  Wallet, 
+  CreditCard,
+  Download,
+  RefreshCw,
+  IndianRupee,
+  Gift,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+  FileText,
+  Home
+} from "lucide-react";
+
+interface LedgerTxn {
+  id: string;
+  user_id: string;
+  transaction_type: string;
+  debit: number;
+  credit: number;
+  description: string | null;
+  created_at: string;
+}
+
+interface GiftTransaction {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  gift_id: string;
+  price_paid: number;
+  currency: string;
+  status: string;
+  created_at: string;
+}
+
+interface DailyRevenue {
+  date: string;
+  revenue: number;
+  transactions: number;
+}
+
+const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+
+const AdminFinanceDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState("all");
+  const [walletTransactions, setWalletTransactions] = useState<LedgerTxn[]>([]);
+  const [giftTransactions, setGiftTransactions] = useState<GiftTransaction[]>([]);
+  const [totalWallets, setTotalWallets] = useState(0);
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [totalWithdrawals, setTotalWithdrawals] = useState(0);
+  const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([]);
+  const [transactionTypes, setTransactionTypes] = useState<{ name: string; value: number }[]>([]);
+
+  const loadFinanceData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const days = dateRange === "all" ? 3650 : parseInt(dateRange); // 10 years for "all time"
+      const startDate = startOfDay(subDays(new Date(), days)).toISOString();
+      const endDate = endOfDay(new Date()).toISOString();
+      // Load ledger transactions
+      const { data: ledgerTxns, error: ledgerError } = await supabase
+        .from("ledger_transactions")
+        .select("*")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate)
+        .order("created_at", { ascending: false });
+
+      if (ledgerError) throw ledgerError;
+      setWalletTransactions(ledgerTxns || []);
+
+      // Load gift transactions
+      const { data: giftTxns, error: giftError } = await supabase
+        .from("gift_transactions")
+        .select("*")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate)
+        .order("created_at", { ascending: false });
+
+      if (giftError) throw giftError;
+      setGiftTransactions(giftTxns || []);
+
+      // Load wallet stats from users_wallet
+      const { data: wallets, error: walletsError } = await supabase
+        .from("users_wallet")
+        .select("id, balance");
+
+      if (walletsError) throw walletsError;
+      setTotalWallets(wallets?.length || 0);
+      setTotalBalance(wallets?.reduce((sum, w) => sum + Number(w.balance), 0) || 0);
+
+      // Load completed withdrawals
+      const { data: withdrawals } = await supabase
+        .from("withdrawal_requests")
+        .select("amount")
+        .eq("status", "completed")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+      
+      setTotalWithdrawals(withdrawals?.reduce((sum, w) => sum + Number(w.amount), 0) || 0);
+
+      // Calculate daily revenue
+      const revenueByDay: Record<string, { revenue: number; transactions: number }> = {};
+      for (let i = days; i >= 0; i--) {
+        const date = format(subDays(new Date(), i), "yyyy-MM-dd");
+        revenueByDay[date] = { revenue: 0, transactions: 0 };
+      }
+
+      // Add recharge credits as revenue
+      ledgerTxns?.forEach((txn: any) => {
+        if (txn.transaction_type === "recharge" && txn.credit > 0) {
+          const date = format(new Date(txn.created_at), "yyyy-MM-dd");
+          if (revenueByDay[date]) {
+            revenueByDay[date].revenue += Number(txn.credit);
+            revenueByDay[date].transactions += 1;
+          }
+        }
+      });
+
+      // Add gift transactions as revenue
+      giftTxns?.forEach((txn) => {
+        if (txn.status === "completed") {
+          const date = format(new Date(txn.created_at), "yyyy-MM-dd");
+          if (revenueByDay[date]) {
+            revenueByDay[date].revenue += Number(txn.price_paid);
+            revenueByDay[date].transactions += 1;
+          }
+        }
+      });
+
+      const dailyData = Object.entries(revenueByDay).map(([date, data]) => ({
+        date: format(new Date(date), "MMM d"),
+        revenue: data.revenue,
+        transactions: data.transactions,
+      }));
+      setDailyRevenue(dailyData);
+
+      // Calculate transaction type distribution
+      const typeCount: Record<string, number> = {};
+      ledgerTxns?.forEach((txn: any) => {
+        const type = txn.transaction_type || "other";
+        typeCount[type] = (typeCount[type] || 0) + 1;
+      });
+      giftTxns?.forEach(() => {
+        typeCount["gift"] = (typeCount["gift"] || 0) + 1;
+      });
+      setTransactionTypes(Object.entries(typeCount).map(([name, value]) => ({ name, value })));
+
+    } catch (error) {
+      console.error("Error loading finance data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load finance data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [dateRange, toast]);
+
+  // Real-time subscriptions for finance data
+  useMultipleRealtimeSubscriptions(
+    ["ledger_transactions", "gift_transactions", "users_wallet", "withdrawal_requests"],
+    loadFinanceData,
+    true
+  );
+
+  useEffect(() => {
+    loadFinanceData();
+  }, [loadFinanceData]);
+
+  const exportCSV = () => {
+    // Combine all transactions for export
+    const allTransactions = [
+      ...walletTransactions.map((t) => ({
+        type: "ledger",
+        transaction_type: t.transaction_type,
+        amount: t.debit > 0 ? t.debit : t.credit,
+        status: "completed",
+        description: t.description,
+        user_id: t.user_id,
+        created_at: t.created_at,
+      })),
+      ...giftTransactions.map((t) => ({
+        type: "gift",
+        transaction_type: "gift_purchase",
+        amount: t.price_paid,
+        status: t.status,
+        description: `Gift from ${t.sender_id.slice(0, 8)} to ${t.receiver_id.slice(0, 8)}`,
+        user_id: t.sender_id,
+        created_at: t.created_at,
+      })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // Generate CSV
+    const headers = ["Type", "Transaction Type", "Amount", "Status", "Description", "User ID", "Date"];
+    const rows = allTransactions.map((t) => [
+      t.type,
+      t.transaction_type,
+      t.amount,
+      t.status,
+      t.description || "",
+      t.user_id,
+      format(new Date(t.created_at), "yyyy-MM-dd HH:mm:ss"),
+    ]);
+
+    const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `finance-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: "Success", description: "CSV exported successfully" });
+  };
+
+  const totalRevenue = dailyRevenue.reduce((sum, d) => sum + d.revenue, 0);
+  const totalTransactions = walletTransactions.length + giftTransactions.length;
+  const giftRevenue = giftTransactions.reduce((sum, t) => sum + Number(t.price_paid), 0);
+  const totalProfit = totalRevenue - totalWithdrawals;
+
+  if (loading) {
+    return (
+      <AdminNav>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        </div>
+      </AdminNav>
+    );
+  }
+
+  return (
+    <AdminNav>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-semibold">Finance Dashboard</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[140px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={loadFinanceData} variant="outline" size="icon">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button onClick={exportCSV} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={() => navigate("/admin/finance-reports")} className="gap-2">
+            <FileText className="h-4 w-4" />
+            Monthly Reports
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Deposits (Men)</p>
+                  <p className="text-2xl font-bold flex items-center text-success">
+                    <IndianRupee className="h-5 w-5" />
+                    {totalRevenue.toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="p-3 bg-success/10 rounded-full">
+                  <TrendingUp className="h-6 w-6 text-success" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "50ms" }}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Withdrawals (Women)</p>
+                  <p className="text-2xl font-bold flex items-center text-destructive">
+                    <IndianRupee className="h-5 w-5" />
+                    {totalWithdrawals.toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="p-3 bg-destructive/10 rounded-full">
+                  <ArrowDownRight className="h-6 w-6 text-destructive" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300 border-primary/30" style={{ animationDelay: "100ms" }}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Profit</p>
+                  <p className={cn("text-2xl font-bold flex items-center", totalProfit >= 0 ? "text-success" : "text-destructive")}>
+                    <IndianRupee className="h-5 w-5" />
+                    {totalProfit.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Deposits − Withdrawals</p>
+                </div>
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Wallet className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "150ms" }}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Gift Revenue</p>
+                  <p className="text-2xl font-bold flex items-center">
+                    <IndianRupee className="h-5 w-5" />
+                    {giftRevenue.toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="p-3 bg-secondary/10 rounded-full">
+                  <Gift className="h-6 w-6 text-secondary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ animationDelay: "200ms" }}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Wallets</p>
+                  <p className="text-2xl font-bold">{totalWallets}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Balance: ₹{totalBalance.toLocaleString("en-IN")}</p>
+                </div>
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <CreditCard className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Revenue Chart */}
+          <Card className="md:col-span-2 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: "200ms" }}>
+            <CardHeader>
+              <CardTitle>Revenue Trend</CardTitle>
+              <CardDescription>Daily revenue over the selected period</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyRevenue}>
+                    <defs>
+                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [`₹${value.toLocaleString("en-IN")}`, "Revenue"]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#revenueGradient)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Transaction Type Distribution */}
+          <Card className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: "250ms" }}>
+            <CardHeader>
+              <CardTitle>Transaction Types</CardTitle>
+              <CardDescription>Distribution by category</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={transactionTypes}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {transactionTypes.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center mt-4">
+                {transactionTypes.map((type, index) => (
+                  <Badge
+                    key={type.name}
+                    variant="outline"
+                    className="gap-1"
+                    style={{ borderColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                    />
+                    {type.name}: {type.value}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Transaction Volume Chart */}
+        <Card className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: "300ms" }}>
+          <CardHeader>
+            <CardTitle>Transaction Volume</CardTitle>
+            <CardDescription>Number of transactions per day</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyRevenue}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--popover))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Bar dataKey="transactions" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Transactions */}
+        <Card className="animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ animationDelay: "350ms" }}>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+            <CardDescription>Latest {Math.min(totalTransactions, 20)} transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...walletTransactions.slice(0, 10).map((t) => ({
+                    id: t.id,
+                    type: t.transaction_type,
+                    amount: t.debit > 0 ? t.debit : t.credit,
+                    status: "completed",
+                    description: t.description,
+                    created_at: t.created_at,
+                    isGift: false,
+                  })), ...giftTransactions.slice(0, 10).map((t) => ({
+                    id: t.id,
+                    type: "gift",
+                    amount: t.price_paid,
+                    status: t.status,
+                    description: "Gift purchase",
+                    created_at: t.created_at,
+                    isGift: true,
+                  }))].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 20).map((txn, index) => (
+                    <TableRow 
+                      key={txn.id}
+                      className="animate-in fade-in slide-in-from-left-2 duration-200"
+                      style={{ animationDelay: `${index * 30}ms` }}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {txn.type === "credit" ? (
+                             <ArrowDownRight className="h-4 w-4 text-primary" />
+                          ) : txn.type === "debit" ? (
+                            <ArrowUpRight className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <Gift className="h-4 w-4 text-primary" />
+                          )}
+                          <span className="capitalize">{txn.type}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`font-medium ${txn.type === "credit" ? "text-primary" : txn.type === "debit" ? "text-destructive" : "text-primary"}`}>
+                          {txn.type === "credit" ? "+" : txn.type === "debit" ? "-" : ""}₹{Number(txn.amount).toLocaleString("en-IN")}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={txn.status === "completed" ? "default" : "secondary"}>
+                          {txn.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                        {txn.description || "-"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {format(new Date(txn.created_at), "MMM d, HH:mm")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {totalTransactions === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        No transactions found in this period
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminNav>
+  );
+};
+
+export default AdminFinanceDashboard;
