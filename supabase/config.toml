@@ -9,9 +9,6 @@ verify_jwt = false
 [functions.reset-password]
 verify_jwt = false
 
-[functions.translate-message]
-verify_jwt = false
-
 [functions.shift-scheduler]
 verify_jwt = false
 
@@ -60,14 +57,8 @@ verify_jwt = false
 [functions.video-call-circuit-breaker]
 verify_jwt = false
 
-[functions.check-libretranslate]
-verify_jwt = false
-
-[functions.seed-translation-data]
-verify_jwt = false
-
-[functions.spell-check]
-verify_jwt = false
-
 [functions.admin-create-user]
+verify_jwt = false
+
+[functions.admin-delete-user]
 verify_jwt = false
