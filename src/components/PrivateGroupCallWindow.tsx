@@ -468,8 +468,8 @@ export function PrivateGroupCallWindow({
       </div>
 
       {/* ─── Gradient Overlays for Readability ────────────────────── */}
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10" />
 
       {/* ─── Top Bar (Over Video) ─────────────────────────────────── */}
       <div className="relative z-20 flex items-center justify-between px-4 py-3">
@@ -584,7 +584,7 @@ export function PrivateGroupCallWindow({
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
       <div className="relative z-20 mt-auto">
         {/* Media Controls Bar */}
-        <div className="flex items-center justify-center gap-3 px-4 py-2 bg-black/40 backdrop-blur-md">
+        <div className="flex items-center justify-center gap-3 px-4 py-2">
           {isConnecting && (
             <div className="flex items-center gap-2 text-white/70 text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -661,7 +661,7 @@ export function PrivateGroupCallWindow({
         </div>
 
         {/* Chat Input Bar — below media controls */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-black/50">
+        <div className="flex items-center gap-2 px-4 py-2">
           <div className="flex-1 flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-4 py-2 border border-white/10">
             <Input
               value={commentText}
