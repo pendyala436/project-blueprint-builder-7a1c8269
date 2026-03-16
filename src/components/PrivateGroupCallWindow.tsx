@@ -537,17 +537,15 @@ export function PrivateGroupCallWindow({
           <div
             key={comment.id}
             className="absolute whitespace-nowrap animate-danmu"
-            style={{ top: `${comment.top}%`, right: '-100%' }}
+            style={{ top: `${comment.top}%`, left: '100%' }}
           >
-            <span className="inline-flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm shadow-lg">
-              <span className="text-primary font-semibold text-xs">{comment.senderName}</span>
-              <span>{comment.text}</span>
+            <span className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-white/10">
+              <span className="text-amber-400 font-bold text-xs">{comment.senderName}</span>
+              <span className="text-white/95">{comment.text}</span>
             </span>
           </div>
         ))}
       </div>
-
-      {/* ─── Floating Emoji Reactions (Bubble Up) ─────────────────── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
         {floatingReactions.map((reaction) => (
           <div
