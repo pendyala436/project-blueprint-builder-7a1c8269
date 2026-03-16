@@ -17,6 +17,7 @@ const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 const LocationSetupScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);

@@ -19,6 +19,7 @@ interface SelectedLanguage {
 
 const LanguagePreferencesScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

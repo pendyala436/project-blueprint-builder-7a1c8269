@@ -17,6 +17,7 @@ const MAX_ADDITIONAL_PHOTOS = 5;
 
 const PhotoUploadScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

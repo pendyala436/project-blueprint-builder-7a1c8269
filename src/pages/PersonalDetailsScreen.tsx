@@ -133,6 +133,7 @@ const lifeGoalOptions = [
 
 const PersonalDetailsScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
   
   // Form state
   const [bio, setBio] = useState("");

@@ -383,6 +383,7 @@ Users may request early deletion of their data by contacting support, subject to
 
 const TermsAgreementScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userPassword", storage: "session" }], "/password-setup");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [expandedDoc, setExpandedDoc] = useState<string | undefined>("terms_of_service");

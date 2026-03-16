@@ -26,6 +26,7 @@ const passwordRequirements: PasswordRequirement[] = [
 
 const PasswordSetupScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
