@@ -261,10 +261,7 @@ const AdminLegalDocuments = () => {
       window.document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download started",
-        description: `Downloading ${document.name}`,
-      });
+      toast.success("Download started", { description: `Downloading ${document.name}` });
     } catch (error: any) {
       console.error("Error downloading document:", error);
       toast({
