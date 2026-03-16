@@ -552,6 +552,7 @@ const AdminUserManagement = () => {
       await supabase.from("audit_logs").insert({
         admin_id: session?.user?.id || "",
         action: `Force Free Mode: ${forceFreeDurationMinutes} min`,
+        action_type: "update",
         resource_type: "user",
         resource_id: forceFreeUser.user_id,
         details: `Forced ${forceFreeUser.full_name || "user"} to free mode for ${forceFreeDurationMinutes} minutes. Expires: ${expiresAt}. Max 20 min per user.`,
