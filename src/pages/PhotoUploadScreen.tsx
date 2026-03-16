@@ -219,12 +219,12 @@ const PhotoUploadScreen = () => {
       }
     } catch (error: any) {
       console.error("Verification error:", error);
-      // On any error, still accept the photo
-      setVerificationState("verified");
-      setVerificationResult({ reason: "Photo accepted" });
+      setVerificationState("failed");
+      setVerificationResult({ reason: "Verification failed. Please try again." });
       toast({
-        title: "Photo accepted",
-        description: "Your photo has been saved",
+        title: "Verification failed",
+        description: "An error occurred during face verification. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsVerifying(false);
