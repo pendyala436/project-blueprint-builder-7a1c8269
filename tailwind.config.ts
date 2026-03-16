@@ -315,8 +315,8 @@ export default {
           "100%": { transform: "translateX(100%)" },
         },
         danmu: {
-          "0%": { transform: "translateX(100vw)" },
-          "100%": { transform: "translateX(-100%)" },
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(calc(-100% - 100vw))" },
         },
         "float-up": {
           "0%": { opacity: "1", transform: "translateY(0) scale(1)" },

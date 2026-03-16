@@ -51,6 +51,13 @@ interface FloatingComment {
   createdAt: number;
 }
 
+interface RecentMessage {
+  id: string;
+  senderName: string;
+  text: string;
+  createdAt: number;
+}
+
 interface FloatingReaction {
   id: string;
   emoji: string;
@@ -114,6 +121,7 @@ export function PrivateGroupCallWindow({
   const [floatingComments, setFloatingComments] = useState<FloatingComment[]>([]);
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
   const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
+  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
 
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -198,12 +206,19 @@ export function PrivateGroupCallWindow({
 
   const addFloatingComment = useCallback((senderName: string, text: string) => {
     const id = `comment-${Date.now()}-${Math.random()}`;
-    const top = Math.floor(Math.random() * 70) + 5; // 5% to 75%
+    const top = Math.floor(Math.random() * 60) + 10; // 10% to 70%
     setFloatingComments(prev => [...prev.slice(-30), { id, senderName, text, top, createdAt: Date.now() }]);
-    // Auto-remove after animation (8 seconds)
+    // Also add to recent messages stack (visible at bottom-left)
+    const msgId = `msg-${Date.now()}-${Math.random()}`;
+    setRecentMessages(prev => [...prev.slice(-8), { id: msgId, senderName, text, createdAt: Date.now() }]);
+    // Auto-remove danmu after animation
     setTimeout(() => {
       setFloatingComments(prev => prev.filter(c => c.id !== id));
     }, 8000);
+    // Auto-remove from recent messages after 15 seconds
+    setTimeout(() => {
+      setRecentMessages(prev => prev.filter(m => m.id !== msgId));
+    }, 15000);
   }, []);
 
   // ─── Floating Emoji Reaction ─────────────────────────────────────
@@ -522,17 +537,15 @@ export function PrivateGroupCallWindow({
           <div
             key={comment.id}
             className="absolute whitespace-nowrap animate-danmu"
-            style={{ top: `${comment.top}%`, right: '-100%' }}
+            style={{ top: `${comment.top}%`, left: '100%' }}
           >
-            <span className="inline-flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm shadow-lg">
-              <span className="text-primary font-semibold text-xs">{comment.senderName}</span>
-              <span>{comment.text}</span>
+            <span className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-white/10">
+              <span className="text-amber-400 font-bold text-xs">{comment.senderName}</span>
+              <span className="text-white/95">{comment.text}</span>
             </span>
           </div>
         ))}
       </div>
-
-      {/* ─── Floating Emoji Reactions (Bubble Up) ─────────────────── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
         {floatingReactions.map((reaction) => (
           <div
@@ -561,19 +574,28 @@ export function PrivateGroupCallWindow({
         </div>
       ))}
 
-      {/* ─── Participant Names (Bottom-Left Overlay) ──────────────── */}
-      {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
-        <div className="absolute bottom-44 left-4 z-20 max-h-24 overflow-y-auto">
-          <div className="flex flex-wrap gap-1">
+      {/* ─── Recent Messages Stack (Bottom-Left, always visible) ──── */}
+      <div className="absolute bottom-48 left-4 z-20 max-w-[55%] space-y-1.5 pointer-events-none">
+        {recentMessages.map((msg) => (
+          <div key={msg.id} className="animate-in slide-in-from-left-4 fade-in duration-300">
+            <div className="inline-flex items-start gap-1.5 bg-black/50 backdrop-blur-sm rounded-xl px-3 py-1.5 max-w-full">
+              <span className="text-amber-400 font-bold text-xs shrink-0">{msg.senderName}:</span>
+              <span className="text-white text-xs break-words">{msg.text}</span>
+            </div>
+          </div>
+        ))}
+        {/* Participant count for host */}
+        {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
             {participants.filter(p => !p.isOwner).map((p) => (
-              <Badge key={p.id} className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm gap-1">
+              <Badge key={p.id} className="text-[9px] bg-black/50 text-white/80 border-0 backdrop-blur-sm gap-0.5 h-4">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                 {p.name}
               </Badge>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
       <div className="relative z-20 mt-auto">
@@ -627,8 +649,8 @@ export function PrivateGroupCallWindow({
               <Heart className="h-5 w-5 text-red-400 fill-red-400" />
             </button>
 
-            {/* Gift button (participants only) */}
-            {!isOwner && isConnected && (
+            {/* Gift button — all connected participants (men) can send gifts to host */}
+            {!isOwner && (isConnected || isLive) && (
               <button
                 onClick={() => setShowGiftDialog(true)}
                 className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500/80 to-orange-600/80 backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-lg shadow-orange-500/30"
@@ -722,10 +744,10 @@ export function PrivateGroupCallWindow({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-amber-500" /> Send a Gift
+              <Gift className="h-5 w-5 text-amber-500" /> Send a Gift to Host
             </DialogTitle>
             <DialogDescription>
-              Gifts appear as animations on screen! 50% reaches the host.
+              You pay the full gift price. The host earns 50% of every gift.
             </DialogDescription>
           </DialogHeader>
 
@@ -738,7 +760,8 @@ export function PrivateGroupCallWindow({
               >
                 <span className="text-3xl">{gift.emoji}</span>
                 <span className="text-xs font-medium text-foreground">{gift.name}</span>
-                <Badge variant="secondary" className="text-[10px]">₹{gift.price}</Badge>
+                <span className="text-xs font-bold text-destructive">₹{gift.price}</span>
+                <span className="text-[10px] text-muted-foreground">Host gets ₹{(gift.price / 2).toFixed(0)}</span>
               </button>
             ))}
             {gifts.length === 0 && (
