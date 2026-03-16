@@ -198,10 +198,7 @@ const AdminSettings = () => {
 
   const saveSettings = async () => {
     if (Object.keys(modifiedSettings).length === 0) {
-      toast({
-        title: "No changes",
-        description: "No settings have been modified",
-      });
+      toast("No changes", { description: "No settings have been modified" });
       return;
     }
 
