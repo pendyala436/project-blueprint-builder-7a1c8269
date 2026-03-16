@@ -557,10 +557,7 @@ const AdminVideoGroupControls = () => {
       const { data } = await supabase.functions.invoke('video-call-circuit-breaker', {
         body: { action: 'report_high_utilization', cpu_percent: 100, memory_percent: 100, source: 'admin_manual' },
       });
-      toast({
-        title: "All Video Calls Stopped",
-        description: `${data?.terminated_calls ?? 0} active call(s) terminated. New calls blocked for 2 hours.`,
-      });
+      toast.success("All Video Calls Stopped", { description: `${data?.terminated_calls ?? 0} active call(s) terminated. New calls blocked for 2 hours.` });
       setBreakerActive(true);
       setBreakerResumesAt(data?.resumes_at ?? '');
     } catch (err) {
