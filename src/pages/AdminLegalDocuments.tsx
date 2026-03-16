@@ -303,10 +303,7 @@ const AdminLegalDocuments = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Document deleted",
-        description: `${document.name} has been deleted`,
-      });
+      toast.success("Document deleted", { description: `${document.name} has been deleted` });
 
       await fetchDocuments();
     } catch (error: any) {
