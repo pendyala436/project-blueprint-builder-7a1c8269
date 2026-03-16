@@ -48,6 +48,13 @@ const AdminNav = ({ children }: AdminNavProps) => {
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [policyAlerts, setPolicyAlerts] = useState(0);
 
+  const isActive = (path: string) =>
+    path === "/admin"
+      ? location.pathname === "/admin" || location.pathname === "/admin/"
+      : location.pathname.startsWith(path);
+
+  const activeItem = navItems.find(item => isActive(item.path)) || navItems[0];
+
   const navItems: NavItem[] = [
     { title: "Dashboard", path: "/admin", icon: <Home className="h-4 w-4" /> },
     { title: "User Management", path: "/admin/users", icon: <Users className="h-4 w-4" />, badge: pendingApprovals },
