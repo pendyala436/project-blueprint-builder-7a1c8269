@@ -219,11 +219,7 @@ const AdminLanguageGroups = () => {
       loadGroups();
     } catch (error) {
       console.error("Error toggling group status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update group status",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update group status" });
     }
   };
 

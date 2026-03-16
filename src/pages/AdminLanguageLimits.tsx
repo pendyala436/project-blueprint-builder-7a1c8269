@@ -199,11 +199,7 @@ const AdminLanguageLimits = () => {
       loadLimits();
     } catch (error) {
       console.error("Error toggling limit status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update limit status",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update limit status" });
     }
   };
 
