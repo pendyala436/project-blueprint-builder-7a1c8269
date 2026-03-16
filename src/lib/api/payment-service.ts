@@ -66,21 +66,43 @@ class PaymentService {
   }
 
   /**
-   * Restore pending payments from localStorage on app restart
+   * Clean up stale pending payments from localStorage on app restart.
+   * Since no webhook/gateway redirect exists to confirm payments,
+   * polling stale transactions is wasteful. We remove entries older
+   * than STALE_PAYMENT_MS and do NOT resume polling.
    */
   private restorePendingPayments(): void {
     try {
       const stored = localStorage.getItem('pending_payments');
-      if (stored) {
-        const payments = JSON.parse(stored);
-        for (const [id, payment] of Object.entries(payments)) {
-          this.pendingPayments.set(id, payment as PaymentRequest);
-          // Resume polling for pending payments
-          this.startPolling(id);
+      if (!stored) return;
+
+      const payments = JSON.parse(stored) as Record<string, PaymentRequest & { _createdAt?: number }>;
+      const now = Date.now();
+      let changed = false;
+
+      for (const [id, payment] of Object.entries(payments)) {
+        const age = now - (payment._createdAt || 0);
+        if (age > STALE_PAYMENT_MS || !payment._createdAt) {
+          // Stale or missing timestamp — discard silently
+          delete payments[id];
+          changed = true;
+          console.warn(`[PaymentService] Discarded stale pending payment: ${id}`);
+        } else {
+          // Keep in map but do NOT auto-poll — there is no webhook to change status
+          this.pendingPayments.set(id, payment);
+        }
+      }
+
+      if (changed) {
+        if (Object.keys(payments).length === 0) {
+          localStorage.removeItem('pending_payments');
+        } else {
+          localStorage.setItem('pending_payments', JSON.stringify(payments));
         }
       }
     } catch (error) {
       console.error('Failed to restore pending payments:', error);
+      localStorage.removeItem('pending_payments');
     }
   }
 
