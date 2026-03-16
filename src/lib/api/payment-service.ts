@@ -27,6 +27,7 @@ import type {
 const POLL_INTERVAL = 2000; // 2 seconds
 const MAX_POLL_ATTEMPTS = 30; // 1 minute max
 const PAYMENT_TIMEOUT = 300000; // 5 minutes
+const STALE_PAYMENT_MS = 5 * 60 * 1000; // 5 minutes — payments older than this are considered abandoned
 
 class PaymentService {
   private static instance: PaymentService;
