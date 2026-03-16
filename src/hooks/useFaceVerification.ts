@@ -30,9 +30,15 @@ export interface UseFaceVerificationReturn {
 let modelsLoaded = false;
 let modelsLoading = false;
 let modelLoadPromise: Promise<void> | null = null;
+let modelLoadError: string | null = null;
 
-// Use jsDelivr CDN which has the correct model files
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+// Primary and fallback CDN URLs for face-api.js models (version-locked)
+const MODEL_URLS = [
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model',
+  'https://unpkg.com/@vladmandic/face-api@1.7.12/model',
+];
+
+const MAX_LOAD_RETRIES = 2;
 
 export const useFaceVerification = (): UseFaceVerificationReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
@@ -63,36 +69,43 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       setIsLoadingModel(true);
 
       modelLoadPromise = (async () => {
-        try {
-          console.log('[FaceAPI] Loading models from:', MODEL_URL);
-          setModelLoadProgress(10);
+        let lastError: unknown = null;
 
-          // Load TinyFaceDetector for fast face detection
-          await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-          console.log('[FaceAPI] TinyFaceDetector loaded');
-          setModelLoadProgress(40);
+        for (const modelUrl of MODEL_URLS) {
+          for (let attempt = 1; attempt <= MAX_LOAD_RETRIES; attempt++) {
+            try {
+              console.log(`[FaceAPI] Loading models from: ${modelUrl} (attempt ${attempt})`);
+              setModelLoadProgress(10);
 
-          // Load AgeGenderNet for gender detection
-          await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
-          console.log('[FaceAPI] AgeGenderNet loaded');
-          setModelLoadProgress(80);
+              await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
+              console.log('[FaceAPI] TinyFaceDetector loaded');
+              setModelLoadProgress(40);
 
-          // Load face landmarks for better detection
-          await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-          console.log('[FaceAPI] FaceLandmark68Net loaded');
-          setModelLoadProgress(100);
+              await faceapi.nets.ageGenderNet.loadFromUri(modelUrl);
+              console.log('[FaceAPI] AgeGenderNet loaded');
+              setModelLoadProgress(80);
 
-          modelsLoaded = true;
-          console.log('[FaceAPI] All models loaded successfully');
-        } catch (error) {
-          console.error('[FaceAPI] Error loading models:', error);
-          // Reset state so we can try again
-          modelsLoading = false;
-          loadAttempted.current = false;
-          throw error;
-        } finally {
-          modelsLoading = false;
+              await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl);
+              console.log('[FaceAPI] FaceLandmark68Net loaded');
+              setModelLoadProgress(100);
+
+              modelsLoaded = true;
+              modelLoadError = null;
+              console.log('[FaceAPI] All models loaded successfully');
+              return; // Success — exit both loops
+            } catch (error) {
+              lastError = error;
+              console.warn(`[FaceAPI] Load attempt ${attempt} from ${modelUrl} failed:`, error);
+            }
+          }
         }
+
+        // All CDNs and retries exhausted
+        modelLoadError = lastError instanceof Error ? lastError.message : 'All CDN sources failed';
+        console.error('[FaceAPI] All model load attempts failed:', modelLoadError);
+        modelsLoading = false;
+        loadAttempted.current = false;
+        throw new Error(modelLoadError);
       })();
 
       try {
