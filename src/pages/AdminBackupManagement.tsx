@@ -115,10 +115,7 @@ const AdminBackupManagement = () => {
   };
 
   const handleDownloadBackup = async (backup: BackupLog) => {
-    toast({
-      title: "Exporting Database",
-      description: "Querying tables and generating backup file...",
-    });
+    toast("Exporting Database", { description: "Querying tables and generating backup file..." });
 
     try {
       const tables = [

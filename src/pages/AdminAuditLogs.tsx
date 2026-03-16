@@ -189,10 +189,7 @@ const AdminAuditLogs = () => {
     link.click();
     URL.revokeObjectURL(url);
 
-    toast({
-      title: "Export complete",
-      description: `Exported ${filteredLogs.length} log entries`,
-    });
+    toast.success("Export complete", { description: `Exported ${filteredLogs.length} log entries` });
   };
 
   const clearFilters = () => {
