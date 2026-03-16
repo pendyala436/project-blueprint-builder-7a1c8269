@@ -229,10 +229,7 @@ const AdminSettings = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
 
-      toast({
-        title: "Settings saved & synced",
-        description: `${Object.keys(modifiedSettings).length} setting(s) updated and synced to dashboards`,
-      });
+      toast.success("Settings saved & synced", { description: `${Object.keys(modifiedSettings).length} setting(s) updated and synced to dashboards` });
 
       setModifiedSettings({});
       loadSettings();
