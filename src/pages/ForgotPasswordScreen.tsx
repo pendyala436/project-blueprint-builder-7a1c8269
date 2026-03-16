@@ -70,7 +70,7 @@ const ForgotPasswordScreen = () => {
         throw error;
       }
 
-      if (!data?.verified) {
+      if (!data?.verified || !data?.token) {
         toast({
           title: "Account not found",
           description: data?.error || "No account found with this email and phone combination. Please check and try again.",
@@ -80,12 +80,12 @@ const ForgotPasswordScreen = () => {
         return;
       }
 
-      // Navigate to password reset page with user ID
-      navigate(`/reset-password?userId=${data.userId}`);
+      // Navigate to password reset page with secure token (not userId)
+      navigate(`/reset-password?token=${data.token}`);
       
       toast({
         title: "Account verified!",
-        description: "You can now set a new password.",
+        description: "You can now set a new password. The link expires in 10 minutes.",
       });
     } catch (error: any) {
       toast({
