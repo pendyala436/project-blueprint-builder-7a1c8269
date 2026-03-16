@@ -72,7 +72,7 @@ import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
 import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
-import { LanguageCommunityPanel } from "@/components/LanguageCommunityPanel";
+// LanguageCommunityPanel removed - language chat is women-only
 
 import { useChatPricing } from "@/hooks/useChatPricing";
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
@@ -1682,15 +1682,7 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* Section 5: Language Community */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <LanguageCommunityPanel
-            currentUserId={currentUserId}
-            motherTongue={userLanguage}
-            userName={userName || 'User'}
-            userPhoto={userPhoto}
-          />
-        </div>
+        {/* Language Community removed for men */}
 
 
 

@@ -1917,7 +1917,18 @@ const WomenDashboardScreen = () => {
             </Card>
           )}
         </div>
-
+        {/* Language Group Chat - Women of same language chat with each other */}
+        {currentUserId && currentWomanLanguage && (
+          <div className="animate-fade-in mt-6" style={{ animationDelay: "0.3s" }}>
+            <LanguageGroupChat
+              currentUserId={currentUserId}
+              languageCode={currentWomanLanguageCode || "eng_Latn"}
+              languageName={currentWomanLanguage}
+              userName={userName || 'User'}
+              userPhoto={userPhoto}
+            />
+          </div>
+        )}
 
       </main>
 
