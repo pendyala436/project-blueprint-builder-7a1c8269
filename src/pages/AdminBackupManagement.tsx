@@ -108,11 +108,7 @@ const AdminBackupManagement = () => {
       await fetchBackups();
     } catch (error: any) {
       console.error("Error triggering backup:", error);
-      toast({
-        title: "Backup Failed",
-        description: classifyError(error, "trigger the backup").message,
-        variant: "destructive",
-      });
+      toast.error("Backup Failed", { description: classifyError(error, "trigger the backup").message });
     } finally {
       setTriggeringBackup(false);
     }
