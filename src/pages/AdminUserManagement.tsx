@@ -3,6 +3,7 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { AdminUserSearchDialog } from "@/components/AdminUserSearchDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,8 +107,8 @@ const PROTECTED_ADMIN_EMAILS = Array.from({ length: 15 }, (_, i) => `admin${i + 
 
 const AdminUserManagement = () => {
   const navigate = useNavigate();
+  const { isLoading: adminLoading, isAdmin, adminEmail, userId: adminUserId } = useAdminAccess();
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, string>>({});
   const [totalCount, setTotalCount] = useState(0);
@@ -237,20 +238,7 @@ const AdminUserManagement = () => {
     } finally { setCreatingUser(false); }
   };
 
-  const checkAdminAccess = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { navigate("/"); return; }
-      const { data: roleData } = await supabase
-        .from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
-      if (!roleData) { toast.error("Access denied. Admin privileges required."); navigate("/dashboard"); return; }
-      setIsAdmin(true);
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      toast.error("Failed to verify admin access");
-      navigate("/dashboard");
-    }
-  };
+  // Admin access is now handled by useAdminAccess hook
 
   const loadStats = async () => {
     try {
@@ -331,7 +319,10 @@ const AdminUserManagement = () => {
     } finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { checkAdminAccess(); }, []);
+  useEffect(() => {
+    if (adminLoading) return;
+    if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
+  }, [adminLoading, isAdmin]);
   useEffect(() => {
     if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
