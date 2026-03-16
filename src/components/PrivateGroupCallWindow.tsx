@@ -602,8 +602,8 @@ export function PrivateGroupCallWindow({
         {/* Typing indicator overlay — shows what user is typing */}
         {commentText.length > 0 && (
           <div className="px-4 pb-2">
-            <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
-              <span className="text-white text-sm">{commentText}</span>
+            <div className="inline-flex items-center gap-1.5">
+              <span className="text-white text-sm drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">{commentText}</span>
               <span className="w-0.5 h-4 bg-primary animate-pulse" />
             </div>
           </div>
