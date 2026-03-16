@@ -139,6 +139,23 @@ const WomenWalletScreen = () => {
       return;
     }
 
+    // Verify KYC is approved before allowing withdrawal
+    if (currentUserId) {
+      const { data: kycData } = await supabase
+        .from("women_kyc")
+        .select("verification_status")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+
+      if (!kycData || kycData.verification_status !== "approved") {
+        toast.error(
+          t("kycRequired", "KYC Verification Required"),
+          { description: t("kycRequiredDesc", "Please complete and get your KYC verified before requesting a withdrawal.") }
+        );
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const result = await requestWithdrawal(currentUserId!, amount, paymentMethod);
