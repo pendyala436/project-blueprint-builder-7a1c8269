@@ -165,7 +165,7 @@ serve(async (req) => {
 
     // ============= AI AUTO SCHEDULE =============
     // Auto-generates monthly schedule based on language group and country timezone
-    if (action === "ai_auto_schedule") {
+    if (effectiveAction === "ai_auto_schedule") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
