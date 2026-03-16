@@ -27,7 +27,7 @@ interface PreloadedUserContext {
 
 // Cache for user context to avoid refetching within the same session
 const userContextCache = new Map<string, { data: PreloadedUserContext; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 30 * 1000; // 30 seconds — keep short so role/approval changes propagate quickly
 
 /**
  * Preload user context on login — fetches admin role, tutorial progress,
