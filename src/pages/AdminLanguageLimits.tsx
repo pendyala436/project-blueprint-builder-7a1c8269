@@ -147,7 +147,7 @@ const AdminLanguageLimits = () => {
           .eq("id", editingLimit.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language limit updated" });
+        toast.success("Success", { description: "Language limit updated" });
       } else {
         const { error } = await supabase.from("language_limits").insert({
           language_name: formLanguage.trim(),
