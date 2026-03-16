@@ -461,7 +461,7 @@ const AdminChatMonitoring = () => {
   // ─── Notifications ────────────────────────────────────────────
   const sendBroadcastNotification = async () => {
     if (!notificationTitle.trim() || !notificationMessage.trim()) {
-      toast({ title: "Error", description: "Please provide both title and message", variant: "destructive" });
+      toast.error("Error", { description: "Please provide both title and message" });
       return;
     }
     setSendingNotification(true);
