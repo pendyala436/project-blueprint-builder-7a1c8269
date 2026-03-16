@@ -137,6 +137,10 @@ Deno.serve(async (req) => {
 
     if (createError) {
       console.error('[admin-create-user] Auth user creation failed:', createError.message)
+      const msg = createError.message?.toLowerCase() || ''
+      if (msg.includes('already') || msg.includes('exists') || msg.includes('registered') || msg.includes('duplicate')) {
+        return jsonResponse({ success: false, error: `A user with email "${normalizedEmail}" already exists. Please use a different email address.`, code: 'USER_EXISTS' }, 409)
+      }
       return jsonResponse({ success: false, error: createError.message }, 400)
     }
 

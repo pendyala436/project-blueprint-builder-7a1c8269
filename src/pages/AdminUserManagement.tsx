@@ -226,7 +226,15 @@ const AdminUserManagement = () => {
         throw new Error(errorMessage);
       }
 
-      if (!data?.success) throw new Error(data?.error || data?.message || "User creation failed.");
+      if (!data?.success) {
+        const errMsg = data?.error || data?.message || "User creation failed.";
+        if (data?.code === "USER_EXISTS") {
+          toast.error("User Already Exists", { description: errMsg });
+        } else {
+          toast.error("Creation Failed", { description: errMsg });
+        }
+        return;
+      }
 
       toast.success(`User ${email} created successfully`);
       setCreateUserDialogOpen(false);
@@ -234,7 +242,12 @@ const AdminUserManagement = () => {
       handleRefresh();
     } catch (err: any) {
       console.error("[handleCreateUser] Error:", err);
-      toast.error(err.message || "Failed to create user");
+      const msg = err.message || "Failed to create user";
+      if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exists")) {
+        toast.error("User Already Exists", { description: msg });
+      } else {
+        toast.error(msg);
+      }
     } finally { setCreatingUser(false); }
   };
 
