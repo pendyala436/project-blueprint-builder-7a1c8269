@@ -100,8 +100,8 @@ const OnlineUsersScreen = () => {
       setCurrentUserGender(userGender);
 
       // Determine opposite gender
-      const oppositeGender = userGender === "Male" ? "Female" : 
-                            userGender === "Female" ? "Male" : "";
+      const oppositeGender = userGender.toLowerCase() === "male" ? "female" : 
+                            userGender.toLowerCase() === "female" ? "male" : "";
 
       // Fetch online users of opposite gender
       const { data: onlineStatus } = await supabase
