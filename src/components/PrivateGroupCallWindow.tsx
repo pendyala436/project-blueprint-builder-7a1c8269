@@ -649,8 +649,8 @@ export function PrivateGroupCallWindow({
               <Heart className="h-5 w-5 text-red-400 fill-red-400" />
             </button>
 
-            {/* Gift button (participants only) */}
-            {!isOwner && isConnected && (
+            {/* Gift button — all connected participants (men) can send gifts to host */}
+            {!isOwner && (isConnected || isLive) && (
               <button
                 onClick={() => setShowGiftDialog(true)}
                 className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500/80 to-orange-600/80 backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-lg shadow-orange-500/30"
