@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, Users, Radio, Loader2,
-  X, Send, Maximize2, Minimize2, Clock, Gift, DollarSign, Heart, MonitorUp, MonitorOff
+  X, Send, Maximize2, Minimize2, Clock, Gift, DollarSign, Heart, ArrowUpDown
 } from 'lucide-react';
 import { usePrivateGroupCall, MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 import { cn } from '@/lib/utils';
