@@ -264,11 +264,7 @@ const AdminLegalDocuments = () => {
       toast.success("Download started", { description: `Downloading ${document.name}` });
     } catch (error: any) {
       console.error("Error downloading document:", error);
-      toast({
-        title: "Download failed",
-        description: classifyError(error, "download the document").message,
-        variant: "destructive",
-      });
+      toast.error("Download failed", { description: classifyError(error, "download the document").message });
     }
   };
 
