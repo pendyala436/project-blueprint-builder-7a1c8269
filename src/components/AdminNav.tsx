@@ -53,7 +53,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
       ? location.pathname === "/admin" || location.pathname === "/admin/"
       : location.pathname.startsWith(path);
 
-  const activeItem = navItems.find(item => isActive(item.path)) || navItems[0];
+  
 
   const navItems: NavItem[] = [
     { title: "Dashboard", path: "/admin", icon: <Home className="h-4 w-4" /> },
