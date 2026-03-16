@@ -87,26 +87,16 @@ const AdminDashboard = () => {
   const handleSeedSuperUsers = async () => {
     setSeedingUsers(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error("You must be logged in as admin");
+      const { data: result, error } = await supabase.functions.invoke('seed-super-users', {
+        method: 'POST',
+      });
+
+      if (error) {
+        toast.error(error.message || "Failed to seed super users");
         return;
       }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/seed-super-users`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.access_token}`
-          }
-        }
-      );
-
-      const result = await response.json();
       
-      if (result.success) {
+      if (result?.success) {
         const created = (result.results?.females?.filter((f: any) => f.status === 'created').length || 0) +
                        (result.results?.males?.filter((m: any) => m.status === 'created').length || 0) +
                        (result.results?.admins?.filter((a: any) => a.status === 'created').length || 0);
@@ -117,7 +107,7 @@ const AdminDashboard = () => {
         toast.success(`Super users seeded! Created: ${created}, Already existed: ${existing}`);
         loadStats();
       } else {
-        toast.error(result.error || "Failed to seed super users");
+        toast.error(result?.error || "Failed to seed super users");
       }
     } catch (error) {
       console.error("Error seeding super users:", error);
