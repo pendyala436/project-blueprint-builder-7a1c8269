@@ -164,11 +164,7 @@ const AdminLanguageLimits = () => {
       loadLimits();
     } catch (error) {
       console.error("Error saving language limit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save language limit",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save language limit" });
     } finally {
       setIsSaving(false);
     }
