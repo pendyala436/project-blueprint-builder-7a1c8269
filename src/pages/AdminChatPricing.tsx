@@ -153,7 +153,7 @@ const AdminChatPricing = () => {
 
     // ── Validate men's rates are positive numbers ──────────────────────────────
     if (isNaN(ratePerMinute) || ratePerMinute <= 0) {
-      toast({ title: "Invalid Rate", description: "Men's chat rate must be a positive number", variant: "destructive" });
+      toast.error("Invalid Rate", { description: "Men's chat rate must be a positive number" });
       return;
     }
     if (isNaN(videoRatePerMinute) || videoRatePerMinute <= 0) {
