@@ -144,9 +144,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
               }}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                (item.path === "/admin"
-                  ? location.pathname === "/admin" || location.pathname === "/admin/"
-                  : location.pathname.startsWith(item.path))
+                isActive(item.path)
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
