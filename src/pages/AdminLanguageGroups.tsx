@@ -43,7 +43,7 @@ interface LanguageGroup {
 
 const AdminLanguageGroups = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [groups, setGroups] = useState<LanguageGroup[]>([]);
   const [loading, setLoading] = useState(true);

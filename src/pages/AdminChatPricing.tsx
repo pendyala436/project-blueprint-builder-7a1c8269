@@ -67,7 +67,7 @@ interface ChatPricing {
 
 const AdminChatPricing = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingRates, setIsEditingRates] = useState(false);

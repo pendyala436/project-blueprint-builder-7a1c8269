@@ -111,7 +111,7 @@ const LiveDuration = ({ startedAt }: { startedAt: string | null }) => {
 // ─── Main component ──────────────────────────────────────────────
 const AdminChatMonitoring = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});

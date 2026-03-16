@@ -76,7 +76,7 @@ const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--c
 
 const AdminFinanceDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("all");
