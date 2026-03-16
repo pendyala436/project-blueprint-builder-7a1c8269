@@ -569,7 +569,6 @@ export function PrivateGroupCallWindow({
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.15) transparent',
           }}
-          }}
         >
           {chatMessages.length === 0 && (
             <p className="text-white/40 text-xs px-2 py-1">No messages yet. Say something!</p>
