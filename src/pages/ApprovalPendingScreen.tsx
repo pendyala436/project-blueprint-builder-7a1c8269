@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Clock, CheckCircle, XCircle, RefreshCw, LogOut, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,48 @@ const ApprovalPendingScreen = () => {
   const [status, setStatus] = useState<ApprovalStatus>("pending");
   const [disapprovalReason, setDisapprovalReason] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     checkApprovalStatus();
   }, []);
+
+  // Realtime subscription for approval status changes
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`approval-status-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const newStatus = payload.new.approval_status as ApprovalStatus;
+          const newReason = payload.new.ai_disapproval_reason as string | null;
+
+          setStatus(newStatus);
+          setDisapprovalReason(newReason);
+
+          if (newStatus === "approved") {
+            toast({
+              title: "Welcome! 🎉",
+              description: "Your account has been approved. Enjoy earning!",
+            });
+            navigate("/women-dashboard");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, navigate]);
 
   const checkApprovalStatus = async () => {
     try {
@@ -30,7 +68,7 @@ const ApprovalPendingScreen = () => {
         return;
       }
       const user = session.user;
-
+      setUserId(user.id);
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("approval_status, ai_disapproval_reason, full_name, gender")
