@@ -473,7 +473,7 @@ const AdminChatMonitoring = () => {
       const { data: users, error: usersError } = await query;
       if (usersError) throw usersError;
       if (!users || users.length === 0) {
-        toast({ title: "No users found", description: "No users match the criteria", variant: "destructive" });
+        toast.error("No users found", { description: "No users match the criteria" });
         return;
       }
 
