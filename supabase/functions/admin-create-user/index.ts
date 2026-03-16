@@ -127,20 +127,6 @@ Deno.serve(async (req) => {
 
     console.log(`[AUDIT] Admin ${caller.id} creating user: ${normalizedEmail} (${normalizedGender}, admin=${assignAdminRole})`)
 
-    // Pre-check: does a user with this email already exist?
-    const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1 })
-    // listUsers doesn't filter by email, so use getUserByEmail-style lookup
-    const { data: existingLookup } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, gender, account_status')
-      .eq('email', normalizedEmail)
-      .maybeSingle()
-
-    // Also check via auth admin API directly
-    const { data: { users: matchedUsers } } = await supabase.auth.admin.listUsers({
-      perPage: 1,
-    })
-
     // Create the auth user — email confirmed immediately, no verification email sent
     const { data: authData, error: createError } = await supabase.auth.admin.createUser({
       email: normalizedEmail,
