@@ -308,11 +308,7 @@ const AdminLegalDocuments = () => {
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error deleting document:", error);
-      toast({
-        title: "Delete failed",
-        description: classifyError(error, "delete the document").message,
-        variant: "destructive",
-      });
+      toast.error("Delete failed", { description: classifyError(error, "delete the document").message });
     }
   };
 
