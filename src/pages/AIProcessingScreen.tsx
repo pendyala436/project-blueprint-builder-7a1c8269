@@ -209,7 +209,7 @@ const AIProcessingScreen = () => {
 
   // Continue to next screen
   const handleContinue = () => {
-    navigate("/welcome-tutorial");
+    navigate("/welcome");
   };
 
   // Skip verification (with warning)
@@ -218,7 +218,7 @@ const AIProcessingScreen = () => {
       title: "Verification Skipped",
       description: "Some features may be limited without verification.",
     });
-    navigate("/welcome-tutorial");
+    navigate("/welcome");
   };
 
   // Cleanup on unmount
