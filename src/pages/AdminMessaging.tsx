@@ -629,7 +629,7 @@ const AdminMessaging = () => {
                             </p>
                           </div>
                           <Badge variant="outline" className="text-xs shrink-0">
-                            {user.gender === 'Female' ? '♀' : '♂'}
+                            {user.gender?.toLowerCase() === 'female' ? '♀' : '♂'}
                           </Badge>
                         </button>
                       ))}

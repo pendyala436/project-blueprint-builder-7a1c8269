@@ -127,7 +127,7 @@ const OnlineUsersScreen = () => {
         .neq("photo_url", "");
 
       if (oppositeGender) {
-        query = query.eq("gender", oppositeGender);
+        query = query.ilike("gender", oppositeGender);
       }
 
       const { data: profiles } = await query;
