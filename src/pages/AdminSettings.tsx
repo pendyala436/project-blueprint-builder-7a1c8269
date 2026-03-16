@@ -574,7 +574,7 @@ const AdminVideoGroupControls = () => {
       await supabase.functions.invoke('video-call-circuit-breaker', {
         body: { action: 'reset' },
       });
-      toast({ title: "Circuit Breaker Reset", description: "Video calls are now allowed again." });
+      toast.success("Circuit Breaker Reset", { description: "Video calls are now allowed again." });
       setBreakerActive(false);
     } catch (err) {
       toast({ title: "Error", description: "Failed to reset", variant: "destructive" });
