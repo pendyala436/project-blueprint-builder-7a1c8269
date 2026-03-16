@@ -1,6 +1,12 @@
 /**
- * Zero-cost Translation stub - no provider needed
- * Components can still call useTranslation() safely
+ * TRANSLATION SYSTEM — DISABLED
+ * 
+ * The multilingual translation system is not active in this application.
+ * This stub provides safe no-op implementations so existing components
+ * that call useTranslation() continue to work without errors.
+ * 
+ * t("key", "fallback") always returns the fallback string (plain English).
+ * translateDynamic/translateDynamicBatch return input unchanged.
  */
 
 const noopT = (key: string, fallback?: string): string => fallback || key;
