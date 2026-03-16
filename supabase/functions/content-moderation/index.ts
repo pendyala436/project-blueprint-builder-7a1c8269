@@ -212,51 +212,78 @@ serve(async (req) => {
     }
 
     if (action === "scan_recent_messages") {
-      // Scan recent messages for violations
-      const { data: messages, error } = await supabase
-        .from("chat_messages")
-        .select("id, message, sender_id, chat_id, created_at")
-        .eq("flagged", false)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-
+      // Scan unflagged messages in batches using cursor-based pagination
+      // Default batch size 500, configurable via request body (max 2000)
+      const batchSize = Math.min(body?.batch_size || 500, 2000);
+      const maxBatches = body?.max_batches || 10; // safety cap: up to 10 rounds
       let flaggedCount = 0;
-      for (const msg of messages || []) {
-        const result = moderateContent(msg.message || "");
-        
-        if (result.isViolation) {
-          for (const violation of result.violations) {
-            await supabase.from("policy_violation_alerts").insert({
-              user_id: msg.sender_id,
-              violation_type: violation.type,
-              severity: violation.severity,
-              content: msg.message?.substring(0, 500),
-              source_message_id: msg.id,
-              source_chat_id: msg.chat_id,
-              detected_by: "batch_scan",
-            });
-          }
+      let totalScanned = 0;
+      let lastCreatedAt: string | null = null;
 
-          await supabase
-            .from("chat_messages")
-            .update({
-              flagged: true,
-              flag_reason: result.violations.map(v => v.type).join(", "),
-              flagged_at: new Date().toISOString(),
-              moderation_status: "flagged",
-            })
-            .eq("id", msg.id);
+      for (let batch = 0; batch < maxBatches; batch++) {
+        let query = supabase
+          .from("chat_messages")
+          .select("id, message, sender_id, chat_id, created_at")
+          .eq("flagged", false)
+          .eq("moderation_status", "pending")
+          .order("created_at", { ascending: true })
+          .limit(batchSize);
 
-          flaggedCount++;
+        if (lastCreatedAt) {
+          query = query.gt("created_at", lastCreatedAt);
         }
+
+        const { data: messages, error } = await query;
+        if (error) throw error;
+        if (!messages || messages.length === 0) break;
+
+        for (const msg of messages) {
+          const result = moderateContent(msg.message || "");
+
+          if (result.isViolation) {
+            for (const violation of result.violations) {
+              await supabase.from("policy_violation_alerts").insert({
+                user_id: msg.sender_id,
+                violation_type: violation.type,
+                severity: violation.severity,
+                content: msg.message?.substring(0, 500),
+                source_message_id: msg.id,
+                source_chat_id: msg.chat_id,
+                detected_by: "batch_scan",
+              });
+            }
+
+            await supabase
+              .from("chat_messages")
+              .update({
+                flagged: true,
+                flag_reason: result.violations.map(v => v.type).join(", "),
+                flagged_at: new Date().toISOString(),
+                moderation_status: "flagged",
+              })
+              .eq("id", msg.id);
+
+            flaggedCount++;
+          } else {
+            // Mark as reviewed so it's not re-scanned
+            await supabase
+              .from("chat_messages")
+              .update({ moderation_status: "clean" })
+              .eq("id", msg.id);
+          }
+        }
+
+        totalScanned += messages.length;
+        lastCreatedAt = messages[messages.length - 1].created_at;
+
+        // If we got fewer than batchSize, we've reached the end
+        if (messages.length < batchSize) break;
       }
 
-      console.log(`Batch scan complete: ${flaggedCount} messages flagged out of ${messages?.length || 0}`);
+      console.log(`Batch scan complete: ${flaggedCount} messages flagged out of ${totalScanned} scanned`);
 
       return new Response(
-        JSON.stringify({ success: true, scanned: messages?.length || 0, flagged: flaggedCount }),
+        JSON.stringify({ success: true, scanned: totalScanned, flagged: flaggedCount }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
