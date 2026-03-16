@@ -40,7 +40,7 @@ const ApprovalPendingScreen = () => {
       if (error) throw error;
 
       // If not female, redirect to regular dashboard
-      if (profile?.gender !== "female") {
+      if (profile?.gender?.toLowerCase() !== "female") {
         navigate("/dashboard");
         return;
       }
