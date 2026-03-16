@@ -36,7 +36,8 @@ import { cn } from '@/lib/utils';
 // ─── Constants ──────────────────────────────────────────────────────────────
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: CURRENT_YEAR - 2023 + 1 }, (_, i) => CURRENT_YEAR - i);
+const START_YEAR = CURRENT_YEAR - 3; // rolling 4-year window
+const YEARS = Array.from({ length: CURRENT_YEAR - START_YEAR + 1 }, (_, i) => CURRENT_YEAR - i);
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Statement {
