@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { SecurityProvider } from "@/components/SecurityProvider";
+import SecurityProvider from "@/components/SecurityProvider";
 import { AutoLogoutWrapper } from "@/components/AutoLogoutWrapper";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import { Loader2 } from "lucide-react";
