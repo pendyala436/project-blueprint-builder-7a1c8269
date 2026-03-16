@@ -513,7 +513,7 @@ const AdminChatMonitoring = () => {
       }).eq("id", selectedMessage.id);
       if (error) throw error;
 
-      toast({ title: "Success", description: "Message flagged for review" });
+      toast.success("Success", { description: "Message flagged for review" });
       setFlagDialogOpen(false); setFlagReason(""); setSelectedMessage(null);
       loadMessages();
     } catch (error) {
