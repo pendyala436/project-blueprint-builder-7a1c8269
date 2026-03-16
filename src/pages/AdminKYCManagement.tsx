@@ -319,7 +319,7 @@ const AdminKYCManagement = () => {
     }
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
       <AdminNav>
         <div className="space-y-4">
@@ -329,8 +329,6 @@ const AdminKYCManagement = () => {
       </AdminNav>
     );
   }
-
-  if (!isAdmin) return null;
 
   const selectedWoman = indianWomen.find(w => w.user_id === selectedUserId);
 

@@ -463,7 +463,7 @@ const AdminTransactionHistory = () => {
     return filtered;
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
       <AdminNav>
         <div className="p-6">
@@ -476,20 +476,6 @@ const AdminTransactionHistory = () => {
           </div>
         </div>
       </AdminNav>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 text-center">
-          <h2 className="text-xl font-bold text-destructive">Access Denied</h2>
-          <p className="text-muted-foreground mt-2">Admin access required</p>
-          <Button className="mt-4" onClick={() => navigate("/dashboard")}>
-            Go to Dashboard
-          </Button>
-        </Card>
-      </div>
     );
   }
 
