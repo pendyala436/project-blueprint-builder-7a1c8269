@@ -209,7 +209,7 @@ const AIProcessingScreen = () => {
 
   // Continue to next screen
   const handleContinue = () => {
-    navigate("/welcome-tutorial");
+    navigate("/welcome");
   };
 
   // Skip verification (with warning)
