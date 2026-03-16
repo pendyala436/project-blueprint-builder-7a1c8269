@@ -546,7 +546,7 @@ const AdminChatMonitoring = () => {
       loadMessages();
     } catch (error) {
       console.error("Error updating status:", error);
-      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+      toast.error("Error", { description: "Failed to update status" });
     }
   };
 
