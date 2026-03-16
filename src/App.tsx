@@ -129,29 +129,29 @@ const App = () => (
                   <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
                   <Route path="/install" element={<InstallApp />} />
 
-                  {/* Admin */}
-                  <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
-                  <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUserManagement /></ProtectedRoute>} />
-                  <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalyticsDashboard /></ProtectedRoute>} />
-                  <Route path="/admin/chat-monitoring" element={<ProtectedRoute requiredRole="admin"><AdminChatMonitoring /></ProtectedRoute>} />
-                  <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><AdminFinanceDashboard /></ProtectedRoute>} />
-                  <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><AdminFinanceReports /></ProtectedRoute>} />
-                  <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><AdminTransactionHistory /></ProtectedRoute>} />
-                  <Route path="/admin/statements" element={<ProtectedRoute requiredRole="admin"><AdminStatementsPage /></ProtectedRoute>} />
-                  <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><AdminChatPricing /></ProtectedRoute>} />
-                  <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><AdminGiftPricing /></ProtectedRoute>} />
-                  <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><AdminLanguageGroups /></ProtectedRoute>} />
-                  <Route path="/admin/language-limits" element={<ProtectedRoute requiredRole="admin"><AdminLanguageLimits /></ProtectedRoute>} />
-                  <Route path="/admin/kyc" element={<ProtectedRoute requiredRole="admin"><AdminKYCManagement /></ProtectedRoute>} />
-                  <Route path="/admin/user-lookup" element={<ProtectedRoute requiredRole="admin"><AdminUserLookup /></ProtectedRoute>} />
-                  <Route path="/admin/moderation" element={<ProtectedRoute requiredRole="admin"><AdminModerationScreen /></ProtectedRoute>} />
-                  <Route path="/admin/policy-alerts" element={<ProtectedRoute requiredRole="admin"><AdminPolicyAlerts /></ProtectedRoute>} />
-                  <Route path="/admin/performance" element={<ProtectedRoute requiredRole="admin"><AdminPerformanceMonitoring /></ProtectedRoute>} />
-                  <Route path="/admin/legal-documents" element={<ProtectedRoute requiredRole="admin"><AdminLegalDocuments /></ProtectedRoute>} />
-                  <Route path="/admin/backups" element={<ProtectedRoute requiredRole="admin"><AdminBackupManagement /></ProtectedRoute>} />
-                  <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><AdminAuditLogs /></ProtectedRoute>} />
-                  <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><AdminMessaging /></ProtectedRoute>} />
-                  <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+                  {/* Admin — each page wrapped in its own ErrorBoundary */}
+                  <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminDashboard /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminUserManagement /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminAnalyticsDashboard /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/chat-monitoring" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminChatMonitoring /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminFinanceDashboard /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminFinanceReports /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminTransactionHistory /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/statements" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminStatementsPage /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminChatPricing /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminGiftPricing /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminLanguageGroups /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/language-limits" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminLanguageLimits /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/kyc" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminKYCManagement /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/user-lookup" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminUserLookup /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/moderation" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminModerationScreen /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/policy-alerts" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminPolicyAlerts /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/performance" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminPerformanceMonitoring /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/legal-documents" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminLegalDocuments /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/backups" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminBackupManagement /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminAuditLogs /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminMessaging /></ErrorBoundary></ProtectedRoute>} />
+                  <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminSettings /></ErrorBoundary></ProtectedRoute>} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>
