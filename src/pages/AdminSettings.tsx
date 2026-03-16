@@ -607,8 +607,7 @@ const AdminVideoGroupControls = () => {
         });
       }
 
-      toast({
-        title: disabled ? "Video Calls Disabled" : "Video Calls Enabled",
+      toast.success(disabled ? "Video Calls Disabled" : "Video Calls Enabled", {
         description: disabled
           ? "All video calls are now permanently disabled until you re-enable them."
           : "Video calls are now enabled for all users.",
