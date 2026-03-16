@@ -87,10 +87,7 @@ const AdminBackupManagement = () => {
     setRefreshing(true);
     await fetchBackups();
     setRefreshing(false);
-    toast({
-      title: "Refreshed",
-      description: "Backup list updated",
-    });
+    toast.success("Refreshed", { description: "Backup list updated" });
   };
 
   const triggerManualBackup = async () => {
