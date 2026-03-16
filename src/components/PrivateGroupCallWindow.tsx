@@ -206,12 +206,19 @@ export function PrivateGroupCallWindow({
 
   const addFloatingComment = useCallback((senderName: string, text: string) => {
     const id = `comment-${Date.now()}-${Math.random()}`;
-    const top = Math.floor(Math.random() * 70) + 5; // 5% to 75%
+    const top = Math.floor(Math.random() * 60) + 10; // 10% to 70%
     setFloatingComments(prev => [...prev.slice(-30), { id, senderName, text, top, createdAt: Date.now() }]);
-    // Auto-remove after animation (8 seconds)
+    // Also add to recent messages stack (visible at bottom-left)
+    const msgId = `msg-${Date.now()}-${Math.random()}`;
+    setRecentMessages(prev => [...prev.slice(-8), { id: msgId, senderName, text, createdAt: Date.now() }]);
+    // Auto-remove danmu after animation
     setTimeout(() => {
       setFloatingComments(prev => prev.filter(c => c.id !== id));
     }, 8000);
+    // Auto-remove from recent messages after 15 seconds
+    setTimeout(() => {
+      setRecentMessages(prev => prev.filter(m => m.id !== msgId));
+    }, 15000);
   }, []);
 
   // ─── Floating Emoji Reaction ─────────────────────────────────────
