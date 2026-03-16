@@ -168,10 +168,7 @@ const AdminBackupManagement = () => {
       a.click();
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Backup Downloaded",
-        description: `Exported ${Object.keys(backupData).length} tables, ${exportObj.total_rows} rows`,
-      });
+      toast.success("Backup Downloaded", { description: `Exported ${Object.keys(backupData).length} tables, ${exportObj.total_rows} rows` });
     } catch (error: any) {
       console.error("Download error:", error);
       toast({
