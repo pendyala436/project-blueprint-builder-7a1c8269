@@ -184,11 +184,7 @@ const AdminFinanceDashboard = () => {
 
     } catch (error) {
       console.error("Error loading finance data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load finance data",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load finance data" });
     } finally {
       setLoading(false);
     }
