@@ -435,7 +435,7 @@ const AdminChatMonitoring = () => {
   const startVideoMonitoring = (callId: string) => {
     setMonitoringVideoCallId(callId);
     logAdminAudit("ghost_monitor_video_start", "video_call", callId, "Started ghost video call monitoring");
-    toast({ title: "👻 Ghost Video Monitor", description: "Monitoring video call — participants cannot see you" });
+    toast("👻 Ghost Video Monitor", { description: "Monitoring video call — participants cannot see you" });
   };
 
   const stopVideoMonitoring = () => {
