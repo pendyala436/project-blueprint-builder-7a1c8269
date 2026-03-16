@@ -34,6 +34,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { useParallelChatSettings } from "@/hooks/useParallelChatSettings";
+import { AccountDeletionSection } from "@/components/settings/AccountDeletionSection";
 
 interface UserSettings {
   theme: string;
