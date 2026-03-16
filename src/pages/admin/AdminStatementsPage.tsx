@@ -520,10 +520,24 @@ const AdminStatementsPage = () => {
                   {loading ? (
                     <div className="p-4 space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
                   ) : filtered.length === 0 ? (
-                    <div className="p-10 text-center text-muted-foreground space-y-2">
+                    <div className="p-10 text-center text-muted-foreground space-y-3">
                       <FileText className="h-10 w-10 mx-auto opacity-20" />
-                      <p className="text-sm">No statements found.</p>
-                      <p className="text-xs">Use the "Generate" button above to create statements.</p>
+                      <p className="text-sm font-medium">No statements found</p>
+                      <p className="text-xs max-w-md mx-auto">
+                        Statements are generated on demand — they are not created automatically.
+                        Use the <strong>"Generate Last Month"</strong> button above to create statements
+                        for all {tab === 'male' ? 'men' : 'women'}, or select a specific user, year, and month first.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 gap-2"
+                        onClick={bulkGenerate}
+                        disabled={generating}
+                      >
+                        <RefreshCw className={cn("h-3.5 w-3.5", generating && "animate-spin")} />
+                        Generate Last Month ({tab === 'male' ? 'All Men' : 'All Women'})
+                      </Button>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
