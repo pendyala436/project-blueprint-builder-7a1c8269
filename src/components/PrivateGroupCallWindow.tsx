@@ -744,10 +744,10 @@ export function PrivateGroupCallWindow({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-amber-500" /> Send a Gift
+              <Gift className="h-5 w-5 text-amber-500" /> Send a Gift to Host
             </DialogTitle>
             <DialogDescription>
-              Gifts appear as animations on screen! 50% reaches the host.
+              You pay the full gift price. The host earns 50% of every gift.
             </DialogDescription>
           </DialogHeader>
 
@@ -760,7 +760,8 @@ export function PrivateGroupCallWindow({
               >
                 <span className="text-3xl">{gift.emoji}</span>
                 <span className="text-xs font-medium text-foreground">{gift.name}</span>
-                <Badge variant="secondary" className="text-[10px]">₹{gift.price}</Badge>
+                <span className="text-xs font-bold text-destructive">₹{gift.price}</span>
+                <span className="text-[10px] text-muted-foreground">Host gets ₹{(gift.price / 2).toFixed(0)}</span>
               </button>
             ))}
             {gifts.length === 0 && (
