@@ -128,6 +128,7 @@ interface Profile {
 const AdminModerationScreen = () => {
   // ============= HOOKS =============
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   
   // ============= STATE =============
   

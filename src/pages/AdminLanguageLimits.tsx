@@ -41,6 +41,7 @@ interface LanguageLimit {
 const AdminLanguageLimits = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [limits, setLimits] = useState<LanguageLimit[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");

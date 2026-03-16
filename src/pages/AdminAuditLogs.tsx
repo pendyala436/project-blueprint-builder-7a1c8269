@@ -82,6 +82,7 @@ const RESOURCE_TYPE_ICONS: Record<string, any> = {
 
 const AdminAuditLogs = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");

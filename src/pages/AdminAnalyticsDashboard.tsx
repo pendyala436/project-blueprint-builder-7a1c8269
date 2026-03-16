@@ -100,6 +100,7 @@ const CHART_COLORS = {
 
 const AdminAnalyticsDashboard = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dateRange, setDateRange] = useState("7");
