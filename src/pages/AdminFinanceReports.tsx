@@ -343,7 +343,7 @@ const AdminFinanceReports = () => {
       const txnUserIds = new Set<string>();
       walletTxns?.forEach(t => txnUserIds.add(t.user_id));
       giftTxns?.forEach(t => txnUserIds.add(t.sender_id));
-      chatSessions?.forEach(t => txnUserIds.add(t.man_user_id));
+      
       womenEarningsData?.forEach(t => txnUserIds.add(t.user_id));
 
       let profiles: any[] = [];
