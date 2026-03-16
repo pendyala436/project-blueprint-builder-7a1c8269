@@ -157,7 +157,7 @@ const AdminLanguageLimits = () => {
         });
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language limit created" });
+        toast.success("Success", { description: "Language limit created" });
       }
 
       setIsDialogOpen(false);
