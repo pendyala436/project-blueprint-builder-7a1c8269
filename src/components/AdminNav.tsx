@@ -81,7 +81,8 @@ const AdminNav = ({ children }: AdminNavProps) => {
     { title: "Settings", path: "/admin/settings", icon: <Settings className="h-4 w-4" /> },
   ];
 
-  useEffect(() => {
+  const activeItem = navItems.find(item => isActive(item.path)) || navItems[0];
+
     loadCounts();
   }, []);
 
