@@ -730,7 +730,7 @@ serve(async (req) => {
 
     // ============= MONTHLY REFRESH =============
     // Called to refresh schedules at the start of each month
-    if (action === "monthly_refresh") {
+    if (effectiveAction === "monthly_refresh") {
       console.log("[AI Scheduler] Starting monthly refresh for all users");
 
       // Get all active women assignments
