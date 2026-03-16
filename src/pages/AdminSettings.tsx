@@ -206,7 +206,7 @@ const AdminSettings = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        toast({ title: "Error", description: "Session expired. Please log in again.", variant: "destructive" });
+        toast.error("Error", { description: "Session expired. Please log in again." });
         navigate("/");
         return;
       }
