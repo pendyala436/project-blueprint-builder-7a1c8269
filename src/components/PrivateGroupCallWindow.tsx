@@ -107,8 +107,9 @@ export function PrivateGroupCallWindow({
   isOwner,
   preAcquiredStream = null,
 }: PrivateGroupCallWindowProps) {
-  // Comment input
+  // Comment input — invisible, captures keystrokes directly
   const [commentText, setCommentText] = useState('');
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   // Chat messages & overlays
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
