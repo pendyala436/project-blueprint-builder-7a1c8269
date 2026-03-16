@@ -312,7 +312,7 @@ const AdminChatMonitoring = () => {
       })));
     } catch (error) {
       console.error("Error loading video calls:", error);
-      toast({ title: "Error", description: "Failed to load video calls", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load video calls" });
     } finally {
       setLoadingVideoCalls(false);
     }
