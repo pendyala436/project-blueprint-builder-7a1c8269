@@ -107,7 +107,6 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
         loadAttempted.current = false;
         throw new Error(modelLoadError);
       })();
-      })();
 
       try {
         await modelLoadPromise;
