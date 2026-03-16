@@ -55,12 +55,9 @@ interface LegalDocument {
 
 const documentTypes = [
   { value: "terms", label: "Terms of Service" },
-  { value: "terms_of_service", label: "Terms of Service" },
   { value: "privacy", label: "Privacy Policy" },
-  { value: "privacy_policy", label: "Privacy Policy" },
   { value: "security_policy", label: "Security Policy" },
   { value: "gdpr", label: "GDPR Compliance" },
-  { value: "gdpr_compliance", label: "GDPR Compliance" },
   { value: "ccpa", label: "CCPA Compliance" },
   { value: "dpdp", label: "DPDP Compliance" },
   { value: "data_storage_policy", label: "Data Storage Policy" },
