@@ -128,11 +128,7 @@ const AdminLanguageLimits = () => {
     }
 
     if (formMaxChat < 1 || formMaxCall < 1) {
-      toast({
-        title: "Validation Error",
-        description: "Maximum values must be at least 1",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Maximum values must be at least 1" });
       return;
     }
 
