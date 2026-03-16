@@ -242,19 +242,24 @@ const AdminUserManagement = () => {
 
   const loadStats = async () => {
     try {
-      const { data: allProfiles } = await supabase
-        .from("profiles").select("account_status, approval_status, gender, ai_approved");
-      if (allProfiles) {
-        setStats({
-          totalUsers: allProfiles.length,
-          activeUsers: allProfiles.filter(p => p.account_status === "active").length,
-          blockedUsers: allProfiles.filter(p => p.account_status === "blocked").length,
-          suspendedUsers: allProfiles.filter(p => p.account_status === "suspended").length,
-          pendingApproval: allProfiles.filter(p => p.approval_status === "pending" && p.gender?.toLowerCase() === "female").length,
-          approvedWomen: allProfiles.filter(p => p.approval_status === "approved" && p.gender?.toLowerCase() === "female").length,
-          aiApprovedWomen: allProfiles.filter(p => p.ai_approved === true && p.gender?.toLowerCase() === "female").length,
-        });
-      }
+      const [total, active, blocked, suspended, pending, approved, aiApproved] = await Promise.all([
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "active"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "blocked"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "suspended"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending").ilike("gender", "female"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("approval_status", "approved").ilike("gender", "female"),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("ai_approved", true).ilike("gender", "female"),
+      ]);
+      setStats({
+        totalUsers: total.count || 0,
+        activeUsers: active.count || 0,
+        blockedUsers: blocked.count || 0,
+        suspendedUsers: suspended.count || 0,
+        pendingApproval: pending.count || 0,
+        approvedWomen: approved.count || 0,
+        aiApprovedWomen: aiApproved.count || 0,
+      });
     } catch (error) {
       console.error("Error loading stats:", error);
     }
