@@ -195,23 +195,15 @@ export function PrivateGroupCallWindow({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ─── Floating Comment (Danmu / Bullet Chat) ─────────────────────
+  // ─── Add Chat Message ─────────────────────────────────────────
 
-  const addFloatingComment = useCallback((senderName: string, text: string) => {
-    const id = `comment-${Date.now()}-${Math.random()}`;
-    const top = Math.floor(Math.random() * 60) + 10; // 10% to 70%
-    setFloatingComments(prev => [...prev.slice(-30), { id, senderName, text, top, createdAt: Date.now() }]);
-    // Also add to recent messages stack (visible at bottom-left)
-    const msgId = `msg-${Date.now()}-${Math.random()}`;
-    setRecentMessages(prev => [...prev.slice(-8), { id: msgId, senderName, text, createdAt: Date.now() }]);
-    // Auto-remove danmu after animation
+  const addChatMessage = useCallback((senderName: string, text: string, isSelf: boolean) => {
+    const id = `msg-${Date.now()}-${Math.random()}`;
+    setChatMessages(prev => [...prev.slice(-100), { id, senderName, text, createdAt: Date.now(), isSelf }]);
+    // Auto-scroll to bottom
     setTimeout(() => {
-      setFloatingComments(prev => prev.filter(c => c.id !== id));
-    }, 8000);
-    // Auto-remove from recent messages after 15 seconds
-    setTimeout(() => {
-      setRecentMessages(prev => prev.filter(m => m.id !== msgId));
-    }, 15000);
+      chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 50);
   }, []);
 
   // ─── Floating Emoji Reaction ─────────────────────────────────────
