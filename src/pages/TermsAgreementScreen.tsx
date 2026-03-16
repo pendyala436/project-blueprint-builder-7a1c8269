@@ -436,13 +436,23 @@ const TermsAgreementScreen = () => {
       const gender = localStorage.getItem("userGender") || "";
       const phone = localStorage.getItem("userPhone") || "";
 
-      if (!email || !password) {
+      // Re-validate password strength to prevent bypass via direct sessionStorage manipulation
+      const passwordValid =
+        password.length >= 8 &&
+        /[A-Z]/.test(password) &&
+        /[a-z]/.test(password) &&
+        /[0-9]/.test(password) &&
+        /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      if (!email || !password || !passwordValid) {
         toast({
           title: "Registration incomplete",
-          description: "Please complete all registration steps.",
+          description: !passwordValid && password
+            ? "Password does not meet strength requirements. Please go back and set a valid password."
+            : "Please complete all registration steps.",
           variant: "destructive",
         });
-        navigate("/register");
+        navigate(passwordValid ? "/register" : "/password-setup", { replace: true });
         return;
       }
 

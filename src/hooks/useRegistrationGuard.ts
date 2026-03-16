@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -11,9 +11,12 @@ export const useRegistrationGuard = (
   redirectTo: string
 ) => {
   const navigate = useNavigate();
+  // Stable ref to avoid re-running on every render while still reading latest values
+  const keysRef = useRef(requiredKeys);
+  keysRef.current = requiredKeys;
 
   useEffect(() => {
-    const missing = requiredKeys.some(({ key, storage = "local" }) => {
+    const missing = keysRef.current.some(({ key, storage = "local" }) => {
       const store = storage === "session" ? sessionStorage : localStorage;
       const value = store.getItem(key);
       return !value || value.trim() === "";
@@ -23,5 +26,5 @@ export const useRegistrationGuard = (
       toast.error("Please complete the previous step first.");
       navigate(redirectTo, { replace: true });
     }
-  }, []);
+  }, [navigate, redirectTo]);
 };
