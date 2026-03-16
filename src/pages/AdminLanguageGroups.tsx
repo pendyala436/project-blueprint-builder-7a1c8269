@@ -186,11 +186,7 @@ const AdminLanguageGroups = () => {
       loadGroups();
     } catch (error) {
       console.error("Error saving language group:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save language group",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save language group" });
     }
   };
 
