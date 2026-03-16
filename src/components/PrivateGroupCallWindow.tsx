@@ -125,8 +125,8 @@ export function PrivateGroupCallWindow({
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const screenStreamRef = useRef<MediaStream | null>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false); // repurposed as scroll toggle
+  const [isScrollEnabled, setIsScrollEnabled] = useState(true);
 
   // Extension state
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
