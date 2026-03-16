@@ -143,11 +143,7 @@ const AdminLegalDocuments = () => {
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error seeding documents:", error);
-      toast({
-        title: "Seeding Failed",
-        description: classifyError(error, "seed default documents").message,
-        variant: "destructive",
-      });
+      toast.error("Seeding Failed", { description: classifyError(error, "seed default documents").message });
     } finally {
       setSeeding(false);
     }
