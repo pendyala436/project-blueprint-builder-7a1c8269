@@ -168,7 +168,7 @@ const AdminLanguageGroups = () => {
           .eq("id", editingGroup.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language group updated" });
+        toast.success("Success", { description: "Language group updated" });
       } else {
         const { error } = await supabase.from("language_groups").insert({
           name: formName.trim(),
