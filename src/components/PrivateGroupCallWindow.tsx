@@ -325,8 +325,8 @@ export function PrivateGroupCallWindow({
     const text = commentText.trim();
     setCommentText('');
 
-    // Optimistic: show own comment immediately as danmu
-    addFloatingComment(userName, text);
+    // Optimistic: show own message immediately
+    addChatMessage(userName, text, true);
 
     // Persist to DB (fire-and-forget)
     supabase
