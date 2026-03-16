@@ -130,21 +130,22 @@ export const useMultipleRealtimeSubscriptions = (
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 
+  // Memoize the tables key to avoid infinite re-subscribe when caller passes inline array literals
+  const tablesKey = useMemo(() => tables.slice().sort().join(','), [tables.join(',')]);
+
   const debouncedUpdate = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => onUpdateRef.current(), debounceMs);
   }, [debounceMs]);
 
   useEffect(() => {
-    if (!enabled || tables.length === 0) return;
+    if (!enabled || !tablesKey) return;
 
-    const channels: RealtimeChannel[] = [];
-    
-    // Use single channel with multiple subscriptions for efficiency
+    const tableList = tablesKey.split(',') as TableName[];
     const channelName = `multi-rt-${Date.now()}`;
     const channel = supabase.channel(channelName);
 
-    tables.forEach((table) => {
+    tableList.forEach((table) => {
       channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table },
@@ -153,11 +154,10 @@ export const useMultipleRealtimeSubscriptions = (
     });
 
     channel.subscribe();
-    channels.push(channel);
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      channels.forEach(ch => supabase.removeChannel(ch));
+      supabase.removeChannel(channel);
     };
-  }, [tables.join(','), debouncedUpdate, enabled]);
+  }, [tablesKey, debouncedUpdate, enabled]);
 };
