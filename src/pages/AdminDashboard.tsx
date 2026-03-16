@@ -416,15 +416,17 @@ const AdminDashboard = () => {
               <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
               {runningCleanup ? "Cleaning..." : "Cleanup"}
             </Button>
-            <Button 
-              onClick={handleSeedSuperUsers} 
-              disabled={seedingUsers}
-              size="sm"
-              className="bg-gradient-to-r from-primary to-secondary text-xs sm:text-sm"
-            >
-              <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
-              {seedingUsers ? "Seeding..." : "Seed Users"}
-            </Button>
+            {!import.meta.env.PROD && (
+              <Button 
+                onClick={handleSeedSuperUsers} 
+                disabled={seedingUsers}
+                size="sm"
+                className="bg-gradient-to-r from-primary to-secondary text-xs sm:text-sm"
+              >
+                <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
+                {seedingUsers ? "Seeding..." : "Seed Users"}
+              </Button>
+            )}
           </div>
         </div>
 
