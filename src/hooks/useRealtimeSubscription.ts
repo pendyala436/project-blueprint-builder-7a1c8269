@@ -131,7 +131,8 @@ export const useMultipleRealtimeSubscriptions = (
   onUpdateRef.current = onUpdate;
 
   // Memoize the tables key to avoid infinite re-subscribe when caller passes inline array literals
-  const tablesKey = useMemo(() => tables.slice().sort().join(','), [tables.join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tablesKey = useMemo(() => tables.slice().sort().join(','), [JSON.stringify(tables)]);
 
   const debouncedUpdate = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
