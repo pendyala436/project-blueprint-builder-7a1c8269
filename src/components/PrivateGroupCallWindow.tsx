@@ -583,31 +583,66 @@ export function PrivateGroupCallWindow({
 
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
       <div className="relative z-20 mt-auto">
-        {/* Comment Input + Emoji Bar */}
-        {/* Hidden input — captures all keyboard input without blocking video */}
-        <input
-          ref={hiddenInputRef}
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendComment();
-            }
-          }}
-          className="absolute opacity-0 pointer-events-none w-0 h-0"
-          autoFocus
-        />
-
-        {/* Typing indicator overlay — shows what user is typing */}
-        {commentText.length > 0 && (
-          <div className="px-4 pb-2">
-            <div className="inline-flex items-center gap-1.5">
-              <span className="text-white text-sm drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">{commentText}</span>
-              <span className="w-0.5 h-4 bg-primary animate-pulse" />
+        <div className="px-4 pb-2">
+          {/* Quick Emoji Reactions */}
+          {showEmojiBar && (
+            <div className="flex items-center gap-2 mb-2 animate-in slide-in-from-bottom-2 duration-200">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleSendReaction(emoji)}
+                  className="text-2xl hover:scale-125 active:scale-95 transition-transform bg-black/40 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center"
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {/* Comment input */}
+            <div className="flex-1 flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-4 py-2 border border-white/10">
+              <Input
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendComment()}
+                placeholder="Say something..."
+                className="border-0 bg-transparent text-white placeholder:text-white/50 focus-visible:ring-0 focus-visible:ring-offset-0 h-7 px-0 text-sm"
+              />
+              {commentText.trim() && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-primary hover:bg-white/10 shrink-0"
+                  onClick={handleSendComment}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Like / Reaction toggle */}
+            <button
+              onClick={() => {
+                if (!showEmojiBar) handleSendReaction('❤️');
+                setShowEmojiBar(prev => !prev);
+              }}
+              className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/25 active:scale-90 transition-all"
+            >
+              <Heart className="h-5 w-5 text-red-400 fill-red-400" />
+            </button>
+
+            {/* Gift button — all connected participants (men) can send gifts to host */}
+            {!isOwner && (isConnected || isLive) && (
+              <button
+                onClick={() => setShowGiftDialog(true)}
+                className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500/80 to-orange-600/80 backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-lg shadow-orange-500/30"
+              >
+                <Gift className="h-5 w-5 text-white" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="px-4 pb-2">
           {/* Quick Emoji Reactions */}
