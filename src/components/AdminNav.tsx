@@ -83,6 +83,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
 
   const activeItem = navItems.find(item => isActive(item.path)) || navItems[0];
 
+  useEffect(() => {
     loadCounts();
   }, []);
 
