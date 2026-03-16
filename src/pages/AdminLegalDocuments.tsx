@@ -277,10 +277,7 @@ const AdminLegalDocuments = () => {
 
       if (error) throw error;
 
-      toast({
-        title: document.is_active ? "Deactivated" : "Activated",
-        description: `${document.name} is now ${document.is_active ? 'inactive' : 'active'}`,
-      });
+      toast.success(document.is_active ? "Deactivated" : "Activated", { description: `${document.name} is now ${document.is_active ? 'inactive' : 'active'}` });
 
       await fetchDocuments();
     } catch (error: any) {
