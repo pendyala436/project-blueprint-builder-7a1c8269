@@ -161,7 +161,7 @@ const AdminChatPricing = () => {
       return;
     }
     if (isNaN(groupCallRate) || groupCallRate <= 0) {
-      toast({ title: "Invalid Rate", description: "Men's group call rate must be a positive number", variant: "destructive" });
+      toast.error("Invalid Rate", { description: "Men's group call rate must be a positive number" });
       return;
     }
     if (isNaN(minWithdrawal) || minWithdrawal <= 0) {
