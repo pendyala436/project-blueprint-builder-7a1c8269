@@ -43,19 +43,12 @@ interface GiftItem {
   price: number;
 }
 
-interface FloatingComment {
-  id: string;
-  senderName: string;
-  text: string;
-  top: number; // percentage from top (0-80)
-  createdAt: number;
-}
-
-interface RecentMessage {
+interface ChatMessage {
   id: string;
   senderName: string;
   text: string;
   createdAt: number;
+  isSelf: boolean;
 }
 
 interface FloatingReaction {
