@@ -115,6 +115,21 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Auth guard: require authenticated user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Parse request body for action type
     let action = "auto_approve"; // default action
     let userId: string | null = null;
@@ -125,6 +140,32 @@ serve(async (req) => {
       userId = body.user_id || null;
     } catch {
       // No body or invalid JSON, use defaults
+    }
+
+    // auto_approve is admin-only; request_reapproval can be done by the user themselves
+    if (action === "auto_approve") {
+      const { data: roleData } = await supabase
+        .from("user_roles").select("role")
+        .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+      if (!roleData) {
+        return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else if (action === "request_reapproval") {
+      // Users can only reapply for themselves
+      if (userId && userId !== caller.id) {
+        const { data: roleData } = await supabase
+          .from("user_roles").select("role")
+          .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+        if (!roleData) {
+          return new Response(JSON.stringify({ success: false, error: "Cannot reapply for another user" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+      // Default userId to caller if not specified
+      if (!userId) userId = caller.id;
     }
 
     console.log(`AI Women Approval - Action: ${action}`);
