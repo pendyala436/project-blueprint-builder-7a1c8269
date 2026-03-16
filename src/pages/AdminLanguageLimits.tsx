@@ -180,7 +180,7 @@ const AdminLanguageLimits = () => {
         .eq("id", limit.id);
 
       if (error) throw error;
-      toast({ title: "Success", description: "Language limit deleted" });
+      toast.success("Success", { description: "Language limit deleted" });
       loadLimits();
     } catch (error) {
       console.error("Error deleting language limit:", error);
