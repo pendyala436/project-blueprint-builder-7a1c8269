@@ -109,9 +109,10 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || supabaseKey;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Auth guard: require authenticated user
+    // Auth guard: allow cron (service_role/anon key) or authenticated users
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
@@ -119,21 +120,37 @@ serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !caller) {
-      return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const isCronCall = token === supabaseAnonKey || token === supabaseKey;
+
+    let callerId: string | null = null;
+
+    if (!isCronCall) {
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
+      if (authError || !caller) {
+        return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      callerId = caller.id;
+    } else {
+      console.log("[SHIFT-SCHEDULER] Triggered by scheduled cron job");
     }
 
-    const { userId, timezone, action, workOnWeekOff } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { userId, timezone, action, workOnWeekOff } = body;
+
+    // For cron calls, default to generate_all_shifts
+    const effectiveAction = isCronCall ? (action || "generate_all_shifts") : action;
 
     // Admin-only actions
     const adminActions = ["generate_all_shifts", "bulk_update"];
-    if (adminActions.includes(action)) {
+    if (adminActions.includes(effectiveAction) && !isCronCall) {
       const { data: roleData } = await supabase
         .from("user_roles").select("role")
-        .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+        .eq("user_id", callerId!).eq("role", "admin").maybeSingle();
       if (!roleData) {
         return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -148,7 +165,7 @@ serve(async (req) => {
 
     // ============= AI AUTO SCHEDULE =============
     // Auto-generates monthly schedule based on language group and country timezone
-    if (action === "ai_auto_schedule") {
+    if (effectiveAction === "ai_auto_schedule") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
@@ -325,7 +342,7 @@ serve(async (req) => {
 
     // ============= WORK ON WEEK OFF =============
     // Allows user to opt-in to work on their scheduled week off
-    if (action === "work_on_week_off") {
+    if (effectiveAction === "work_on_week_off") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
@@ -394,7 +411,7 @@ serve(async (req) => {
     }
 
     // ============= GET SHIFT STATUS =============
-    if (action === "get_shift_status") {
+    if (effectiveAction === "get_shift_status") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
@@ -471,7 +488,7 @@ serve(async (req) => {
     }
 
     // ============= MARK ATTENDANCE =============
-    if (action === "mark_attendance") {
+    if (effectiveAction === "mark_attendance") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
@@ -533,7 +550,7 @@ serve(async (req) => {
 
     // ============= GET LANGUAGE GROUP SHIFTS =============
     // Returns all women in the same language group with their shift schedules for 24/7 coverage display
-    if (action === "get_language_group_shifts") {
+    if (effectiveAction === "get_language_group_shifts") {
       // Get user's language if not provided
       let targetLanguage = null;
       
@@ -713,7 +730,7 @@ serve(async (req) => {
 
     // ============= MONTHLY REFRESH =============
     // Called to refresh schedules at the start of each month
-    if (action === "monthly_refresh") {
+    if (effectiveAction === "monthly_refresh") {
       console.log("[AI Scheduler] Starting monthly refresh for all users");
 
       // Get all active women assignments
