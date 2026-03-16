@@ -47,6 +47,25 @@ serve(async (req) => {
     const { action, data } = await req.json();
     console.log(`AI Women Manager - Action: ${action}`, data);
 
+    // SECURITY: Admin-only actions
+    if (action === 'auto_approve_women' || action === 'suspend_inactive_women') {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authenticatedUserId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!roleData) {
+        console.log(`[SECURITY] Non-admin user ${authenticatedUserId} attempted ${action} - BLOCKED`);
+        return new Response(
+          JSON.stringify({ error: 'Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log(`[SECURITY] Admin ${authenticatedUserId} authorized for ${action}`);
+    }
+
     // SECURITY: For distribution actions, verify the caller is male (only men can initiate)
     // Exception: Women with Golden Badge can initiate chats and calls
     if (action === 'distribute_for_chat' || action === 'distribute_for_call') {
