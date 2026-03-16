@@ -220,7 +220,7 @@ const AdminChatPricing = () => {
       await loadPricing();
     } catch (error) {
       console.error("Error saving pricing:", error);
-      toast({ title: "Error", description: "Failed to save pricing configuration", variant: "destructive" });
+      toast.error("Error", { description: "Failed to save pricing configuration" });
     } finally {
       setIsSaving(false);
     }
