@@ -170,12 +170,18 @@ const AdminFinanceReports = () => {
         .select("user_id, preferred_language, status, wait_time_seconds, joined_at")
         .eq("status", "waiting");
 
-      // Load profiles for country data
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, country, primary_language");
+      // Load profiles only for users currently in the queue
+      const queueUserIds = [...new Set(queueData?.map(q => q.user_id) || [])];
+      let profiles: any[] = [];
+      if (queueUserIds.length > 0) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("user_id, country, primary_language")
+          .in("user_id", queueUserIds);
+        profiles = data || [];
+      }
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
 
       // Group by country
       const countryQueue = new Map<string, { count: number; totalWait: number; flag: string }>();
@@ -347,12 +353,26 @@ const AdminFinanceReports = () => {
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString());
 
-      // Load all profiles for name/country/language lookup
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, country, primary_language, gender");
+      // Collect unique user IDs from all transaction sources, then fetch only those profiles
+      const txnUserIds = new Set<string>();
+      walletTxns?.forEach(t => txnUserIds.add(t.user_id));
+      giftTxns?.forEach(t => txnUserIds.add(t.sender_id));
+      chatSessions?.forEach(t => txnUserIds.add(t.man_user_id));
+      womenEarningsData?.forEach(t => txnUserIds.add(t.user_id));
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      let profiles: any[] = [];
+      const userIdArray = [...txnUserIds];
+      // Supabase .in() has a limit; batch in chunks of 500
+      for (let i = 0; i < userIdArray.length; i += 500) {
+        const chunk = userIdArray.slice(i, i + 500);
+        const { data } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, country, primary_language, gender")
+          .in("user_id", chunk);
+        if (data) profiles.push(...data);
+      }
+
+      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
 
       // Aggregate men spending
       const menSpendingMap = new Map<string, MenSpending>();
