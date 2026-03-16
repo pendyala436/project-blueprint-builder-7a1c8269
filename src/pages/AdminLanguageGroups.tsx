@@ -71,11 +71,7 @@ const AdminLanguageGroups = () => {
       setGroups(data || []);
     } catch (error) {
       console.error("Error loading language groups:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load language groups",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load language groups" });
     } finally {
       setLoading(false);
     }
