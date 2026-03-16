@@ -525,7 +525,9 @@ const WomenDashboardScreen = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        navigate("/");
+        // Don't redirect — ProtectedRoute handles auth guard.
+        // Just stop loading to avoid stuck spinner on token refresh race.
+        setIsLoading(false);
         return;
       }
       const user = session.user;
