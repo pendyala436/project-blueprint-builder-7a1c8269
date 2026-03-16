@@ -342,7 +342,7 @@ serve(async (req) => {
 
     // ============= WORK ON WEEK OFF =============
     // Allows user to opt-in to work on their scheduled week off
-    if (action === "work_on_week_off") {
+    if (effectiveAction === "work_on_week_off") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
