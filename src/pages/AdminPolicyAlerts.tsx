@@ -245,12 +245,13 @@ const AdminPolicyAlerts = () => {
       });
 
       if (error) throw error;
+      if (!data) throw new Error("No response from content moderation function");
       if (data.success) {
-        toast.success(`Scan complete: ${data.flagged} violations found in ${data.scanned} messages`);
+        toast.success(`Scan complete: ${data.flagged ?? 0} violations found in ${data.scanned ?? 0} messages`);
         loadAlerts();
         loadStats();
       } else {
-        toast.error("Scan failed: " + data.error);
+        toast.error("Scan failed: " + (data.error || "Unknown error"));
       }
     } catch (error) {
       console.error("Error scanning messages:", error);
