@@ -598,45 +598,17 @@ const AdminUserManagement = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      // Deduct from wallet
-      const { data: walletRaw } = await supabase.from("users_wallet" as any).select("balance").eq("user_id", deductUser.user_id).maybeSingle();
-      const wallet = walletRaw as any;
-      if (!wallet) throw new Error("Wallet not found for this user");
-      
-      const newBalance = Math.max(0, (wallet.balance || 0) - amount);
-      const { error: walletError } = await supabase.from("users_wallet" as any)
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq("user_id", deductUser.user_id);
-      if (walletError) throw walletError;
-
-      // Record ledger transaction
-      await supabase.from("ledger_transactions").insert({
-        user_id: deductUser.user_id,
-        transaction_type: "admin_penalty",
-        debit: amount,
-        credit: 0,
-        description: `Admin penalty: ${deductReason}`,
-        reference_id: `PENALTY-${Date.now()}`,
+      // Atomic RPC: wallet update + ledger + notification + audit in one transaction
+      const { data, error } = await supabase.rpc("admin_deduct_wallet" as any, {
+        p_user_id: deductUser.user_id,
+        p_amount: amount,
+        p_reason: deductReason.trim(),
+        p_admin_id: session?.user?.id || "",
       });
 
-      // Create notification
-      await supabase.from("notifications").insert({
-        user_id: deductUser.user_id,
-        title: "Wallet Deduction",
-        message: `₹${amount.toFixed(2)} has been deducted from your wallet. Reason: ${deductReason}`,
-        type: "system",
-      });
+      if (error) throw error;
 
-      // Audit log
-      await supabase.from("audit_logs").insert({
-        admin_id: session?.user?.id || "",
-        action: `Wallet Deduction: ₹${amount.toFixed(2)}`,
-        action_type: "update",
-        resource_type: "wallet",
-        resource_id: deductUser.user_id,
-        details: `Deducted ₹${amount.toFixed(2)} from ${deductUser.full_name || "user"}. Reason: ${deductReason}. Previous balance: ₹${wallet.balance}. New balance: ₹${newBalance}.`,
-      });
-
+      const result = data as any;
       toast.success(`₹${amount.toFixed(2)} deducted from ${deductUser.full_name || "user"}'s wallet`);
       setDeductDialogOpen(false);
     } catch (error: any) {
