@@ -550,7 +550,7 @@ serve(async (req) => {
 
     // ============= GET LANGUAGE GROUP SHIFTS =============
     // Returns all women in the same language group with their shift schedules for 24/7 coverage display
-    if (action === "get_language_group_shifts") {
+    if (effectiveAction === "get_language_group_shifts") {
       // Get user's language if not provided
       let targetLanguage = null;
       
