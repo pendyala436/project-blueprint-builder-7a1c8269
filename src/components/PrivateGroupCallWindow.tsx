@@ -51,6 +51,13 @@ interface FloatingComment {
   createdAt: number;
 }
 
+interface RecentMessage {
+  id: string;
+  senderName: string;
+  text: string;
+  createdAt: number;
+}
+
 interface FloatingReaction {
   id: string;
   emoji: string;
