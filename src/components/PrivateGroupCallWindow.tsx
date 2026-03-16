@@ -584,7 +584,7 @@ export function PrivateGroupCallWindow({
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
       <div className="relative z-20 mt-auto">
         {/* Media Controls Bar */}
-        <div className="flex items-center justify-center gap-3 px-4 py-2 bg-black/40 backdrop-blur-md">
+        <div className="flex items-center justify-center gap-3 px-4 py-2">
           {isConnecting && (
             <div className="flex items-center gap-2 text-white/70 text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
