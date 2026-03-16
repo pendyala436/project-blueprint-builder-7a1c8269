@@ -80,10 +80,9 @@ const AdminNav = ({ children }: AdminNavProps) => {
 
   const loadCounts = async () => {
     const { count: approvals } = await supabase
-      .from("profiles")
+      .from("female_profiles")
       .select("*", { count: "exact", head: true })
-      .eq("approval_status", "pending")
-      .eq("gender", "Female");
+      .eq("approval_status", "pending");
 
     const { count: alerts } = await supabase
       .from("policy_violation_alerts")
