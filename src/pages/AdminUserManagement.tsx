@@ -454,6 +454,7 @@ const AdminUserManagement = () => {
       await supabase.from("audit_logs").insert({
         admin_id: session?.user?.id || "",
         action: `Gender switched: ${currentGender} → ${newGender}`,
+        action_type: "update",
         resource_type: "user", resource_id: user.user_id,
         details: `Admin switched ${user.full_name || "user"} from ${currentGender} to ${newGender}`,
       });
