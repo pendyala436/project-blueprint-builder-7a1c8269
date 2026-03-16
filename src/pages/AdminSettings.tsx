@@ -107,11 +107,7 @@ const AdminSettings = () => {
       setSettings((data as AdminSetting[]) || []);
     } catch (error) {
       console.error("Error loading settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load settings",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load settings" });
     } finally {
       setLoading(false);
     }
