@@ -129,11 +129,7 @@ const AdminChatPricing = () => {
       }
     } catch (error) {
       console.error("Error loading pricing:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pricing configuration",
-        variant: "destructive"
-      });
+      toast.error("Error", { description: "Failed to load pricing configuration" });
     } finally {
       setIsLoading(false);
     }
