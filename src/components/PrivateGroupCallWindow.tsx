@@ -564,10 +564,11 @@ export function PrivateGroupCallWindow({
         {/* Scrollable chat — transparent scrollbar */}
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-y-auto space-y-0.5 pr-1"
+          className={cn("flex-1 space-y-0.5 pr-1", isScrollEnabled ? "overflow-y-auto" : "overflow-hidden")}
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.15) transparent',
+          }}
           }}
         >
           {chatMessages.length === 0 && (
