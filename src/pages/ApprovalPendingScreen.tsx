@@ -68,7 +68,7 @@ const ApprovalPendingScreen = () => {
         return;
       }
       const user = session.user;
-
+      setUserId(user.id);
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("approval_status, ai_disapproval_reason, full_name, gender")
