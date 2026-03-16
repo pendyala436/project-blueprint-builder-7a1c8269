@@ -606,15 +606,54 @@ export function PrivateGroupCallWindow({
           )}
 
           {isOwner && (
-            <Button
-              variant={isVideoEnabled ? 'secondary' : 'destructive'}
-              size="sm"
-              onClick={handleToggleVideo}
-              disabled={isConnecting}
-              className="rounded-full h-10 w-10 p-0"
-            >
-              {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-            </Button>
+            <>
+              <Button
+                variant={isVideoEnabled ? 'secondary' : 'destructive'}
+                size="sm"
+                onClick={handleToggleVideo}
+                disabled={isConnecting}
+                className="rounded-full h-10 w-10 p-0"
+              >
+                {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+              </Button>
+
+              <Button
+                variant={isScreenSharing ? 'destructive' : 'secondary'}
+                size="sm"
+                onClick={async () => {
+                  if (isScreenSharing) {
+                    // Stop screen share
+                    screenStreamRef.current?.getTracks().forEach(t => t.stop());
+                    screenStreamRef.current = null;
+                    setIsScreenSharing(false);
+                    // Restore camera
+                    if (localVideoRef.current && localVideoRef.current.srcObject) {
+                      localVideoRef.current.srcObject = localVideoRef.current.srcObject;
+                    }
+                  } else {
+                    try {
+                      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                      screenStreamRef.current = screenStream;
+                      if (localVideoRef.current) {
+                        localVideoRef.current.srcObject = screenStream;
+                      }
+                      setIsScreenSharing(true);
+                      screenStream.getVideoTracks()[0].onended = () => {
+                        setIsScreenSharing(false);
+                        screenStreamRef.current = null;
+                      };
+                    } catch {
+                      toast.error('Screen sharing cancelled');
+                    }
+                  }
+                }}
+                disabled={isConnecting}
+                className="rounded-full h-10 w-10 p-0"
+                title={isScreenSharing ? 'Stop screen share' : 'Share screen'}
+              >
+                {isScreenSharing ? <MonitorOff className="h-4 w-4" /> : <MonitorUp className="h-4 w-4" />}
+              </Button>
+            </>
           )}
 
           <Button
