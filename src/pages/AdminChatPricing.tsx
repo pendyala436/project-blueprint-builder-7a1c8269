@@ -212,7 +212,7 @@ const AdminChatPricing = () => {
         group_call_women_earning_rate: groupCallWomenRate.toFixed(2),
       }));
 
-      toast({ title: "Saved", description: "Pricing updated — women earn exactly half of men's rate across all sessions." });
+      toast.success("Saved", { description: "Pricing updated — women earn exactly half of men's rate across all sessions." });
       setIsEditingRates(false);
       setIsEditingVideoRates(false);
       setIsEditingGroupRates(false);
