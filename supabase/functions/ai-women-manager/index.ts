@@ -12,22 +12,59 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get authenticated user from auth header
+    // --- Mandatory authentication ---
     const authHeader = req.headers.get('authorization');
-    let authenticatedUserId: string | null = null;
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabase.auth.getUser(token);
-      authenticatedUserId = user?.id || null;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized – missing token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Validate JWT via anon-key client (respects signing keys)
+    const token = authHeader.replace('Bearer ', '');
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
+
+    if (authError || !caller) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized – invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authenticatedUserId: string = caller.id;
+
+    // Service-role client for privileged DB operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { action, data } = await req.json();
     console.log(`AI Women Manager - Action: ${action}`, data);
+
+    // SECURITY: Admin-only actions
+    if (action === 'auto_approve_women' || action === 'suspend_inactive_women') {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authenticatedUserId)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (!roleData) {
+        console.log(`[SECURITY] Non-admin user ${authenticatedUserId} attempted ${action} - BLOCKED`);
+        return new Response(
+          JSON.stringify({ error: 'Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log(`[SECURITY] Admin ${authenticatedUserId} authorized for ${action}`);
+    }
 
     // SECURITY: For distribution actions, verify the caller is male (only men can initiate)
     // Exception: Women with Golden Badge can initiate chats and calls
