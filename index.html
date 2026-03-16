@@ -151,6 +151,41 @@
       }
     </style>
 
+    <!-- Cache recovery: clear stale service workers on load failures -->
+    <script>
+      // If React doesn't render within 8s, clear SW cache and reload once
+      (function() {
+        var timer = setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && root.children.length <= 1) {
+            if (sessionStorage.getItem('sw-recovery')) return; // already tried
+            sessionStorage.setItem('sw-recovery', '1');
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+              });
+            }
+            if ('caches' in window) {
+              caches.keys().then(function(keys) {
+                keys.forEach(function(k) { caches.delete(k); });
+              });
+            }
+            setTimeout(function() { location.reload(); }, 500);
+          }
+        }, 8000);
+        // Cancel timer once React renders
+        var obs = new MutationObserver(function() {
+          var root = document.getElementById('root');
+          if (root && root.children.length > 1) {
+            clearTimeout(timer);
+            sessionStorage.removeItem('sw-recovery');
+            obs.disconnect();
+          }
+        });
+        obs.observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
+      })();
+    </script>
+
     <!-- Preload main script for faster execution -->
     <link rel="modulepreload" href="/src/main.tsx" />
   </head>

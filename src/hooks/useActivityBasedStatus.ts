@@ -112,15 +112,15 @@ export const useActivityBasedStatus = ({
     };
   }, [userId, handleActivity, resetInactivityTimer]);
 
-  // Set offline on unmount
+  // Set offline on unmount — only if user hasn't signed out
   useEffect(() => {
     return () => {
-      if (userId) {
+      if (userId && !globalThis.__supabaseSignedOut) {
         supabase.from('user_status').upsert({
           user_id: userId,
           is_online: false,
           last_seen: new Date().toISOString(),
-        }, { onConflict: 'user_id' }).then(() => {});
+        }, { onConflict: 'user_id' }).then(() => {}, () => {});
       }
     };
   }, [userId]);

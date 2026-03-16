@@ -13,7 +13,7 @@ declare let self: ServiceWorkerGlobalScope;
 // ========================================
 
 // App version for cache busting
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const CACHE_PREFIX = 'meowmeow-pwa';
 
 // Clean up old caches
@@ -436,17 +436,6 @@ async function getCacheSize(): Promise<number> {
 // OFFLINE FALLBACK
 // ========================================
 
-// This is handled by workbox precaching, but we add a fallback
-self.addEventListener('fetch', (event) => {
-  // Only handle navigation requests that fail
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/') || new Response('Offline', {
-          status: 503,
-          statusText: 'Service Unavailable',
-        });
-      })
-    );
-  }
-});
+// NOTE: Navigation fallback is handled by workbox precacheAndRoute + NavigationRoute
+// Do NOT add a manual fetch handler for navigation here — it conflicts with workbox
+// and can cause blank pages by calling respondWith twice.
