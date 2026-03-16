@@ -574,19 +574,28 @@ export function PrivateGroupCallWindow({
         </div>
       ))}
 
-      {/* ─── Participant Names (Bottom-Left Overlay) ──────────────── */}
-      {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
-        <div className="absolute bottom-44 left-4 z-20 max-h-24 overflow-y-auto">
-          <div className="flex flex-wrap gap-1">
+      {/* ─── Recent Messages Stack (Bottom-Left, always visible) ──── */}
+      <div className="absolute bottom-48 left-4 z-20 max-w-[55%] space-y-1.5 pointer-events-none">
+        {recentMessages.map((msg) => (
+          <div key={msg.id} className="animate-in slide-in-from-left-4 fade-in duration-300">
+            <div className="inline-flex items-start gap-1.5 bg-black/50 backdrop-blur-sm rounded-xl px-3 py-1.5 max-w-full">
+              <span className="text-amber-400 font-bold text-xs shrink-0">{msg.senderName}:</span>
+              <span className="text-white text-xs break-words">{msg.text}</span>
+            </div>
+          </div>
+        ))}
+        {/* Participant count for host */}
+        {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
             {participants.filter(p => !p.isOwner).map((p) => (
-              <Badge key={p.id} className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm gap-1">
+              <Badge key={p.id} className="text-[9px] bg-black/50 text-white/80 border-0 backdrop-blur-sm gap-0.5 h-4">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                 {p.name}
               </Badge>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
       <div className="relative z-20 mt-auto">
