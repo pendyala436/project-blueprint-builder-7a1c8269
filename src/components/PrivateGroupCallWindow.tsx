@@ -243,7 +243,7 @@ export function PrivateGroupCallWindow({
         const msg = payload.new as any;
         if (msg.sender_id !== currentUserId) {
           const name = getParticipantName(msg.sender_id);
-          addFloatingComment(name, msg.message || '');
+          addChatMessage(name, msg.message || '', false);
         }
       })
       .subscribe();
