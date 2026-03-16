@@ -110,11 +110,11 @@ export function PrivateGroupCallWindow({
   // Comment input
   const [commentText, setCommentText] = useState('');
 
-  // Floating overlays
-  const [floatingComments, setFloatingComments] = useState<FloatingComment[]>([]);
+  // Chat messages & overlays
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
   const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
-  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
