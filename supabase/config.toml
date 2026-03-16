@@ -1,5 +1,8 @@
 project_id = "tvneohngeracipjajzos"
 
+[functions.collect-metrics]
+verify_jwt = false
+
 [functions.verify-photo]
 verify_jwt = false
 
