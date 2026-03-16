@@ -1,23 +1,17 @@
 import { classifyError, logError } from "@/lib/errors";
 import { supabase } from "@/integrations/supabase/client";
 
-const SUPABASE_URL = "https://tvneohngeracipjajzos.supabase.co";
-
 /**
  * Triggers the data-cleanup edge function to clean up old data
  */
 export const triggerDataCleanup = async (): Promise<{ success: boolean; error?: string }> => {
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/data-cleanup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
-      },
+    const { data, error } = await supabase.functions.invoke('data-cleanup', {
+      body: {},
     });
 
-    const data = await response.json();
-    return { success: data.success ?? response.ok, error: data.error };
+    if (error) throw error;
+    return { success: data?.success ?? true, error: data?.error };
   } catch (error) {
     console.error('Data cleanup error:', error);
     return { success: false, error: classifyError(error, 'run cleanup').message };
@@ -29,16 +23,12 @@ export const triggerDataCleanup = async (): Promise<{ success: boolean; error?: 
  */
 export const triggerGroupCleanup = async (): Promise<{ success: boolean; error?: string }> => {
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/group-cleanup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
-      },
+    const { data, error } = await supabase.functions.invoke('group-cleanup', {
+      body: {},
     });
 
-    const data = await response.json();
-    return { success: data.success ?? response.ok, error: data.error };
+    if (error) throw error;
+    return { success: data?.success ?? true, error: data?.error };
   } catch (error) {
     console.error('Group cleanup error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -50,16 +40,12 @@ export const triggerGroupCleanup = async (): Promise<{ success: boolean; error?:
  */
 export const triggerVideoCleanup = async (): Promise<{ success: boolean; error?: string }> => {
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/video-cleanup`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
-      },
+    const { data, error } = await supabase.functions.invoke('video-cleanup', {
+      body: {},
     });
 
-    const data = await response.json();
-    return { success: data.success ?? response.ok, error: data.error };
+    if (error) throw error;
+    return { success: data?.success ?? true, error: data?.error };
   } catch (error) {
     console.error('Video cleanup error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -81,34 +67,27 @@ export const verifyPhoto = async (
   genderMatches?: boolean;
 }> => {
   try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/verify-photo`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
-      },
-      body: JSON.stringify({
+    const { data, error } = await supabase.functions.invoke('verify-photo', {
+      body: {
         imageBase64,
         expectedGender,
         userId,
         verificationType: 'selfie',
-      }),
+      },
     });
 
-    const data = await response.json();
-    
+    if (error) throw error;
+
     return {
-      verified: data.verified ?? false,
-      // Support both camelCase (current edge function) and snake_case (older versions)
-      detectedGender: data.detectedGender ?? data.detected_gender,
-      confidence: data.confidence,
-      reason: data.reason,
-      genderMatches: data.genderMatches ?? data.gender_matches,
+      verified: data?.verified ?? false,
+      detectedGender: data?.detectedGender ?? data?.detected_gender,
+      confidence: data?.confidence,
+      reason: data?.reason,
+      genderMatches: data?.genderMatches ?? data?.gender_matches,
     };
   } catch (error) {
     console.error('Photo verification error:', error);
-    // Accept photo on error to avoid blocking registration
-    return { verified: true, reason: 'Photo accepted' };
+    return { verified: false, reason: 'Photo verification failed. Please try again.' };
   }
 };
 
