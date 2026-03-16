@@ -275,20 +275,11 @@ const AdminFinanceReports = () => {
           .gte("created_at", startDate.toISOString())
           .lte("created_at", endDate.toISOString());
 
-        // Get active chat sessions for this month
-        const { data: chatSessions } = await supabase
-          .from("active_chat_sessions")
-          .select("total_earned")
-          .gte("created_at", startDate.toISOString())
-          .lte("created_at", endDate.toISOString());
-
-        const menSpendingTotal = (walletTxns || []).reduce((sum, t: any) => sum + Math.abs(t.debit), 0) +
-          (chatSessions || []).reduce((sum, s) => sum + s.total_earned, 0);
+        const menSpendingTotal = (walletTxns || []).reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const chatSpending = (walletTxns || [])
-          .filter((t: any) => t.transaction_type === "chat_charge")
-          .reduce((sum, t: any) => sum + Math.abs(t.debit), 0) +
-          (chatSessions || []).reduce((sum, s) => sum + s.total_earned, 0);
+          .filter((t: any) => ["chat_charge", "video_call_charge", "group_call_charge"].includes(t.transaction_type))
+          .reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const giftSpending = (walletTxns || [])
           .filter((t: any) => t.transaction_type === "gift_purchase")
