@@ -120,15 +120,15 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       }
 
       if (!modelsLoaded) {
-        console.warn('[FaceAPI] Models not loaded, auto-accepting');
+        console.warn('[FaceAPI] Models not loaded — rejecting verification');
         return {
-          verified: true,
-          hasFace: true,
-          detectedGender: expectedGender || 'unknown',
-          confidence: 0.5,
-          reason: 'Models not available, photo accepted',
-          genderMatches: true,
-          autoAccepted: true
+          verified: false,
+          hasFace: false,
+          detectedGender: 'unknown',
+          confidence: 0,
+          reason: 'Face verification models failed to load. Please check your internet connection and try again.',
+          genderMatches: false,
+          modelLoadFailed: true
         };
       }
 
