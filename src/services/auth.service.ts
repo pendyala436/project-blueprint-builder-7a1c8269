@@ -107,6 +107,10 @@ export async function signOut(): Promise<{ success: boolean; error?: string }> {
       ]);
     }
 
+    // Clear admin cache on logout
+    const { clearAdminCache } = await import('@/hooks/useAdminAccess');
+    clearAdminCache();
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       logError(error, 'signOut');
