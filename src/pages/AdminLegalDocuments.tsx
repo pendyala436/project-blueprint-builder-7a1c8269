@@ -169,11 +169,7 @@ const AdminLegalDocuments = () => {
     }
 
     if (!newDocument.name.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter a document name",
-        variant: "destructive",
-      });
+      toast.error("Name required", { description: "Please enter a document name" });
       return;
     }
 
