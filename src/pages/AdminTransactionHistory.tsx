@@ -173,10 +173,8 @@ const AdminTransactionHistory = () => {
   const [womenStats, setWomenStats] = useState({ transactions: 0, earned: 0, withdrawals: 0 });
 
   useEffect(() => {
-    if (!adminLoading && isAdmin) {
-      loadAllData();
-    }
-  }, [adminLoading, isAdmin, dateRange]);
+    loadAllData();
+  }, [dateRange]);
 
   // Real-time subscriptions
   useEffect(() => {
