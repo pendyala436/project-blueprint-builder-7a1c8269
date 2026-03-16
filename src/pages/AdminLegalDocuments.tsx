@@ -164,11 +164,7 @@ const AdminLegalDocuments = () => {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to upload",
-        variant: "destructive",
-      });
+      toast.error("No file selected", { description: "Please select a file to upload" });
       return;
     }
 
