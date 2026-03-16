@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { clearUserContextCache } from '@/hooks/useOptimizedAuth';
 
 // Extend Window to track sign-out globally for back-button guard
 declare global {
