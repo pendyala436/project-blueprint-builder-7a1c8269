@@ -411,7 +411,7 @@ serve(async (req) => {
     }
 
     // ============= GET SHIFT STATUS =============
-    if (action === "get_shift_status") {
+    if (effectiveAction === "get_shift_status") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
