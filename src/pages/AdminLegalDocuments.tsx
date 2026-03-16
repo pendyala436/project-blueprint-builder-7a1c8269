@@ -118,11 +118,7 @@ const AdminLegalDocuments = () => {
       setDocuments(data || []);
     } catch (error: any) {
       console.error("Error fetching documents:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load legal documents",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load legal documents" });
     } finally {
       setLoading(false);
     }
