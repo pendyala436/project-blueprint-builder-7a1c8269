@@ -104,12 +104,12 @@ const SecurityProvider: React.FC<SecurityProviderProps> = memo(({
       devToolsCheckInterval = setInterval(checkDevTools, 2000);
     }
 
-    // Console protection in production only
+    // Console protection in production — only suppress debug/log, preserve warn/error for diagnostics
     if (enableConsoleProtection && import.meta.env.PROD) {
       console.log = () => {};
-      console.warn = () => {};
-      console.error = () => {};
       console.info = () => {};
+      // console.warn and console.error are intentionally preserved
+      // so runtime errors and auth failures remain visible in production logs
     }
 
     // Selection and copy handlers
