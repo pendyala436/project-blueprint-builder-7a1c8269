@@ -562,7 +562,7 @@ export function PrivateGroupCallWindow({
         {/* Scrollable chat */}
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-1"
+          className="flex-1 overflow-hidden space-y-1 pr-1"
         >
           {chatMessages.length === 0 && (
             <p className="text-white/40 text-xs px-2 py-1">No messages yet. Say something!</p>
