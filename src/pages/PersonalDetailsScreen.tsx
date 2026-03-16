@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from "react";
+import { useRegistrationGuard } from "@/hooks/useRegistrationGuard";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Ruler, Briefcase, GraduationCap, Heart, Utensils, Dumbbell, Baby, PawPrint, Plane, Brain, Star, Wine, Cigarette } from "lucide-react";
 import { Button } from "@/components/ui/button";
