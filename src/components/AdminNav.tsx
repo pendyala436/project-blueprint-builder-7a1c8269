@@ -192,7 +192,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
 
           <div className="flex items-center gap-2">
             <MeowLogo size="sm" />
-            <Badge variant="destructive" className="text-xs">ADMIN</Badge>
+            <span className="text-sm font-medium text-foreground">{activeItem.title}</span>
           </div>
 
           <Button variant="auroraGhost" size="icon" onClick={handleLogout}>
