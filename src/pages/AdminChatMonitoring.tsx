@@ -423,7 +423,7 @@ const AdminChatMonitoring = () => {
     setSilentMonitorChatId(chatId);
     loadSilentMonitorMessages(chatId);
     logAdminAudit("ghost_monitor_chat_start", "chat", chatId, "Started silent chat monitoring");
-    toast({ title: "👻 Ghost Mode Active", description: "Silently monitoring chat — participants cannot see you" });
+    toast("👻 Ghost Mode Active", { description: "Silently monitoring chat — participants cannot see you" });
   };
 
   const stopSilentMonitoring = () => {
