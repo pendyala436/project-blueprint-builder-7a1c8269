@@ -30,9 +30,15 @@ export interface UseFaceVerificationReturn {
 let modelsLoaded = false;
 let modelsLoading = false;
 let modelLoadPromise: Promise<void> | null = null;
+let modelLoadError: string | null = null;
 
-// Use jsDelivr CDN which has the correct model files
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+// Primary and fallback CDN URLs for face-api.js models (version-locked)
+const MODEL_URLS = [
+  'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model',
+  'https://unpkg.com/@vladmandic/face-api@1.7.12/model',
+];
+
+const MAX_LOAD_RETRIES = 2;
 
 export const useFaceVerification = (): UseFaceVerificationReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
