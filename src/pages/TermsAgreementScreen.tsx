@@ -720,27 +720,6 @@ const TermsAgreementScreen = () => {
         }
       }
 
-      // Clear localStorage and sessionStorage registration data
-      localStorage.removeItem("pendingPhotoData");
-      localStorage.removeItem("pendingAdditionalPhotos");
-      localStorage.removeItem("userName");
-      localStorage.removeItem("userEmail");
-      localStorage.removeItem("userPhone");
-      localStorage.removeItem("userGender");
-      localStorage.removeItem("userDob");
-      localStorage.removeItem("userDateOfBirth");
-      localStorage.removeItem("userCountry");
-      localStorage.removeItem("userState");
-      localStorage.removeItem("userCity");
-      localStorage.removeItem("userLatitude");
-      localStorage.removeItem("userLongitude");
-      localStorage.removeItem("userPrimaryLanguage");
-      sessionStorage.removeItem("userPassword");
-      localStorage.removeItem("userLanguagePreferences");
-      localStorage.removeItem("userPersonalDetails");
-      sessionStorage.removeItem("selectedLanguage");
-      sessionStorage.removeItem("selectedCountry");
-
       toast({
         title: "Registration Complete!",
         description: "Your account is being verified.",
@@ -756,6 +735,17 @@ const TermsAgreementScreen = () => {
         variant: "destructive",
       });
     } finally {
+      // Always clear sensitive registration data regardless of success/failure
+      const registrationKeys = [
+        "pendingPhotoData", "pendingAdditionalPhotos", "userName", "userEmail",
+        "userPhone", "userGender", "userDob", "userDateOfBirth", "userCountry",
+        "userState", "userCity", "userLatitude", "userLongitude",
+        "userPrimaryLanguage", "userLanguagePreferences", "userPersonalDetails",
+      ];
+      registrationKeys.forEach(key => localStorage.removeItem(key));
+      sessionStorage.removeItem("userPassword");
+      sessionStorage.removeItem("selectedLanguage");
+      sessionStorage.removeItem("selectedCountry");
       setIsLoading(false);
     }
   };
