@@ -488,7 +488,7 @@ serve(async (req) => {
     }
 
     // ============= MARK ATTENDANCE =============
-    if (action === "mark_attendance") {
+    if (effectiveAction === "mark_attendance") {
       if (!userId) {
         return new Response(
           JSON.stringify({ error: "User ID is required" }),
