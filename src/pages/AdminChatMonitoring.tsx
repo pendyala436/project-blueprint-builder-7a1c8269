@@ -542,7 +542,7 @@ const AdminChatMonitoring = () => {
       const { error } = await supabase.from("chat_messages")
         .update({ moderation_status: status }).eq("id", message.id);
       if (error) throw error;
-      toast({ title: "Success", description: `Message marked as ${status}` });
+      toast.success("Success", { description: `Message marked as ${status}` });
       loadMessages();
     } catch (error) {
       console.error("Error updating status:", error);
