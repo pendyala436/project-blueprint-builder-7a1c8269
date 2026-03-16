@@ -264,7 +264,7 @@ const AdminChatMonitoring = () => {
       }));
     } catch (error) {
       console.error("Error loading active chats:", error);
-      toast({ title: "Error", description: "Failed to load active chats", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load active chats" });
     } finally {
       setLoadingChats(false);
     }
