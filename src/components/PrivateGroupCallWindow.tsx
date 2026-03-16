@@ -121,6 +121,7 @@ export function PrivateGroupCallWindow({
   const [floatingComments, setFloatingComments] = useState<FloatingComment[]>([]);
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
   const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
+  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
 
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
