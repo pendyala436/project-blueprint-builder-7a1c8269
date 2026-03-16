@@ -320,18 +320,17 @@ const AdminUserManagement = () => {
   };
 
   useEffect(() => {
-    if (adminLoading) return;
-    if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
-  }, [adminLoading, isAdmin]);
+    fetchUsers(); loadLanguageGroups(); loadStats();
+  }, []);
   useEffect(() => {
-    if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
+    fetchUsers(); loadLanguageGroups(); loadStats();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
+  }, [currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
   useMultipleRealtimeSubscriptions(
     ["profiles", "user_roles", "language_groups"],
-    () => { if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); } },
-    isAdmin
+    () => { fetchUsers(); loadLanguageGroups(); loadStats(); },
+    true
   );
 
   const handleRefresh = () => { setRefreshing(true); fetchUsers(); loadLanguageGroups(); loadStats(); };
