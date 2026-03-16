@@ -123,11 +123,7 @@ const AdminLanguageLimits = () => {
 
   const handleSave = async () => {
     if (!formLanguage.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Language name is required",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Language name is required" });
       return;
     }
 
