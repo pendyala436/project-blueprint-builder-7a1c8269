@@ -171,11 +171,7 @@ const AdminBackupManagement = () => {
       toast.success("Backup Downloaded", { description: `Exported ${Object.keys(backupData).length} tables, ${exportObj.total_rows} rows` });
     } catch (error: any) {
       console.error("Download error:", error);
-      toast({
-        title: "Download Failed",
-        description: error.message || "Failed to export database",
-        variant: "destructive",
-      });
+      toast.error("Download Failed", { description: error.message || "Failed to export database" });
     }
   };
 

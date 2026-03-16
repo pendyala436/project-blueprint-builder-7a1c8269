@@ -245,7 +245,7 @@ const AdminFinanceDashboard = () => {
     a.click();
     URL.revokeObjectURL(url);
 
-    toast({ title: "Success", description: "CSV exported successfully" });
+    toast.success("Success", { description: "CSV exported successfully" });
   };
 
   const totalRevenue = dailyRevenue.reduce((sum, d) => sum + d.revenue, 0);
