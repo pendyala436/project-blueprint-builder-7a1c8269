@@ -529,7 +529,7 @@ const AdminChatMonitoring = () => {
         flag_reason: null, moderation_status: "cleared",
       }).eq("id", message.id);
       if (error) throw error;
-      toast({ title: "Success", description: "Flag removed" });
+      toast.success("Success", { description: "Flag removed" });
       loadMessages();
     } catch (error) {
       console.error("Error unflagging:", error);
