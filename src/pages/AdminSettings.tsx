@@ -235,11 +235,7 @@ const AdminSettings = () => {
       loadSettings();
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save settings",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save settings" });
     } finally {
       setSaving(false);
     }
