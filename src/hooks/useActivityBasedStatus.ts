@@ -120,7 +120,7 @@ export const useActivityBasedStatus = ({
           user_id: userId,
           is_online: false,
           last_seen: new Date().toISOString(),
-        }, { onConflict: 'user_id' }).then(() => {}).catch(() => {});
+        }, { onConflict: 'user_id' }).then(() => {}, () => {});
       }
     };
   }, [userId]);
