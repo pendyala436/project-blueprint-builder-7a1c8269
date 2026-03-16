@@ -53,7 +53,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface AnalyticsData {
