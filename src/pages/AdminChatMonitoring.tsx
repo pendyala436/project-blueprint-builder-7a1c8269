@@ -533,7 +533,7 @@ const AdminChatMonitoring = () => {
       loadMessages();
     } catch (error) {
       console.error("Error unflagging:", error);
-      toast({ title: "Error", description: "Failed to remove flag", variant: "destructive" });
+      toast.error("Error", { description: "Failed to remove flag" });
     }
   };
 
