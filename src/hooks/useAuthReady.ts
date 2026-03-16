@@ -58,6 +58,7 @@ function boot() {
   supabase.auth.onAuthStateChange((_event, session) => {
     if (_event === 'SIGNED_OUT') {
       globalThis.__supabaseSignedOut = true;
+      clearUserContextCache();
     } else if (session?.user) {
       globalThis.__supabaseSignedOut = false;
     }
