@@ -128,10 +128,7 @@ const AdminLegalDocuments = () => {
     setRefreshing(true);
     await fetchDocuments();
     setRefreshing(false);
-    toast({
-      title: "Refreshed",
-      description: "Document list updated",
-    });
+    toast.success("Refreshed", { description: "Document list updated" });
   };
 
   const handleSeedDocuments = async () => {
