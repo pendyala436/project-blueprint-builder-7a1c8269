@@ -75,7 +75,7 @@ const AdminLanguageGroups = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   // Real-time subscription for language groups
   useRealtimeSubscription({
