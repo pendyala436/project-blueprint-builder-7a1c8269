@@ -490,7 +490,7 @@ const AdminChatMonitoring = () => {
       setNotificationTitle(""); setNotificationMessage(""); setNotificationTarget("all");
     } catch (error) {
       console.error("Error sending notifications:", error);
-      toast({ title: "Error", description: "Failed to send notifications", variant: "destructive" });
+      toast.error("Error", { description: "Failed to send notifications" });
     } finally {
       setSendingNotification(false);
     }
