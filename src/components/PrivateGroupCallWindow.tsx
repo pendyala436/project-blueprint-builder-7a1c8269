@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, Users, Radio, Loader2,
-  X, Send, Maximize2, Minimize2, Clock, Gift, DollarSign, Heart, MonitorUp, MonitorOff
+  X, Send, Maximize2, Minimize2, Clock, Gift, DollarSign, Heart, ArrowUpDown
 } from 'lucide-react';
 import { usePrivateGroupCall, MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 import { cn } from '@/lib/utils';
@@ -125,8 +125,8 @@ export function PrivateGroupCallWindow({
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const screenStreamRef = useRef<MediaStream | null>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false); // repurposed as scroll toggle
+  const [isScrollEnabled, setIsScrollEnabled] = useState(true);
 
   // Extension state
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
@@ -564,7 +564,7 @@ export function PrivateGroupCallWindow({
         {/* Scrollable chat — transparent scrollbar */}
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-y-auto space-y-0.5 pr-1"
+          className={cn("flex-1 space-y-0.5 pr-1", isScrollEnabled ? "overflow-y-auto" : "overflow-hidden")}
           style={{
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(255,255,255,0.15) transparent',
@@ -606,55 +606,27 @@ export function PrivateGroupCallWindow({
           )}
 
           {isOwner && (
-            <>
-              <Button
-                variant={isVideoEnabled ? 'secondary' : 'destructive'}
-                size="sm"
-                onClick={handleToggleVideo}
-                disabled={isConnecting}
-                className="rounded-full h-10 w-10 p-0"
-              >
-                {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-              </Button>
-
-              <Button
-                variant={isScreenSharing ? 'destructive' : 'secondary'}
-                size="sm"
-                onClick={async () => {
-                  if (isScreenSharing) {
-                    // Stop screen share
-                    screenStreamRef.current?.getTracks().forEach(t => t.stop());
-                    screenStreamRef.current = null;
-                    setIsScreenSharing(false);
-                    // Restore camera
-                    if (localVideoRef.current && localVideoRef.current.srcObject) {
-                      localVideoRef.current.srcObject = localVideoRef.current.srcObject;
-                    }
-                  } else {
-                    try {
-                      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                      screenStreamRef.current = screenStream;
-                      if (localVideoRef.current) {
-                        localVideoRef.current.srcObject = screenStream;
-                      }
-                      setIsScreenSharing(true);
-                      screenStream.getVideoTracks()[0].onended = () => {
-                        setIsScreenSharing(false);
-                        screenStreamRef.current = null;
-                      };
-                    } catch {
-                      toast.error('Screen sharing cancelled');
-                    }
-                  }
-                }}
-                disabled={isConnecting}
-                className="rounded-full h-10 w-10 p-0"
-                title={isScreenSharing ? 'Stop screen share' : 'Share screen'}
-              >
-                {isScreenSharing ? <MonitorOff className="h-4 w-4" /> : <MonitorUp className="h-4 w-4" />}
-              </Button>
-            </>
+            <Button
+              variant={isVideoEnabled ? 'secondary' : 'destructive'}
+              size="sm"
+              onClick={handleToggleVideo}
+              disabled={isConnecting}
+              className="rounded-full h-10 w-10 p-0"
+            >
+              {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+            </Button>
           )}
+
+          {/* Scroll enable/disable toggle */}
+          <Button
+            variant={isScrollEnabled ? 'secondary' : 'destructive'}
+            size="sm"
+            onClick={() => setIsScrollEnabled(prev => !prev)}
+            className="rounded-full h-10 w-10 p-0"
+            title={isScrollEnabled ? 'Disable chat scroll' : 'Enable chat scroll'}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
 
           <Button
             variant={isAudioEnabled ? 'secondary' : 'destructive'}
