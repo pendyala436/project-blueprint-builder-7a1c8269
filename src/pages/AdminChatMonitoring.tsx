@@ -448,7 +448,7 @@ const AdminChatMonitoring = () => {
     loadGroupMessages(groupId);
     loadGroupParticipants(groupId);
     logAdminAudit("ghost_monitor_group_start", "private_group", groupId, "Started ghost group monitoring");
-    toast({ title: "👻 Ghost Group Monitor", description: "Silently monitoring group — not visible to participants" });
+    toast("👻 Ghost Group Monitor", { description: "Silently monitoring group — not visible to participants" });
   };
 
   const stopGroupMonitoring = () => {
