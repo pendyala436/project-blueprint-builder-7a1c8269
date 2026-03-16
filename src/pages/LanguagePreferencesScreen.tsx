@@ -1,4 +1,5 @@
 import { useState, useMemo, lazy, Suspense } from "react";
+import { useRegistrationGuard } from "@/hooks/useRegistrationGuard";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,7 @@ interface SelectedLanguage {
 
 const LanguagePreferencesScreen = () => {
   const navigate = useNavigate();
+  useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");

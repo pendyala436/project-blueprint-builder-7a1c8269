@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRegistrationGuard } from "@/hooks/useRegistrationGuard";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowLeft, User, Calendar, Heart, Mail, Phone } from "lucide-react";
 import { format, differenceInYears } from "date-fns";
@@ -33,6 +34,7 @@ const phoneSchema = z.string().regex(/^\+?[1-9]\d{6,14}$/, "Please enter a valid
 const BasicInfoScreen = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  useRegistrationGuard([{ key: "selectedLanguage", storage: "session" }], "/register");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
