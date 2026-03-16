@@ -188,7 +188,7 @@ const AdminFinanceDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, toast]);
+  }, [dateRange]);
 
   // Real-time subscriptions for finance data
   useMultipleRealtimeSubscriptions(
