@@ -22,7 +22,6 @@ type TableName =
   | "gift_transactions"
   | "absence_records"
   | "user_settings"
-  | "women_earnings"
   | "matches"
   | "user_languages"
   | "withdrawal_requests"
