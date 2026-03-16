@@ -468,8 +468,8 @@ export function PrivateGroupCallWindow({
       </div>
 
       {/* ─── Gradient Overlays for Readability ────────────────────── */}
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10" />
 
       {/* ─── Top Bar (Over Video) ─────────────────────────────────── */}
       <div className="relative z-20 flex items-center justify-between px-4 py-3">
