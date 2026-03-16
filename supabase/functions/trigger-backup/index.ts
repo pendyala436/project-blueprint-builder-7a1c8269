@@ -9,6 +9,7 @@ interface BackupRequest {
   backup_type?: 'manual' | 'scheduled'
 }
 
+// Comprehensive list of ALL application tables
 const BACKUP_TABLES = [
   'profiles', 'male_profiles', 'female_profiles', 'user_roles',
   'chat_messages', 'active_chat_sessions', 'matches',
@@ -25,8 +26,17 @@ const BACKUP_TABLES = [
   'admin_revenue_transactions', 'chat_wait_queue',
   'language_community_messages', 'group_video_access',
   'platform_metrics', 'policy_violation_alerts',
-  'user_status',
+  'user_status', 'password_reset_tokens',
 ]
+
+// Tables that may have >10k rows — paginate these
+const LARGE_TABLES = new Set([
+  'chat_messages', 'ledger_transactions', 'notifications',
+  'audit_logs', 'language_community_messages', 'group_messages',
+])
+
+const MAX_ROWS_PER_TABLE = 50000
+const PAGE_SIZE = 1000
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -106,62 +116,220 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-    // Run backup in background using waitUntil pattern
+    // Run backup in background
     const backupPromise = (async () => {
       try {
         const backupData: Record<string, unknown[]> = {}
+        const tableStats: Record<string, number> = {}
         const errors: string[] = []
         let totalRows = 0
 
-        // Export each table (up to 10000 rows per table using service role)
+        // ============================================
+        // PHASE 1: Export all database tables
+        // ============================================
         for (const table of BACKUP_TABLES) {
           try {
-            const { data, error } = await adminClient
-              .from(table)
-              .select('*')
-              .limit(10000)
+            if (LARGE_TABLES.has(table)) {
+              // Paginated export for large tables
+              const allRows: unknown[] = []
+              let offset = 0
+              let hasMore = true
 
-            if (error) {
-              errors.push(`${table}: ${error.message}`)
-              console.warn(`Skipping table ${table}: ${error.message}`)
-            } else if (data) {
-              backupData[table] = data
-              totalRows += data.length
+              while (hasMore && offset < MAX_ROWS_PER_TABLE) {
+                const { data, error } = await adminClient
+                  .from(table)
+                  .select('*')
+                  .range(offset, offset + PAGE_SIZE - 1)
+                  .order('created_at', { ascending: true })
+
+                if (error) {
+                  // If ordering by created_at fails, try without ordering
+                  const { data: fallbackData, error: fallbackError } = await adminClient
+                    .from(table)
+                    .select('*')
+                    .range(offset, offset + PAGE_SIZE - 1)
+
+                  if (fallbackError) {
+                    errors.push(`${table}: ${fallbackError.message}`)
+                    break
+                  }
+                  if (fallbackData) allRows.push(...fallbackData)
+                  hasMore = (fallbackData?.length || 0) === PAGE_SIZE
+                } else {
+                  if (data) allRows.push(...data)
+                  hasMore = (data?.length || 0) === PAGE_SIZE
+                }
+                offset += PAGE_SIZE
+              }
+
+              if (allRows.length > 0) {
+                backupData[table] = allRows
+                tableStats[table] = allRows.length
+                totalRows += allRows.length
+              }
+            } else {
+              // Standard export for smaller tables (up to 10k)
+              const { data, error } = await adminClient
+                .from(table)
+                .select('*')
+                .limit(10000)
+
+              if (error) {
+                errors.push(`${table}: ${error.message}`)
+                console.warn(`Skipping table ${table}: ${error.message}`)
+              } else if (data && data.length > 0) {
+                backupData[table] = data
+                tableStats[table] = data.length
+                totalRows += data.length
+              }
             }
           } catch (e) {
             errors.push(`${table}: ${e instanceof Error ? e.message : 'unknown'}`)
           }
         }
 
-        // Build the backup payload
+        // ============================================
+        // PHASE 2: Export storage bucket metadata & files
+        // ============================================
+        const storageBackup: Record<string, { files: unknown[]; totalFiles: number }> = {}
+
+        try {
+          const { data: buckets, error: bucketsError } = await adminClient.storage.listBuckets()
+
+          if (!bucketsError && buckets) {
+            for (const bucket of buckets) {
+              try {
+                const bucketFiles: unknown[] = []
+
+                // List all files in the bucket (recursive via folders)
+                const listFilesRecursive = async (path: string) => {
+                  const { data: files, error: listError } = await adminClient.storage
+                    .from(bucket.name)
+                    .list(path, { limit: 1000 })
+
+                  if (listError || !files) return
+
+                  for (const file of files) {
+                    const fullPath = path ? `${path}/${file.name}` : file.name
+
+                    if (file.id) {
+                      // It's a file — store metadata
+                      const { data: urlData } = await adminClient.storage
+                        .from(bucket.name)
+                        .createSignedUrl(fullPath, 60 * 60 * 24 * 7) // 7-day signed URL
+
+                      bucketFiles.push({
+                        name: file.name,
+                        path: fullPath,
+                        bucket: bucket.name,
+                        size: (file.metadata as any)?.size || null,
+                        mimetype: (file.metadata as any)?.mimetype || null,
+                        created_at: file.created_at,
+                        updated_at: file.updated_at,
+                        signed_url: urlData?.signedUrl || null,
+                      })
+                    } else {
+                      // It's a folder — recurse
+                      await listFilesRecursive(fullPath)
+                    }
+                  }
+                }
+
+                await listFilesRecursive('')
+
+                if (bucketFiles.length > 0) {
+                  storageBackup[bucket.name] = {
+                    files: bucketFiles,
+                    totalFiles: bucketFiles.length,
+                  }
+                }
+              } catch (bucketErr) {
+                errors.push(`storage/${bucket.name}: ${bucketErr instanceof Error ? bucketErr.message : 'unknown'}`)
+              }
+            }
+          }
+        } catch (storageErr) {
+          errors.push(`storage_listing: ${storageErr instanceof Error ? storageErr.message : 'unknown'}`)
+        }
+
+        // ============================================
+        // PHASE 3: Export auth users metadata
+        // ============================================
+        const authUsersBackup: unknown[] = []
+        try {
+          let page = 1
+          let hasMore = true
+          while (hasMore && page <= 100) {
+            const { data: usersPage, error: usersError } = await adminClient.auth.admin.listUsers({
+              page,
+              perPage: 50,
+            })
+            if (usersError) {
+              errors.push(`auth_users: ${usersError.message}`)
+              break
+            }
+            if (usersPage?.users) {
+              for (const u of usersPage.users) {
+                authUsersBackup.push({
+                  id: u.id,
+                  email: u.email,
+                  phone: u.phone,
+                  created_at: u.created_at,
+                  last_sign_in_at: u.last_sign_in_at,
+                  email_confirmed_at: u.email_confirmed_at,
+                  phone_confirmed_at: u.phone_confirmed_at,
+                  role: u.role,
+                  app_metadata: u.app_metadata,
+                  user_metadata: u.user_metadata,
+                })
+              }
+              hasMore = usersPage.users.length === 50
+            } else {
+              hasMore = false
+            }
+            page++
+          }
+        } catch (authErr) {
+          errors.push(`auth_users: ${authErr instanceof Error ? authErr.message : 'unknown'}`)
+        }
+
+        // ============================================
+        // Build the complete backup payload
+        // ============================================
         const backupPayload = {
           backup_id: backupLog.id,
           backup_type: backupType,
           created_at: new Date().toISOString(),
           triggered_by: user.id,
           supabase_project_url: supabaseUrl,
-          tables_exported: Object.keys(backupData).length,
-          tables_failed: errors.length,
-          total_rows: totalRows,
+          version: '2.0',
+          summary: {
+            tables_exported: Object.keys(backupData).length,
+            tables_failed: errors.filter(e => !e.startsWith('storage') && !e.startsWith('auth')).length,
+            total_rows: totalRows,
+            table_stats: tableStats,
+            storage_buckets_exported: Object.keys(storageBackup).length,
+            total_storage_files: Object.values(storageBackup).reduce((sum, b) => sum + b.totalFiles, 0),
+            auth_users_exported: authUsersBackup.length,
+          },
           errors: errors.length > 0 ? errors : undefined,
-          data: backupData,
+          database: backupData,
+          storage: Object.keys(storageBackup).length > 0 ? storageBackup : undefined,
+          auth_users: authUsersBackup.length > 0 ? authUsersBackup : undefined,
         }
 
         const jsonStr = JSON.stringify(backupPayload)
         const sizeBytes = new TextEncoder().encode(jsonStr).length
         const storagePath = `backups/${timestamp}_${backupLog.id}.json`
 
-        // Try to upload to Supabase Storage (bucket: backups)
+        // Upload to Supabase Storage
         let uploadSuccess = false
         try {
-          // Ensure bucket exists
           await adminClient.storage.createBucket('backups', {
             public: false,
             allowedMimeTypes: ['application/json'],
-            fileSizeLimit: 500 * 1024 * 1024, // 500MB
-          }).catch(() => {
-            // Bucket may already exist, that's fine
-          })
+            fileSizeLimit: 500 * 1024 * 1024,
+          }).catch(() => { /* bucket may already exist */ })
 
           const { error: uploadError } = await adminClient.storage
             .from('backups')
@@ -172,28 +340,38 @@ Deno.serve(async (req) => {
 
           if (uploadError) {
             console.error('Storage upload failed:', uploadError.message)
+            errors.push(`upload: ${uploadError.message}`)
           } else {
             uploadSuccess = true
           }
         } catch (storageErr) {
           console.error('Storage error:', storageErr)
+          errors.push(`upload: ${storageErr instanceof Error ? storageErr.message : 'unknown'}`)
         }
 
         // Update backup log as completed
+        const summary = backupPayload.summary
+        const statusMsg = [
+          `${summary.tables_exported} tables (${totalRows} rows)`,
+          `${summary.auth_users_exported} auth users`,
+          `${summary.storage_buckets_exported} storage buckets (${summary.total_storage_files} files)`,
+          errors.length > 0 ? `${errors.length} warnings` : null,
+        ].filter(Boolean).join(', ')
+
         await adminClient
           .from('backup_logs')
           .update({
-            status: 'completed',
+            status: uploadSuccess ? 'completed' : 'failed',
             size_bytes: sizeBytes,
             storage_path: uploadSuccess ? storagePath : null,
             completed_at: new Date().toISOString(),
-            error_message: errors.length > 0
-              ? `${Object.keys(backupData).length} tables exported, ${errors.length} skipped`
-              : null,
+            error_message: uploadSuccess
+              ? (errors.length > 0 ? statusMsg : null)
+              : `Upload failed. ${statusMsg}`,
           })
           .eq('id', backupLog.id)
 
-        console.log(`Backup ${backupLog.id} completed: ${Object.keys(backupData).length} tables, ${totalRows} rows, ${(sizeBytes / 1024 / 1024).toFixed(2)} MB`)
+        console.log(`Backup ${backupLog.id} ${uploadSuccess ? 'completed' : 'failed'}: ${statusMsg}, ${(sizeBytes / 1024 / 1024).toFixed(2)} MB`)
       } catch (error) {
         console.error(`Backup ${backupLog.id} failed:`, error)
         await adminClient
@@ -207,7 +385,7 @@ Deno.serve(async (req) => {
       }
     })()
 
-    // Use EdgeRuntime waitUntil if available, otherwise fire-and-forget
+    // Use EdgeRuntime waitUntil if available
     if (typeof (globalThis as any).EdgeRuntime !== 'undefined') {
       (globalThis as any).EdgeRuntime.waitUntil(backupPromise)
     }
