@@ -60,7 +60,7 @@ const PasswordSetupScreen = () => {
   };
 
   const handleBack = () => {
-    navigate("/location-setup");
+    navigate("/language-preferences");
   };
 
   return (

@@ -120,16 +120,22 @@ const WalletScreen = () => {
     setProcessingPayment(true);
     try {
       const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
+      // NOTE: Real payment gateway integration required.
+      // This records the recharge as PENDING until gateway webhook confirms payment.
+      // Production: redirect to gateway URL, then credit wallet only on webhook confirmation.
+      toast.info(`Redirecting to ${gateway?.name}…`, {
+        description: "Complete your payment on the gateway page.",
+      });
       const result = await creditWallet(
         userId,
         amount,
-        `Wallet recharge via ${gateway?.name}`,
+        `Wallet recharge via ${gateway?.name} – PENDING GATEWAY CONFIRMATION`,
         `RC_${selectedGateway.toUpperCase()}_${Date.now()}`
       );
       if (result.success) {
         setIsAnimating(true);
         setTimeout(() => setIsAnimating(false), 600);
-        toast.success(`₹${amount} added to your wallet!`);
+        toast.success(`₹${amount} recharge recorded — pending gateway confirmation.`);
         loadWallet();
       } else {
         toast.error(result.error || "Recharge failed. Please try again.");
@@ -246,9 +252,9 @@ const WalletScreen = () => {
               <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
                 {INTERNATIONAL_GATEWAYS.map((gateway) => (
                   <div key={gateway.id} className="relative">
-                    <RadioGroupItem value={gateway.id} id={gateway.id} className="peer sr-only" />
+                    <RadioGroupItem value={gateway.id} id={`intl-${gateway.id}`} className="peer sr-only" />
                     <Label
-                      htmlFor={gateway.id}
+                      htmlFor={`intl-${gateway.id}`}
                       className={cn(
                         "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
                         "hover:border-primary/50 hover:bg-muted/50",

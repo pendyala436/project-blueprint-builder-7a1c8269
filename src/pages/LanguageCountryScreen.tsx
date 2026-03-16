@@ -64,7 +64,7 @@ const LanguageCountryScreen = () => {
 
       {/* Header */}
       <header className="px-6 pt-8 pb-4 relative z-10">
-        <ProgressIndicator currentStep={1} totalSteps={8} />
+        <ProgressIndicator currentStep={1} totalSteps={9} />
       </header>
 
       {/* Main Content */}

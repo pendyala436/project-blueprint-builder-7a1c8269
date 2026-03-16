@@ -702,6 +702,24 @@ const TermsAgreementScreen = () => {
         gender: gender.toLowerCase() === "female" ? "women" : "men",
       }, { onConflict: "user_id" });
 
+      // Save language preferences from LanguagePreferencesScreen to user_languages table
+      const savedLanguagePrefs = localStorage.getItem("userLanguagePreferences");
+      if (savedLanguagePrefs) {
+        try {
+          const langPrefs = JSON.parse(savedLanguagePrefs) as Array<{ code: string; name: string }>;
+          if (langPrefs.length > 0) {
+            const langRecords = langPrefs.map((lang) => ({
+              user_id: user.id,
+              language_code: lang.code,
+              language_name: lang.name,
+            }));
+            await supabase.from("user_languages").upsert(langRecords, { onConflict: "user_id,language_code" });
+          }
+        } catch {
+          // Non-critical - language preferences can be set later from settings
+        }
+      }
+
       // Clear localStorage and sessionStorage registration data
       localStorage.removeItem("pendingPhotoData");
       localStorage.removeItem("pendingAdditionalPhotos");
@@ -718,6 +736,7 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userLongitude");
       localStorage.removeItem("userPrimaryLanguage");
       localStorage.removeItem("userPassword");
+      localStorage.removeItem("userLanguagePreferences");
       localStorage.removeItem("userPersonalDetails");
       sessionStorage.removeItem("selectedLanguage");
       sessionStorage.removeItem("selectedCountry");

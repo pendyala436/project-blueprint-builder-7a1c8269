@@ -59,12 +59,18 @@ const LanguagePreferencesScreen = () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user) {
+        // During registration, no session yet — save to localStorage and continue
+        if (selectedLanguages.length > 0) {
+          localStorage.setItem("userLanguagePreferences", JSON.stringify(selectedLanguages));
+          localStorage.setItem("userPrimaryLanguage", selectedLanguages[0].code);
+        }
         toast({
-          title: "Not authenticated",
-          description: "Please sign in to continue.",
-          variant: "destructive",
+          title: "Preferences saved!",
+          description: selectedLanguages.length > 0
+            ? `${selectedLanguages.length} language(s) selected.`
+            : "Skipped — you can update this later.",
         });
-        navigate("/");
+        navigate("/password-setup");
         return;
       }
       const user = session.user;
@@ -95,7 +101,7 @@ const LanguagePreferencesScreen = () => {
         description: `${selectedLanguages.length} language(s) selected for translation.`,
       });
 
-      navigate("/terms-agreement");
+      navigate("/password-setup");
     } catch (error) {
       console.error("Error saving languages:", error);
       toast({
@@ -129,7 +135,7 @@ const LanguagePreferencesScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={7} totalSteps={8} />
+            <ProgressIndicator currentStep={6} totalSteps={9} />
           </div>
         </div>
       </header>

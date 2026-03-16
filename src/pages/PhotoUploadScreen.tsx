@@ -332,7 +332,7 @@ const PhotoUploadScreen = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={5} totalSteps={8} />
+            <ProgressIndicator currentStep={4} totalSteps={9} />
           </div>
         </div>
       </header>

@@ -199,7 +199,7 @@ const LocationSetupScreen = () => {
       description: "Your location has been saved.",
     });
 
-    navigate("/password-setup");
+    navigate("/language-preferences");
   };
 
   return (
@@ -223,7 +223,7 @@ const LocationSetupScreen = () => {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={6} totalSteps={8} />
+            <ProgressIndicator currentStep={5} totalSteps={9} />
           </div>
         </div>
       </header>
