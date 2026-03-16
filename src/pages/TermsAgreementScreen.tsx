@@ -735,7 +735,7 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userLatitude");
       localStorage.removeItem("userLongitude");
       localStorage.removeItem("userPrimaryLanguage");
-      localStorage.removeItem("userPassword");
+      sessionStorage.removeItem("userPassword");
       localStorage.removeItem("userLanguagePreferences");
       localStorage.removeItem("userPersonalDetails");
       sessionStorage.removeItem("selectedLanguage");

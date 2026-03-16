@@ -47,8 +47,8 @@ const PasswordSetupScreen = () => {
       return;
     }
 
-    // Store password temporarily for account creation after terms agreement
-    localStorage.setItem("userPassword", password);
+    // Store password in sessionStorage (tab-scoped, auto-cleared on close)
+    sessionStorage.setItem("userPassword", password);
 
     toast({
       title: "Password saved",
