@@ -87,11 +87,7 @@ const AdminLanguageLimits = () => {
       setLimits(data || []);
     } catch (error) {
       console.error("Error loading language limits:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load language limits",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load language limits" });
     } finally {
       setLoading(false);
     }
