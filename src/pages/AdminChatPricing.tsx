@@ -157,7 +157,7 @@ const AdminChatPricing = () => {
       return;
     }
     if (isNaN(videoRatePerMinute) || videoRatePerMinute <= 0) {
-      toast({ title: "Invalid Rate", description: "Men's video rate must be a positive number", variant: "destructive" });
+      toast.error("Invalid Rate", { description: "Men's video rate must be a positive number" });
       return;
     }
     if (isNaN(groupCallRate) || groupCallRate <= 0) {
