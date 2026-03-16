@@ -15,6 +15,8 @@ let RECONNECT_ATTEMPTS = 3; // Auto-reconnect attempts
 let HEARTBEAT_INTERVAL_SECONDS = 60; // Billing heartbeat interval
 
 // Super user email patterns - they bypass ALL balance requirements
+// CANONICAL PATTERN: {role}{1-15}@meow-meow.com (no zero-padding)
+// Must stay in sync with: seed-super-users/index.ts, admin-delete-user/index.ts
 const SUPER_USER_PATTERNS = {
   female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
   male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
