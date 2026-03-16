@@ -160,11 +160,9 @@ const AdminKYCManagement = () => {
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
   useEffect(() => {
-    if (isAdmin) {
-      loadIndianWomen();
-      loadStats();
-    }
-  }, [isAdmin]);
+    loadIndianWomen();
+    loadStats();
+  }, []);
 
   useEffect(() => {
     filterWomen();
