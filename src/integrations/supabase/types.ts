@@ -3047,6 +3047,14 @@ export type Database = {
         Args: { p_month: number; p_user_id: string; p_year: number }
         Returns: Json
       }
+      get_analytics_summary: {
+        Args: {
+          p_bucket_interval?: string
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_dashboard_stats: { Args: { p_user_id: string }; Returns: Json }
       get_ledger_statement:
         | {

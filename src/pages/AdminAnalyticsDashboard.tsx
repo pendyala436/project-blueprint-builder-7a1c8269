@@ -53,7 +53,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface AnalyticsData {
@@ -123,183 +123,61 @@ const AdminAnalyticsDashboard = () => {
 
   const fetchAnalytics = useCallback(async () => {
     try {
-      const days = dateRange === "all" ? 3650 : parseInt(dateRange); // 10 years for "all time"
+      // Cap "all time" to 365 days to avoid generating thousands of chart points
+      const days = dateRange === "all" ? 365 : parseInt(dateRange);
       const startDate = subDays(new Date(), days);
+      const endDate = new Date();
 
-      // Fetch total users
-      const { count: totalUsers } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
+      // Single server-side RPC — all aggregation happens in Postgres
+      const { data, error } = await supabase.rpc("get_analytics_summary" as any, {
+        p_start_date: startDate.toISOString(),
+        p_end_date: endDate.toISOString(),
+      });
 
-      // Fetch active users (online in last 24 hours)
-      const { count: activeUsers } = await supabase
-        .from("user_status")
-        .select("*", { count: "exact", head: true })
-        .eq("is_online", true);
+      if (error) throw error;
 
-      // Fetch total matches
-      const { count: totalMatches } = await supabase
-        .from("matches")
-        .select("*", { count: "exact", head: true });
+      const result = data as any;
+      const totals = result.totals;
+      const gender = result.gender;
+      const chart = result.chart;
 
-      // Fetch men's recharges from ledger
-      const { data: menRechargesData } = await supabase
-        .from("ledger_transactions")
-        .select("credit, created_at, description")
-        .eq("transaction_type", "recharge")
-        .gt("credit", 0)
-        .gte("created_at", startDate.toISOString());
-
-      const totalMenRecharges = menRechargesData?.reduce((sum, tx) => sum + Number(tx.credit), 0) || 0;
-
-      // Fetch men's spending (debits from ledger)
-      const { data: menSpentData } = await supabase
-        .from("ledger_transactions")
-        .select("debit, created_at")
-        .gt("debit", 0)
-        .in("transaction_type", ["chat_charge", "video_call_charge", "group_call_charge"])
-        .gte("created_at", startDate.toISOString());
-
-      const totalMenSpent = menSpentData?.reduce((sum, tx) => sum + Number(tx.debit), 0) || 0;
-
-      // Fetch completed withdrawals by women
-      const { data: withdrawalsData } = await supabase
-        .from("withdrawal_requests")
-        .select("amount, created_at")
-        .eq("status", "completed")
-        .gte("created_at", startDate.toISOString());
-
-      const totalWithdrawals = withdrawalsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
-
-      // Admin profit = Total Deposits (Men) - Total Withdrawals (Women)
-      const adminProfit = totalMenRecharges - totalWithdrawals;
-
-      // Fetch new users today
-      const today = new Date();
-      const { count: newUsersToday } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", startOfDay(today).toISOString())
-        .lte("created_at", endOfDay(today).toISOString());
-
-      // Fetch messages count
-      const { count: messagesCount } = await supabase
-        .from("chat_messages")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", startDate.toISOString());
-
-      // Fetch gender distribution
-      const { data: genderData } = await supabase
-        .from("profiles")
-        .select("gender");
-
-      const maleCount = genderData?.filter(p => p.gender?.toLowerCase() === "male").length || 0;
-      const femaleCount = genderData?.filter(p => p.gender?.toLowerCase() === "female").length || 0;
-      const otherCount = (genderData?.length || 0) - maleCount - femaleCount;
-
-      setGenderDistribution([
-        { name: "Male", value: maleCount, color: CHART_COLORS.male },
-        { name: "Female", value: femaleCount, color: CHART_COLORS.female },
-        { name: "Other", value: otherCount, color: CHART_COLORS.accent },
-      ]);
-
-      // Calculate conversion rate (matches / users)
-      const conversionRate = totalUsers ? ((totalMatches || 0) / totalUsers) * 100 : 0;
-
-      // Calculate average session time from active chat sessions
-      const { data: sessionData } = await supabase
-        .from("active_chat_sessions")
-        .select("total_minutes")
-        .gte("created_at", startDate.toISOString());
-
-      const totalSessionMinutes = sessionData?.reduce((sum, s) => sum + Number(s.total_minutes), 0) || 0;
-      const avgSessionTime = sessionData && sessionData.length > 0 
-        ? Math.round(totalSessionMinutes / sessionData.length) 
-        : 0;
-
-      // Fetch women earnings for display
-      const { data: womenEarningsData } = await supabase
-        .from("women_earnings")
-        .select("amount, created_at")
-        .gte("created_at", startDate.toISOString());
-
-      const totalWomenEarned = womenEarningsData?.reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
+      const menRecharges = Number(totals.men_recharges) || 0;
+      const womenWithdrawals = Number(totals.women_withdrawals) || 0;
+      const adminProfit = menRecharges - womenWithdrawals;
+      const totalUsers = Number(totals.total_users) || 0;
+      const totalMatches = Number(totals.total_matches) || 0;
+      const conversionRate = totalUsers ? (totalMatches / totalUsers) * 100 : 0;
 
       setAnalytics({
-        totalUsers: totalUsers || 0,
-        activeUsers: activeUsers || 0,
-        totalMatches: totalMatches || 0,
-        adminProfit: adminProfit,
-        menRecharges: totalMenRecharges,
-        menSpent: totalMenSpent,
-        womenEarnings: totalWomenEarned,
-        womenWithdrawals: totalWithdrawals,
-        newUsersToday: newUsersToday || 0,
-        messagesCount: messagesCount || 0,
-        avgSessionTime,
+        totalUsers,
+        activeUsers: Number(totals.active_users) || 0,
+        totalMatches,
+        adminProfit,
+        menRecharges,
+        menSpent: Number(totals.men_spent) || 0,
+        womenEarnings: Number(totals.women_earnings) || 0,
+        womenWithdrawals,
+        newUsersToday: Number(totals.new_users_today) || 0,
+        messagesCount: Number(totals.messages_count) || 0,
+        avgSessionTime: Math.round(Number(totals.avg_session_minutes) || 0),
         conversionRate,
       });
 
-      // Generate chart data based on real daily data
-      const chartDataPoints: ChartData[] = [];
-      
-      // Fetch daily user registrations
-      const { data: dailyUsers } = await supabase
-        .from("profiles")
-        .select("created_at")
-        .gte("created_at", startDate.toISOString());
+      setGenderDistribution([
+        { name: "Male", value: Number(gender.male) || 0, color: CHART_COLORS.male },
+        { name: "Female", value: Number(gender.female) || 0, color: CHART_COLORS.female },
+        { name: "Other", value: Number(gender.other) || 0, color: CHART_COLORS.accent },
+      ]);
 
-      // Fetch daily matches
-      const { data: dailyMatches } = await supabase
-        .from("matches")
-        .select("created_at")
-        .gte("created_at", startDate.toISOString());
-
-      // Fetch daily messages
-      const { data: dailyMessages } = await supabase
-        .from("chat_messages")
-        .select("created_at")
-        .gte("created_at", startDate.toISOString());
-
-      for (let i = days - 1; i >= 0; i--) {
-        const date = subDays(new Date(), i);
-        const dateStr = format(date, "MMM dd");
-        const dayStart = startOfDay(date).toISOString();
-        const dayEnd = endOfDay(date).toISOString();
-
-        // Count actual data for each day
-        const usersOnDay = dailyUsers?.filter(u => 
-          u.created_at >= dayStart && u.created_at <= dayEnd
-        ).length || 0;
-
-        const matchesOnDay = dailyMatches?.filter(m => 
-          m.created_at >= dayStart && m.created_at <= dayEnd
-        ).length || 0;
-
-        const messagesOnDay = dailyMessages?.filter(m => 
-          m.created_at >= dayStart && m.created_at <= dayEnd
-        ).length || 0;
-
-        // Calculate daily financial data from real transactions
-        const dailyMenRecharges = menRechargesData?.filter(tx => 
-          tx.created_at >= dayStart && tx.created_at <= dayEnd
-        ).reduce((sum, tx) => sum + Number(tx.credit), 0) || 0;
-
-        const dailyWithdrawals = withdrawalsData?.filter(tx => 
-          tx.created_at >= dayStart && tx.created_at <= dayEnd
-        ).reduce((sum, tx) => sum + Number(tx.amount), 0) || 0;
-
-        const dailyProfit = dailyMenRecharges - dailyWithdrawals;
-
-        chartDataPoints.push({
-          date: dateStr,
-          users: usersOnDay,
-          activeUsers: Math.min(usersOnDay, activeUsers || 0),
-          matches: matchesOnDay,
-          revenue: dailyProfit,
-          messages: messagesOnDay,
-        });
-      }
+      // Chart data is already aggregated server-side
+      const chartDataPoints: ChartData[] = (chart || []).map((point: any) => ({
+        date: point.date,
+        users: Number(point.users) || 0,
+        activeUsers: 0,
+        matches: Number(point.matches) || 0,
+        revenue: Number(point.revenue) || 0,
+        messages: Number(point.messages) || 0,
+      }));
       setChartData(chartDataPoints);
 
     } catch (error) {
