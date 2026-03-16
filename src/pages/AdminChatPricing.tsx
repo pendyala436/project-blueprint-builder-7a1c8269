@@ -198,10 +198,27 @@ const AdminChatPricing = () => {
           .eq("id", pricing.id);
         if (error) throw error;
       } else {
-        // First-time insert — deactivate any stale rows first to prevent duplicates.
-        await supabase.from("chat_pricing").update({ is_active: false } as any).eq("is_active", true);
-        const { error } = await supabase.from("chat_pricing").insert(pricingData as any);
-        if (error) throw error;
+        // First-time insert — use upsert to prevent race conditions.
+        // If another admin concurrently inserts, the DB constraint prevents duplicates.
+        // We rely on is_active + currency as a natural unique pair (only one active config per currency).
+        const { data: existing } = await supabase
+          .from("chat_pricing")
+          .select("id")
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+
+        if (existing?.id) {
+          // Another concurrent request already created a row — update it instead
+          const { error } = await supabase
+            .from("chat_pricing")
+            .update(pricingData as any)
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("chat_pricing").insert(pricingData as any);
+          if (error) throw error;
+        }
       }
 
       // Reflect the enforced half-rule back into form so UI stays consistent
