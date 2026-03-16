@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import AdminNav from '@/components/AdminNav';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ const GROUP_CONFIG: { key: TargetGroup; label: string; icon: React.ReactNode; co
 ];
 
 const AdminMessaging = () => {
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [activeTab, setActiveTab] = useState<'inbox' | 'broadcast' | 'chat'>('inbox');
   const [selectedGroup, setSelectedGroup] = useState<TargetGroup>('all');
   const [broadcastMessage, setBroadcastMessage] = useState('');
@@ -310,6 +312,14 @@ const AdminMessaging = () => {
   const getGroupLabel = (group: string) => GROUP_CONFIG.find(g => g.key === group)?.label || group;
 
   const totalUnread = inboxThreads.reduce((sum, t) => sum + t.unread_count, 0);
+
+  if (adminLoading || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <AdminNav>

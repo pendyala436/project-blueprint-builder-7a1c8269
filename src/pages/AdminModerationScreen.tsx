@@ -29,6 +29,7 @@ import AdminNav from "@/components/AdminNav";
 import { useNavigate } from 'react-router-dom';
 // Supabase client for all database operations
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 // UI Components from shadcn/ui
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -128,6 +129,7 @@ interface Profile {
 const AdminModerationScreen = () => {
   // ============= HOOKS =============
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   
   // ============= STATE =============
   
@@ -545,6 +547,14 @@ const AdminModerationScreen = () => {
   };
 
   // ============= LOADING STATE =============
+  if (adminLoading || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
    if (loading) {
     return (
       <AdminNav>
