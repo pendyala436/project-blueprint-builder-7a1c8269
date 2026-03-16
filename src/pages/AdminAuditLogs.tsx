@@ -110,11 +110,7 @@ const AdminAuditLogs = () => {
       setLogs((data as AuditLog[]) || []);
     } catch (error) {
       console.error("Error loading logs:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load audit logs",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load audit logs" });
     } finally {
       setLoading(false);
     }
