@@ -617,6 +617,17 @@ export function PrivateGroupCallWindow({
             </Button>
           )}
 
+          {/* Scroll enable/disable toggle */}
+          <Button
+            variant={isScrollEnabled ? 'secondary' : 'destructive'}
+            size="sm"
+            onClick={() => setIsScrollEnabled(prev => !prev)}
+            className="rounded-full h-10 w-10 p-0"
+            title={isScrollEnabled ? 'Disable chat scroll' : 'Enable chat scroll'}
+          >
+            <ArrowUpDown className="h-4 w-4" />
+          </Button>
+
           <Button
             variant={isAudioEnabled ? 'secondary' : 'destructive'}
             size="sm"
