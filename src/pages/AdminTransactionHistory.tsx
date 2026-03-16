@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AdminNav from "@/components/AdminNav";
-import { useAdminAccess } from "@/hooks/useAdminAccess";
+
 import { 
   ArrowLeft, 
   ArrowUpRight, 
@@ -143,7 +143,7 @@ interface PlatformStats {
 
 const AdminTransactionHistory = () => {
   const navigate = useNavigate();
-  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("statement");
@@ -173,10 +173,8 @@ const AdminTransactionHistory = () => {
   const [womenStats, setWomenStats] = useState({ transactions: 0, earned: 0, withdrawals: 0 });
 
   useEffect(() => {
-    if (!adminLoading && isAdmin) {
-      loadAllData();
-    }
-  }, [adminLoading, isAdmin, dateRange]);
+    loadAllData();
+  }, [dateRange]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -465,7 +463,7 @@ const AdminTransactionHistory = () => {
     return filtered;
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
       <AdminNav>
         <div className="p-6">
@@ -478,20 +476,6 @@ const AdminTransactionHistory = () => {
           </div>
         </div>
       </AdminNav>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 text-center">
-          <h2 className="text-xl font-bold text-destructive">Access Denied</h2>
-          <p className="text-muted-foreground mt-2">Admin access required</p>
-          <Button className="mt-4" onClick={() => navigate("/dashboard")}>
-            Go to Dashboard
-          </Button>
-        </Card>
-      </div>
     );
   }
 

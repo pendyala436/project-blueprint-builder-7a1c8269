@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
-import { useAdminAccess } from "@/hooks/useAdminAccess";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,7 +146,7 @@ const getSignedUrl = async (storedUrl: string): Promise<string> => {
 };
 
 const AdminKYCManagement = () => {
-  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
+  
   const [loading, setLoading] = useState(true);
   const [indianWomen, setIndianWomen] = useState<IndianWoman[]>([]);
   const [filteredWomen, setFilteredWomen] = useState<IndianWoman[]>([]);
@@ -160,11 +160,9 @@ const AdminKYCManagement = () => {
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
   useEffect(() => {
-    if (isAdmin) {
-      loadIndianWomen();
-      loadStats();
-    }
-  }, [isAdmin]);
+    loadIndianWomen();
+    loadStats();
+  }, []);
 
   useEffect(() => {
     filterWomen();
@@ -321,7 +319,7 @@ const AdminKYCManagement = () => {
     }
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     return (
       <AdminNav>
         <div className="space-y-4">
@@ -331,8 +329,6 @@ const AdminKYCManagement = () => {
       </AdminNav>
     );
   }
-
-  if (!isAdmin) return null;
 
   const selectedWoman = indianWomen.find(w => w.user_id === selectedUserId);
 

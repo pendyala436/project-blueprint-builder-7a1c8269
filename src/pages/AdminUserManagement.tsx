@@ -3,7 +3,7 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAdminAccess } from "@/hooks/useAdminAccess";
+
 import { AdminUserSearchDialog } from "@/components/AdminUserSearchDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,7 +107,7 @@ const PROTECTED_ADMIN_EMAILS = Array.from({ length: 15 }, (_, i) => `admin${i + 
 
 const AdminUserManagement = () => {
   const navigate = useNavigate();
-  const { isLoading: adminLoading, isAdmin, adminEmail, userId: adminUserId } = useAdminAccess();
+  
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, string>>({});
@@ -320,18 +320,17 @@ const AdminUserManagement = () => {
   };
 
   useEffect(() => {
-    if (adminLoading) return;
-    if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
-  }, [adminLoading, isAdmin]);
+    fetchUsers(); loadLanguageGroups(); loadStats();
+  }, []);
   useEffect(() => {
-    if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
+    fetchUsers(); loadLanguageGroups(); loadStats();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
+  }, [currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
   useMultipleRealtimeSubscriptions(
     ["profiles", "user_roles", "language_groups"],
-    () => { if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); } },
-    isAdmin
+    () => { fetchUsers(); loadLanguageGroups(); loadStats(); },
+    true
   );
 
   const handleRefresh = () => { setRefreshing(true); fetchUsers(); loadLanguageGroups(); loadStats(); };
@@ -784,7 +783,7 @@ const AdminUserManagement = () => {
     );
   }
 
-  if (!isAdmin) return null;
+  
 
   return (
     <AdminNav>
