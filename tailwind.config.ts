@@ -314,11 +314,34 @@ export default {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
+        danmu: {
+          "0%": { transform: "translateX(100vw)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
+        "float-up": {
+          "0%": { opacity: "1", transform: "translateY(0) scale(1)" },
+          "50%": { opacity: "0.8", transform: "translateY(-80px) scale(1.2)" },
+          "100%": { opacity: "0", transform: "translateY(-160px) scale(0.8)" },
+        },
+        "gift-entrance": {
+          "0%": { opacity: "0", transform: "scale(0.3) rotate(-10deg)" },
+          "50%": { opacity: "1", transform: "scale(1.15) rotate(2deg)" },
+          "70%": { opacity: "1", transform: "scale(0.95) rotate(-1deg)" },
+          "100%": { opacity: "1", transform: "scale(1) rotate(0deg)" },
+        },
+        "gift-pulse": {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.05)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 2s infinite",
+        danmu: "danmu 8s linear forwards",
+        "float-up": "float-up 3s ease-out forwards",
+        "gift-entrance": "gift-entrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "gift-pulse": "gift-pulse 2s ease-in-out infinite",
       },
       boxShadow: {
         soft: "var(--shadow-soft)",
