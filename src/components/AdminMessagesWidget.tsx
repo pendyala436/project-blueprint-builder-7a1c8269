@@ -123,10 +123,11 @@ export const AdminMessagesWidget = ({ currentUserId }: AdminMessagesWidgetProps)
 
   // Mark message as read
   const markAsRead = async (messageId: string) => {
-    await supabase
-      .from('admin_broadcast_messages')
-      .update({ is_read: true })
-      .eq('id', messageId);
+    // Try both tables since messages come from either source
+    await Promise.all([
+      supabase.from('admin_broadcast_messages').update({ is_read: true }).eq('id', messageId),
+      supabase.from('admin_user_messages').update({ is_read: true }).eq('id', messageId),
+    ]);
 
     setMessages(prev =>
       prev.map(m => (m.id === messageId ? { ...m, is_read: true } : m))

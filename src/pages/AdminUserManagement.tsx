@@ -650,16 +650,18 @@ const AdminUserManagement = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Not authenticated");
       if (chatTargetUser) {
-        const { error } = await supabase.from("admin_broadcast_messages").insert({
-          admin_id: session.user.id, recipient_id: chatTargetUser.user_id,
-          subject: chatSubject, message: chatMessage, is_broadcast: false,
+        const { error } = await supabase.from("admin_user_messages").insert({
+          admin_id: session.user.id, sender_id: session.user.id,
+          target_user_id: chatTargetUser.user_id, target_group: 'direct',
+          sender_role: 'admin', message: `[${chatSubject}] ${chatMessage}`,
         });
         if (error) throw error;
         toast.success(`Message sent to ${chatTargetUser.full_name || "user"}`);
       } else {
-        const { error } = await supabase.from("admin_broadcast_messages").insert({
-          admin_id: session.user.id, recipient_id: null,
-          subject: chatSubject, message: chatMessage, is_broadcast: true,
+        const { error } = await supabase.from("admin_user_messages").insert({
+          admin_id: session.user.id, sender_id: session.user.id,
+          target_user_id: null, target_group: 'all',
+          sender_role: 'admin', message: `[${chatSubject}] ${chatMessage}`,
         });
         if (error) throw error;
         toast.success("Broadcast message sent to all users");
