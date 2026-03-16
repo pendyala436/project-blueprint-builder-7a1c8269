@@ -454,6 +454,7 @@ const AdminUserManagement = () => {
       await supabase.from("audit_logs").insert({
         admin_id: session?.user?.id || "",
         action: `Gender switched: ${currentGender} → ${newGender}`,
+        action_type: "update",
         resource_type: "user", resource_id: user.user_id,
         details: `Admin switched ${user.full_name || "user"} from ${currentGender} to ${newGender}`,
       });
@@ -551,6 +552,7 @@ const AdminUserManagement = () => {
       await supabase.from("audit_logs").insert({
         admin_id: session?.user?.id || "",
         action: `Force Free Mode: ${forceFreeDurationMinutes} min`,
+        action_type: "update",
         resource_type: "user",
         resource_id: forceFreeUser.user_id,
         details: `Forced ${forceFreeUser.full_name || "user"} to free mode for ${forceFreeDurationMinutes} minutes. Expires: ${expiresAt}. Max 20 min per user.`,
@@ -629,6 +631,7 @@ const AdminUserManagement = () => {
       await supabase.from("audit_logs").insert({
         admin_id: session?.user?.id || "",
         action: `Wallet Deduction: ₹${amount.toFixed(2)}`,
+        action_type: "update",
         resource_type: "wallet",
         resource_id: deductUser.user_id,
         details: `Deducted ₹${amount.toFixed(2)} from ${deductUser.full_name || "user"}. Reason: ${deductReason}. Previous balance: ₹${wallet.balance}. New balance: ₹${newBalance}.`,
