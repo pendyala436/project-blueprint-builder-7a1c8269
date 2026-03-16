@@ -485,7 +485,7 @@ const AdminChatMonitoring = () => {
       const { error } = await supabase.from("notifications").insert(notifications);
       if (error) throw error;
 
-      toast({ title: "Success", description: `Notification sent to ${users.length} ${notificationTarget === "all" ? "users" : notificationTarget}` });
+      toast.success("Success", { description: `Notification sent to ${users.length} ${notificationTarget === "all" ? "users" : notificationTarget}` });
       setNotificationDialogOpen(false);
       setNotificationTitle(""); setNotificationMessage(""); setNotificationTarget("all");
     } catch (error) {
