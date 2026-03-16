@@ -613,7 +613,7 @@ const AdminVideoGroupControls = () => {
           : "Video calls are now enabled for all users.",
       });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to update setting", variant: "destructive" });
+      toast.error("Error", { description: "Failed to update setting" });
     } finally {
       setLoadingAction(null);
     }
