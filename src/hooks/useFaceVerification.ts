@@ -77,16 +77,12 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
               console.log(`[FaceAPI] Loading models from: ${modelUrl} (attempt ${attempt})`);
               setModelLoadProgress(10);
 
-              await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
-              console.log('[FaceAPI] TinyFaceDetector loaded');
-              setModelLoadProgress(40);
-
-              await faceapi.nets.ageGenderNet.loadFromUri(modelUrl);
-              console.log('[FaceAPI] AgeGenderNet loaded');
-              setModelLoadProgress(80);
-
-              await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl);
-              console.log('[FaceAPI] FaceLandmark68Net loaded');
+              await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
+                faceapi.nets.ageGenderNet.loadFromUri(modelUrl),
+                faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
+              ]);
+              console.log('[FaceAPI] All models loaded in parallel');
               setModelLoadProgress(100);
 
               modelsLoaded = true;
