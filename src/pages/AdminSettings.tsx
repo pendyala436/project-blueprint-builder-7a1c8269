@@ -561,7 +561,7 @@ const AdminVideoGroupControls = () => {
       setBreakerActive(true);
       setBreakerResumesAt(data?.resumes_at ?? '');
     } catch (err) {
-      toast({ title: "Error", description: "Failed to stop calls", variant: "destructive" });
+      toast.error("Error", { description: "Failed to stop calls" });
     } finally {
       setLoadingAction(null);
     }
