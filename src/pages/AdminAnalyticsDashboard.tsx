@@ -173,7 +173,7 @@ const AdminAnalyticsDashboard = () => {
       const chartDataPoints: ChartData[] = (chart || []).map((point: any) => ({
         date: point.date,
         users: Number(point.users) || 0,
-        activeUsers: 0,
+        activeUsers: Number(point.activeUsers) || 0,
         matches: Number(point.matches) || 0,
         revenue: Number(point.revenue) || 0,
         messages: Number(point.messages) || 0,
