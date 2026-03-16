@@ -499,7 +499,7 @@ const AdminChatMonitoring = () => {
   // ─── Moderation actions ────────────────────────────────────────
   const handleFlag = async () => {
     if (!selectedMessage || !flagReason.trim()) {
-      toast({ title: "Error", description: "Please provide a reason for flagging", variant: "destructive" });
+      toast.error("Error", { description: "Please provide a reason for flagging" });
       return;
     }
     try {
