@@ -82,7 +82,10 @@ Deno.serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
     if (authError || !caller) {
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
