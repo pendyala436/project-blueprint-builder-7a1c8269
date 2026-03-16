@@ -28,9 +28,10 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth guard: require admin role
+    // Auth guard: validate JWT via anon-key client (not service role)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
@@ -38,23 +39,31 @@ serve(async (req) => {
       });
     }
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user: caller }, error: authError } = await supabase.auth.getUser(token);
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
     if (authError || !caller) {
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { data: roleData } = await supabase
-      .from("user_roles").select("role")
-      .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
-    if (!roleData) {
-      return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const body = await req.json();
     const { action, cpu_percent, memory_percent, source } = body;
+
+    // check_status is allowed for any authenticated user (frontend needs it)
+    // All other actions (report_high_utilization, reset) require admin role
+    if (action !== "check_status") {
+      const { data: roleData } = await supabase
+        .from("user_roles").select("role")
+        .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+      if (!roleData) {
+        return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     console.log(`[CircuitBreaker] action=${action}, cpu=${cpu_percent}%, mem=${memory_percent}%, source=${source}`);
 
