@@ -1,5 +1,7 @@
 /**
- * Zero-cost i18n stub - no translation library overhead
+ * TRANSLATION SYSTEM — DISABLED
+ * 
+ * Zero-cost i18n stub. No translation library is loaded.
  * All UI is plain English. Returns passthrough functions.
  */
 
