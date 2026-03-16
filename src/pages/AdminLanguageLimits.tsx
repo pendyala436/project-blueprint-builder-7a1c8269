@@ -184,11 +184,7 @@ const AdminLanguageLimits = () => {
       loadLimits();
     } catch (error) {
       console.error("Error deleting language limit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete language limit",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete language limit" });
     }
   };
 
