@@ -395,7 +395,17 @@ const AdminUserManagement = () => {
       const { error } = await supabase.from("profiles").delete().eq("id", selectedUser.id);
       if (error) throw error;
 
-      toast.success("User deleted successfully from database");
+      // Delete the Supabase Auth user via edge function (requires service role)
+      const { error: authError } = await supabase.functions.invoke("admin-delete-user", {
+        body: { user_id: userId },
+      });
+      if (authError) {
+        console.error("Warning: Auth user deletion failed:", authError);
+        toast.warning("Profile deleted but auth account removal failed. The user may still be able to log in.");
+      } else {
+        toast.success("User fully deleted (profile + auth account)");
+      }
+
       setDeleteDialogOpen(false); fetchUsers(); loadStats();
     } catch (error: any) {
       console.error("Error deleting user:", error);
