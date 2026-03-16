@@ -638,10 +638,7 @@ const AdminVideoGroupControls = () => {
           is_public: true,
         }, { onConflict: 'setting_key' });
 
-      toast({
-        title: "Private Groups Updated",
-        description: `Maximum private groups set to ${privateGroupCount}`,
-      });
+      toast.success("Private Groups Updated", { description: `Maximum private groups set to ${privateGroupCount}` });
     } catch (err) {
       toast({ title: "Error", description: "Failed to update", variant: "destructive" });
     } finally {
