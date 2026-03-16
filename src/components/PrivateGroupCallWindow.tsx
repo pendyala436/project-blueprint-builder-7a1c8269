@@ -546,23 +546,27 @@ export function PrivateGroupCallWindow({
         </div>
       ))}
 
-      {/* ─── Static Chat Messages Panel (Bottom-Left) ─────────────── */}
-      <div className="absolute bottom-28 left-3 z-20 w-[55%] max-h-[40%] flex flex-col">
+      {/* ─── Chat Messages Panel (Bottom-Left, full height) ─────────── */}
+      <div className="absolute top-16 bottom-28 left-3 z-20 w-[55%] flex flex-col">
         {/* Participant badges for host */}
         {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-1.5">
+          <div className="flex flex-wrap gap-1 mb-1.5 shrink-0">
             {participants.filter(p => !p.isOwner).map((p) => (
-              <Badge key={p.id} className="text-[9px] bg-black/50 text-white/80 border-0 backdrop-blur-sm gap-0.5 h-4">
+              <Badge key={p.id} className="text-[9px] bg-black/30 text-white/80 border-0 backdrop-blur-sm gap-0.5 h-4">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                 {p.name}
               </Badge>
             ))}
           </div>
         )}
-        {/* Scrollable chat */}
+        {/* Scrollable chat — transparent scrollbar */}
         <div
           ref={chatScrollRef}
-          className="flex-1 overflow-hidden space-y-1 pr-1"
+          className="flex-1 overflow-y-auto space-y-0.5 pr-1"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.15) transparent',
+          }}
         >
           {chatMessages.length === 0 && (
             <p className="text-white/40 text-xs px-2 py-1">No messages yet. Say something!</p>
