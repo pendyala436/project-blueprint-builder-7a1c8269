@@ -316,8 +316,16 @@ const AdminLegalDocuments = () => {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
 
+  // Map legacy DB values to canonical keys
+  const legacyTypeMap: Record<string, string> = {
+    terms_of_service: "terms",
+    privacy_policy: "privacy",
+    gdpr_compliance: "gdpr",
+  };
+
   const getTypeLabel = (type: string) => {
-    return documentTypes.find(t => t.value === type)?.label || type;
+    const canonical = legacyTypeMap[type] || type;
+    return documentTypes.find(t => t.value === canonical)?.label || type;
   };
 
   const filteredDocuments = documents.filter(doc => {
