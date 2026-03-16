@@ -142,8 +142,6 @@ const AdminFinanceReports = () => {
       "ledger_transactions",
       "women_earnings",
       "gift_transactions",
-      "active_chat_sessions",
-      "video_call_sessions",
       "chat_wait_queue",
       "withdrawal_requests",
       "profiles"
