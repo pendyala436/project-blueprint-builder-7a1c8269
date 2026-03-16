@@ -142,8 +142,6 @@ const AdminFinanceReports = () => {
       "ledger_transactions",
       "women_earnings",
       "gift_transactions",
-      "active_chat_sessions",
-      "video_call_sessions",
       "chat_wait_queue",
       "withdrawal_requests",
       "profiles"
@@ -275,20 +273,11 @@ const AdminFinanceReports = () => {
           .gte("created_at", startDate.toISOString())
           .lte("created_at", endDate.toISOString());
 
-        // Get active chat sessions for this month
-        const { data: chatSessions } = await supabase
-          .from("active_chat_sessions")
-          .select("total_earned")
-          .gte("created_at", startDate.toISOString())
-          .lte("created_at", endDate.toISOString());
-
-        const menSpendingTotal = (walletTxns || []).reduce((sum, t: any) => sum + Math.abs(t.debit), 0) +
-          (chatSessions || []).reduce((sum, s) => sum + s.total_earned, 0);
+        const menSpendingTotal = (walletTxns || []).reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const chatSpending = (walletTxns || [])
-          .filter((t: any) => t.transaction_type === "chat_charge")
-          .reduce((sum, t: any) => sum + Math.abs(t.debit), 0) +
-          (chatSessions || []).reduce((sum, s) => sum + s.total_earned, 0);
+          .filter((t: any) => ["chat_charge", "video_call_charge", "group_call_charge"].includes(t.transaction_type))
+          .reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const giftSpending = (walletTxns || [])
           .filter((t: any) => t.transaction_type === "gift_purchase")
@@ -340,11 +329,6 @@ const AdminFinanceReports = () => {
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString());
 
-      const { data: chatSessions } = await supabase
-        .from("active_chat_sessions")
-        .select("man_user_id, total_earned, created_at")
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString());
 
       // Load women's earnings
       const { data: womenEarningsData } = await supabase
@@ -357,7 +341,7 @@ const AdminFinanceReports = () => {
       const txnUserIds = new Set<string>();
       walletTxns?.forEach(t => txnUserIds.add(t.user_id));
       giftTxns?.forEach(t => txnUserIds.add(t.sender_id));
-      chatSessions?.forEach(t => txnUserIds.add(t.man_user_id));
+      
       womenEarningsData?.forEach(t => txnUserIds.add(t.user_id));
 
       let profiles: any[] = [];
@@ -394,31 +378,12 @@ const AdminFinanceReports = () => {
         
         const amount = Math.abs((txn as any).debit || 0);
         existing.total_spent += amount;
-        if ((txn as any).transaction_type === "chat_charge") existing.chat_spending += amount;
+        if (["chat_charge", "video_call_charge", "group_call_charge"].includes((txn as any).transaction_type)) existing.chat_spending += amount;
         if ((txn as any).transaction_type === "gift_purchase") existing.gift_spending += amount;
         
         menSpendingMap.set(txn.user_id, existing);
       });
 
-      chatSessions?.forEach(session => {
-        const profile = profileMap.get(session.man_user_id);
-        if (!profile) return;
-        
-        const existing = menSpendingMap.get(session.man_user_id) || {
-          user_id: session.man_user_id,
-          full_name: profile.full_name || "Unknown",
-          country: profile.country || "Unknown",
-          language: profile.primary_language || "Unknown",
-          total_spent: 0,
-          chat_spending: 0,
-          gift_spending: 0,
-          month: selectedMonth,
-        };
-        
-        existing.chat_spending += session.total_earned;
-        existing.total_spent += session.total_earned;
-        menSpendingMap.set(session.man_user_id, existing);
-      });
 
       // Aggregate women earnings
       const womenEarningsMap = new Map<string, WomenEarning>();
