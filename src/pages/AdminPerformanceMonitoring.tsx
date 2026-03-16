@@ -316,9 +316,27 @@ const AdminPerformanceMonitoring = () => {
           <Card className="p-8 text-center">
             <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Metrics Data</h3>
-            <p className="text-muted-foreground">
-              No system metrics have been recorded yet. Metrics will appear here once the system starts logging performance data.
+            <p className="text-muted-foreground mb-4">
+              No system metrics have been recorded yet. The <code className="text-xs bg-muted px-1.5 py-0.5 rounded">collect-metrics</code> edge function needs to run periodically (via pg_cron or an external scheduler) to populate this data.
             </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  toast.info("Collecting metrics...");
+                  const { error } = await supabase.functions.invoke('collect-metrics');
+                  if (error) throw error;
+                  toast.success("Metrics collected successfully");
+                  loadData();
+                } catch (e: any) {
+                  toast.error("Failed to collect metrics", { description: e.message });
+                }
+              }}
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Collect Metrics Now
+            </Button>
           </Card>
         )}
 
