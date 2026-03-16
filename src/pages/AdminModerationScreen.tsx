@@ -29,6 +29,7 @@ import AdminNav from "@/components/AdminNav";
 import { useNavigate } from 'react-router-dom';
 // Supabase client for all database operations
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 // UI Components from shadcn/ui
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
