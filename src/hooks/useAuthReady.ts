@@ -35,12 +35,22 @@ function boot() {
   if (initialized) return;
   initialized = true;
 
-  // 1) Restore session from storage FIRST
-  supabase.auth.getSession().then(({ data: { session } }) => {
+  // 1) Restore session from storage FIRST — with timeout to prevent hanging
+  const sessionPromise = supabase.auth.getSession().then(({ data: { session } }) => {
     broadcast({ user: session?.user ?? null, session, isReady: true });
   }).catch(() => {
     broadcast({ user: null, session: null, isReady: true });
   });
+
+  // Safety timeout: if Supabase is unreachable, don't block the UI forever
+  const timeout = setTimeout(() => {
+    if (!globalState.isReady) {
+      console.warn('[Auth] Session restore timed out after 5s, proceeding without session');
+      broadcast({ user: null, session: null, isReady: true });
+    }
+  }, 5000);
+
+  sessionPromise.finally(() => clearTimeout(timeout));
 
   // 2) Listen for subsequent changes (sign-in, sign-out, token refresh)
   //    IMPORTANT: no async work inside this callback
