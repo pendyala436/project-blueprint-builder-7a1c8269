@@ -150,11 +150,7 @@ const AdminLanguageGroups = () => {
     }
 
     if (formLanguages.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "At least one language is required",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "At least one language is required" });
       return;
     }
 
