@@ -179,7 +179,7 @@ const AdminLanguageGroups = () => {
         });
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language group created" });
+        toast.success("Success", { description: "Language group created" });
       }
 
       setIsDialogOpen(false);
