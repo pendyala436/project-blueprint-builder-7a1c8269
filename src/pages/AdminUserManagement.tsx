@@ -319,7 +319,10 @@ const AdminUserManagement = () => {
     } finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { checkAdminAccess(); }, []);
+  useEffect(() => {
+    if (adminLoading) return;
+    if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
+  }, [adminLoading, isAdmin]);
   useEffect(() => {
     if (isAdmin) { fetchUsers(); loadLanguageGroups(); loadStats(); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
