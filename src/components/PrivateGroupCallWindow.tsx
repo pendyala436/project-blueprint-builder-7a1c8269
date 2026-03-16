@@ -568,14 +568,14 @@ export function PrivateGroupCallWindow({
             <p className="text-white/40 text-xs px-2 py-1">No messages yet. Say something!</p>
           )}
           {chatMessages.map((msg) => (
-            <div key={msg.id} className="bg-black/50 backdrop-blur-sm rounded-lg px-2.5 py-1.5">
+            <div key={msg.id} className="px-1 py-0.5">
               <span className={cn(
-                "font-bold text-xs mr-1.5",
+                "font-bold text-xs mr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
                 msg.isSelf ? "text-primary" : "text-amber-400"
               )}>
                 {msg.senderName}:
               </span>
-              <span className="text-white text-xs break-words">{msg.text}</span>
+              <span className="text-white text-xs break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{msg.text}</span>
             </div>
           ))}
         </div>
