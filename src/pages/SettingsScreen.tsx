@@ -1,12 +1,31 @@
 import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home, Settings } from "lucide-react";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { supabase } from "@/integrations/supabase/client";
 
 const SettingsScreen = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [homePath, setHomePath] = useState("/dashboard");
+
+  useEffect(() => {
+    const detectHome = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("gender")
+        .eq("user_id", session.user.id)
+        .single();
+      if (profile?.gender?.toLowerCase() === "female") {
+        setHomePath("/women-dashboard");
+      }
+    };
+    detectHome();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -25,7 +44,7 @@ const SettingsScreen = () => {
             <Button
               variant="auroraGhost"
               size="icon"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(homePath)}
               className="rounded-full"
             >
               <Home className="h-5 w-5" />
