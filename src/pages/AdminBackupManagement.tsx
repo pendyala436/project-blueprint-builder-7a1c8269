@@ -77,11 +77,7 @@ const AdminBackupManagement = () => {
       setBackups(data || []);
     } catch (error: any) {
       console.error("Error fetching backups:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load backup logs",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load backup logs" });
     } finally {
       setLoading(false);
     }
