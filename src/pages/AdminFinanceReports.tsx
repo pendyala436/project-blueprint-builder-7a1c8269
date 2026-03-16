@@ -386,25 +386,6 @@ const AdminFinanceReports = () => {
         menSpendingMap.set(txn.user_id, existing);
       });
 
-      chatSessions?.forEach(session => {
-        const profile = profileMap.get(session.man_user_id);
-        if (!profile) return;
-        
-        const existing = menSpendingMap.get(session.man_user_id) || {
-          user_id: session.man_user_id,
-          full_name: profile.full_name || "Unknown",
-          country: profile.country || "Unknown",
-          language: profile.primary_language || "Unknown",
-          total_spent: 0,
-          chat_spending: 0,
-          gift_spending: 0,
-          month: selectedMonth,
-        };
-        
-        existing.chat_spending += session.total_earned;
-        existing.total_spent += session.total_earned;
-        menSpendingMap.set(session.man_user_id, existing);
-      });
 
       // Aggregate women earnings
       const womenEarningsMap = new Map<string, WomenEarning>();
