@@ -249,7 +249,7 @@ export function PrivateGroupCallWindow({
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addFloatingComment]);
+  }, [group.id, currentUserId, addChatMessage]);
 
   // Extension check
   useEffect(() => {
