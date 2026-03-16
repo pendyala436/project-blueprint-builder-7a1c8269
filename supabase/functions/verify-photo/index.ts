@@ -359,6 +359,9 @@ async function saveVerificationResult(
     const supabase = createClient(supabaseUrl, supabaseKey);
     const tableName = expectedGender === 'female' ? 'female_profiles' : 'male_profiles';
 
+    // Only update verification-specific fields to avoid conflicting with
+    // ai-women-approval which manages approval_status, ai_approved, is_earning_eligible.
+    // Each function owns its own column set to prevent last-write-wins conflicts.
     const { error } = await supabase
       .from(tableName)
       .update({
@@ -370,9 +373,10 @@ async function saveVerificationResult(
     if (error) {
       console.error(`Failed to update ${tableName}:`, error);
     } else {
-      console.log(`Updated ${tableName} for user ${userId}: verified=${result.verified}`);
+      console.log(`[verify-photo] Updated ${tableName}.is_verified for user ${userId}: ${result.verified}`);
     }
 
+    // Only update verification columns in profiles — do NOT touch approval_status or ai_approved
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
@@ -384,6 +388,8 @@ async function saveVerificationResult(
 
     if (profileError) {
       console.error('Failed to update profiles:', profileError);
+    } else {
+      console.log(`[verify-photo] Updated profiles.is_verified for user ${userId}: ${result.verified}`);
     }
   } catch (err) {
     console.error('Error saving verification result:', err);

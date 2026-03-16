@@ -99,6 +99,8 @@ Deno.serve(async (req) => {
     }
 
     // Create female super users (1-15)
+    // CANONICAL PATTERN: female{1-15}@meow-meow.com (no zero-padding)
+    // Must stay in sync with: chat-manager SUPER_USER_PATTERNS, admin-delete-user protected pattern
     for (let i = 1; i <= 15; i++) {
       const email = `female${i}@meow-meow.com`
       try {
