@@ -138,10 +138,7 @@ const AdminLegalDocuments = () => {
       
       if (error) throw error;
       
-      toast({
-        title: "Documents Seeded",
-        description: `Successfully seeded ${data?.results?.filter((r: any) => r.status === 'created').length || 0} documents`,
-      });
+      toast.success("Documents Seeded", { description: `Successfully seeded ${data?.results?.filter((r: any) => r.status === 'created').length || 0} documents` });
       
       await fetchDocuments();
     } catch (error: any) {
