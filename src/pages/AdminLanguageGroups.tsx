@@ -204,11 +204,7 @@ const AdminLanguageGroups = () => {
       loadGroups();
     } catch (error) {
       console.error("Error deleting language group:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete language group",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete language group" });
     }
   };
 
