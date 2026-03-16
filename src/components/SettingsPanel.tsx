@@ -500,6 +500,9 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
         </CardContent>
       </Card>
 
+      {/* Account Deletion */}
+      <AccountDeletionSection compact={compact} />
+
       {/* Save Button - always visible when changes exist */}
       {hasChanges && (
         <div className="sticky bottom-4 z-50 flex justify-center pb-4 pt-2">
