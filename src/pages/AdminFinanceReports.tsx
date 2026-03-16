@@ -170,12 +170,18 @@ const AdminFinanceReports = () => {
         .select("user_id, preferred_language, status, wait_time_seconds, joined_at")
         .eq("status", "waiting");
 
-      // Load profiles for country data
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, country, primary_language");
+      // Load profiles only for users currently in the queue
+      const queueUserIds = [...new Set(queueData?.map(q => q.user_id) || [])];
+      let profiles: any[] = [];
+      if (queueUserIds.length > 0) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("user_id, country, primary_language")
+          .in("user_id", queueUserIds);
+        profiles = data || [];
+      }
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
 
       // Group by country
       const countryQueue = new Map<string, { count: number; totalWait: number; flag: string }>();
