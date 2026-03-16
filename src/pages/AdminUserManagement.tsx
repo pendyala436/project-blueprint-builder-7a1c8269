@@ -238,20 +238,7 @@ const AdminUserManagement = () => {
     } finally { setCreatingUser(false); }
   };
 
-  const checkAdminAccess = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) { navigate("/"); return; }
-      const { data: roleData } = await supabase
-        .from("user_roles").select("role").eq("user_id", session.user.id).eq("role", "admin").maybeSingle();
-      if (!roleData) { toast.error("Access denied. Admin privileges required."); navigate("/dashboard"); return; }
-      setIsAdmin(true);
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      toast.error("Failed to verify admin access");
-      navigate("/dashboard");
-    }
-  };
+  // Admin access is now handled by useAdminAccess hook
 
   const loadStats = async () => {
     try {
