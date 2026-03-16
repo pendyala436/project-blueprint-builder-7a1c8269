@@ -43,8 +43,6 @@ verify_jwt = false
 [functions.group-cleanup]
 verify_jwt = false
 
-[functions.ai-election-manager]
-verify_jwt = false
 
 [functions.monthly-earning-rotation]
 verify_jwt = false
