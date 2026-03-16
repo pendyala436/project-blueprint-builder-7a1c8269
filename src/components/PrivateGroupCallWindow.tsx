@@ -682,30 +682,33 @@ export function PrivateGroupCallWindow({
             )}
           </div>
 
-          {/* Emoji reaction button — toggles emoji picker */}
-          <button
-            onClick={() => setShowEmojiBar(prev => !prev)}
-            className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/25 active:scale-90 transition-all shrink-0"
-          >
-            <Heart className="h-5 w-5 text-red-400 fill-red-400" />
-          </button>
+          {/* Emoji reaction button — host only */}
+          {isOwner && (
+            <>
+              <button
+                onClick={() => setShowEmojiBar(prev => !prev)}
+                className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/25 active:scale-90 transition-all shrink-0"
+              >
+                <Heart className="h-5 w-5 text-red-400 fill-red-400" />
+              </button>
 
-          {/* Emoji picker popup */}
-          {showEmojiBar && (
-            <div className="absolute bottom-14 right-16 flex items-center gap-1.5 bg-black/60 backdrop-blur-md rounded-full px-2 py-1.5 border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => { handleSendReaction(emoji); setShowEmojiBar(false); }}
-                  className="text-xl hover:scale-125 active:scale-90 transition-transform w-8 h-8 flex items-center justify-center"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+              {showEmojiBar && (
+                <div className="absolute bottom-14 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md rounded-full px-2 py-1.5 border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  {QUICK_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => { handleSendReaction(emoji); setShowEmojiBar(false); }}
+                      className="text-xl hover:scale-125 active:scale-90 transition-transform w-8 h-8 flex items-center justify-center"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Gift button — men only */}
+          {/* Gift button — men (non-owner) only */}
           {!isOwner && (isConnected || isLive) && (
             <button
               onClick={() => setShowGiftDialog(true)}
