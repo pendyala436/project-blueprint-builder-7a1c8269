@@ -179,7 +179,7 @@ const MatchingScreen = () => {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, photo_url, age, primary_language, preferred_language, country, ai_approved, approval_status")
-        .eq("gender", "Female")
+        .ilike("gender", "female")
         .in("user_id", onlineUserIds);
 
       // Fetch availability status
