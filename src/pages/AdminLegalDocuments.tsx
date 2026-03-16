@@ -282,11 +282,7 @@ const AdminLegalDocuments = () => {
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error toggling document status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update document status",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update document status" });
     }
   };
 
