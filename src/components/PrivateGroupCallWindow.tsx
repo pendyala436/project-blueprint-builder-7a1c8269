@@ -107,8 +107,9 @@ export function PrivateGroupCallWindow({
   isOwner,
   preAcquiredStream = null,
 }: PrivateGroupCallWindowProps) {
-  // Comment input
+  // Comment input — invisible, captures keystrokes directly
   const [commentText, setCommentText] = useState('');
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   // Chat messages & overlays
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -583,6 +584,31 @@ export function PrivateGroupCallWindow({
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
       <div className="relative z-20 mt-auto">
         {/* Comment Input + Emoji Bar */}
+        {/* Hidden input — captures all keyboard input without blocking video */}
+        <input
+          ref={hiddenInputRef}
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSendComment();
+            }
+          }}
+          className="absolute opacity-0 pointer-events-none w-0 h-0"
+          autoFocus
+        />
+
+        {/* Typing indicator overlay — shows what user is typing */}
+        {commentText.length > 0 && (
+          <div className="px-4 pb-2">
+            <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
+              <span className="text-white text-sm">{commentText}</span>
+              <span className="w-0.5 h-4 bg-primary animate-pulse" />
+            </div>
+          </div>
+        )}
+
         <div className="px-4 pb-2">
           {/* Quick Emoji Reactions */}
           {showEmojiBar && (
@@ -600,27 +626,6 @@ export function PrivateGroupCallWindow({
           )}
 
           <div className="flex items-center gap-2">
-            {/* Comment input */}
-            <div className="flex-1 flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-4 py-2 border border-white/10">
-              <Input
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendComment()}
-                placeholder="Say something..."
-                className="border-0 bg-transparent text-white placeholder:text-white/50 focus-visible:ring-0 focus-visible:ring-offset-0 h-7 px-0 text-sm"
-              />
-              {commentText.trim() && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-primary hover:bg-white/10 shrink-0"
-                  onClick={handleSendComment}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
             {/* Like / Reaction toggle */}
             <button
               onClick={() => {
