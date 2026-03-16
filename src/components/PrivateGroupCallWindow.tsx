@@ -43,19 +43,12 @@ interface GiftItem {
   price: number;
 }
 
-interface FloatingComment {
-  id: string;
-  senderName: string;
-  text: string;
-  top: number; // percentage from top (0-80)
-  createdAt: number;
-}
-
-interface RecentMessage {
+interface ChatMessage {
   id: string;
   senderName: string;
   text: string;
   createdAt: number;
+  isSelf: boolean;
 }
 
 interface FloatingReaction {
@@ -117,11 +110,11 @@ export function PrivateGroupCallWindow({
   // Comment input
   const [commentText, setCommentText] = useState('');
 
-  // Floating overlays
-  const [floatingComments, setFloatingComments] = useState<FloatingComment[]>([]);
+  // Chat messages & overlays
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
   const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
-  const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -202,23 +195,15 @@ export function PrivateGroupCallWindow({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ─── Floating Comment (Danmu / Bullet Chat) ─────────────────────
+  // ─── Add Chat Message ─────────────────────────────────────────
 
-  const addFloatingComment = useCallback((senderName: string, text: string) => {
-    const id = `comment-${Date.now()}-${Math.random()}`;
-    const top = Math.floor(Math.random() * 60) + 10; // 10% to 70%
-    setFloatingComments(prev => [...prev.slice(-30), { id, senderName, text, top, createdAt: Date.now() }]);
-    // Also add to recent messages stack (visible at bottom-left)
-    const msgId = `msg-${Date.now()}-${Math.random()}`;
-    setRecentMessages(prev => [...prev.slice(-8), { id: msgId, senderName, text, createdAt: Date.now() }]);
-    // Auto-remove danmu after animation
+  const addChatMessage = useCallback((senderName: string, text: string, isSelf: boolean) => {
+    const id = `msg-${Date.now()}-${Math.random()}`;
+    setChatMessages(prev => [...prev.slice(-100), { id, senderName, text, createdAt: Date.now(), isSelf }]);
+    // Auto-scroll to bottom
     setTimeout(() => {
-      setFloatingComments(prev => prev.filter(c => c.id !== id));
-    }, 8000);
-    // Auto-remove from recent messages after 15 seconds
-    setTimeout(() => {
-      setRecentMessages(prev => prev.filter(m => m.id !== msgId));
-    }, 15000);
+      chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 50);
   }, []);
 
   // ─── Floating Emoji Reaction ─────────────────────────────────────
@@ -258,13 +243,13 @@ export function PrivateGroupCallWindow({
         const msg = payload.new as any;
         if (msg.sender_id !== currentUserId) {
           const name = getParticipantName(msg.sender_id);
-          addFloatingComment(name, msg.message || '');
+          addChatMessage(name, msg.message || '', false);
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addFloatingComment]);
+  }, [group.id, currentUserId, addChatMessage]);
 
   // Extension check
   useEffect(() => {
@@ -340,8 +325,8 @@ export function PrivateGroupCallWindow({
     const text = commentText.trim();
     setCommentText('');
 
-    // Optimistic: show own comment immediately as danmu
-    addFloatingComment(userName, text);
+    // Optimistic: show own message immediately
+    addChatMessage(userName, text, true);
 
     // Persist to DB (fire-and-forget)
     supabase
@@ -531,21 +516,7 @@ export function PrivateGroupCallWindow({
         </div>
       </div>
 
-      {/* ─── Floating Danmu Comments (Bullet Chat) ────────────────── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
-        {floatingComments.map((comment) => (
-          <div
-            key={comment.id}
-            className="absolute whitespace-nowrap animate-danmu"
-            style={{ top: `${comment.top}%`, left: '100%' }}
-          >
-            <span className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-white/10">
-              <span className="text-amber-400 font-bold text-xs">{comment.senderName}</span>
-              <span className="text-white/95">{comment.text}</span>
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* ─── Floating Emoji Reactions ─────────────────────────────── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
         {floatingReactions.map((reaction) => (
           <div
@@ -574,19 +545,11 @@ export function PrivateGroupCallWindow({
         </div>
       ))}
 
-      {/* ─── Recent Messages Stack (Bottom-Left, always visible) ──── */}
-      <div className="absolute bottom-48 left-4 z-20 max-w-[55%] space-y-1.5 pointer-events-none">
-        {recentMessages.map((msg) => (
-          <div key={msg.id} className="animate-in slide-in-from-left-4 fade-in duration-300">
-            <div className="inline-flex items-start gap-1.5 bg-black/50 backdrop-blur-sm rounded-xl px-3 py-1.5 max-w-full">
-              <span className="text-amber-400 font-bold text-xs shrink-0">{msg.senderName}:</span>
-              <span className="text-white text-xs break-words">{msg.text}</span>
-            </div>
-          </div>
-        ))}
-        {/* Participant count for host */}
+      {/* ─── Static Chat Messages Panel (Bottom-Left) ─────────────── */}
+      <div className="absolute bottom-44 left-3 z-20 w-[55%] max-h-[45%] flex flex-col">
+        {/* Participant badges for host */}
         {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="flex flex-wrap gap-1 mb-1.5">
             {participants.filter(p => !p.isOwner).map((p) => (
               <Badge key={p.id} className="text-[9px] bg-black/50 text-white/80 border-0 backdrop-blur-sm gap-0.5 h-4">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -595,6 +558,26 @@ export function PrivateGroupCallWindow({
             ))}
           </div>
         )}
+        {/* Scrollable chat */}
+        <div
+          ref={chatScrollRef}
+          className="flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-1"
+        >
+          {chatMessages.length === 0 && (
+            <p className="text-white/40 text-xs px-2 py-1">No messages yet. Say something!</p>
+          )}
+          {chatMessages.map((msg) => (
+            <div key={msg.id} className="bg-black/50 backdrop-blur-sm rounded-lg px-2.5 py-1.5">
+              <span className={cn(
+                "font-bold text-xs mr-1.5",
+                msg.isSelf ? "text-primary" : "text-amber-400"
+              )}>
+                {msg.senderName}:
+              </span>
+              <span className="text-white text-xs break-words">{msg.text}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
