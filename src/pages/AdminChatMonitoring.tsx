@@ -518,7 +518,7 @@ const AdminChatMonitoring = () => {
       loadMessages();
     } catch (error) {
       console.error("Error flagging message:", error);
-      toast({ title: "Error", description: "Failed to flag message", variant: "destructive" });
+      toast.error("Error", { description: "Failed to flag message" });
     }
   };
 
