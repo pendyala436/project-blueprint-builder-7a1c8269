@@ -44,7 +44,7 @@ const SettingsScreen = () => {
             <Button
               variant="auroraGhost"
               size="icon"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(homePath)}
               className="rounded-full"
             >
               <Home className="h-5 w-5" />
