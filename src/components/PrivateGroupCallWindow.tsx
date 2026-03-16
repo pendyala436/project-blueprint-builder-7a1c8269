@@ -516,21 +516,7 @@ export function PrivateGroupCallWindow({
         </div>
       </div>
 
-      {/* ─── Floating Danmu Comments (Bullet Chat) ────────────────── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
-        {floatingComments.map((comment) => (
-          <div
-            key={comment.id}
-            className="absolute whitespace-nowrap animate-danmu"
-            style={{ top: `${comment.top}%`, left: '100%' }}
-          >
-            <span className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm shadow-lg border border-white/10">
-              <span className="text-amber-400 font-bold text-xs">{comment.senderName}</span>
-              <span className="text-white/95">{comment.text}</span>
-            </span>
-          </div>
-        ))}
-      </div>
+      {/* ─── Floating Emoji Reactions ─────────────────────────────── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
         {floatingReactions.map((reaction) => (
           <div
@@ -559,19 +545,11 @@ export function PrivateGroupCallWindow({
         </div>
       ))}
 
-      {/* ─── Recent Messages Stack (Bottom-Left, always visible) ──── */}
-      <div className="absolute bottom-48 left-4 z-20 max-w-[55%] space-y-1.5 pointer-events-none">
-        {recentMessages.map((msg) => (
-          <div key={msg.id} className="animate-in slide-in-from-left-4 fade-in duration-300">
-            <div className="inline-flex items-start gap-1.5 bg-black/50 backdrop-blur-sm rounded-xl px-3 py-1.5 max-w-full">
-              <span className="text-amber-400 font-bold text-xs shrink-0">{msg.senderName}:</span>
-              <span className="text-white text-xs break-words">{msg.text}</span>
-            </div>
-          </div>
-        ))}
-        {/* Participant count for host */}
+      {/* ─── Static Chat Messages Panel (Bottom-Left) ─────────────── */}
+      <div className="absolute bottom-44 left-3 z-20 w-[55%] max-h-[45%] flex flex-col">
+        {/* Participant badges for host */}
         {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="flex flex-wrap gap-1 mb-1.5">
             {participants.filter(p => !p.isOwner).map((p) => (
               <Badge key={p.id} className="text-[9px] bg-black/50 text-white/80 border-0 backdrop-blur-sm gap-0.5 h-4">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -580,6 +558,26 @@ export function PrivateGroupCallWindow({
             ))}
           </div>
         )}
+        {/* Scrollable chat */}
+        <div
+          ref={chatScrollRef}
+          className="flex-1 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent pr-1"
+        >
+          {chatMessages.length === 0 && (
+            <p className="text-white/40 text-xs px-2 py-1">No messages yet. Say something!</p>
+          )}
+          {chatMessages.map((msg) => (
+            <div key={msg.id} className="bg-black/50 backdrop-blur-sm rounded-lg px-2.5 py-1.5">
+              <span className={cn(
+                "font-bold text-xs mr-1.5",
+                msg.isSelf ? "text-primary" : "text-amber-400"
+              )}>
+                {msg.senderName}:
+              </span>
+              <span className="text-white text-xs break-words">{msg.text}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
