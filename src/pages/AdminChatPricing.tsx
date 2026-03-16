@@ -165,7 +165,7 @@ const AdminChatPricing = () => {
       return;
     }
     if (isNaN(minWithdrawal) || minWithdrawal <= 0) {
-      toast({ title: "Invalid Minimum", description: "Minimum withdrawal balance must be a positive number", variant: "destructive" });
+      toast.error("Invalid Minimum", { description: "Minimum withdrawal balance must be a positive number" });
       return;
     }
 
