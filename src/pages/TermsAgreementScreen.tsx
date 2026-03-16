@@ -641,12 +641,29 @@ const TermsAgreementScreen = () => {
         updated_at: new Date().toISOString(),
       };
 
-      // Save to profiles table
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .upsert(profileData, { onConflict: "user_id" });
+      // Save to profiles table (upsert with retry for resilience)
+      let profileError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { error } = await supabase
+          .from("profiles")
+          .upsert(profileData, { onConflict: "user_id" });
+        profileError = error;
+        if (!error) break;
+        if (attempt < 3) await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile creation failed after retries:", profileError);
+        // Sign out to prevent broken logged-in state with no profile
+        await supabase.auth.signOut();
+        toast({
+          title: "Registration failed",
+          description: "Account was created but profile setup failed. Please try registering again.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
 
       // NOTE: Profile data is synced to gender-specific tables (male_profiles/female_profiles)
       // via database trigger. Languages support all 386+ languages from languages.ts
