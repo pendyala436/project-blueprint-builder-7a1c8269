@@ -88,18 +88,26 @@ const AdminNav = ({ children }: AdminNavProps) => {
   }, []);
 
   const loadCounts = async () => {
-    const { count: approvals } = await supabase
-      .from("female_profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("approval_status", "pending");
+    try {
+      const [approvalsRes, alertsRes] = await Promise.all([
+        supabase
+          .from("female_profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("approval_status", "pending"),
+        supabase
+          .from("policy_violation_alerts")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pending"),
+      ]);
 
-    const { count: alerts } = await supabase
-      .from("policy_violation_alerts")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
+      if (approvalsRes.error) console.error("[AdminNav] Failed to load approval counts:", approvalsRes.error);
+      if (alertsRes.error) console.error("[AdminNav] Failed to load alert counts:", alertsRes.error);
 
-    setPendingApprovals(approvals || 0);
-    setPolicyAlerts(alerts || 0);
+      setPendingApprovals(approvalsRes.count || 0);
+      setPolicyAlerts(alertsRes.count || 0);
+    } catch (error) {
+      console.error("[AdminNav] loadCounts failed:", error);
+    }
   };
 
   const handleLogout = async () => {
