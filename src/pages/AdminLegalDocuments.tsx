@@ -220,10 +220,7 @@ const AdminLegalDocuments = () => {
 
       setUploadProgress(100);
 
-      toast({
-        title: "Document uploaded",
-        description: `${newDocument.name} has been uploaded successfully`,
-      });
+      toast.success("Document uploaded", { description: `${newDocument.name} has been uploaded successfully` });
 
       // Reset form
       setUploadDialogOpen(false);
