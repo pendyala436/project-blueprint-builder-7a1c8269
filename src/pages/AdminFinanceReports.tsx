@@ -331,11 +331,6 @@ const AdminFinanceReports = () => {
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString());
 
-      const { data: chatSessions } = await supabase
-        .from("active_chat_sessions")
-        .select("man_user_id, total_earned, created_at")
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString());
 
       // Load women's earnings
       const { data: womenEarningsData } = await supabase
