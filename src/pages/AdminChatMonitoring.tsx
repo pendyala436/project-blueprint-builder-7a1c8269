@@ -220,7 +220,7 @@ const AdminChatMonitoring = () => {
       }
     } catch (error) {
       console.error("Error loading messages:", error);
-      toast({ title: "Error", description: "Failed to load messages", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load messages" });
     } finally {
       setLoading(false);
     }
