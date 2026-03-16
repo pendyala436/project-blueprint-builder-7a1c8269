@@ -2,34 +2,29 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 /**
  * PrivateGroupCallWindow
  * 
- * Enhanced private group call UI with:
- * - Host-only video display (participants see only host)
- * - Participants can speak (audio disabled by default, can enable) and chat
+ * Live-stream style private group call UI with:
+ * - Full-screen host video
+ * - Floating danmu/bullet chat comments overlaying the video
+ * - Emoji/like reactions bubbling up
+ * - Animated gift overlays on screen
  * - 30-minute timer countdown
- * - Optional gift sending during call (no restrictions after joining)
- * - Gift tickets display based on price for 1 minute
  * - 50 participant limit
  * - Refund handling when host ends early
  * - One extension per month with reason
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, Users, Radio, Loader2,
-  X, Send, Paperclip, File, MessageCircle, Maximize2, Minimize2,
-  Clock, Gift, DollarSign, AlertTriangle, Ticket, Timer
+  X, Send, Maximize2, Minimize2, Clock, Gift, DollarSign, Heart
 } from 'lucide-react';
 import { usePrivateGroupCall, MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -39,15 +34,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 
-interface GroupMessage {
-  id: string;
-  sender_id: string;
-  message: string;
-  file_url?: string | null;
-  file_type?: string | null;
-  file_name?: string | null;
-  created_at: string;
-}
+// ─── Types ───────────────────────────────────────────────────────
 
 interface GiftItem {
   id: string;
@@ -56,13 +43,28 @@ interface GiftItem {
   price: number;
 }
 
-interface GiftTicket {
+interface FloatingComment {
   id: string;
   senderName: string;
-  giftEmoji: string;
-  giftName: string;
+  text: string;
+  top: number; // percentage from top (0-80)
+  createdAt: number;
+}
+
+interface FloatingReaction {
+  id: string;
+  emoji: string;
+  left: number; // percentage from left
+  createdAt: number;
+}
+
+interface AnimatedGift {
+  id: string;
+  senderName: string;
+  emoji: string;
+  name: string;
   price: number;
-  expiresAt: number;
+  createdAt: number;
 }
 
 interface ExtensionRecord {
@@ -91,6 +93,11 @@ interface PrivateGroupCallWindowProps {
   preAcquiredStream?: MediaStream | null;
 }
 
+// ─── Quick Emoji Reactions ───────────────────────────────────────
+const QUICK_EMOJIS = ['❤️', '🔥', '😂', '👏', '😍', '🎉'];
+
+// ─── Component ───────────────────────────────────────────────────
+
 export function PrivateGroupCallWindow({
   group,
   currentUserId,
@@ -100,42 +107,28 @@ export function PrivateGroupCallWindow({
   isOwner,
   preAcquiredStream = null,
 }: PrivateGroupCallWindowProps) {
-  // Chat state
-  const [messages, setMessages] = useState<GroupMessage[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  // Comment input
+  const [commentText, setCommentText] = useState('');
+
+  // Floating overlays
+  const [floatingComments, setFloatingComments] = useState<FloatingComment[]>([]);
+  const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
+  const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
+
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner); // Host has mic on by default, participants off
-  const isStoppingRef = useRef(false); // Guard to prevent double-stop
+  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner);
+  const isStoppingRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
-  
-  // View mode: show both panels, video only, or chat only
-  const [viewMode, setViewMode] = useState<'both' | 'video' | 'chat'>('video'); // Default to video only, chat hidden
-  
-  // Gift tickets display (shows for 1 minute at top)
-  const [giftTickets, setGiftTickets] = useState<GiftTicket[]>([]);
-  
+  const [showEmojiBar, setShowEmojiBar] = useState(false);
+
   // Extension state
-  const [showExtensionDialog, setShowExtensionDialog] = useState(false);
-  const [extensionReason, setExtensionReason] = useState('');
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
-  const [isExtending, setIsExtending] = useState(false);
 
-  const hasChat = group.access_type === 'chat' || group.access_type === 'both';
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
-  
-  // Determine what's actually shown based on viewMode and access_type
-  const showVideo = hasVideo && (viewMode === 'both' || viewMode === 'video');
-  const showChat = hasChat && (viewMode === 'both' || viewMode === 'chat');
 
-  // Helper to get participant name by user ID
-  // Men see other men's real names in chat. Host sees everything.
   const getParticipantName = (userId: string): string => {
     if (userId === currentUserId) return userName;
     if (userId === group.owner_id) {
@@ -144,12 +137,6 @@ export function PrivateGroupCallWindow({
     }
     const participant = participants.find(p => p.id === userId);
     return participant?.name || 'Participant';
-  };
-
-  const getParticipantPhoto = (userId: string): string | undefined => {
-    if (userId === currentUserId) return userPhoto || undefined;
-    const participant = participants.find(p => p.id === userId);
-    return participant?.photo;
   };
 
   // Enhanced group call hook
@@ -195,8 +182,6 @@ export function PrivateGroupCallWindow({
       if (refunded && !isOwner) {
         toast.success('Call ended by host. Unused balance has been refunded.');
       }
-      // Don't call onClose here - it's called by handleEndStream/handleClose
-      // to prevent double invocation of handleStopLive
     },
   });
 
@@ -208,117 +193,89 @@ export function PrivateGroupCallWindow({
     if (hrs > 0) return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
 
-  // Calculate ticket display length based on price (min 5s, max 60s based on price)
-  const getTicketDisplayDuration = (price: number): number => {
-    // Scale: ₹10 = 5s, ₹120 = 60s
-    const minDuration = 5000;
-    const maxDuration = 60000;
-    const minPrice = 10;
-    const maxPrice = 120;
-    
-    if (price <= minPrice) return minDuration;
-    if (price >= maxPrice) return maxDuration;
-    
-    const ratio = (price - minPrice) / (maxPrice - minPrice);
-    return Math.floor(minDuration + (maxDuration - minDuration) * ratio);
-  };
+  // ─── Floating Comment (Danmu / Bullet Chat) ─────────────────────
 
-  // Add gift ticket to display
-  const addGiftTicket = (senderName: string, gift: GiftItem) => {
-    const ticketId = `ticket-${Date.now()}`;
-    const displayDuration = getTicketDisplayDuration(gift.price);
-    
-    const newTicket: GiftTicket = {
-      id: ticketId,
-      senderName,
-      giftEmoji: gift.emoji,
-      giftName: gift.name,
-      price: gift.price,
-      expiresAt: Date.now() + displayDuration,
-    };
-    
-    setGiftTickets(prev => [newTicket, ...prev]);
-    
-    // Auto-remove after display duration
+  const addFloatingComment = useCallback((senderName: string, text: string) => {
+    const id = `comment-${Date.now()}-${Math.random()}`;
+    const top = Math.floor(Math.random() * 70) + 5; // 5% to 75%
+    setFloatingComments(prev => [...prev.slice(-30), { id, senderName, text, top, createdAt: Date.now() }]);
+    // Auto-remove after animation (8 seconds)
     setTimeout(() => {
-      setGiftTickets(prev => prev.filter(t => t.id !== ticketId));
-    }, displayDuration);
-  };
-
-  // Check extension eligibility for this month
-  useEffect(() => {
-    const checkExtensionEligibility = async () => {
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      
-      // Check local storage for extension record
-      const storageKey = `extension_${currentUserId}_${group.id}`;
-      const stored = localStorage.getItem(storageKey);
-      
-      if (stored) {
-        const record: ExtensionRecord = JSON.parse(stored);
-        if (record.month === currentMonth && record.year === currentYear && record.used) {
-          setCanExtendThisMonth(false);
-        }
-      }
-    };
-    
-    checkExtensionEligibility();
-  }, [currentUserId, group.id]);
-
-  // Clean up expired tickets periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setGiftTickets(prev => prev.filter(t => t.expiresAt > now));
-    }, 1000);
-    
-    return () => clearInterval(interval);
+      setFloatingComments(prev => prev.filter(c => c.id !== id));
+    }, 8000);
   }, []);
 
-  // Fetch messages
+  // ─── Floating Emoji Reaction ─────────────────────────────────────
+
+  const addFloatingReaction = useCallback((emoji: string) => {
+    const id = `reaction-${Date.now()}-${Math.random()}`;
+    const left = 75 + Math.random() * 20; // cluster on the right side
+    setFloatingReactions(prev => [...prev.slice(-20), { id, emoji, left, createdAt: Date.now() }]);
+    setTimeout(() => {
+      setFloatingReactions(prev => prev.filter(r => r.id !== id));
+    }, 3000);
+  }, []);
+
+  // ─── Animated Gift Overlay ──────────────────────────────────────
+
+  const addAnimatedGift = useCallback((senderName: string, gift: GiftItem) => {
+    const id = `gift-${Date.now()}`;
+    setAnimatedGifts(prev => [...prev.slice(-5), { id, senderName, emoji: gift.emoji, name: gift.name, price: gift.price, createdAt: Date.now() }]);
+    // Gift animation lasts longer for expensive gifts
+    const duration = Math.min(8000, 3000 + gift.price * 30);
+    setTimeout(() => {
+      setAnimatedGifts(prev => prev.filter(g => g.id !== id));
+    }, duration);
+  }, []);
+
+  // ─── Realtime: Listen for group_messages as floating comments ───
+
   useEffect(() => {
-    if (hasChat) {
-      fetchMessages();
-      
-      const channel = supabase
-        .channel(`private-group-chat-${group.id}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'group_messages',
-          filter: `group_id=eq.${group.id}`
-        }, (payload) => {
-          const newMsg = payload.new as GroupMessage;
-          setMessages(prev => [...prev, newMsg]);
-          scrollToBottom();
-        })
-        .subscribe();
+    const channel = supabase
+      .channel(`danmu-${group.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'group_messages',
+        filter: `group_id=eq.${group.id}`
+      }, (payload) => {
+        const msg = payload.new as any;
+        if (msg.sender_id !== currentUserId) {
+          const name = getParticipantName(msg.sender_id);
+          addFloatingComment(name, msg.message || '');
+        }
+      })
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
+    return () => { supabase.removeChannel(channel); };
+  }, [group.id, currentUserId, addFloatingComment]);
+
+  // Extension check
+  useEffect(() => {
+    const now = new Date();
+    const storageKey = `extension_${currentUserId}_${group.id}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const record: ExtensionRecord = JSON.parse(stored);
+      if (record.month === now.getMonth() && record.year === now.getFullYear() && record.used) {
+        setCanExtendThisMonth(false);
+      }
     }
-  }, [group.id, hasChat]);
+  }, [currentUserId, group.id]);
 
-  // Auto-start: host auto-goes-live, participants auto-join (run only once)
+  // Auto-start
   const hasAutoStarted = useRef(false);
   useEffect(() => {
     if (hasAutoStarted.current) return;
     if (isOwner && !isConnected && !isConnecting && !isLive) {
       hasAutoStarted.current = true;
-      console.log('[PrivateGroupCallWindow] Auto-starting goLive for host');
       goLive().then(success => {
         if (!success) {
-          console.error('[PrivateGroupCallWindow] goLive failed, closing window');
           toast.error('Failed to go live. Please try again.');
           onClose();
         }
-      }).catch(err => {
-        console.error('[PrivateGroupCallWindow] goLive error:', err);
+      }).catch(() => {
         toast.error('Failed to go live. Please try again.');
         onClose();
       });
@@ -328,22 +285,19 @@ export function PrivateGroupCallWindow({
     }
   }, [isOwner, group.is_live, isConnected, isConnecting, joinStream, hasVideo, goLive, isLive]);
 
-  // Attach host stream to video element when both are available
+  // Attach host stream
   useEffect(() => {
     if (hostStream && remoteVideoRef.current) {
-      console.log('[PrivateGroupCallWindow] useEffect: Attaching hostStream to video element');
       remoteVideoRef.current.srcObject = hostStream;
-      remoteVideoRef.current.play().catch(e => console.warn('[PrivateGroupCallWindow] play() failed:', e));
+      remoteVideoRef.current.play().catch(() => {});
     }
   }, [hostStream]);
 
   useEffect(() => {
-    if (error) {
-      toast.error(error);
-    }
+    if (error) toast.error(error);
   }, [error]);
 
-  // Fetch gifts for optional sending
+  // Fetch gifts
   useEffect(() => {
     const fetchGifts = async () => {
       const { data } = await supabase
@@ -351,107 +305,46 @@ export function PrivateGroupCallWindow({
         .select('id, name, emoji, price')
         .eq('is_active', true)
         .order('price', { ascending: true });
-      
       if (data) setGifts(data);
     };
     fetchGifts();
   }, []);
 
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('group_messages')
-      .select('*')
-      .eq('group_id', group.id)
-      .order('created_at', { ascending: true })
-      .limit(100);
+  // ─── Handlers ──────────────────────────────────────────────────
 
-    if (data) {
-      setMessages(data);
-      scrollToBottom();
-    }
-  };
+  const handleSendComment = async () => {
+    if (!commentText.trim()) return;
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || isSending) return;
-
-    // Content moderation - block phone numbers, emails, social media
     const { moderateMessage } = await import('@/lib/content-moderation');
-    const moderationResult = moderateMessage(newMessage.trim());
+    const moderationResult = moderateMessage(commentText.trim());
     if (moderationResult.isBlocked) {
       toast.error(moderationResult.reason || 'This message contains prohibited content.');
       return;
     }
 
-    setIsSending(true);
-    try {
-      await supabase
-        .from('group_messages')
-        .insert({
-          group_id: group.id,
-          sender_id: currentUserId,
-          message: newMessage.trim()
-        });
+    const text = commentText.trim();
+    setCommentText('');
 
-      setNewMessage('');
-    } catch (error) {
-      toast.error('Failed to send message');
-    } finally {
-      setIsSending(false);
-    }
+    // Optimistic: show own comment immediately as danmu
+    addFloatingComment(userName, text);
+
+    // Persist to DB (fire-and-forget)
+    supabase
+      .from('group_messages')
+      .insert({ group_id: group.id, sender_id: currentUserId, message: text })
+      .then(({ error }) => { if (error) console.error('Failed to send comment', error); });
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error('File size must be less than 50MB');
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      const fileName = `${Date.now()}_${file.name}`;
-      const filePath = `${group.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('community-files')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('community-files')
-        .getPublicUrl(filePath);
-
-      await supabase
-        .from('group_messages')
-        .insert({
-          group_id: group.id,
-          sender_id: currentUserId,
-          message: file.name,
-          file_url: publicUrl,
-          file_type: file.type,
-          file_name: file.name
-        });
-
-      toast.success('File uploaded');
-    } catch (error) {
-      toast.error('Failed to upload file');
-    } finally {
-      setIsSending(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+  const handleSendReaction = (emoji: string) => {
+    addFloatingReaction(emoji);
+    // Persist as a group message so others see it
+    supabase
+      .from('group_messages')
+      .insert({ group_id: group.id, sender_id: currentUserId, message: emoji })
+      .then(({ error }) => { if (error) console.error('Failed to send reaction', error); });
   };
 
   const handleSendGift = async (gift: GiftItem) => {
-    // Optional tip - 50% goes to host, 50% to admin
     try {
       const { data, error } = await supabase.rpc('process_group_tip', {
         p_sender_id: currentUserId,
@@ -462,93 +355,34 @@ export function PrivateGroupCallWindow({
       if (error) throw error;
 
       const result = data as { success: boolean; error?: string };
-      
+
       if (result.success) {
-        // Add gift ticket to display
-        addGiftTicket(userName, gift);
-        
-        // Broadcast tip to all participants
-        toast.success(`${gift.emoji} Tip sent to host! (50% reaches host)`);
+        addAnimatedGift(userName, gift);
+        toast.success(`${gift.emoji} Gift sent!`);
         setShowGiftDialog(false);
       } else {
-        toast.error(result.error || 'Failed to send tip');
+        toast.error(result.error || 'Failed to send gift');
       }
     } catch (error: any) {
-      toast.error('Tip not sent', { description: classifyError(error, 'send the tip').message });
-    }
-  };
-
-  // Handle time extension request (once per month)
-  const handleRequestExtension = async () => {
-    if (!canExtendThisMonth) {
-      toast.error('You have already used your monthly extension for this group');
-      return;
-    }
-    
-    if (!extensionReason.trim()) {
-      toast.error('Please provide a reason for the extension');
-      return;
-    }
-    
-    if (extensionReason.trim().length < 10) {
-      toast.error('Please provide a more detailed reason (at least 10 characters)');
-      return;
-    }
-    
-    setIsExtending(true);
-    
-    try {
-      // Record extension usage
-      const now = new Date();
-      const extensionRecord: ExtensionRecord = {
-        month: now.getMonth(),
-        year: now.getFullYear(),
-        used: true,
-        reason: extensionReason.trim()
-      };
-      
-      const storageKey = `extension_${currentUserId}_${group.id}`;
-      localStorage.setItem(storageKey, JSON.stringify(extensionRecord));
-      
-      // Here you would typically also save to database and process the extension
-      // For now, we'll just mark it as used
-      
-      setCanExtendThisMonth(false);
-      setShowExtensionDialog(false);
-      setExtensionReason('');
-      toast.success('Extension request submitted. Your time has been extended by 1 day.');
-    } catch (error) {
-      toast.error('Failed to process extension request');
-    } finally {
-      setIsExtending(false);
+      toast.error('Gift not sent', { description: classifyError(error, 'send the gift').message });
     }
   };
 
   const handleGoLive = async () => {
     const success = await goLive();
-    if (success) {
-      toast.success('You are now live!');
-    }
+    if (success) toast.success('You are now live!');
   };
 
   const handleEndStream = async () => {
-    // Guard: prevent double invocation
     if (isStoppingRef.current) return;
     isStoppingRef.current = true;
-    
-    // Broadcast stream-ended, cleanup WebRTC, then notify parent
-    try {
-      await endStream(true);
-    } catch (err) {
-      console.error('[PrivateGroupCallWindow] endStream error:', err);
-    }
+    try { await endStream(true); } catch (err) { console.error(err); }
     toast.success('Stream ended');
-    // Always call onClose regardless of errors
     onClose();
   };
 
   const handleToggleVideo = () => {
-    if (!isOwner) return; // Only host can toggle video
+    if (!isOwner) return;
     const newState = !isVideoEnabled;
     setIsVideoEnabled(newState);
     toggleVideo(newState);
@@ -561,605 +395,362 @@ export function PrivateGroupCallWindow({
   };
 
   const handleClose = async () => {
-    // Guard: prevent double invocation
     if (isStoppingRef.current) return;
     isStoppingRef.current = true;
-    
     try {
-      if (isOwner && isLive) {
-        await endStream(true);
-      } else {
-        cleanup();
-      }
+      if (isOwner && isLive) { await endStream(true); } else { cleanup(); }
     } catch (err) {
-      console.error('[PrivateGroupCallWindow] handleClose error:', err);
-      toast.error('Call not ended', { description: 'Unable to end the call session properly. Please refresh if the call appears stuck.' });
+      console.error(err);
     }
-    // Always call onClose regardless of errors
     onClose();
   };
 
-  const renderFileMessage = (msg: GroupMessage) => {
-    if (!msg.file_url) return null;
-    
-    const isImage = msg.file_type?.startsWith('image/');
-    const isVideo = msg.file_type?.startsWith('video/');
-    const isAudio = msg.file_type?.startsWith('audio/');
-
-    if (isImage) {
-      return (
-        <img 
-          src={msg.file_url} 
-          alt={msg.file_name || 'Image'} 
-          className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90"
-          onClick={() => window.open(msg.file_url!, '_blank')}
-        />
-      );
-    }
-
-    if (isVideo) {
-      return <video src={msg.file_url} controls className="max-w-full max-h-48 rounded-lg" />;
-    }
-
-    if (isAudio) {
-      return <audio src={msg.file_url} controls className="w-full" />;
-    }
-
-    return (
-      <a 
-        href={msg.file_url} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 hover:bg-muted"
-      >
-        <File className="h-5 w-5 text-primary" />
-        <span className="text-sm truncate">{msg.file_name || 'Download file'}</span>
-      </a>
-    );
-  };
+  // ─── Render ────────────────────────────────────────────────────
 
   return (
     <div className={cn(
-      "fixed z-50 bg-background border rounded-lg shadow-2xl flex flex-col overflow-hidden",
-      isFullscreen 
-        ? "inset-4" 
-        : "bottom-4 right-4 w-[900px] h-[650px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)]"
+      "fixed z-50 bg-black flex flex-col overflow-hidden select-none",
+      isFullscreen
+        ? "inset-0"
+        : "bottom-4 right-4 w-[900px] h-[650px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] rounded-2xl shadow-2xl border border-white/10"
     )}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Video className="h-4 w-4 text-primary" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Private Group Call</span>
-            <span className="text-muted-foreground">•</span>
+      {/* ─── Video Layer (Full Background) ───────────────────────── */}
+      <div className="absolute inset-0">
+        {isOwner ? (
+          <div className="relative w-full h-full">
+            <video
+              ref={localVideoRef}
+              autoPlay muted playsInline
+              className="w-full h-full object-cover"
+            />
+            {!isVideoEnabled && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                <Avatar className="h-28 w-28 ring-4 ring-white/20">
+                  <AvatarImage src={userPhoto || undefined} />
+                  <AvatarFallback className="text-4xl bg-gradient-to-br from-primary to-accent">{userName[0]}</AvatarFallback>
+                </Avatar>
+              </div>
+            )}
           </div>
-          <h3 className="font-semibold">{group.name}</h3>
+        ) : (
+          <div className="relative w-full h-full">
+            {isConnected && hostStream ? (
+              <video
+                ref={(el) => {
+                  if (el) {
+                    if (remoteVideoRef && 'current' in remoteVideoRef) {
+                      (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+                    }
+                    if (hostStream && el.srcObject !== hostStream) {
+                      el.srcObject = hostStream;
+                      el.play().catch(() => {});
+                    }
+                  }
+                }}
+                autoPlay playsInline muted={false}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                <div className="text-center text-white">
+                  <Avatar className="h-28 w-28 mx-auto mb-4 ring-4 ring-white/20">
+                    <AvatarImage src={participants.find(p => p.isOwner)?.photo} />
+                    <AvatarFallback className="text-4xl">{participants.find(p => p.isOwner)?.name?.[0] || 'H'}</AvatarFallback>
+                  </Avatar>
+                  <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+                  <p className="text-sm text-gray-400 mt-3">Connecting to host...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ─── Gradient Overlays for Readability ────────────────────── */}
+      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/80 to-transparent pointer-events-none z-10" />
+
+      {/* ─── Top Bar (Over Video) ─────────────────────────────────── */}
+      <div className="relative z-20 flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          {/* Host avatar + name */}
+          <Avatar className="h-9 w-9 ring-2 ring-red-500">
+            <AvatarImage src={isOwner ? (userPhoto || undefined) : participants.find(p => p.isOwner)?.photo} />
+            <AvatarFallback className="text-xs bg-red-600 text-white">
+              {isOwner ? userName[0] : (participants.find(p => p.isOwner)?.name?.[0] || 'H')}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-white text-sm font-semibold leading-tight">{group.name}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {isLive && (
+                <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0">
+                  <Radio className="h-2.5 w-2.5 animate-pulse" /> LIVE
+                </Badge>
+              )}
+              <span className="text-white/70 text-[11px] flex items-center gap-0.5">
+                <Users className="h-3 w-3" /> {viewerCount}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
           {isLive && (
-            <Badge variant="destructive" className="gap-1">
-              <Radio className="h-3 w-3 animate-pulse" />
-              LIVE
-            </Badge>
-          )}
-          <Badge variant="secondary" className="gap-1">
-            <Users className="h-3 w-3" />
-            {viewerCount}/{MAX_PARTICIPANTS}
-          </Badge>
-          {isLive && (
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="outline" className="text-white/90 border-white/30 bg-black/40 text-[11px] gap-1">
               <Clock className="h-3 w-3" />
               {formatTime(remainingTime)}
             </Badge>
           )}
           {isOwner && totalEarnings > 0 && (
-            <Badge variant="default" className="gap-1 bg-green-600">
-              <DollarSign className="h-3 w-3" />
-              ₹{totalEarnings.toFixed(0)}
+            <Badge className="bg-green-600/90 text-white text-[11px] gap-1 border-0">
+              <DollarSign className="h-3 w-3" /> ₹{totalEarnings.toFixed(0)}
             </Badge>
           )}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* View mode toggles - only when both chat and video are available */}
-          {hasVideo && hasChat && (
-            <div className="flex items-center border rounded-md overflow-hidden">
-              <Button 
-                variant={viewMode === 'video' ? 'default' : 'ghost'} 
-                size="sm" 
-                className="rounded-none h-7 px-2 text-xs"
-                onClick={() => setViewMode(viewMode === 'video' ? 'both' : 'video')}
-                title="Video only"
-              >
-                <Video className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant={viewMode === 'both' ? 'default' : 'ghost'} 
-                size="sm" 
-                className="rounded-none h-7 px-2 text-xs border-x"
-                onClick={() => setViewMode('both')}
-                title="Video + Chat"
-              >
-                <Maximize2 className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant={viewMode === 'chat' ? 'default' : 'ghost'} 
-                size="sm" 
-                className="rounded-none h-7 px-2 text-xs"
-                onClick={() => setViewMode(viewMode === 'chat' ? 'both' : 'chat')}
-                title="Chat only"
-              >
-                <MessageCircle className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => setIsFullscreen(!isFullscreen)}>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={() => setIsFullscreen(!isFullscreen)}>
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleClose(); }}>
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Elapsed Time Display */}
-      {isLive && remainingTime > 0 && (
-        <div className="px-4 py-1 bg-muted/20 text-center">
-          <p className="text-[10px] text-muted-foreground">
-            Live for {formatTime(remainingTime)}
-          </p>
+      {/* ─── Floating Danmu Comments (Bullet Chat) ────────────────── */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
+        {floatingComments.map((comment) => (
+          <div
+            key={comment.id}
+            className="absolute whitespace-nowrap animate-danmu"
+            style={{ top: `${comment.top}%`, right: '-100%' }}
+          >
+            <span className="inline-flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm shadow-lg">
+              <span className="text-primary font-semibold text-xs">{comment.senderName}</span>
+              <span>{comment.text}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── Floating Emoji Reactions (Bubble Up) ─────────────────── */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-20">
+        {floatingReactions.map((reaction) => (
+          <div
+            key={reaction.id}
+            className="absolute animate-float-up"
+            style={{ left: `${reaction.left}%`, bottom: '15%' }}
+          >
+            <span className="text-3xl drop-shadow-lg">{reaction.emoji}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── Animated Gift Overlay (Center Screen) ────────────────── */}
+      {animatedGifts.map((gift) => (
+        <div
+          key={gift.id}
+          className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none animate-gift-entrance"
+        >
+          <div className="flex flex-col items-center gap-2 animate-gift-pulse">
+            <span className="text-8xl drop-shadow-2xl">{gift.emoji}</span>
+            <div className="bg-black/60 backdrop-blur-md rounded-2xl px-5 py-2 text-center">
+              <p className="text-white font-bold text-lg">{gift.senderName}</p>
+              <p className="text-amber-400 text-sm font-medium">sent {gift.name} • ₹{gift.price}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* ─── Participant Names (Bottom-Left Overlay) ──────────────── */}
+      {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
+        <div className="absolute bottom-44 left-4 z-20 max-h-24 overflow-y-auto">
+          <div className="flex flex-wrap gap-1">
+            {participants.filter(p => !p.isOwner).map((p) => (
+              <Badge key={p.id} className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                {p.name}
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Gift Rocket Display - Shows at top with sender name on rocket */}
-      {giftTickets.length > 0 && (
-        <div className="px-4 py-3 bg-gradient-to-r from-orange-500/20 via-red-500/20 to-yellow-500/20 border-b border-orange-500/30 overflow-hidden relative">
-          <div className="flex flex-col gap-2">
-            {giftTickets.slice(0, 3).map((ticket) => {
-              const remainingMs = ticket.expiresAt - Date.now();
-              const totalMs = getTicketDisplayDuration(ticket.price);
-              const progressPercent = Math.max(0, (remainingMs / totalMs) * 100);
-              // Scale rocket size based on price (larger price = larger rocket)
-              const rocketScale = 0.8 + (ticket.price / 120) * 0.6;
-              
-              return (
-                <div 
-                  key={ticket.id} 
-                  className="flex items-center gap-3 animate-fade-in"
+      {/* ─── Bottom Controls (Over Video) ─────────────────────────── */}
+      <div className="relative z-20 mt-auto">
+        {/* Comment Input + Emoji Bar */}
+        <div className="px-4 pb-2">
+          {/* Quick Emoji Reactions */}
+          {showEmojiBar && (
+            <div className="flex items-center gap-2 mb-2 animate-in slide-in-from-bottom-2 duration-200">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleSendReaction(emoji)}
+                  className="text-2xl hover:scale-125 active:scale-95 transition-transform bg-black/40 backdrop-blur-sm rounded-full w-10 h-10 flex items-center justify-center"
                 >
-                  {/* Animated Rocket with Sender Name */}
-                  <div 
-                    className="relative flex items-center animate-rocket-fly"
-                    style={{ transform: `scale(${rocketScale})` }}
-                  >
-                    {/* Rocket Body */}
-                    <div className="relative">
-                      <span className="text-3xl drop-shadow-lg">🚀</span>
-                      {/* Sender Name on Rocket */}
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                        <span className="text-[10px] font-bold text-white bg-gradient-to-r from-orange-500 to-red-500 px-1.5 py-0.5 rounded-full shadow-lg border border-white/30">
-                          {ticket.senderName}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Flame Trail */}
-                    <div className="flex items-center -ml-2 animate-pulse">
-                      <span className="text-xl">🔥</span>
-                      {ticket.price >= 50 && <span className="text-lg -ml-1">🔥</span>}
-                      {ticket.price >= 100 && <span className="text-sm -ml-1">🔥</span>}
-                    </div>
-                  </div>
-                  
-                  {/* Gift Info */}
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="text-2xl">{ticket.giftEmoji}</span>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm text-foreground">
-                        {ticket.senderName}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        sent <span className="text-orange-500 font-medium">{ticket.giftName}</span>
-                      </span>
-                    </div>
-                    <Badge variant="outline" className="text-orange-600 border-orange-500/50 bg-orange-500/10">
-                      ₹{ticket.price}
-                    </Badge>
-                  </div>
-                  
-                  {/* Progress Timer */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-16">
-                      <Progress value={progressPercent} className="h-1.5 bg-orange-500/20" />
-                    </div>
-                    <Timer className="h-3 w-3 text-orange-500" />
-                  </div>
-                </div>
-              );
-            })}
-            {giftTickets.length > 3 && (
-              <p className="text-xs text-muted-foreground text-center">
-                +{giftTickets.length - 3} more rocket gifts incoming! 🚀
-              </p>
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {/* Comment input */}
+            <div className="flex-1 flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-4 py-2 border border-white/10">
+              <Input
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendComment()}
+                placeholder="Say something..."
+                className="border-0 bg-transparent text-white placeholder:text-white/50 focus-visible:ring-0 focus-visible:ring-offset-0 h-7 px-0 text-sm"
+              />
+              {commentText.trim() && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-primary hover:bg-white/10 shrink-0"
+                  onClick={handleSendComment}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* Like / Reaction toggle */}
+            <button
+              onClick={() => {
+                if (!showEmojiBar) handleSendReaction('❤️');
+                setShowEmojiBar(prev => !prev);
+              }}
+              className="h-10 w-10 rounded-full bg-white/15 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/25 active:scale-90 transition-all"
+            >
+              <Heart className="h-5 w-5 text-red-400 fill-red-400" />
+            </button>
+
+            {/* Gift button (participants only) */}
+            {!isOwner && isConnected && (
+              <button
+                onClick={() => setShowGiftDialog(true)}
+                className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500/80 to-orange-600/80 backdrop-blur-md border border-white/20 flex items-center justify-center hover:scale-105 active:scale-90 transition-all shadow-lg shadow-orange-500/30"
+              >
+                <Gift className="h-5 w-5 text-white" />
+              </button>
             )}
           </div>
         </div>
-      )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Video Section - Host Only */}
-        {showVideo && (
-          <div className={cn(
-            "flex flex-col border-r min-h-0 transition-all duration-300",
-            showChat ? "w-1/2" : "flex-1"
-          )}>
-            {/* Video Display */}
-            <div className="flex-1 p-2 bg-black min-h-0 flex items-center justify-center">
-              {isOwner ? (
-                // Host sees their own video
-                <div className="relative w-full h-full max-w-2xl">
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                  {!isVideoEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-800 rounded-lg">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={userPhoto || undefined} />
-                        <AvatarFallback className="text-3xl">{userName[0]}</AvatarFallback>
-                      </Avatar>
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-white text-xs">
-                    You (Host)
-                  </div>
-                </div>
+        {/* Media Controls Bar */}
+        <div className="flex items-center justify-center gap-3 px-4 py-3 bg-black/60 backdrop-blur-md">
+          {isConnecting && (
+            <div className="flex items-center gap-2 text-white/70 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Connecting...
+            </div>
+          )}
+
+          {isRefunding && (
+            <div className="flex items-center gap-2 text-yellow-400 text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing refunds...
+            </div>
+          )}
+
+          {isOwner && (
+            <Button
+              variant={isVideoEnabled ? 'secondary' : 'destructive'}
+              size="sm"
+              onClick={handleToggleVideo}
+              disabled={isConnecting}
+              className="rounded-full h-10 w-10 p-0"
+            >
+              {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+            </Button>
+          )}
+
+          <Button
+            variant={isAudioEnabled ? 'secondary' : 'destructive'}
+            size="sm"
+            onClick={handleToggleAudio}
+            disabled={isConnecting}
+            className="rounded-full h-10 w-10 p-0"
+            title={isOwner ? 'Toggle mic' : (isAudioEnabled ? 'Mute' : 'Unmute to speak')}
+          >
+            {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+          </Button>
+
+          {isOwner && (
+            <>
+              {!isLive && !isConnected ? (
+                <Button
+                  size="sm"
+                  onClick={handleGoLive}
+                  className="gap-1.5 rounded-full px-5 bg-red-600 hover:bg-red-700"
+                  disabled={isConnecting}
+                >
+                  {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}
+                  Go Live
+                </Button>
               ) : (
-                // Participants see host's video stream via WebRTC
-                <div className="relative w-full h-full max-w-2xl">
-                  {isConnected ? (
-                    <>
-                      {hostStream ? (
-                        <video
-                          ref={(el) => {
-                            if (el) {
-                              // Always update the hook's ref
-                              if (remoteVideoRef && 'current' in remoteVideoRef) {
-                                (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
-                              }
-                              // Attach stream if available
-                              if (hostStream && el.srcObject !== hostStream) {
-                                console.log('[PrivateGroupCallWindow] Callback ref: attaching hostStream to video');
-                                el.srcObject = hostStream;
-                                el.play().catch(e => console.warn('[PrivateGroupCallWindow] play() failed:', e));
-                              }
-                            }
-                          }}
-                          autoPlay
-                          playsInline
-                          muted={false}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg">
-                          <div className="text-center text-white">
-                            <Avatar className="h-24 w-24 mx-auto mb-4">
-                              <AvatarImage src={participants.find(p => p.isOwner)?.photo} />
-                              <AvatarFallback className="text-3xl">
-                                {participants.find(p => p.isOwner)?.name?.[0] || 'H'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <p className="text-lg font-medium">
-                              {participants.find(p => p.isOwner)?.name || 'Host'}
-                            </p>
-                            <Loader2 className="h-6 w-6 mx-auto mt-3 animate-spin text-primary" />
-                            <p className="text-sm text-gray-400 mt-2">
-                              Connecting to host video...
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                      <Badge className="absolute top-2 left-2 bg-red-600">
-                        <Radio className="h-3 w-3 mr-1 animate-pulse" />
-                        {hostStream ? 'Watching Host' : 'Connecting...'}
-                      </Badge>
-                    </>
-                  ) : (
-                    <div className="text-center text-gray-400">
-                      <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin" />
-                      <p>Connecting to stream...</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Participant names overlay */}
-              {isOwner ? (
-                // Host sees ALL joined user names
-                <div className="absolute bottom-2 left-2 right-2 max-h-24 overflow-y-auto">
-                  <div className="flex flex-wrap gap-1">
-                    {participants.filter(p => !p.isOwner).length === 0 ? (
-                      <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none">
-                        Waiting for participants...
-                      </Badge>
-                    ) : (
-                      participants.filter(p => !p.isOwner).map((p) => (
-                        <Badge key={p.id} variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
-                          <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                          {p.name}
-                        </Badge>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : participants.length > 1 ? (
-                <div className="absolute bottom-2 left-2">
-                  <Badge variant="secondary" className="text-[10px] bg-black/60 text-white border-none gap-1">
-                    <Users className="h-3 w-3" />
-                    {viewerCount} in group
-                  </Badge>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Video Controls */}
-            <div className="flex items-center justify-center gap-3 p-3 bg-muted/30 border-t">
-              {isConnecting && (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Connecting...
-                </div>
-              )}
-              
-              {isRefunding && (
-                <div className="flex items-center gap-2 text-yellow-600 text-sm">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing refunds...
-                </div>
-              )}
-
-              {/* Only host can toggle video */}
-              {isOwner && (
                 <Button
-                  variant={isVideoEnabled ? 'secondary' : 'destructive'}
+                  variant="destructive"
                   size="sm"
-                  onClick={handleToggleVideo}
-                  disabled={isConnecting}
+                  onClick={(e) => { e.stopPropagation(); handleEndStream(); }}
+                  className="gap-1.5 rounded-full px-5"
+                  disabled={isRefunding}
                 >
-                  {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
+                  <PhoneOff className="h-4 w-4" /> End
                 </Button>
               )}
+            </>
+          )}
 
-              {/* Everyone can toggle audio - participants start muted */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={isAudioEnabled ? 'secondary' : 'destructive'}
-                  size="sm"
-                  onClick={handleToggleAudio}
-                  disabled={isConnecting}
-                  title={isOwner ? 'Toggle microphone' : (isAudioEnabled ? 'Mute microphone' : 'Unmute to speak')}
-                >
-                  {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                </Button>
-                {!isOwner && !isAudioEnabled && isConnected && (
-                  <span className="text-xs text-muted-foreground">Tap mic to speak</span>
-                )}
-              </div>
-
-              {/* Optional tip button for participants */}
-              {!isOwner && isConnected && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowGiftDialog(true)}
-                  className="gap-1"
-                >
-                  <Gift className="h-4 w-4" />
-                  Send Tip
-                </Button>
-              )}
-
-              {isOwner && (
-                <>
-                  {!isLive && !isConnected ? (
-                    <Button 
-                      size="sm"
-                      onClick={handleGoLive} 
-                      className="gap-1"
-                      disabled={isConnecting}
-                    >
-                      {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}
-                      Go Live
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEndStream();
-                      }} 
-                      className="gap-1"
-                      disabled={isRefunding}
-                    >
-                      <PhoneOff className="h-4 w-4" />
-                      End
-                    </Button>
-                  )}
-                </>
-              )}
-
-              {!isOwner && isConnected && (
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClose();
-                  }}
-                  className="gap-1"
-                >
-                  <PhoneOff className="h-4 w-4" />
-                  Leave
-                </Button>
-              )}
-            </div>
-
-            {/* Participant Info */}
-            <div className="px-3 py-2 bg-muted/20 border-t text-center">
-              <p className="text-xs text-muted-foreground">
-                {isOwner ? (
-                  `${viewerCount - 1} viewers • Only your video is visible • Men can chat & speak`
-                ) : (
-                  `Watching host • Tap mic to speak • Men are not visible to each other`
-                )}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Chat Section */}
-        {showChat && (
-          <div className={cn(
-            "flex flex-col transition-all duration-300",
-            showVideo ? "w-1/2" : "flex-1"
-          )}>
-            <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/20">
-              <MessageCircle className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Group Chat</span>
-              <Badge variant="secondary" className="text-[10px] ml-auto">
-                {participants.length} online
-              </Badge>
-            </div>
-
-            <ScrollArea className="flex-1 p-3">
-              <div className="space-y-3">
-                {messages.length === 0 ? (
-                  <div className="text-center text-muted-foreground text-sm py-8">
-                    No messages yet. Start the conversation!
-                  </div>
-                ) : (
-                  messages.map((msg) => {
-                    const isOwn = msg.sender_id === currentUserId;
-                    const isHost = msg.sender_id === group.owner_id;
-                    const senderName = getParticipantName(msg.sender_id);
-                    const senderPhoto = getParticipantPhoto(msg.sender_id);
-                    return (
-                      <div
-                        key={msg.id}
-                        className={cn("flex gap-2", isOwn ? 'flex-row-reverse' : 'flex-row')}
-                      >
-                        <Avatar className="h-7 w-7 flex-shrink-0">
-                          <AvatarImage src={senderPhoto} />
-                          <AvatarFallback className="text-xs">
-                            {senderName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className={cn("max-w-[75%]", isOwn ? 'items-end' : 'items-start')}>
-                          {!isOwn && (
-                            <p className="text-xs text-muted-foreground mb-1">
-                              {isHost ? '👑 ' : ''}{senderName}
-                            </p>
-                          )}
-                          <div
-                            className={cn(
-                              "px-3 py-2 rounded-lg text-sm",
-                              isOwn ? 'bg-primary text-primary-foreground' : 
-                              isHost ? 'bg-yellow-500/20 border border-yellow-500/30' : 'bg-muted'
-                            )}
-                          >
-                            {msg.file_url ? renderFileMessage(msg) : msg.message}
-                          </div>
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            {format(new Date(msg.created_at), 'HH:mm')}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={scrollRef} />
-              </div>
-            </ScrollArea>
-
-            <div className="p-3 border-t flex gap-2">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                className="hidden"
-                accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-              />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isSending}
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                disabled={isSending}
-                className="flex-1"
-              />
-              <Button size="icon" onClick={handleSendMessage} disabled={isSending || !newMessage.trim()}>
-                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
-        )}
+          {!isOwner && isConnected && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); handleClose(); }}
+              className="gap-1.5 rounded-full px-5"
+            >
+              <PhoneOff className="h-4 w-4" /> Leave
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Gift Dialog with limit info */}
+      {/* ─── Gift Dialog ──────────────────────────────────────────── */}
       <Dialog open={showGiftDialog} onOpenChange={setShowGiftDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Send Tip to Host</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-amber-500" /> Send a Gift
+            </DialogTitle>
             <DialogDescription>
-              Optional: Send a tip to support the host. 50% of the tip reaches the host.
+              Gifts appear as animations on screen! 50% reaches the host.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-3 gap-3 py-4">
             {gifts.slice(0, 12).map((gift) => (
-              <Button
+              <button
                 key={gift.id}
-                variant="outline"
-                className="h-auto py-4 flex flex-col gap-2"
                 onClick={() => handleSendGift(gift)}
+                className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-border/50 bg-card hover:bg-accent hover:border-primary/50 transition-all hover:scale-105 active:scale-95"
               >
-                <span className="text-2xl">{gift.emoji}</span>
-                <span className="text-xs">{gift.name}</span>
-                <span className="text-xs font-bold">₹{gift.price}</span>
-              </Button>
+                <span className="text-3xl">{gift.emoji}</span>
+                <span className="text-xs font-medium text-foreground">{gift.name}</span>
+                <Badge variant="secondary" className="text-[10px]">₹{gift.price}</Badge>
+              </button>
             ))}
             {gifts.length === 0 && (
-              <div className="col-span-3 text-center py-4 text-muted-foreground">
+              <div className="col-span-3 text-center py-6 text-muted-foreground">
                 <p>No gifts available</p>
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
 
-// Helper function exported for ticket display calculation
-function getTicketDisplayDuration(price: number): number {
-  const minDuration = 5000;
-  const maxDuration = 60000;
-  const minPrice = 10;
-  const maxPrice = 120;
-  
-  if (price <= minPrice) return minDuration;
-  if (price >= maxPrice) return maxDuration;
-  
-  const ratio = (price - minPrice) / (maxPrice - minPrice);
-  return Math.floor(minDuration + (maxDuration - minDuration) * ratio);
-}
+export default PrivateGroupCallWindow;
