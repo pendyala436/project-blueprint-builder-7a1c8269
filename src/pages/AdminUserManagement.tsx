@@ -631,6 +631,7 @@ const AdminUserManagement = () => {
       await supabase.from("audit_logs").insert({
         admin_id: session?.user?.id || "",
         action: `Wallet Deduction: ₹${amount.toFixed(2)}`,
+        action_type: "update",
         resource_type: "wallet",
         resource_id: deductUser.user_id,
         details: `Deducted ₹${amount.toFixed(2)} from ${deductUser.full_name || "user"}. Reason: ${deductReason}. Previous balance: ₹${wallet.balance}. New balance: ₹${newBalance}.`,
