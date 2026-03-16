@@ -1682,15 +1682,7 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* Section 5: Language Community */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <LanguageCommunityPanel
-            currentUserId={currentUserId}
-            motherTongue={userLanguage}
-            userName={userName || 'User'}
-            userPhoto={userPhoto}
-          />
-        </div>
+        {/* Language Community removed for men */}
 
 
 
