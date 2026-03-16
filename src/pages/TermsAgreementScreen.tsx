@@ -429,7 +429,7 @@ const TermsAgreementScreen = () => {
     try {
       // Get registration data from localStorage
       const email = localStorage.getItem("userEmail") || "";
-      const password = localStorage.getItem("userPassword") || "";
+      const password = sessionStorage.getItem("userPassword") || "";
       const fullName = localStorage.getItem("userName") || "";
       const gender = localStorage.getItem("userGender") || "";
       const phone = localStorage.getItem("userPhone") || "";
@@ -735,7 +735,7 @@ const TermsAgreementScreen = () => {
       localStorage.removeItem("userLatitude");
       localStorage.removeItem("userLongitude");
       localStorage.removeItem("userPrimaryLanguage");
-      localStorage.removeItem("userPassword");
+      sessionStorage.removeItem("userPassword");
       localStorage.removeItem("userLanguagePreferences");
       localStorage.removeItem("userPersonalDetails");
       sessionStorage.removeItem("selectedLanguage");
