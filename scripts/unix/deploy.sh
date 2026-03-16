@@ -47,7 +47,7 @@ EDGE_FUNCTIONS=(
     "reset-password"
     "seed-legal-documents"
     "seed-super-users"
-    "shift-scheduler"
+    
     "translate-message"
     "trigger-backup"
     "verify-photo"

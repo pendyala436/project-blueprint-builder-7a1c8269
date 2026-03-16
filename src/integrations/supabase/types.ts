@@ -3286,7 +3286,6 @@ export type Database = {
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       reset_private_group_counts: { Args: never; Returns: undefined }
       revert_busy_to_online: { Args: { p_user_id: string }; Returns: undefined }
-      rotate_monthly_shifts: { Args: never; Returns: undefined }
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
