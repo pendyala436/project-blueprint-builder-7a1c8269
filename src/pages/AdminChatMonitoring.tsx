@@ -353,7 +353,7 @@ const AdminChatMonitoring = () => {
       }
     } catch (error) {
       console.error("Error loading live groups:", error);
-      toast({ title: "Error", description: "Failed to load live groups", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load live groups" });
     } finally {
       setLoadingGroups(false);
     }
