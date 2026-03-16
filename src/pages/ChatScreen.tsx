@@ -2,22 +2,19 @@
  * ChatScreen.tsx
  * 
  * PURPOSE: Real-time messaging interface between two matched users.
- * Features automatic message translation using Language neural translation.
  * 
  * KEY FEATURES:
  * - Real-time message updates via Supabase Realtime subscriptions
- * - Automatic language translation for cross-language communication
  * - Read receipts and message status indicators
  * - Date-grouped message display
  * - Online/offline status indicators
+ * 
+ * NOTE: Translation system is disabled. Messages are sent as plain text.
  * 
  * DATABASE TABLES USED:
  * - chat_messages: Stores all chat messages
  * - profiles: User profile information
  * - user_status: Online/offline tracking
- * 
- * EDGE FUNCTIONS USED:
- * - translate-message: Language based neural translation
  */
 
 // ============= IMPORTS SECTION =============
