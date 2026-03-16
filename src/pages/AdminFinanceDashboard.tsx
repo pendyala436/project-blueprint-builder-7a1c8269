@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
@@ -76,7 +76,7 @@ const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--c
 
 const AdminFinanceDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("all");
@@ -184,15 +184,11 @@ const AdminFinanceDashboard = () => {
 
     } catch (error) {
       console.error("Error loading finance data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load finance data",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load finance data" });
     } finally {
       setLoading(false);
     }
-  }, [dateRange, toast]);
+  }, [dateRange]);
 
   // Real-time subscriptions for finance data
   useMultipleRealtimeSubscriptions(
@@ -249,7 +245,7 @@ const AdminFinanceDashboard = () => {
     a.click();
     URL.revokeObjectURL(url);
 
-    toast({ title: "Success", description: "CSV exported successfully" });
+    toast.success("Success", { description: "CSV exported successfully" });
   };
 
   const totalRevenue = dailyRevenue.reduce((sum, d) => sum + d.revenue, 0);

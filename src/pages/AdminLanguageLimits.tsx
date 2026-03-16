@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { languages } from "@/data/languages";
 import { 
   ArrowLeft, 
@@ -41,7 +41,7 @@ interface LanguageLimit {
 
 const AdminLanguageLimits = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [limits, setLimits] = useState<LanguageLimit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,11 +87,7 @@ const AdminLanguageLimits = () => {
       setLimits(data || []);
     } catch (error) {
       console.error("Error loading language limits:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load language limits",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load language limits" });
     } finally {
       setLoading(false);
     }
@@ -127,20 +123,12 @@ const AdminLanguageLimits = () => {
 
   const handleSave = async () => {
     if (!formLanguage.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Language name is required",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Language name is required" });
       return;
     }
 
     if (formMaxChat < 1 || formMaxCall < 1) {
-      toast({
-        title: "Validation Error",
-        description: "Maximum values must be at least 1",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Maximum values must be at least 1" });
       return;
     }
 
@@ -159,7 +147,7 @@ const AdminLanguageLimits = () => {
           .eq("id", editingLimit.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language limit updated" });
+        toast.success("Success", { description: "Language limit updated" });
       } else {
         const { error } = await supabase.from("language_limits").insert({
           language_name: formLanguage.trim(),
@@ -169,18 +157,14 @@ const AdminLanguageLimits = () => {
         });
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language limit created" });
+        toast.success("Success", { description: "Language limit created" });
       }
 
       setIsDialogOpen(false);
       loadLimits();
     } catch (error) {
       console.error("Error saving language limit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save language limit",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save language limit" });
     } finally {
       setIsSaving(false);
     }
@@ -196,15 +180,11 @@ const AdminLanguageLimits = () => {
         .eq("id", limit.id);
 
       if (error) throw error;
-      toast({ title: "Success", description: "Language limit deleted" });
+      toast.success("Success", { description: "Language limit deleted" });
       loadLimits();
     } catch (error) {
       console.error("Error deleting language limit:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete language limit",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete language limit" });
     }
   };
 
@@ -219,11 +199,7 @@ const AdminLanguageLimits = () => {
       loadLimits();
     } catch (error) {
       console.error("Error toggling limit status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update limit status",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update limit status" });
     }
   };
 

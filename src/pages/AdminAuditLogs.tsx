@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { 
   ArrowLeft, 
@@ -110,11 +110,7 @@ const AdminAuditLogs = () => {
       setLogs((data as AuditLog[]) || []);
     } catch (error) {
       console.error("Error loading logs:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load audit logs",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load audit logs" });
     } finally {
       setLoading(false);
     }
@@ -193,10 +189,7 @@ const AdminAuditLogs = () => {
     link.click();
     URL.revokeObjectURL(url);
 
-    toast({
-      title: "Export complete",
-      description: `Exported ${filteredLogs.length} log entries`,
-    });
+    toast.success("Export complete", { description: `Exported ${filteredLogs.length} log entries` });
   };
 
   const clearFilters = () => {

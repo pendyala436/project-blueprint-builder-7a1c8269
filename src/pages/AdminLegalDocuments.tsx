@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useProductionMode } from "@/hooks/useProductionMode";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -78,7 +78,7 @@ const documentTypes = [
 
 const AdminLegalDocuments = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isProduction } = useProductionMode();
   
@@ -118,11 +118,7 @@ const AdminLegalDocuments = () => {
       setDocuments(data || []);
     } catch (error: any) {
       console.error("Error fetching documents:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load legal documents",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load legal documents" });
     } finally {
       setLoading(false);
     }
@@ -132,10 +128,7 @@ const AdminLegalDocuments = () => {
     setRefreshing(true);
     await fetchDocuments();
     setRefreshing(false);
-    toast({
-      title: "Refreshed",
-      description: "Document list updated",
-    });
+    toast.success("Refreshed", { description: "Document list updated" });
   };
 
   const handleSeedDocuments = async () => {
@@ -145,19 +138,12 @@ const AdminLegalDocuments = () => {
       
       if (error) throw error;
       
-      toast({
-        title: "Documents Seeded",
-        description: `Successfully seeded ${data?.results?.filter((r: any) => r.status === 'created').length || 0} documents`,
-      });
+      toast.success("Documents Seeded", { description: `Successfully seeded ${data?.results?.filter((r: any) => r.status === 'created').length || 0} documents` });
       
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error seeding documents:", error);
-      toast({
-        title: "Seeding Failed",
-        description: classifyError(error, "seed default documents").message,
-        variant: "destructive",
-      });
+      toast.error("Seeding Failed", { description: classifyError(error, "seed default documents").message });
     } finally {
       setSeeding(false);
     }
@@ -178,20 +164,12 @@ const AdminLegalDocuments = () => {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to upload",
-        variant: "destructive",
-      });
+      toast.error("No file selected", { description: "Please select a file to upload" });
       return;
     }
 
     if (!newDocument.name.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter a document name",
-        variant: "destructive",
-      });
+      toast.error("Name required", { description: "Please enter a document name" });
       return;
     }
 
@@ -242,10 +220,7 @@ const AdminLegalDocuments = () => {
 
       setUploadProgress(100);
 
-      toast({
-        title: "Document uploaded",
-        description: `${newDocument.name} has been uploaded successfully`,
-      });
+      toast.success("Document uploaded", { description: `${newDocument.name} has been uploaded successfully` });
 
       // Reset form
       setUploadDialogOpen(false);
@@ -263,11 +238,7 @@ const AdminLegalDocuments = () => {
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error uploading document:", error);
-      toast({
-        title: "Upload failed",
-        description: classifyError(error, "upload the document").message,
-        variant: "destructive",
-      });
+      toast.error("Upload failed", { description: classifyError(error, "upload the document").message });
     } finally {
       setUploading(false);
     }
@@ -290,17 +261,10 @@ const AdminLegalDocuments = () => {
       window.document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download started",
-        description: `Downloading ${document.name}`,
-      });
+      toast.success("Download started", { description: `Downloading ${document.name}` });
     } catch (error: any) {
       console.error("Error downloading document:", error);
-      toast({
-        title: "Download failed",
-        description: classifyError(error, "download the document").message,
-        variant: "destructive",
-      });
+      toast.error("Download failed", { description: classifyError(error, "download the document").message });
     }
   };
 
@@ -313,19 +277,12 @@ const AdminLegalDocuments = () => {
 
       if (error) throw error;
 
-      toast({
-        title: document.is_active ? "Deactivated" : "Activated",
-        description: `${document.name} is now ${document.is_active ? 'inactive' : 'active'}`,
-      });
+      toast.success(document.is_active ? "Deactivated" : "Activated", { description: `${document.name} is now ${document.is_active ? 'inactive' : 'active'}` });
 
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error toggling document status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update document status",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update document status" });
     }
   };
 
@@ -346,19 +303,12 @@ const AdminLegalDocuments = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Document deleted",
-        description: `${document.name} has been deleted`,
-      });
+      toast.success("Document deleted", { description: `${document.name} has been deleted` });
 
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error deleting document:", error);
-      toast({
-        title: "Delete failed",
-        description: classifyError(error, "delete the document").message,
-        variant: "destructive",
-      });
+      toast.error("Delete failed", { description: classifyError(error, "delete the document").message });
     }
   };
 

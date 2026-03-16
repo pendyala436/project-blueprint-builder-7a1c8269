@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { 
@@ -107,11 +107,7 @@ const AdminSettings = () => {
       setSettings((data as AdminSetting[]) || []);
     } catch (error) {
       console.error("Error loading settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load settings",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load settings" });
     } finally {
       setLoading(false);
     }
@@ -202,10 +198,7 @@ const AdminSettings = () => {
 
   const saveSettings = async () => {
     if (Object.keys(modifiedSettings).length === 0) {
-      toast({
-        title: "No changes",
-        description: "No settings have been modified",
-      });
+      toast("No changes", { description: "No settings have been modified" });
       return;
     }
 
@@ -213,7 +206,7 @@ const AdminSettings = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        toast({ title: "Error", description: "Session expired. Please log in again.", variant: "destructive" });
+        toast.error("Error", { description: "Session expired. Please log in again." });
         navigate("/");
         return;
       }
@@ -236,20 +229,13 @@ const AdminSettings = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
 
-      toast({
-        title: "Settings saved & synced",
-        description: `${Object.keys(modifiedSettings).length} setting(s) updated and synced to dashboards`,
-      });
+      toast.success("Settings saved & synced", { description: `${Object.keys(modifiedSettings).length} setting(s) updated and synced to dashboards` });
 
       setModifiedSettings({});
       loadSettings();
     } catch (error) {
       console.error("Error saving settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save settings",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save settings" });
     } finally {
       setSaving(false);
     }
@@ -571,14 +557,11 @@ const AdminVideoGroupControls = () => {
       const { data } = await supabase.functions.invoke('video-call-circuit-breaker', {
         body: { action: 'report_high_utilization', cpu_percent: 100, memory_percent: 100, source: 'admin_manual' },
       });
-      toast({
-        title: "All Video Calls Stopped",
-        description: `${data?.terminated_calls ?? 0} active call(s) terminated. New calls blocked for 2 hours.`,
-      });
+      toast.success("All Video Calls Stopped", { description: `${data?.terminated_calls ?? 0} active call(s) terminated. New calls blocked for 2 hours.` });
       setBreakerActive(true);
       setBreakerResumesAt(data?.resumes_at ?? '');
     } catch (err) {
-      toast({ title: "Error", description: "Failed to stop calls", variant: "destructive" });
+      toast.error("Error", { description: "Failed to stop calls" });
     } finally {
       setLoadingAction(null);
     }
@@ -591,10 +574,10 @@ const AdminVideoGroupControls = () => {
       await supabase.functions.invoke('video-call-circuit-breaker', {
         body: { action: 'reset' },
       });
-      toast({ title: "Circuit Breaker Reset", description: "Video calls are now allowed again." });
+      toast.success("Circuit Breaker Reset", { description: "Video calls are now allowed again." });
       setBreakerActive(false);
     } catch (err) {
-      toast({ title: "Error", description: "Failed to reset", variant: "destructive" });
+      toast.error("Error", { description: "Failed to reset" });
     } finally {
       setLoadingAction(null);
     }
@@ -624,14 +607,13 @@ const AdminVideoGroupControls = () => {
         });
       }
 
-      toast({
-        title: disabled ? "Video Calls Disabled" : "Video Calls Enabled",
+      toast.success(disabled ? "Video Calls Disabled" : "Video Calls Enabled", {
         description: disabled
           ? "All video calls are now permanently disabled until you re-enable them."
           : "Video calls are now enabled for all users.",
       });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to update setting", variant: "destructive" });
+      toast.error("Error", { description: "Failed to update setting" });
     } finally {
       setLoadingAction(null);
     }
@@ -656,12 +638,9 @@ const AdminVideoGroupControls = () => {
           is_public: true,
         }, { onConflict: 'setting_key' });
 
-      toast({
-        title: "Private Groups Updated",
-        description: `Maximum private groups set to ${privateGroupCount}`,
-      });
+      toast.success("Private Groups Updated", { description: `Maximum private groups set to ${privateGroupCount}` });
     } catch (err) {
-      toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+      toast.error("Error", { description: "Failed to update" });
     } finally {
       setLoadingAction(null);
     }

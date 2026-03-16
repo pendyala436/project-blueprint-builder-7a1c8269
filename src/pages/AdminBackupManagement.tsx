@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
@@ -39,7 +39,7 @@ interface BackupLog {
 
 const AdminBackupManagement = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const [backups, setBackups] = useState<BackupLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [triggeringBackup, setTriggeringBackup] = useState(false);
@@ -77,11 +77,7 @@ const AdminBackupManagement = () => {
       setBackups(data || []);
     } catch (error: any) {
       console.error("Error fetching backups:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load backup logs",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load backup logs" });
     } finally {
       setLoading(false);
     }
@@ -91,10 +87,7 @@ const AdminBackupManagement = () => {
     setRefreshing(true);
     await fetchBackups();
     setRefreshing(false);
-    toast({
-      title: "Refreshed",
-      description: "Backup list updated",
-    });
+    toast.success("Refreshed", { description: "Backup list updated" });
   };
 
   const triggerManualBackup = async () => {
@@ -110,29 +103,19 @@ const AdminBackupManagement = () => {
         throw new Error(classifyError(response.error, "create backup").message);
       }
 
-      toast({
-        title: "Backup Started",
-        description: "Manual backup has been initiated",
-      });
+      toast.success("Backup Started", { description: "Manual backup has been initiated" });
       
       await fetchBackups();
     } catch (error: any) {
       console.error("Error triggering backup:", error);
-      toast({
-        title: "Backup Failed",
-        description: classifyError(error, "trigger the backup").message,
-        variant: "destructive",
-      });
+      toast.error("Backup Failed", { description: classifyError(error, "trigger the backup").message });
     } finally {
       setTriggeringBackup(false);
     }
   };
 
   const handleDownloadBackup = async (backup: BackupLog) => {
-    toast({
-      title: "Exporting Database",
-      description: "Querying tables and generating backup file...",
-    });
+    toast("Exporting Database", { description: "Querying tables and generating backup file..." });
 
     try {
       const tables = [
@@ -185,17 +168,10 @@ const AdminBackupManagement = () => {
       a.click();
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Backup Downloaded",
-        description: `Exported ${Object.keys(backupData).length} tables, ${exportObj.total_rows} rows`,
-      });
+      toast.success("Backup Downloaded", { description: `Exported ${Object.keys(backupData).length} tables, ${exportObj.total_rows} rows` });
     } catch (error: any) {
       console.error("Download error:", error);
-      toast({
-        title: "Download Failed",
-        description: error.message || "Failed to export database",
-        variant: "destructive",
-      });
+      toast.error("Download Failed", { description: error.message || "Failed to export database" });
     }
   };
 

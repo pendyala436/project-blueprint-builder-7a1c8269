@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { 
   IndianRupee, 
   Clock, 
@@ -67,7 +67,7 @@ interface ChatPricing {
 
 const AdminChatPricing = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingRates, setIsEditingRates] = useState(false);
@@ -129,11 +129,7 @@ const AdminChatPricing = () => {
       }
     } catch (error) {
       console.error("Error loading pricing:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load pricing configuration",
-        variant: "destructive"
-      });
+      toast.error("Error", { description: "Failed to load pricing configuration" });
     } finally {
       setIsLoading(false);
     }
@@ -157,19 +153,19 @@ const AdminChatPricing = () => {
 
     // ── Validate men's rates are positive numbers ──────────────────────────────
     if (isNaN(ratePerMinute) || ratePerMinute <= 0) {
-      toast({ title: "Invalid Rate", description: "Men's chat rate must be a positive number", variant: "destructive" });
+      toast.error("Invalid Rate", { description: "Men's chat rate must be a positive number" });
       return;
     }
     if (isNaN(videoRatePerMinute) || videoRatePerMinute <= 0) {
-      toast({ title: "Invalid Rate", description: "Men's video rate must be a positive number", variant: "destructive" });
+      toast.error("Invalid Rate", { description: "Men's video rate must be a positive number" });
       return;
     }
     if (isNaN(groupCallRate) || groupCallRate <= 0) {
-      toast({ title: "Invalid Rate", description: "Men's group call rate must be a positive number", variant: "destructive" });
+      toast.error("Invalid Rate", { description: "Men's group call rate must be a positive number" });
       return;
     }
     if (isNaN(minWithdrawal) || minWithdrawal <= 0) {
-      toast({ title: "Invalid Minimum", description: "Minimum withdrawal balance must be a positive number", variant: "destructive" });
+      toast.error("Invalid Minimum", { description: "Minimum withdrawal balance must be a positive number" });
       return;
     }
 
@@ -216,7 +212,7 @@ const AdminChatPricing = () => {
         group_call_women_earning_rate: groupCallWomenRate.toFixed(2),
       }));
 
-      toast({ title: "Saved", description: "Pricing updated — women earn exactly half of men's rate across all sessions." });
+      toast.success("Saved", { description: "Pricing updated — women earn exactly half of men's rate across all sessions." });
       setIsEditingRates(false);
       setIsEditingVideoRates(false);
       setIsEditingGroupRates(false);
@@ -224,7 +220,7 @@ const AdminChatPricing = () => {
       await loadPricing();
     } catch (error) {
       console.error("Error saving pricing:", error);
-      toast({ title: "Error", description: "Failed to save pricing configuration", variant: "destructive" });
+      toast.error("Error", { description: "Failed to save pricing configuration" });
     } finally {
       setIsSaving(false);
     }

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { languages } from "@/data/languages";
 import { 
   ArrowLeft, 
@@ -43,7 +43,7 @@ interface LanguageGroup {
 
 const AdminLanguageGroups = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [groups, setGroups] = useState<LanguageGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,15 +71,11 @@ const AdminLanguageGroups = () => {
       setGroups(data || []);
     } catch (error) {
       console.error("Error loading language groups:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load language groups",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to load language groups" });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   // Real-time subscription for language groups
   useRealtimeSubscription({
@@ -149,20 +145,12 @@ const AdminLanguageGroups = () => {
 
   const handleSave = async () => {
     if (!formName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Group name is required",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Group name is required" });
       return;
     }
 
     if (formLanguages.length === 0) {
-      toast({
-        title: "Validation Error",
-        description: "At least one language is required",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "At least one language is required" });
       return;
     }
 
@@ -180,7 +168,7 @@ const AdminLanguageGroups = () => {
           .eq("id", editingGroup.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language group updated" });
+        toast.success("Success", { description: "Language group updated" });
       } else {
         const { error } = await supabase.from("language_groups").insert({
           name: formName.trim(),
@@ -191,18 +179,14 @@ const AdminLanguageGroups = () => {
         });
 
         if (error) throw error;
-        toast({ title: "Success", description: "Language group created" });
+        toast.success("Success", { description: "Language group created" });
       }
 
       setIsDialogOpen(false);
       loadGroups();
     } catch (error) {
       console.error("Error saving language group:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save language group",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to save language group" });
     }
   };
 
@@ -216,15 +200,11 @@ const AdminLanguageGroups = () => {
         .eq("id", group.id);
 
       if (error) throw error;
-      toast({ title: "Success", description: "Language group deleted" });
+      toast.success("Success", { description: "Language group deleted" });
       loadGroups();
     } catch (error) {
       console.error("Error deleting language group:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete language group",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to delete language group" });
     }
   };
 
@@ -239,11 +219,7 @@ const AdminLanguageGroups = () => {
       loadGroups();
     } catch (error) {
       console.error("Error toggling group status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update group status",
-        variant: "destructive",
-      });
+      toast.error("Error", { description: "Failed to update group status" });
     }
   };
 

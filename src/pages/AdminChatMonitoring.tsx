@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format, differenceInMinutes, differenceInSeconds } from "date-fns";
 import { countries } from "@/data/countries";
 import { languages } from "@/data/languages";
@@ -111,7 +111,7 @@ const LiveDuration = ({ startedAt }: { startedAt: string | null }) => {
 // ─── Main component ──────────────────────────────────────────────
 const AdminChatMonitoring = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
@@ -220,7 +220,7 @@ const AdminChatMonitoring = () => {
       }
     } catch (error) {
       console.error("Error loading messages:", error);
-      toast({ title: "Error", description: "Failed to load messages", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load messages" });
     } finally {
       setLoading(false);
     }
@@ -264,7 +264,7 @@ const AdminChatMonitoring = () => {
       }));
     } catch (error) {
       console.error("Error loading active chats:", error);
-      toast({ title: "Error", description: "Failed to load active chats", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load active chats" });
     } finally {
       setLoadingChats(false);
     }
@@ -312,7 +312,7 @@ const AdminChatMonitoring = () => {
       })));
     } catch (error) {
       console.error("Error loading video calls:", error);
-      toast({ title: "Error", description: "Failed to load video calls", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load video calls" });
     } finally {
       setLoadingVideoCalls(false);
     }
@@ -353,7 +353,7 @@ const AdminChatMonitoring = () => {
       }
     } catch (error) {
       console.error("Error loading live groups:", error);
-      toast({ title: "Error", description: "Failed to load live groups", variant: "destructive" });
+      toast.error("Error", { description: "Failed to load live groups" });
     } finally {
       setLoadingGroups(false);
     }
@@ -423,7 +423,7 @@ const AdminChatMonitoring = () => {
     setSilentMonitorChatId(chatId);
     loadSilentMonitorMessages(chatId);
     logAdminAudit("ghost_monitor_chat_start", "chat", chatId, "Started silent chat monitoring");
-    toast({ title: "👻 Ghost Mode Active", description: "Silently monitoring chat — participants cannot see you" });
+    toast("👻 Ghost Mode Active", { description: "Silently monitoring chat — participants cannot see you" });
   };
 
   const stopSilentMonitoring = () => {
@@ -435,7 +435,7 @@ const AdminChatMonitoring = () => {
   const startVideoMonitoring = (callId: string) => {
     setMonitoringVideoCallId(callId);
     logAdminAudit("ghost_monitor_video_start", "video_call", callId, "Started ghost video call monitoring");
-    toast({ title: "👻 Ghost Video Monitor", description: "Monitoring video call — participants cannot see you" });
+    toast("👻 Ghost Video Monitor", { description: "Monitoring video call — participants cannot see you" });
   };
 
   const stopVideoMonitoring = () => {
@@ -448,7 +448,7 @@ const AdminChatMonitoring = () => {
     loadGroupMessages(groupId);
     loadGroupParticipants(groupId);
     logAdminAudit("ghost_monitor_group_start", "private_group", groupId, "Started ghost group monitoring");
-    toast({ title: "👻 Ghost Group Monitor", description: "Silently monitoring group — not visible to participants" });
+    toast("👻 Ghost Group Monitor", { description: "Silently monitoring group — not visible to participants" });
   };
 
   const stopGroupMonitoring = () => {
@@ -461,7 +461,7 @@ const AdminChatMonitoring = () => {
   // ─── Notifications ────────────────────────────────────────────
   const sendBroadcastNotification = async () => {
     if (!notificationTitle.trim() || !notificationMessage.trim()) {
-      toast({ title: "Error", description: "Please provide both title and message", variant: "destructive" });
+      toast.error("Error", { description: "Please provide both title and message" });
       return;
     }
     setSendingNotification(true);
@@ -473,7 +473,7 @@ const AdminChatMonitoring = () => {
       const { data: users, error: usersError } = await query;
       if (usersError) throw usersError;
       if (!users || users.length === 0) {
-        toast({ title: "No users found", description: "No users match the criteria", variant: "destructive" });
+        toast.error("No users found", { description: "No users match the criteria" });
         return;
       }
 
@@ -485,12 +485,12 @@ const AdminChatMonitoring = () => {
       const { error } = await supabase.from("notifications").insert(notifications);
       if (error) throw error;
 
-      toast({ title: "Success", description: `Notification sent to ${users.length} ${notificationTarget === "all" ? "users" : notificationTarget}` });
+      toast.success("Success", { description: `Notification sent to ${users.length} ${notificationTarget === "all" ? "users" : notificationTarget}` });
       setNotificationDialogOpen(false);
       setNotificationTitle(""); setNotificationMessage(""); setNotificationTarget("all");
     } catch (error) {
       console.error("Error sending notifications:", error);
-      toast({ title: "Error", description: "Failed to send notifications", variant: "destructive" });
+      toast.error("Error", { description: "Failed to send notifications" });
     } finally {
       setSendingNotification(false);
     }
@@ -499,7 +499,7 @@ const AdminChatMonitoring = () => {
   // ─── Moderation actions ────────────────────────────────────────
   const handleFlag = async () => {
     if (!selectedMessage || !flagReason.trim()) {
-      toast({ title: "Error", description: "Please provide a reason for flagging", variant: "destructive" });
+      toast.error("Error", { description: "Please provide a reason for flagging" });
       return;
     }
     try {
@@ -513,12 +513,12 @@ const AdminChatMonitoring = () => {
       }).eq("id", selectedMessage.id);
       if (error) throw error;
 
-      toast({ title: "Success", description: "Message flagged for review" });
+      toast.success("Success", { description: "Message flagged for review" });
       setFlagDialogOpen(false); setFlagReason(""); setSelectedMessage(null);
       loadMessages();
     } catch (error) {
       console.error("Error flagging message:", error);
-      toast({ title: "Error", description: "Failed to flag message", variant: "destructive" });
+      toast.error("Error", { description: "Failed to flag message" });
     }
   };
 
@@ -529,11 +529,11 @@ const AdminChatMonitoring = () => {
         flag_reason: null, moderation_status: "cleared",
       }).eq("id", message.id);
       if (error) throw error;
-      toast({ title: "Success", description: "Flag removed" });
+      toast.success("Success", { description: "Flag removed" });
       loadMessages();
     } catch (error) {
       console.error("Error unflagging:", error);
-      toast({ title: "Error", description: "Failed to remove flag", variant: "destructive" });
+      toast.error("Error", { description: "Failed to remove flag" });
     }
   };
 
@@ -542,11 +542,11 @@ const AdminChatMonitoring = () => {
       const { error } = await supabase.from("chat_messages")
         .update({ moderation_status: status }).eq("id", message.id);
       if (error) throw error;
-      toast({ title: "Success", description: `Message marked as ${status}` });
+      toast.success("Success", { description: `Message marked as ${status}` });
       loadMessages();
     } catch (error) {
       console.error("Error updating status:", error);
-      toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+      toast.error("Error", { description: "Failed to update status" });
     }
   };
 
