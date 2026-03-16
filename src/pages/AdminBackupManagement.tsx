@@ -103,10 +103,7 @@ const AdminBackupManagement = () => {
         throw new Error(classifyError(response.error, "create backup").message);
       }
 
-      toast({
-        title: "Backup Started",
-        description: "Manual backup has been initiated",
-      });
+      toast.success("Backup Started", { description: "Manual backup has been initiated" });
       
       await fetchBackups();
     } catch (error: any) {
