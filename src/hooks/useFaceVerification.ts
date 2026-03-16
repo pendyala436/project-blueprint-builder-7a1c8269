@@ -16,6 +16,7 @@ export interface FaceVerificationResult {
   reason: string;
   genderMatches?: boolean;
   autoAccepted?: boolean;
+  modelLoadFailed?: boolean;
 }
 
 export interface UseFaceVerificationReturn {
@@ -120,15 +121,15 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       }
 
       if (!modelsLoaded) {
-        console.warn('[FaceAPI] Models not loaded, auto-accepting');
+        console.warn('[FaceAPI] Models not loaded — rejecting verification');
         return {
-          verified: true,
-          hasFace: true,
-          detectedGender: expectedGender || 'unknown',
-          confidence: 0.5,
-          reason: 'Models not available, photo accepted',
-          genderMatches: true,
-          autoAccepted: true
+          verified: false,
+          hasFace: false,
+          detectedGender: 'unknown',
+          confidence: 0,
+          reason: 'Face verification models failed to load. Please check your internet connection and try again.',
+          genderMatches: false,
+          modelLoadFailed: true
         };
       }
 
@@ -180,15 +181,14 @@ export const useFaceVerification = (): UseFaceVerificationReturn => {
       };
     } catch (error) {
       console.error('[FaceAPI] Verification error:', error);
-      // On error, auto-accept to not block the user
+      // On error, reject — do not silently auto-accept
       return {
-        verified: true,
-        hasFace: true,
-        detectedGender: expectedGender || 'unknown',
-        confidence: 0.5,
-        reason: 'Verification error, photo accepted',
-        genderMatches: true,
-        autoAccepted: true
+        verified: false,
+        hasFace: false,
+        detectedGender: 'unknown',
+        confidence: 0,
+        reason: 'Face verification failed due to an error. Please try again.',
+        genderMatches: false
       };
     } finally {
       setIsVerifying(false);
