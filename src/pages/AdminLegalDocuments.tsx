@@ -238,11 +238,7 @@ const AdminLegalDocuments = () => {
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error uploading document:", error);
-      toast({
-        title: "Upload failed",
-        description: classifyError(error, "upload the document").message,
-        variant: "destructive",
-      });
+      toast.error("Upload failed", { description: classifyError(error, "upload the document").message });
     } finally {
       setUploading(false);
     }
