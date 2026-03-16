@@ -107,8 +107,8 @@ const PROTECTED_ADMIN_EMAILS = Array.from({ length: 15 }, (_, i) => `admin${i + 
 
 const AdminUserManagement = () => {
   const navigate = useNavigate();
+  const { isLoading: adminLoading, isAdmin, adminEmail, userId: adminUserId } = useAdminAccess();
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, string>>({});
   const [totalCount, setTotalCount] = useState(0);
