@@ -410,7 +410,7 @@ export function PrivateGroupCallWindow({
 
   return (
     <div className={cn(
-      "fixed z-50 bg-black flex flex-col overflow-hidden select-none",
+      "fixed z-50 flex flex-col overflow-hidden select-none",
       isFullscreen
         ? "inset-0"
         : "bottom-4 right-4 w-[900px] h-[650px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] rounded-2xl shadow-2xl border border-white/10"
