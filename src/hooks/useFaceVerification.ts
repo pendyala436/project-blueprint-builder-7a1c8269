@@ -16,6 +16,7 @@ export interface FaceVerificationResult {
   reason: string;
   genderMatches?: boolean;
   autoAccepted?: boolean;
+  modelLoadFailed?: boolean;
 }
 
 export interface UseFaceVerificationReturn {
