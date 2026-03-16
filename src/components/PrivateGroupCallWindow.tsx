@@ -547,7 +547,7 @@ export function PrivateGroupCallWindow({
       ))}
 
       {/* ─── Static Chat Messages Panel (Bottom-Left) ─────────────── */}
-      <div className="absolute bottom-44 left-3 z-20 w-[55%] max-h-[45%] flex flex-col">
+      <div className="absolute bottom-36 left-3 z-20 w-[55%] max-h-[40%] flex flex-col">
         {/* Participant badges for host */}
         {isOwner && participants.filter(p => !p.isOwner).length > 0 && (
           <div className="flex flex-wrap gap-1 mb-1.5">
