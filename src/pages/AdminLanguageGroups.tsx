@@ -145,11 +145,7 @@ const AdminLanguageGroups = () => {
 
   const handleSave = async () => {
     if (!formName.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Group name is required",
-        variant: "destructive",
-      });
+      toast.error("Validation Error", { description: "Group name is required" });
       return;
     }
 
