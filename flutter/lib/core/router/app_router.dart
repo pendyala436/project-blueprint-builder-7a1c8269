@@ -63,7 +63,7 @@ class AppRoutes {
   static const String findMatch = '/find-match';
   static const String matchDiscovery = '/match-discovery';
   static const String profile = '/profile/:userId';
-  static const String chat = '/chat/:chatId';
+  static const String chat = '/chat/:partnerId';
   static const String wallet = '/wallet';
   static const String womenWallet = '/women-wallet';
   static const String transactionHistory = '/transaction-history';
