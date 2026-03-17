@@ -85,21 +85,21 @@ const RegistrationCompleteScreen = () => {
       if (!session?.user) return;
       const user = session.user;
 
-      // Fetch profile to get gender
+      // Fetch profile to get gender and current verification status
       const { data: profile } = await supabase
         .from("profiles")
-        .select("gender, approval_status")
+        .select("gender, approval_status, is_verified")
         .eq("user_id", user.id)
         .single();
 
       setUserGender(profile?.gender || null);
       setApprovalStatus(profile?.approval_status || "pending");
 
-      // Update profile to mark registration as complete
+      // Only mark registration complete — preserve existing verification_status
+      // (is_verified is set by AI verification in AIProcessingScreen)
       await supabase
         .from("profiles")
         .update({
-          verification_status: true,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
