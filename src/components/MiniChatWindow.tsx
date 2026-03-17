@@ -409,6 +409,10 @@ const MiniChatWindow = ({
   };
 
   const startBilling = () => {
+    // Clear any existing intervals to prevent orphaned timers on resume
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+
     timerRef.current = setInterval(() => {
       setElapsedSeconds(prev => prev + 1);
     }, 1000);
