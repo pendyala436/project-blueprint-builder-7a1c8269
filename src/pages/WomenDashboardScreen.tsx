@@ -1593,7 +1593,7 @@ const WomenDashboardScreen = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry)}
+              onClick={() => fetchOnlineMen(currentWomanLanguage, currentWomanCountry)}
               className="gap-1 h-7 text-xs px-2"
             >
               <RefreshCw className="w-3.5 h-3.5" />
