@@ -9,6 +9,7 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
  */
 
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -209,6 +210,7 @@ const LIFE_GOAL_OPTIONS = [
 
 const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEditDialogProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // State for profile data
   const [profile, setProfile] = useState<ProfileData>({
@@ -1198,25 +1200,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    if (!userEmail) return;
-                    try {
-                      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-                        redirectTo: `${window.location.origin}/reset-password`,
-                      });
-                      if (error) throw error;
-                      toast({
-                        title: "Reset Email Sent",
-                        description: "Check your email for the password reset link",
-                      });
-                    } catch (error) {
-                      console.error("Error sending reset email:", error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to send reset email. Please try again.",
-                        variant: "destructive",
-                      });
-                    }
+                  onClick={() => {
+                    navigate('/forgot-password');
                   }}
                 >
                   <KeyRound className="w-4 h-4 mr-2" />
