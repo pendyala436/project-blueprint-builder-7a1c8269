@@ -153,7 +153,7 @@ export const GENDER_OPTIONS = [
 export const ACCOUNT_STATUS = {
   ACTIVE: 'active',
   SUSPENDED: 'suspended',
-  BANNED: 'banned',
+  BLOCKED: 'blocked',
 } as const;
 
 // ============= Approval Status =============
