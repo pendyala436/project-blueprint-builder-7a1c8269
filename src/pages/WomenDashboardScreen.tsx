@@ -217,7 +217,6 @@ const WomenDashboardScreen = () => {
     unreadNotifications: 0,
     todayEarnings: 0
   });
-  const [myTodayEarnings, setMyTodayEarnings] = useState(0);
   const [myWalletBalance, setMyWalletBalance] = useState(0);
   const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
@@ -887,9 +886,8 @@ const WomenDashboardScreen = () => {
       if (data) {
         const balanceData = data as Record<string, number>;
         setMyWalletBalance(Number(balanceData.available_balance) || 0);
-        // Also set today's earnings from the same response to avoid a redundant RPC call
+        // Set today's earnings from the same response
         const todayEarnings = Number(balanceData.today_earnings) || 0;
-        setMyTodayEarnings(todayEarnings);
         setStats(prev => ({ ...prev, todayEarnings }));
       }
     } catch (error) {
@@ -1427,7 +1425,7 @@ const WomenDashboardScreen = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-primary">₹{myTodayEarnings.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-primary">₹{stats.todayEarnings.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
