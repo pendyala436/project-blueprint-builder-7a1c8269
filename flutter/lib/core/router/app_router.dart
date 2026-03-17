@@ -138,7 +138,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.profile, builder: (_, state) => ProfileDetailScreen(userId: state.pathParameters['userId']!)),
       
       // Chat Routes
-      GoRoute(path: AppRoutes.chat, builder: (_, state) => ChatScreen(chatId: state.pathParameters['chatId']!)),
+      GoRoute(path: AppRoutes.chat, builder: (_, state) => ChatScreen(chatId: state.pathParameters['partnerId']!)),
       
       // Wallet Routes
       GoRoute(path: AppRoutes.wallet, builder: (_, __) => const WalletScreen()),

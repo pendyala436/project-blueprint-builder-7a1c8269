@@ -41,7 +41,7 @@ export const ROUTES = {
   FIND_MATCH: '/find-match',
   MATCH_DISCOVERY: '/match-discovery',
   PROFILE: '/profile/:userId',
-  CHAT: '/chat/:chatId',
+  CHAT: '/chat/:partnerId',
   WALLET: '/wallet',
   WOMEN_WALLET: '/women-wallet',
   TRANSACTION_HISTORY: '/transaction-history',
