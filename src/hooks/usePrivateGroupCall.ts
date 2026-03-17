@@ -605,7 +605,7 @@ export function usePrivateGroupCall({
       .on('broadcast', { event: 'join-rejected' }, ({ payload }) => {
         if (payload.participantId === currentUserId) {
           if (payload.reason === 'group_full') {
-            toast.error('Group is full (max 50 participants)');
+            toast.error(`Group is full (max ${MAX_PARTICIPANTS} participants)`);
           }
           cleanup();
         }
