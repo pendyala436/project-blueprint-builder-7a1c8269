@@ -1671,7 +1671,7 @@ const WomenDashboardScreen = () => {
             {/* Other Language Men */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
+                <span className="text-sm font-medium text-primary">{t('otherLanguages', 'Other Languages')}</span>
                 <span className="text-xs text-muted-foreground">({otherLanguageMen.length})</span>
               </div>
               
