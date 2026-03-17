@@ -80,7 +80,7 @@ import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
-
+import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 interface Notification {
   id: string;
   title: string;
