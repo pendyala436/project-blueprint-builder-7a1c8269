@@ -204,6 +204,7 @@ const DashboardScreen = () => {
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for language feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
+  const userLanguageRef = useRef(userLanguage);
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // Language language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -344,21 +345,27 @@ const DashboardScreen = () => {
   const lastFetchWomenRef = useRef<number>(0);
   const fetchWomenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Keep ref in sync with state so throttled callback always has latest value
+  useEffect(() => {
+    userLanguageRef.current = userLanguage;
+  }, [userLanguage]);
+
   const throttledFetchOnlineWomen = useCallback(() => {
     const now = Date.now();
+    const lang = userLanguageRef.current;
     if (now - lastFetchWomenRef.current < 5000) {
       if (fetchWomenTimeoutRef.current) clearTimeout(fetchWomenTimeoutRef.current);
       fetchWomenTimeoutRef.current = setTimeout(() => {
         lastFetchWomenRef.current = Date.now();
         fetchOnlineUsersCount();
-        if (userLanguage) fetchOnlineWomen(userLanguage);
+        if (userLanguageRef.current) fetchOnlineWomen(userLanguageRef.current);
       }, 3000);
       return;
     }
     lastFetchWomenRef.current = now;
     fetchOnlineUsersCount();
-    if (userLanguage) fetchOnlineWomen(userLanguage);
-  }, [userLanguage]);
+    if (lang) fetchOnlineWomen(lang);
+  }, []); // stable — reads from ref, no stale closure
 
   useEffect(() => {
     if (!currentUserId) return;
