@@ -461,7 +461,7 @@ const WomenDashboardScreen = () => {
             console.log("[WomenDashboard] user_languages INSERT:", record.language_name);
             setCurrentWomanLanguage(record.language_name);
             setCurrentWomanLanguageCode(record.language_code || "eng_Latn");
-            fetchOnlineMen(undefined, record.language_name, currentWomanCountry);
+            fetchOnlineMen(record.language_name, currentWomanCountry);
           }
         }
       )
