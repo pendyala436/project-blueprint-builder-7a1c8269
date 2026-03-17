@@ -1,4 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
+import { useChatPricing } from "@/hooks/useChatPricing";
 import { useCallback, useEffect } from "react";
 import {
   Dialog,
@@ -43,6 +44,7 @@ const VideoCallModal = ({
   preAcquiredStream
 }: VideoCallModalProps) => {
   const { toast } = useToast();
+  const { pricing } = useChatPricing();
   const {
     callStatus,
     callDuration,
@@ -62,7 +64,7 @@ const VideoCallModal = ({
     currentUserId,
     remoteUserId,
     isInitiator,
-    ratePerMinute: 8,
+    ratePerMinute: pricing.videoRatePerMinute,
     onCallEnded: onClose,
     preAcquiredStream,
   });
