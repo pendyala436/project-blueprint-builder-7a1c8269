@@ -35,8 +35,7 @@ import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import { countries } from "@/data/countries";
 import { statesByCountry, State } from "@/data/states";
 import ProfilePhotosSection from "@/components/ProfilePhotosSection";
-import { menLanguages, MenLanguage } from "@/data/men_languages";
-import { womenLanguages, WomenLanguage } from "@/data/women_languages";
+import { languages, type Language } from "@/data/languages";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -356,9 +355,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       // Get language from the profile data itself (stored in primary_language/preferred_language)
       // Each profile type has its own language stored independently
       if (data && data.primary_language) {
-        // Use gender-specific language list
-        const languageList = data.gender === 'female' ? womenLanguages : menLanguages;
-        const foundLang = languageList.find(l => l.name === data.primary_language);
+        // Use master language list
+        const foundLang = languages.find(l => l.name === data.primary_language);
         if (foundLang) {
           const langData = {
             language_name: foundLang.name,
@@ -706,7 +704,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 My Language (for Chat Matching)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Select your primary language from {profile.gender === 'female' ? womenLanguages.length : menLanguages.length}+ languages. Auto-translation is available.
+                Select your primary language from {languages.length}+ languages. Auto-translation is available.
               </p>
               
               <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
@@ -739,12 +737,12 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       <CommandEmpty>No language found. Try searching by name.</CommandEmpty>
                       
                       {/* Show filtered results - increased limit */}
-                      <CommandGroup heading={`🌐 Languages (${(profile.gender === 'female' ? womenLanguages : menLanguages).filter(l => 
+                      <CommandGroup heading={`🌐 Languages (${languages.filter(l => 
                         !languageSearch || 
                         l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 
                         l.nativeName.toLowerCase().includes(languageSearch.toLowerCase())
                       ).length} available)`}>
-                        {(profile.gender === 'female' ? womenLanguages : menLanguages)
+                        {languages
                           .filter(l => 
                             !languageSearch || 
                             l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 

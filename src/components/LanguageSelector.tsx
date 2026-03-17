@@ -13,8 +13,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Languages, Search, Check, Globe, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { menLanguages, MenLanguage } from "@/data/men_languages";
-import { womenLanguages, WomenLanguage } from "@/data/women_languages";
+import { languages, type Language } from "@/data/languages";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -90,14 +89,13 @@ export const LanguageSelector = ({
     }
   }, [gender]);
 
-  // Get languages based on gender - 1000+ languages for each gender
+  // Get languages - 1000+ languages available
   const languages: ProfileLanguage[] = useMemo(() => {
-    const sourceLanguages = userGender === 'female' ? womenLanguages : menLanguages;
-    return sourceLanguages.map(lang => ({
+    return languages.map(lang => ({
       ...lang,
       isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
     }));
-  }, [userGender]);
+  }, []);
 
   // Filter languages based on search
   const filteredLanguages = useMemo(() => {
