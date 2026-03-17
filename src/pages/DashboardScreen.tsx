@@ -1423,8 +1423,8 @@ const DashboardScreen = () => {
               {/* Same Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
+                  <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
                     {userLanguage}
                   </span>
                   <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
