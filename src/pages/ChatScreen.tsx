@@ -1139,13 +1139,8 @@ const ChatScreen = () => {
       }
     } catch (error) {
       console.error("Camera error:", error);
-        const camErr = classifyError(error);
-        toast.error(camErr.title, { description: camErr.message });
-      toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to take a selfie",
-        variant: "destructive",
-      });
+      const camErr = classifyError(error);
+      toast.error(camErr.title, { description: camErr.message });
       setIsCameraOpen(false);
     }
   };
