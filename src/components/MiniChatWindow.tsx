@@ -230,12 +230,13 @@ const MiniChatWindow = ({
   useEffect(() => {
     const hasSentMessage = messages.some(m => m.senderId === currentUserId);
     const hasReceivedMessage = messages.some(m => m.senderId !== currentUserId);
-    if (hasSentMessage && hasReceivedMessage && !billingStarted) {
+    if (hasSentMessage && hasReceivedMessage && !billingStartedRef.current) {
+      billingStartedRef.current = true;
       setBillingStarted(true);
       setLastActivityTime(Date.now());
       startBilling();
     }
-  }, [messages, currentUserId, billingStarted]);
+  }, [messages, currentUserId]);
 
   useEffect(() => {
     if (messages.length > 0) {
