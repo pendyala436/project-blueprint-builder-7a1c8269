@@ -217,7 +217,6 @@ const WomenDashboardScreen = () => {
     unreadNotifications: 0,
     todayEarnings: 0
   });
-  const [myTodayEarnings, setMyTodayEarnings] = useState(0);
   const [myWalletBalance, setMyWalletBalance] = useState(0);
   const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
