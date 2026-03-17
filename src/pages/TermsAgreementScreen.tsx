@@ -554,7 +554,7 @@ const TermsAgreementScreen = () => {
       const city = localStorage.getItem("userCity") || "";
       const latitude = localStorage.getItem("userLatitude");
       const longitude = localStorage.getItem("userLongitude");
-      const languageCode = sessionStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
+      const languageCode = localStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
       const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
       const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
 
@@ -773,8 +773,8 @@ const TermsAgreementScreen = () => {
       ];
       registrationKeys.forEach(key => localStorage.removeItem(key));
       sessionStorage.removeItem("userPassword");
-      sessionStorage.removeItem("selectedLanguage");
-      sessionStorage.removeItem("selectedCountry");
+      localStorage.removeItem("selectedLanguage");
+      localStorage.removeItem("selectedCountry");
       setIsLoading(false);
     }
   };
