@@ -449,24 +449,19 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         return;
       }
 
-      // Get detected gender - if it differs from expected, update it (same as registration)
+      // Get detected gender - warn on mismatch but do NOT auto-change
       const detected = verifyData.detectedGender;
       let finalGender = expectedGender || 'unknown';
       
       if (detected === 'male' || detected === 'female') {
         if (expectedGender && detected !== expectedGender) {
-          // Gender mismatch - update to detected gender (same behavior as registration)
-          finalGender = detected;
+          // Gender mismatch - warn user but keep their registered gender
           toast({
-            title: "Gender updated",
-            description: `Your profile gender has been set to ${detected} based on AI detection`,
+            title: "Gender mismatch detected",
+            description: `AI detected ${detected}, but your profile gender remains ${expectedGender}. Contact support if this is incorrect.`,
+            variant: "destructive",
           });
-          
-          // Update gender in profiles table
-          await supabase
-            .from("profiles")
-            .update({ gender: detected })
-            .eq("user_id", userId);
+          finalGender = expectedGender;
         } else {
           finalGender = detected;
         }
