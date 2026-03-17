@@ -135,6 +135,47 @@ interface ChatPartner {
  * - Real-time updates
  * - Automatic translation
  */
+/** Renders chat attachment with signed URL resolution for private bucket */
+const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: boolean; resolveUrl: (u: string) => Promise<string> }) => {
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    resolveUrl(url).then((u) => { if (!cancelled) setResolvedUrl(u); });
+    return () => { cancelled = true; };
+  }, [url, resolveUrl]);
+
+  if (!resolvedUrl) {
+    return <div className={`rounded-2xl overflow-hidden px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}>
+      <span className="text-sm text-muted-foreground">Loading attachment…</span>
+    </div>;
+  }
+
+  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+  return (
+    <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
+      {isImage ? (
+        <img
+          src={resolvedUrl}
+          alt="Attachment"
+          className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => window.open(resolvedUrl, "_blank")}
+        />
+      ) : (
+        <a
+          href={resolvedUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-2 px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}
+        >
+          <FileText className="w-5 h-5" />
+          <span className="text-sm underline">Download File</span>
+        </a>
+      )}
+    </div>
+  );
+};
+
 const ChatScreen = () => {
   // ============= HOOKS INITIALIZATION =============
   
