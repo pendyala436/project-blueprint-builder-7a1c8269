@@ -1068,7 +1068,8 @@ const WomenDashboardScreen = () => {
           title: "🌟 Golden Badge Activated!",
           description: "You can now initiate chats with men for 30 days!",
         });
-        loadDashboardData();
+        // Refresh only wallet balance — badge state already updated above
+        fetchWalletBalance(currentUserId);
       } else {
         toast({
           title: "Purchase Failed",
