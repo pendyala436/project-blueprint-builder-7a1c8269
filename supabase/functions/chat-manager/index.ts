@@ -1880,9 +1880,10 @@ serve(async (req) => {
       }
 
       // ============= GET ACTIVE CHATS =============
-      // Get all active chat sessions for a user
+      // Get all active chat sessions for the authenticated user
       case "get_active_chats": {
-        const targetUserId = user_id || man_user_id || woman_user_id;
+        // SECURITY: Always use authenticated user ID — never trust user_id from body
+        const targetUserId = authenticatedUserId;
         
         if (!targetUserId) {
           return new Response(
