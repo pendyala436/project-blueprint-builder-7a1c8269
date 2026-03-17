@@ -353,6 +353,8 @@ const ChatScreen = () => {
    */
   useEffect(() => {
     if (partnerId) {
+      // Reset guard so a new partner triggers fresh initialization
+      initializingRef.current = false;
       initializeChat(partnerId);
     }
   }, [partnerId]); // Re-run if partner ID changes
