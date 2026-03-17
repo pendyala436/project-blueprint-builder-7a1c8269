@@ -635,7 +635,7 @@ const ChatScreen = () => {
           description: "Chat partner not found",
           variant: "destructive",
         });
-        navigate("/dashboard");
+        navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard");
         return;
       }
 
