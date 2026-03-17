@@ -1,4 +1,5 @@
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
+import { countries } from "@/data/countries";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -591,17 +592,10 @@ const DashboardScreen = () => {
       // Use country from main profiles table
       const userCountryValue = mainProfile?.country;
       if (userCountryValue) {
-        setUserCountryName(userCountryValue); // Store full country name for language feature
-        // Map country name to code
-        const countryCodeMap: Record<string, string> = {
-          "India": "IN", "United States": "US", "United Kingdom": "GB",
-          "Australia": "AU", "Canada": "CA", "Germany": "DE", "France": "FR",
-          "Japan": "JP", "Singapore": "SG", "Malaysia": "MY", "Philippines": "PH",
-          "Thailand": "TH", "Saudi Arabia": "SA", "UAE": "AE", "Qatar": "QA",
-          "Kuwait": "KW", "Bangladesh": "BD", "Pakistan": "PK", "Nepal": "NP",
-          "Sri Lanka": "LK"
-        };
-        setUserCountry(countryCodeMap[userCountryValue] || "IN");
+        setUserCountryName(userCountryValue);
+        // Look up country code from the full countries dataset
+        const match = countries.find(c => c.name.toLowerCase() === userCountryValue.toLowerCase());
+        setUserCountry(match?.code || "IN");
       }
 
       // Fetch wallet balance via server-side RPC (with timeout)
