@@ -886,9 +886,8 @@ const WomenDashboardScreen = () => {
       if (data) {
         const balanceData = data as Record<string, number>;
         setMyWalletBalance(Number(balanceData.available_balance) || 0);
-        // Also set today's earnings from the same response to avoid a redundant RPC call
+        // Set today's earnings from the same response
         const todayEarnings = Number(balanceData.today_earnings) || 0;
-        setMyTodayEarnings(todayEarnings);
         setStats(prev => ({ ...prev, todayEarnings }));
       }
     } catch (error) {
