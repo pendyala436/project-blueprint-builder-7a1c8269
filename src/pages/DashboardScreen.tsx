@@ -294,6 +294,8 @@ const DashboardScreen = () => {
     return `${currency.symbol}${converted.toLocaleString()}`;
   };
 
+  const wentOnlineRef = useRef(false);
+
   useEffect(() => {
     let mounted = true;
     let loadingTimeoutId: NodeJS.Timeout;
@@ -322,6 +324,7 @@ const DashboardScreen = () => {
         }
         await loadDashboardData();
         updateUserOnlineStatus(true);
+        wentOnlineRef.current = true;
         loadActiveChatCount();
       } catch (error) {
         console.error('[Dashboard] Init error:', error);
@@ -333,11 +336,14 @@ const DashboardScreen = () => {
     };
     init();
 
-    // Cleanup: set offline when leaving
+    // Cleanup: only set offline if we successfully went online
     return () => {
       mounted = false;
       clearTimeout(loadingTimeoutId);
-      updateUserOnlineStatus(false);
+      if (wentOnlineRef.current) {
+        wentOnlineRef.current = false;
+        updateUserOnlineStatus(false);
+      }
     };
   }, []);
 
