@@ -450,28 +450,27 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
         return;
       }
 
-      // Get detected gender - warn on mismatch but do NOT auto-change
+      // Get detected gender - block verification on mismatch
       const detected = verifyData.detectedGender;
-      let finalGender = expectedGender || 'unknown';
+      const genderMatched = !expectedGender || detected === expectedGender;
       
-      if (detected === 'male' || detected === 'female') {
-        if (expectedGender && detected !== expectedGender) {
-          // Gender mismatch - warn user but keep their registered gender
-          toast({
-            title: "Gender mismatch detected",
-            description: `AI detected ${detected}, but your profile gender remains ${expectedGender}. Contact support if this is incorrect.`,
-            variant: "destructive",
-          });
-          finalGender = expectedGender;
-        } else {
-          finalGender = detected;
-        }
+      if (!genderMatched) {
+        toast({
+          title: "Gender mismatch detected",
+          description: `AI detected ${detected}, but your registered gender is ${expectedGender}. Verification failed. Contact support if this is incorrect.`,
+          variant: "destructive",
+        });
+        setVerificationStatus('failed');
+        setDetectedGender(expectedGender || 'unknown');
+        setUploadingType(null);
+        return; // Do NOT upload or change verification status
       }
+
+      const finalGender = expectedGender || detected || 'unknown';
 
       // Verification passed
       setDetectedGender(finalGender);
       setVerificationStatus('verified');
-      onGenderVerified?.(finalGender);
 
       // Generate unique filename
       const fileExt = pendingSelfieFile.name.split(".").pop();
@@ -506,7 +505,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
           is_primary: photos.length === 0,
         });
 
-      // Update profile verification status and photo
+      // Update profile verification status and photo (gender NOT modified)
       if (expectedGender === 'male') {
         await supabase
           .from("male_profiles")
@@ -528,7 +527,7 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
 
       toast({
         title: "Selfie verified!",
-        description: `Gender verified as ${finalGender}`,
+        description: "Face verification successful ✓",
       });
 
       // Clear preview and reload photos
