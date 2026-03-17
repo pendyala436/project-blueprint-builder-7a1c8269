@@ -1530,6 +1530,24 @@ serve(async (req) => {
           .eq("chat_id", chat_id)
           .maybeSingle();
 
+        // SECURITY: Verify caller is a participant or admin
+        if (session && session.man_user_id !== authenticatedUserId && session.woman_user_id !== authenticatedUserId) {
+          const { data: adminRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', authenticatedUserId)
+            .eq('role', 'admin')
+            .maybeSingle();
+
+          if (!adminRole) {
+            console.log(`[SECURITY] User ${authenticatedUserId} attempted to end chat ${chat_id} they are not part of`);
+            return new Response(
+              JSON.stringify({ success: false, error: 'Not a participant in this chat session' }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+
         if (session && (session.status === "active" || session.status === "billing_paused")) {
           // FINAL BILLING: Bill remaining time since last heartbeat (whole minutes only, drop partial)
           const now = new Date();
