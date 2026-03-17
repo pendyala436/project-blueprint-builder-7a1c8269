@@ -81,11 +81,10 @@ const WelcomeTutorialScreen = () => {
   const isLastStep = currentStep === totalSteps - 1;
 
   useEffect(() => {
-    // Track viewed steps
-    if (!stepsViewed.includes(currentStep)) {
-      setStepsViewed(prev => [...prev, currentStep]);
-    }
-  }, [currentStep, stepsViewed]);
+    setStepsViewed(prev => 
+      prev.includes(currentStep) ? prev : [...prev, currentStep]
+    );
+  }, [currentStep]);
 
   const animateTransition = useCallback((direction: "left" | "right", newStep: number) => {
     setSlideDirection(direction);
