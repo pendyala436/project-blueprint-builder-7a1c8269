@@ -510,7 +510,7 @@ const DashboardScreen = () => {
     return "bg-online";
   };
 
-  const MAX_PARALLEL_CHATS = 3;
+  const MAX_PARALLEL_CHATS = settings?.maxParallelChats || 3;
   const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
