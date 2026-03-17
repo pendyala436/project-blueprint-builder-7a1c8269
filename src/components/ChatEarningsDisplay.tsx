@@ -39,6 +39,9 @@ const ChatEarningsDisplay = ({
   const loadEarningsData = useCallback(async () => {
     try {
       // First check earning eligibility from female_profiles or profiles
+      let eligible: boolean = false;
+      let badgeType: string | null = null;
+
       const { data: femaleProfile } = await supabase
         .from("female_profiles")
         .select("is_earning_eligible, earning_badge_type, is_indian, country")
@@ -46,8 +49,8 @@ const ChatEarningsDisplay = ({
         .maybeSingle();
 
       if (femaleProfile) {
-        setIsEarningEligible(femaleProfile.is_earning_eligible ?? false);
-        setEarningBadgeType(femaleProfile.earning_badge_type);
+        eligible = femaleProfile.is_earning_eligible ?? false;
+        badgeType = femaleProfile.earning_badge_type;
       } else {
         // Fallback to profiles table
         const { data: profile } = await supabase
@@ -57,10 +60,13 @@ const ChatEarningsDisplay = ({
           .maybeSingle();
         
         if (profile) {
-          setIsEarningEligible(profile.is_earning_eligible ?? false);
-          setEarningBadgeType(profile.earning_badge_type);
+          eligible = profile.is_earning_eligible ?? false;
+          badgeType = profile.earning_badge_type;
         }
       }
+
+      setIsEarningEligible(eligible);
+      setEarningBadgeType(badgeType);
 
       // Get admin-set earning rate for women
       const { data: pricing } = await supabase
@@ -73,8 +79,8 @@ const ChatEarningsDisplay = ({
         setEarningRate(pricing.women_earning_rate);
       }
 
-      // Only fetch earnings if eligible
-      if (isEarningEligible) {
+      // Only fetch earnings if eligible (use local variable, not stale state)
+      if (eligible) {
         // Get today's earnings
         const today = new Date().toISOString().split("T")[0];
         const { data: earnings } = await supabase
@@ -120,8 +126,8 @@ const ChatEarningsDisplay = ({
         const sessionDurationMs = Date.now() - new Date(currentSession.started_at).getTime();
         setElapsedSeconds(Math.floor(sessionDurationMs / 1000));
         
-        // Only calculate earnings if eligible
-        if (isEarningEligible) {
+        // Only calculate earnings if eligible (use local variable)
+        if (eligible) {
           const sessionMinutes = sessionDurationMs / (1000 * 60);
           const womenEarnings = sessionMinutes * (pricing?.women_earning_rate || 2);
           setCurrentSessionEarnings(womenEarnings);
@@ -131,7 +137,7 @@ const ChatEarningsDisplay = ({
       console.error("Error loading earnings:", error);
       toast.error("Earnings unavailable", { description: "Unable to load your earnings. Please refresh the page." });
     }
-  }, [currentUserId, chatPartnerId, isEarningEligible]);
+  }, [currentUserId, chatPartnerId]);
 
   // Track user activity
   const updateActivity = useCallback(() => {
