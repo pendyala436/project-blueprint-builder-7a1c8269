@@ -225,20 +225,9 @@ const ChatBillingDisplay = ({
             .limit(1),
         ]);
 
-        if (!messages || messages.length === 0) return;
-
         const now = Date.now();
-        let manLastMsg: number | null = null;
-        let womanLastMsg: number | null = null;
-
-        for (const msg of messages) {
-          if (msg.sender_id === currentUserId && !manLastMsg) {
-            manLastMsg = new Date(msg.created_at).getTime();
-          } else if (msg.sender_id === chatPartnerId && !womanLastMsg) {
-            womanLastMsg = new Date(msg.created_at).getTime();
-          }
-          if (manLastMsg && womanLastMsg) break;
-        }
+        const manLastMsg = manMsgs?.[0] ? new Date(manMsgs[0].created_at).getTime() : null;
+        const womanLastMsg = womanMsgs?.[0] ? new Date(womanMsgs[0].created_at).getTime() : null;
 
         setLastManMessageTime(manLastMsg);
         setLastWomanMessageTime(womanLastMsg);
@@ -264,7 +253,7 @@ const ChatBillingDisplay = ({
       } catch (error) {
         console.error("Error checking message activity:", error);
       }
-    }, 5000); // Check every 5 seconds
+    }, 30000); // Check every 30 seconds (reduced from 5s to minimize DB load)
   }, [currentUserId, chatPartnerId]);
 
   useEffect(() => {
