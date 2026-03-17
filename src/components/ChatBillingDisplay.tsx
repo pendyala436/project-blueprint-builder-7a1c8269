@@ -330,7 +330,7 @@ const ChatBillingDisplay = ({
 
         setBillingStarted(true);
 
-        if (data.end_chat || data.remaining_balance <= 0) {
+        if (data.remaining_balance !== undefined && data.remaining_balance <= 0 && !data.waiting_for_full_minute) {
           // Chat ended due to insufficient balance - AUTO DISCONNECT
           await endChatDueToBalance(chatId);
           setShowRechargeDialog(true);
