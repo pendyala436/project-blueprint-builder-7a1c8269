@@ -92,11 +92,10 @@ export const LanguageSelector = ({
   // Get languages - 1000+ languages available
   const allLanguages: ProfileLanguage[] = useMemo(() => {
     return languages.map(lang => ({
-    return sourceLanguages.map(lang => ({
       ...lang,
       isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
     }));
-  }, [userGender]);
+  }, []);
 
   // Filter languages based on search
   const filteredLanguages = useMemo(() => {
