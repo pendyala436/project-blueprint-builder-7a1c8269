@@ -15,7 +15,7 @@ functions/
 ├── reset-password/        # Password reset flow
 ├── seed-legal-documents/  # Seed legal docs
 ├── seed-super-users/      # Seed test users
-├── shift-scheduler/       # Work shift scheduling
+
 ├── translate-message/     # Real-time translation
 ├── trigger-backup/        # Database backup
 ├── verify-photo/          # Photo verification

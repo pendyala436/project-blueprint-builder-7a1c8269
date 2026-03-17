@@ -170,7 +170,7 @@ npx supabase db reset
 | `seed-legal-documents` | Seed legal documents | Service Role |
 | `seed-sample-users` | Seed sample users for testing | Service Role |
 | `seed-super-users` | Create admin users | Service Role |
-| `shift-scheduler` | Automated shift scheduling | Service Role |
+
 | `translate-message` | Real-time message translation | Yes |
 | `trigger-backup` | Database backup trigger | Service Role |
 | `verify-photo` | Photo verification with AI | Yes |
