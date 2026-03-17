@@ -23,21 +23,75 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
   const { user, isReady } = useAuthReady();
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
-  const checkedForUser = useRef<string | null>(null); // prevents re-check on token refresh
+  const checkedForUser = useRef<string | null>(null);
+  const REVALIDATE_INTERVAL_MS = 60_000; // Re-check role every 60s
 
+  // Core role-check logic extracted for reuse
+  const checkRole = async (userId: string, isRevalidation = false) => {
+    const MAX_RETRIES = isRevalidation ? 1 : 3;
+    let profileRes: any, femaleRes: any, adminRes: any;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const timeout = new Promise((_, rej) =>
+          setTimeout(() => rej(new Error('timeout')), 8000)
+        );
+        const queries = Promise.all([
+          supabase.from('profiles').select('gender').eq('user_id', userId).maybeSingle(),
+          supabase.from('female_profiles').select('user_id').eq('user_id', userId).maybeSingle(),
+          supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').maybeSingle(),
+        ]);
+        [profileRes, femaleRes, adminRes] = (await Promise.race([queries, timeout])) as any;
+        break;
+      } catch (retryErr) {
+        if (attempt < MAX_RETRIES) {
+          console.warn(`[ProtectedRoute] Role check attempt ${attempt} failed, retrying...`);
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+        } else {
+          throw retryErr;
+        }
+      }
+    }
+
+    const isAdmin = !!adminRes.data;
+    const isFemale = profileRes.data?.gender?.toLowerCase() === 'female' || !!femaleRes.data;
+    const isMale = !isFemale && !isAdmin;
+
+    let ok = false;
+    let to = '/';
+
+    switch (requiredRole) {
+      case 'admin':
+        ok = isAdmin;
+        if (!ok) to = isFemale ? '/women-dashboard' : '/dashboard';
+        break;
+      case 'female':
+        ok = isFemale && !isAdmin;
+        if (!ok) to = isAdmin ? '/admin' : '/dashboard';
+        break;
+      case 'male':
+        ok = isMale && !isAdmin;
+        if (!ok) to = isAdmin ? '/admin' : isFemale ? '/women-dashboard' : '/dashboard';
+        break;
+      case 'authenticated':
+        ok = true;
+        break;
+    }
+
+    return { ok, to };
+  };
+
+  // Initial role check on mount / user change
   useEffect(() => {
     if (!isReady) return;
 
-    // No user → login
     if (!user) {
       navigate('/', { replace: true });
       return;
     }
 
-    // Already checked for this exact user → skip
     if (checkedForUser.current === user.id) return;
 
-    // Only need authentication, no role check
     if (requiredRole === 'authenticated') {
       checkedForUser.current = user.id;
       setAuthorized(true);
@@ -45,61 +99,13 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       return;
     }
 
-    // ── Role check with retry (runs once per user) ──
     let mounted = true;
     setChecking(true);
 
     (async () => {
       try {
-        const MAX_RETRIES = 3;
-        let profileRes: any, femaleRes: any, adminRes: any;
-        
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-          try {
-            const timeout = new Promise((_, rej) =>
-              setTimeout(() => rej(new Error('timeout')), 8000)
-            );
-
-            const queries = Promise.all([
-              supabase.from('profiles').select('gender').eq('user_id', user.id).maybeSingle(),
-              supabase.from('female_profiles').select('user_id').eq('user_id', user.id).maybeSingle(),
-              supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin').maybeSingle(),
-            ]);
-
-            [profileRes, femaleRes, adminRes] = (await Promise.race([queries, timeout])) as any;
-            break; // success
-          } catch (retryErr) {
-            if (attempt < MAX_RETRIES) {
-              console.warn(`[ProtectedRoute] Role check attempt ${attempt} failed, retrying...`);
-              await new Promise(r => setTimeout(r, 1000 * attempt));
-            } else {
-              throw retryErr;
-            }
-          }
-        }
+        const { ok, to } = await checkRole(user.id);
         if (!mounted) return;
-
-        const isAdmin = !!adminRes.data;
-        const isFemale = profileRes.data?.gender?.toLowerCase() === 'female' || !!femaleRes.data;
-        const isMale = !isFemale && !isAdmin;
-
-        let ok = false;
-        let to = '/';
-
-        switch (requiredRole) {
-          case 'admin':
-            ok = isAdmin;
-            if (!ok) to = isFemale ? '/women-dashboard' : '/dashboard';
-            break;
-          case 'female':
-            ok = isFemale && !isAdmin;
-            if (!ok) to = isAdmin ? '/admin' : '/dashboard';
-            break;
-          case 'male':
-            ok = isMale && !isAdmin;
-            if (!ok) to = isAdmin ? '/admin' : isFemale ? '/women-dashboard' : '/dashboard';
-            break;
-        }
 
         if (ok) {
           checkedForUser.current = user.id;
@@ -109,7 +115,6 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
         }
       } catch (e) {
         console.error('[ProtectedRoute]', e);
-        // Don't toast here - ProtectedRoute handles redirect to login silently
         if (mounted) navigate('/', { replace: true });
       } finally {
         if (mounted) setChecking(false);
@@ -118,6 +123,28 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
 
     return () => { mounted = false; };
   }, [user?.id, isReady, requiredRole, navigate]);
+
+  // Periodic re-validation: detect revoked roles while tab is open
+  useEffect(() => {
+    if (!authorized || !user || requiredRole === 'authenticated') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const { ok, to } = await checkRole(user.id, true);
+        if (!ok) {
+          console.warn(`[ProtectedRoute] Role revoked for user ${user.id}, redirecting`);
+          checkedForUser.current = null;
+          setAuthorized(false);
+          toast.error('Your access permissions have changed. Redirecting...');
+          navigate(to, { replace: true });
+        }
+      } catch {
+        // Silently ignore transient network errors during revalidation
+      }
+    }, REVALIDATE_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [authorized, user?.id, requiredRole, navigate]);
 
   // Sign-out listener + back-button guard for admin routes
   useEffect(() => {
