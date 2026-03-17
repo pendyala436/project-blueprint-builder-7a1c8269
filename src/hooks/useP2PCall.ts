@@ -207,6 +207,7 @@ export const useP2PCall = ({
       callTimerRef.current = setInterval(() => {
         setState(prev => {
           const newDuration = prev.callDuration + 1;
+          callDurationRef.current = newDuration;
           return {
             ...prev,
             callDuration: newDuration,
