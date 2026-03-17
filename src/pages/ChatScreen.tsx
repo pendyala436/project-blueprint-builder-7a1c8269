@@ -1173,19 +1173,17 @@ const ChatScreen = () => {
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${currentUserId}/${chatId.current}/${Date.now()}.${fileExt}`;
+      const randomSuffix = crypto.randomUUID().slice(0, 8);
+      const storagePath = `${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
       
       const { data, error } = await supabase.storage
-        .from("profile-photos")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+        .from("chat-attachments")
+        .upload(storagePath, file, { cacheControl: "3600", upsert: false });
       
       if (error) throw error;
       
-      const { data: { publicUrl } } = supabase.storage
-        .from("profile-photos")
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
+      // Store the raw path — signed URLs are generated at display time
+      return `chat-attachment://${storagePath}`;
     } catch (error) {
       console.error("Upload error:", error);
         toast.error("Upload failed", { description: ERROR_MESSAGES.upload.failed });
