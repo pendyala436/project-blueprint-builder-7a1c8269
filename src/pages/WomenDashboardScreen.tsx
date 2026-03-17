@@ -1070,7 +1070,7 @@ const WomenDashboardScreen = () => {
 
   // ScrollableUserList extracted to top-level component to avoid Hooks violation
 
-  const UserCard = ({ user, isPremium = false }: { user: OnlineMan; isPremium?: boolean }) => (
+  const renderUserCard = (user: OnlineMan, isPremium = false) => (
     <Card 
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
