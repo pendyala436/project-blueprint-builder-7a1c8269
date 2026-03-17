@@ -448,7 +448,7 @@ export function usePWA() {
       };
 
       const subscription = await registration.pushManager.subscribe({
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
