@@ -540,7 +540,10 @@ const ChatScreen = () => {
    * 
    * @param partnerId - UUID of chat partner from URL
    */
+  const initializingRef = useRef(false);
   const initializeChat = async (partnerId: string) => {
+    if (initializingRef.current) return;
+    initializingRef.current = true;
     try {
       setIsLoading(true);
 
