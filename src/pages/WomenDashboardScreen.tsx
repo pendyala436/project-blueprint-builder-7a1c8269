@@ -1516,8 +1516,8 @@ const WomenDashboardScreen = () => {
 
           <Card className="p-3 bg-gradient-aurora border-success/30 shadow-glow">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-success/20">
-                <Globe2 className="w-4 h-4 text-success" />
+              <div className="p-1.5 rounded-lg bg-primary/20">
+                <Globe2 className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <p className="text-lg font-bold">{sameLanguageMen.length + otherLanguageMen.length}</p>
