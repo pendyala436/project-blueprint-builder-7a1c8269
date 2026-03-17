@@ -502,7 +502,7 @@ export function PrivateGroupCallWindow({
         <div className="flex items-center gap-2">
           {isLive && (
             <Badge variant="outline" className="text-white/90 border-white/30 bg-black/40 text-[11px] gap-1">
-              <Clock className="h-3 w-3" />
+              <Circle className="h-2 w-2 fill-red-500 text-red-500 animate-pulse" />
               {formatTime(remainingTime)}
             </Badge>
           )}
