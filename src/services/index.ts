@@ -10,9 +10,6 @@
  * - Backend: Supabase (database + edge functions)
  */
 
-export * from './auth.service';
-export * from './profile.service';
 export * from './wallet.service';
-export * from './chat.service';
-export * from './admin.service';
+export * from './cleanup.service';
 export * from './cleanup.service';
