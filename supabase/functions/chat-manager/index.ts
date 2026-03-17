@@ -1081,19 +1081,36 @@ serve(async (req) => {
         // Create chat session - sorted UUIDs joined with underscore (consistent format)
         const sortedIds = [String(man_user_id), String(woman_user_id)].sort();
         const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
-        const { data: session, error: sessionError } = await supabase
-          .from("active_chat_sessions")
-          .insert({
-            chat_id: chatId,
-            man_user_id,
-            woman_user_id,
-            rate_per_minute: ratePerMinute,
-            status: "active"
-          })
-          .select()
-          .single();
 
-        if (sessionError) throw sessionError;
+        // Check for existing active session with this chat ID
+        const { data: existingSession } = await supabase
+          .from("active_chat_sessions")
+          .select("*")
+          .eq("chat_id", chatId)
+          .eq("status", "active")
+          .maybeSingle();
+
+        let session;
+        if (existingSession) {
+          // Reuse existing active session
+          session = existingSession;
+          console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
+        } else {
+          const { data: newSession, error: sessionError } = await supabase
+            .from("active_chat_sessions")
+            .insert({
+              chat_id: chatId,
+              man_user_id,
+              woman_user_id,
+              rate_per_minute: ratePerMinute,
+              status: "active"
+            })
+            .select()
+            .single();
+
+          if (sessionError) throw sessionError;
+          session = newSession;
+        }
 
         // Update woman's availability
         const { data: currentAvailability } = await supabase
