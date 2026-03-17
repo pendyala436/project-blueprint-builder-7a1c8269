@@ -57,6 +57,7 @@ const ChatBillingDisplay = ({
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const messageCheckInterval = useRef<NodeJS.Timeout | null>(null);
   const sessionStarted = useRef(false);
+  const loadInProgress = useRef(false);
 
   const MESSAGE_INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
   const WARNING_THRESHOLD = 120000; // 2 minutes - show warning
@@ -65,6 +66,8 @@ const ChatBillingDisplay = ({
   const isWrongGender = userGender !== "male";
 
   const loadPricingAndWallet = useCallback(async () => {
+    if (loadInProgress.current) return;
+    loadInProgress.current = true;
     try {
       // Get current pricing
       const { data: pricing } = await supabase
@@ -132,6 +135,8 @@ const ChatBillingDisplay = ({
     } catch (error) {
       console.error("Error loading billing info:", error);
       toast.error("Billing info unavailable", { description: "Unable to load billing details. Please refresh." });
+    } finally {
+      loadInProgress.current = false;
     }
   }, [currentUserId, chatPartnerId]);
 
