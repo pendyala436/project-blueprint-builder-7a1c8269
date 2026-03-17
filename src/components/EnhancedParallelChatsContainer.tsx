@@ -215,8 +215,8 @@ const EnhancedParallelChatsContainer = ({
     
     loadActiveChats();
 
-    // User-scoped channel name for efficient routing
-    const channelName = `chats-${currentUserId}-${Date.now()}`;
+    // Static channel name — must NOT include Date.now() or other dynamic values
+    const channelName = `chats-${currentUserId}`;
     const column = userGender === "male" ? "man_user_id" : "woman_user_id";
 
     const channel = supabase
