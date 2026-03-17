@@ -105,8 +105,10 @@ const RegistrationCompleteScreen = () => {
         .eq("user_id", user.id);
 
       // Registration finalized successfully
+      setIsFinalized(true);
     } catch (error) {
-      // Error finalizing registration - silent fail, not critical
+      // Error finalizing registration - still allow navigation with fallback
+      setIsFinalized(true);
     }
   };
 
