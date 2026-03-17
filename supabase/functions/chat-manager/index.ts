@@ -1326,6 +1326,16 @@ serve(async (req) => {
         const lastActivity = new Date(session.last_activity_at);
         const secondsElapsed = (now.getTime() - lastActivity.getTime()) / 1000;
 
+        // Check if man is a super user by email - they don't get charged
+        const isSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
+
+        // Fetch man's wallet early so we can return balance in all responses
+        const { data: wallet } = await supabase
+          .from("wallets")
+          .select("balance, id")
+          .eq("user_id", session.man_user_id)
+          .maybeSingle();
+
         // MINUTE-WISE BILLING: Only bill when >= 60 seconds have elapsed
         // This prevents fractional/incremental entries and ensures exactly 1 entry per minute
         if (secondsElapsed < 60) {
@@ -1371,7 +1381,7 @@ serve(async (req) => {
               minutes_elapsed: 0,
               men_charged: 0,
               women_earned: 0,
-              remaining_balance: 0,
+              remaining_balance: wallet?.balance ?? 0,
               duplicate_skipped: true
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1381,17 +1391,6 @@ serve(async (req) => {
         // Calculate charges for whole minutes
         const menCharge = wholeMinutes * session.rate_per_minute;
         const newTotalMinutes = session.total_minutes + wholeMinutes;
-        const newTotalEarned = session.total_earned + menCharge;
-
-        // Check if man is a super user by email - they don't get charged
-        const isSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
-
-        // Check man's wallet balance (only for non-super users)
-        const { data: wallet } = await supabase
-          .from("wallets")
-          .select("balance, id")
-          .eq("user_id", session.man_user_id)
-          .maybeSingle();
         
         if (!isSuperUser && (!wallet || wallet.balance < menCharge)) {
           // End chat due to insufficient balance - auto-disconnect
