@@ -157,7 +157,7 @@ const App = () => (
                 </Routes>
               </Suspense>
               <Toaster />
-              <ShadToaster />
+              
               <NetworkStatusIndicator />
             </AutoLogoutWrapper>
           </SecurityProvider>
