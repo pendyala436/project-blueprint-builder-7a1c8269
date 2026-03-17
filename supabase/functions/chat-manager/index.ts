@@ -1415,6 +1415,7 @@ serve(async (req) => {
           const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
           
           if (womenEarnings > 0) {
+            const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
             await Promise.all([
               supabase.from("women_earnings").insert({
                 user_id: session.woman_user_id,
@@ -1423,23 +1424,8 @@ serve(async (req) => {
                 earning_type: "chat",
                 description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
               }),
-              supabase.from("wallets").update({
-                balance: supabase.rpc ? undefined : undefined // handled below
-              }).eq("user_id", "SKIP") // placeholder — actual update below
+              ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id)] : [])
             ]);
-            // Credit woman's wallet balance
-            await supabase.rpc('increment_wallet_balance', {
-              p_user_id: session.woman_user_id,
-              p_amount: womenEarnings
-            }).then(async ({ error }) => {
-              if (error) {
-                // Fallback: direct update if RPC doesn't exist
-                const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
-                if (wWallet) {
-                  await supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id);
-                }
-              }
-            });
           }
 
           await supabase
