@@ -355,9 +355,8 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
       // Get language from the profile data itself (stored in primary_language/preferred_language)
       // Each profile type has its own language stored independently
       if (data && data.primary_language) {
-        // Use gender-specific language list
-        const languageList = data.gender === 'female' ? womenLanguages : menLanguages;
-        const foundLang = languageList.find(l => l.name === data.primary_language);
+        // Use master language list
+        const foundLang = languages.find(l => l.name === data.primary_language);
         if (foundLang) {
           const langData = {
             language_name: foundLang.name,
