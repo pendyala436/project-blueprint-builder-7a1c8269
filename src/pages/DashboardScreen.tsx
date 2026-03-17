@@ -1555,7 +1555,7 @@ const DashboardScreen = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-1 mt-0.5">
-                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info/20 text-info rounded-full">
+                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
                                 {woman.primary_language}
                               </span>
                               <span className="text-[10px] text-muted-foreground">→</span>
