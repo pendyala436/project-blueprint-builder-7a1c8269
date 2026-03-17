@@ -1641,7 +1641,7 @@ const WomenDashboardScreen = () => {
                       <ScrollableUserList>
                         {sameLanguageMen.filter(m => !m.hasRecharged).map((user, index) => (
                           <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            <UserCard user={user} isPremium={false} />
+                            {renderUserCard(user, false)}
                           </div>
                         ))}
                       </ScrollableUserList>
