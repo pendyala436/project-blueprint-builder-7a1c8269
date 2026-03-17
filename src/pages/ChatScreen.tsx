@@ -951,12 +951,36 @@ const ChatScreen = () => {
    */
   const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
     try {
-      // Translation removed - return message as-is
-      return { translatedMessage: message, isTranslated: false, detectedLanguage: sourceLanguage || currentUserLanguage, translationPair: "" };
+      // Skip translation if same language
+      const src = (sourceLanguage || currentUserLanguage || "english").toLowerCase();
+      const tgt = targetLanguage.toLowerCase();
+      if (src === tgt) {
+        return { translatedMessage: message, isTranslated: false, detectedLanguage: src, translationPair: "" };
+      }
+
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "translate",
+          message,
+          source_language: src,
+          target_language: tgt,
+        },
+      });
+
+      if (error || !data?.translated_message) {
+        // Fallback: return original message untranslated
+        return { translatedMessage: message, isTranslated: false, detectedLanguage: src, translationPair: "" };
+      }
+
+      return {
+        translatedMessage: data.translated_message,
+        isTranslated: true,
+        detectedLanguage: data.detected_language || src,
+        translationPair: `${src} → ${tgt}`,
+      };
     } catch (error) {
       console.error("Translation error:", error);
-        toast.error("Translation failed", { description: ERROR_MESSAGES.chat?.translationFailed || "Translation service unavailable" });
-      // Return original message on error
+      // Return original message on error — never block sending
       return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown", translationPair: "" };
     }
   };
