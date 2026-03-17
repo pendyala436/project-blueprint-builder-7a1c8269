@@ -299,7 +299,7 @@ const DraggableMiniChatWindow = ({
       const emoji = fileType === "image" ? "📷" : fileType === "video" ? "🎬" : "📎";
       const { error: messageError } = await supabase.from("chat_messages").insert({
         chat_id: chatId, sender_id: currentUserId, receiver_id: partnerId,
-        message: `${emoji} [${fileType.toUpperCase()}:${publicUrl}] ${file.name}`,
+        message: `${emoji} [${fileType.toUpperCase()}:${messageUrl}] ${file.name}`,
       });
       if (messageError) throw messageError;
       toast({ title: "File sent", description: `${file.name} has been sent` });
