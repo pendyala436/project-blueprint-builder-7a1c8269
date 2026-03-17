@@ -148,61 +148,62 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
           return;
         }
 
-        // Get detected gender - warn on mismatch but do NOT auto-change
+        // Get detected gender - warn on mismatch, block verification
         const detected = verifyData.detectedGender;
-        let gender = expectedGender || 'unknown';
+        const genderMatched = !expectedGender || detected === expectedGender;
         
-        if (detected === 'male' || detected === 'female') {
-          if (expectedGender && detected !== expectedGender) {
-            // Gender mismatch - warn user but keep their registered gender
-            toast({
-              title: "Gender mismatch detected",
-              description: `AI detected ${detected}, but your profile gender remains ${expectedGender}. Contact support if this is incorrect.`,
-              variant: "destructive",
-            });
-            gender = expectedGender;
-          } else {
-            gender = detected;
-          }
+        if (!genderMatched) {
+          // Gender mismatch - reject verification entirely
+          toast({
+            title: "Gender mismatch detected",
+            description: `AI detected ${detected}, but your registered gender is ${expectedGender}. Verification failed. Contact support if this is incorrect.`,
+            variant: "destructive",
+          });
+          setVerificationStatus('failed');
+          setDetectedGender(expectedGender || 'unknown');
+          setUploadingType(null);
+          return; // Do NOT proceed with upload or status changes
         }
         
-        setDetectedGender(gender);
+        setDetectedGender(detected || expectedGender || 'unknown');
         setVerificationStatus(verifyData.verified ? 'verified' : 'failed');
 
-        // Update only the specific gender profile (not the main profiles table for gender)
-        if (expectedGender === 'male') {
-          const { data: existingMale } = await supabase
-            .from("male_profiles")
-            .select("id")
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          if (existingMale) {
-            await supabase
+        // Only update verification status if gender matched and face verified
+        if (verifyData.verified) {
+          if (expectedGender === 'male') {
+            const { data: existingMale } = await supabase
               .from("male_profiles")
-              .update({ is_verified: verifyData.verified })
-              .eq("user_id", userId);
-          }
-        } else if (expectedGender === 'female') {
-          const { data: existingFemale } = await supabase
-            .from("female_profiles")
-            .select("id")
-            .eq("user_id", userId)
-            .maybeSingle();
+              .select("id")
+              .eq("user_id", userId)
+              .maybeSingle();
 
-          if (existingFemale) {
-            await supabase
+            if (existingMale) {
+              await supabase
+                .from("male_profiles")
+                .update({ is_verified: true })
+                .eq("user_id", userId);
+            }
+          } else if (expectedGender === 'female') {
+            const { data: existingFemale } = await supabase
               .from("female_profiles")
-              .update({ is_verified: verifyData.verified })
-              .eq("user_id", userId);
-          }
-        }
+              .select("id")
+              .eq("user_id", userId)
+              .maybeSingle();
 
-        onGenderVerified?.(gender);
+            if (existingFemale) {
+              await supabase
+                .from("female_profiles")
+                .update({ is_verified: true })
+                .eq("user_id", userId);
+            }
+          }
+
+          onGenderVerified?.(expectedGender || detected || 'unknown');
+        }
 
         toast({
           title: verifyData.verified ? "Verification successful" : "Verification complete",
-          description: `Gender verified: ${gender}${verifyData.verified ? " ✓" : ""}`,
+          description: `Face verified${verifyData.verified ? " ✓" : ""}`,
         });
       }
 
