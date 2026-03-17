@@ -161,5 +161,6 @@ export const ACCOUNT_STATUS = {
 export const APPROVAL_STATUS = {
   PENDING: 'pending',
   APPROVED: 'approved',
-  REJECTED: 'rejected',
+  DISAPPROVED: 'disapproved',
+  INACTIVE: 'inactive',
 } as const;
