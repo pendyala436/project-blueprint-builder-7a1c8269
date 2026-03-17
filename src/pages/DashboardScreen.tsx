@@ -682,9 +682,9 @@ const DashboardScreen = () => {
             description: t('findingAnotherUser', 'Finding another available user...'),
           });
 
-          const nextWoman = await initiateReconnect(womanUserId);
+          const nextWoman = _reconnectDepth < 2 ? await initiateReconnect(womanUserId) : null;
           if (nextWoman) {
-            await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
+            await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
           } else {
             toast({
               title: t('noOneAvailable', 'No One Available'),
