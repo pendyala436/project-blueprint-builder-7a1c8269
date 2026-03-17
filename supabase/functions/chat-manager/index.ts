@@ -1415,15 +1415,17 @@ serve(async (req) => {
           const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
           
           if (womenEarnings > 0) {
-            await supabase
-              .from("women_earnings")
-              .insert({
+            const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
+            await Promise.all([
+              supabase.from("women_earnings").insert({
                 user_id: session.woman_user_id,
                 chat_session_id: session.id,
                 amount: womenEarnings,
                 earning_type: "chat",
                 description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
-              });
+              }),
+              ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id)] : [])
+            ]);
           }
 
           await supabase
@@ -1484,6 +1486,7 @@ serve(async (req) => {
         const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
         
         if (womenEarnings > 0) {
+          const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
           await Promise.all([
             supabase.from("women_earnings").insert({
               user_id: session.woman_user_id,
@@ -1502,7 +1505,9 @@ serve(async (req) => {
               rate_per_minute: womenEarningRate,
               duration_seconds: wholeMinutes * 60,
               description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
-            })
+            }),
+            // Credit woman's wallet balance
+            ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id)] : [])
           ]);
         }
 
@@ -1636,6 +1641,7 @@ serve(async (req) => {
 
               // Credit only Indian woman's earnings
               if (finalWomenEarning > 0) {
+                const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
                 await Promise.all([
                   supabase.from("women_earnings").insert({
                     user_id: session.woman_user_id,
@@ -1654,7 +1660,9 @@ serve(async (req) => {
                     rate_per_minute: finalWomenRate,
                     duration_seconds: wholeMinutesRemaining * 60,
                     description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
-                  })
+                  }),
+                  // Credit woman's wallet balance
+                  ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + finalWomenEarning }).eq("id", wWallet.id)] : [])
                 ]);
               }
 
