@@ -1078,8 +1078,9 @@ serve(async (req) => {
         const ratePerMinute = pricing?.rate_per_minute || 4.00;
         const womenEarningRate = pricing?.women_earning_rate || 2.00;
 
-        // Create chat session
-        const chatId = `chat_${man_user_id}_${woman_user_id}_${Date.now()}`;
+        // Create chat session - sorted UUIDs joined with underscore (consistent format)
+        const sortedIds = [String(man_user_id), String(woman_user_id)].sort();
+        const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
         const { data: session, error: sessionError } = await supabase
           .from("active_chat_sessions")
           .insert({
