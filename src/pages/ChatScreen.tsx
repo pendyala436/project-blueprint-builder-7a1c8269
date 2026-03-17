@@ -752,31 +752,24 @@ const ChatScreen = () => {
     setActionLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from("user_friends")
-        .insert({
-          user_id: currentUserId,
-          friend_id: chatPartner.userId,
-          status: "accepted",
-          created_by: currentUserId
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('send_friend_request', {
+        p_target_user_id: chatPartner.userId,
+      });
 
       if (error) throw error;
 
-      setIsFriend(true);
-      setFriendshipId(data.id);
       toast({
-        title: "Friend Added",
-        description: `${chatPartner.fullName} is now your friend!`,
+        title: "Friend Request Sent",
+        description: `A friend request has been sent to ${chatPartner.fullName}.`,
       });
     } catch (error: any) {
-      console.error("Error adding friend:", error);
-      toast.error("Could not add friend", { description: "Unable to add this person as a friend. Please try again." });
+      console.error("Error sending friend request:", error);
+      const msg = error?.message?.includes('already')
+        ? "A friend request already exists."
+        : "Failed to send friend request";
       toast({
         title: "Error",
-        description: "Failed to add friend",
+        description: msg,
         variant: "destructive",
       });
     } finally {
