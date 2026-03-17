@@ -135,6 +135,47 @@ interface ChatPartner {
  * - Real-time updates
  * - Automatic translation
  */
+/** Renders chat attachment with signed URL resolution for private bucket */
+const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: boolean; resolveUrl: (u: string) => Promise<string> }) => {
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    resolveUrl(url).then((u) => { if (!cancelled) setResolvedUrl(u); });
+    return () => { cancelled = true; };
+  }, [url, resolveUrl]);
+
+  if (!resolvedUrl) {
+    return <div className={`rounded-2xl overflow-hidden px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}>
+      <span className="text-sm text-muted-foreground">Loading attachment…</span>
+    </div>;
+  }
+
+  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+  return (
+    <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
+      {isImage ? (
+        <img
+          src={resolvedUrl}
+          alt="Attachment"
+          className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => window.open(resolvedUrl, "_blank")}
+        />
+      ) : (
+        <a
+          href={resolvedUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-2 px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}
+        >
+          <FileText className="w-5 h-5" />
+          <span className="text-sm underline">Download File</span>
+        </a>
+      )}
+    </div>
+  );
+};
+
 const ChatScreen = () => {
   // ============= HOOKS INITIALIZATION =============
   
@@ -1173,19 +1214,17 @@ const ChatScreen = () => {
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${currentUserId}/${chatId.current}/${Date.now()}.${fileExt}`;
+      const randomSuffix = crypto.randomUUID().slice(0, 8);
+      const storagePath = `${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
       
       const { data, error } = await supabase.storage
-        .from("profile-photos")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
+        .from("chat-attachments")
+        .upload(storagePath, file, { cacheControl: "3600", upsert: false });
       
       if (error) throw error;
       
-      const { data: { publicUrl } } = supabase.storage
-        .from("profile-photos")
-        .getPublicUrl(fileName);
-      
-      return publicUrl;
+      // Store the raw path — signed URLs are generated at display time
+      return `chat-attachment://${storagePath}`;
     } catch (error) {
       console.error("Upload error:", error);
         toast.error("Upload failed", { description: ERROR_MESSAGES.upload.failed });
@@ -1265,6 +1304,33 @@ const ChatScreen = () => {
     }
     return { text: message };
   };
+
+  // Signed URL cache for chat attachments
+  const signedUrlCache = useRef<Map<string, string>>(new Map());
+
+  /**
+   * Resolve attachment URL — generates signed URL for private bucket paths,
+   * passes through legacy public URLs unchanged.
+   */
+  const resolveAttachmentUrl = useCallback(async (url: string): Promise<string> => {
+    if (!url.startsWith('chat-attachment://')) return url;
+
+    const cached = signedUrlCache.current.get(url);
+    if (cached) return cached;
+
+    const storagePath = url.replace('chat-attachment://', '');
+    const { data, error } = await supabase.storage
+      .from('chat-attachments')
+      .createSignedUrl(storagePath, 3600); // 1 hour
+
+    if (error || !data?.signedUrl) {
+      console.warn('[Chat] Failed to generate signed URL:', error?.message);
+      return url;
+    }
+
+    signedUrlCache.current.set(url, data.signedUrl);
+    return data.signedUrl;
+  }, []);
 
   /**
    * formatTime Function
@@ -1705,26 +1771,7 @@ const ChatScreen = () => {
                         
                         {/* Attachment preview */}
                         {attachmentUrl && (
-                          <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
-                            {attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                              <img 
-                                src={attachmentUrl} 
-                                alt="Attachment" 
-                                className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(attachmentUrl, "_blank")}
-                              />
-                            ) : (
-                              <a 
-                                href={attachmentUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className={`flex items-center gap-2 px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}
-                              >
-                                <FileText className="w-5 h-5" />
-                                <span className="text-sm underline">Download File</span>
-                              </a>
-                            )}
-                          </div>
+                          <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
                         )}
                         
                         {/* Primary message bubble - Native language (large) */}
