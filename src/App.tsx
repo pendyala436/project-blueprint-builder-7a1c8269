@@ -9,6 +9,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import SecurityProvider from "@/components/SecurityProvider";
 import { AutoLogoutWrapper } from "@/components/AutoLogoutWrapper";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
+import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -88,6 +89,7 @@ const App = () => (
       <ErrorBoundary>
         <BrowserRouter>
           <SecurityProvider>
+            <UserActivityProvider>
             <AutoLogoutWrapper>
               <Suspense fallback={<Loading />}>
                 <Routes>
@@ -160,6 +162,7 @@ const App = () => (
               
               <NetworkStatusIndicator />
             </AutoLogoutWrapper>
+            </UserActivityProvider>
           </SecurityProvider>
         </BrowserRouter>
       </ErrorBoundary>
