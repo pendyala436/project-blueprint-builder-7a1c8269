@@ -1671,7 +1671,7 @@ serve(async (req) => {
                     description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
                   }),
                   // Credit woman's wallet balance
-                  ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + finalWomenEarning }).eq("id", wWallet.id)] : [])
+                  ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: finalWomenEarning })] : [])
                 ]);
               }
 
