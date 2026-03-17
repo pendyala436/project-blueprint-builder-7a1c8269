@@ -146,6 +146,15 @@ const PhotoUploadScreen = () => {
     }
   }, [stream, showCamera]);
 
+  // Stop camera on unmount to prevent lingering stream
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
   const stopCamera = () => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
