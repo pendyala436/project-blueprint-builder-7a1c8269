@@ -76,6 +76,7 @@ const RegistrationCompleteScreen = () => {
 
   const [userGender, setUserGender] = useState<string | null>(null);
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+  const [isFinalized, setIsFinalized] = useState(false);
 
   const finalizeRegistration = async () => {
     try {
@@ -104,12 +105,15 @@ const RegistrationCompleteScreen = () => {
         .eq("user_id", user.id);
 
       // Registration finalized successfully
+      setIsFinalized(true);
     } catch (error) {
-      // Error finalizing registration - silent fail, not critical
+      // Error finalizing registration - still allow navigation with fallback
+      setIsFinalized(true);
     }
   };
 
   const handleGoToDashboard = () => {
+    if (!isFinalized) return;
     toast({
       title: "Welcome!",
       description: "Redirecting to your dashboard...",
@@ -244,6 +248,7 @@ const RegistrationCompleteScreen = () => {
           >
             <Button
               onClick={handleGoToDashboard}
+              disabled={!isFinalized}
               className="w-full h-14 text-lg font-medium animate-bounce-subtle"
               variant="aurora"
             >
