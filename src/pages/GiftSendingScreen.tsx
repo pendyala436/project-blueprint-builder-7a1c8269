@@ -88,12 +88,11 @@ const GiftSendingScreen = () => {
       if (session?.user) {
         const user = session.user;
         setCurrentUserId(user.id);
-        const { data: wallet } = await supabase
-          .from("users_wallet")
-          .select("balance")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setWalletBalance(wallet?.balance || 0);
+        const { data: rpcData } = await supabase.rpc('get_men_wallet_balance', {
+          p_user_id: user.id
+        });
+        const balanceData = rpcData as Record<string, number> | null;
+        setWalletBalance(balanceData?.balance !== undefined ? Number(balanceData.balance) : 0);
       }
 
       // Load receiver profile if receiverId provided
