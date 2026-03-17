@@ -357,6 +357,22 @@ const MatchDiscoveryScreen = () => {
         profilesQuery = profilesQuery.gte("last_active_at", fiveMinutesAgo.toISOString());
       }
 
+      // Age range filter (server-side)
+      if (filters.ageRange[0] > 18) {
+        profilesQuery = profilesQuery.gte("age", filters.ageRange[0]);
+      }
+      if (filters.ageRange[1] < 60) {
+        profilesQuery = profilesQuery.lte("age", filters.ageRange[1]);
+      }
+
+      // Height range filter (server-side)
+      if (filters.heightRange[0] > 140) {
+        profilesQuery = profilesQuery.gte("height_cm", filters.heightRange[0]);
+      }
+      if (filters.heightRange[1] < 200) {
+        profilesQuery = profilesQuery.lte("height_cm", filters.heightRange[1]);
+      }
+
       // Execute the query with a limit to prevent unbounded fetches
       const { data: profiles } = await profilesQuery.limit(100);
 
@@ -402,16 +418,7 @@ const MatchDiscoveryScreen = () => {
 
       // Pre-filter profiles before processing
       const eligibleProfiles = profiles
-        .filter(p => !matchedUserIds.has(p.user_id))
-        .filter(p => {
-          if (p.age) {
-            if (p.age < filters.ageRange[0] || p.age > filters.ageRange[1]) return false;
-          }
-          if (p.height_cm) {
-            if (p.height_cm < filters.heightRange[0] || p.height_cm > filters.heightRange[1]) return false;
-          }
-          return true;
-        });
+        .filter(p => !matchedUserIds.has(p.user_id));
 
       // Batch-fetch all languages in ONE query instead of N+1
       const eligibleUserIds = eligibleProfiles.map(p => p.user_id);
