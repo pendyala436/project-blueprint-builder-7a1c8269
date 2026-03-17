@@ -1793,7 +1793,7 @@ const ChatScreen = () => {
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
                             
                             {/* MANDATORY English meaning (small letters) - for ALL messages */}
-                            {message.originalEnglish && message.originalEnglish !== displayText && (
+                            {showTranslations && message.originalEnglish && message.originalEnglish !== displayText && (
                               <p className={`text-xs mt-1 pt-1 border-t flex items-center gap-1 ${
                                 isMine 
                                   ? "border-primary-foreground/20 text-primary-foreground/70" 
@@ -1801,6 +1801,13 @@ const ChatScreen = () => {
                               }`}>
                                 <Languages className="w-3 h-3 flex-shrink-0" />
                                 <span>🌐 {message.originalEnglish}</span>
+                              </p>
+                            )}
+                            {/* Show translated message subtitle when translations are enabled */}
+                            {showTranslations && !isMine && message.isTranslated && message.translatedMessage && message.translatedMessage !== displayText && (
+                              <p className={`text-xs mt-1 pt-1 border-t flex items-center gap-1 border-border/50 text-muted-foreground`}>
+                                <Languages className="w-3 h-3 flex-shrink-0" />
+                                <span>Original: {message.message}</span>
                               </p>
                             )}
                           </div>
