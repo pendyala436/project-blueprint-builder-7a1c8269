@@ -499,7 +499,7 @@ const WomenDashboardScreen = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, currentWomanLanguage, currentWomanCountry]);
+  }, [currentUserId]); // stable — throttledFetchOnlineMen reads from refs; language handlers fetch directly
 
   const loadActiveChatCount = async () => {
     if (!currentUserId) return;
