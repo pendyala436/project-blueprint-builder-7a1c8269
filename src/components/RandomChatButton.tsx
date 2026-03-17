@@ -93,6 +93,7 @@ export const RandomChatButton = ({
         onInsufficientBalance?.();
         return;
       }
+    }
 
     setIsSearching(true);
     setSearchDialogOpen(true);
