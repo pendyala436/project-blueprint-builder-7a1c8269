@@ -82,7 +82,7 @@
   "protocol_handlers": [
     {
       "protocol": "web+meowmeow",
-      "url": "/handle-protocol?url=%s"
+      "url": "/dashboard?url=%s"
     }
   ],
   "handle_links": "preferred",
