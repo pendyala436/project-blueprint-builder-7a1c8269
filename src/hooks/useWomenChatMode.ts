@@ -134,13 +134,13 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
           setFreeMinutesLimit(isIndian ? (Number(data.free_minutes_limit) || 60) : Infinity);
         } else {
           // Create default record - Indian women default to paid, non-Indian to free
-          await supabase.from("women_chat_modes").insert({
+          await supabase.from("women_chat_modes").upsert({
             user_id: userId,
             current_mode: defaultMode,
             free_minutes_used_today: 0,
             free_minutes_limit: 60,
             last_free_reset_date: new Date().toISOString().split("T")[0]
-          });
+          }, { onConflict: "user_id", ignoreDuplicates: true });
           setCurrentMode(defaultMode);
         }
       } catch (err) {
