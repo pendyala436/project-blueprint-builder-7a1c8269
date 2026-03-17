@@ -1078,21 +1078,39 @@ serve(async (req) => {
         const ratePerMinute = pricing?.rate_per_minute || 4.00;
         const womenEarningRate = pricing?.women_earning_rate || 2.00;
 
-        // Create chat session
-        const chatId = `chat_${man_user_id}_${woman_user_id}_${Date.now()}`;
-        const { data: session, error: sessionError } = await supabase
-          .from("active_chat_sessions")
-          .insert({
-            chat_id: chatId,
-            man_user_id,
-            woman_user_id,
-            rate_per_minute: ratePerMinute,
-            status: "active"
-          })
-          .select()
-          .single();
+        // Create chat session - sorted UUIDs joined with underscore (consistent format)
+        const sortedIds = [String(man_user_id), String(woman_user_id)].sort();
+        const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
 
-        if (sessionError) throw sessionError;
+        // Check for existing active session with this chat ID
+        const { data: existingSession } = await supabase
+          .from("active_chat_sessions")
+          .select("*")
+          .eq("chat_id", chatId)
+          .eq("status", "active")
+          .maybeSingle();
+
+        let session;
+        if (existingSession) {
+          // Reuse existing active session
+          session = existingSession;
+          console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
+        } else {
+          const { data: newSession, error: sessionError } = await supabase
+            .from("active_chat_sessions")
+            .insert({
+              chat_id: chatId,
+              man_user_id,
+              woman_user_id,
+              rate_per_minute: ratePerMinute,
+              status: "active"
+            })
+            .select()
+            .single();
+
+          if (sessionError) throw sessionError;
+          session = newSession;
+        }
 
         // Update woman's availability
         const { data: currentAvailability } = await supabase
@@ -1660,8 +1678,9 @@ serve(async (req) => {
         // End current session
         await endChatSession(supabase, chat_id, "transferred", session);
 
-        // Start new session with new woman
-        const newChatId = `chat_${session.man_user_id}_${newWomanId}_${Date.now()}`;
+        // Start new session with new woman - sorted UUIDs joined with underscore
+        const sortedTransferIds = [String(session.man_user_id), String(newWomanId)].sort();
+        const newChatId = `${sortedTransferIds[0]}_${sortedTransferIds[1]}`;
         await supabase
           .from("active_chat_sessions")
           .insert({
