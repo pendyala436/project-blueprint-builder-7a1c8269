@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useRegistrationGuard } from "@/hooks/useRegistrationGuard";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ArrowLeft, User, Calendar, Heart, Mail, Phone } from "lucide-react";
@@ -58,6 +59,8 @@ const BasicInfoScreen = () => {
     gender?: boolean;
     phone?: boolean;
   }>({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
 
   // Trigger shake animation
   const triggerShake = (field: string) => {
@@ -65,13 +68,53 @@ const BasicInfoScreen = () => {
     setTimeout(() => setShakeField(null), 500);
   };
 
-  // Validate email
+  // Validate email (format only)
   const validateEmail = (value: string) => {
     if (!value.trim()) return "Email is required";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(value.trim())) return "Please enter a valid email";
     return undefined;
   };
+
+  // Check email uniqueness against auth
+  const checkEmailUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
+    const formatError = validateEmail(value);
+    if (formatError) return formatError;
+    setCheckingEmail(true);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("email", value.trim().toLowerCase())
+        .maybeSingle();
+      if (data) return "This email is already registered. Please log in instead.";
+      return undefined;
+    } catch {
+      return undefined; // Don't block registration on network errors
+    } finally {
+      setCheckingEmail(false);
+    }
+  }, []);
+
+  // Check phone uniqueness
+  const checkPhoneUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
+    const formatError = validatePhone(value);
+    if (formatError) return formatError;
+    setCheckingPhone(true);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("phone", value.trim())
+        .maybeSingle();
+      if (data) return "This phone number is already registered.";
+      return undefined;
+    } catch {
+      return undefined;
+    } finally {
+      setCheckingPhone(false);
+    }
+  }, []);
 
   // Validate full name
   const validateFullName = (value: string) => {
@@ -97,7 +140,7 @@ const BasicInfoScreen = () => {
     return undefined;
   };
 
-  // Validate phone
+  // Validate phone (format only)
   const validatePhone = (value: string) => {
     if (!value.trim()) return "Phone number is required";
     const result = phoneSchema.safeParse(value.trim());
@@ -106,12 +149,12 @@ const BasicInfoScreen = () => {
   };
 
   // Handle field blur
-  const handleBlur = (field: "email" | "fullName" | "dob" | "gender" | "phone") => {
+  const handleBlur = async (field: "email" | "fullName" | "dob" | "gender" | "phone") => {
     setTouched((prev) => ({ ...prev, [field]: true }));
     
     let error: string | undefined;
     if (field === "email") {
-      error = validateEmail(email);
+      error = await checkEmailUniqueness(email);
     } else if (field === "fullName") {
       error = validateFullName(fullName);
     } else if (field === "dob") {
@@ -119,7 +162,7 @@ const BasicInfoScreen = () => {
     } else if (field === "gender") {
       error = validateGender(gender);
     } else if (field === "phone") {
-      error = validatePhone(phone);
+      error = await checkPhoneUniqueness(phone);
     }
 
     if (error) {
@@ -137,39 +180,66 @@ const BasicInfoScreen = () => {
     return age;
   };
 
-  const handleNext = () => {
-    // Validate all fields
-    const emailError = validateEmail(email);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNext = async () => {
+    // Validate all format rules first
+    const emailFormatError = validateEmail(email);
     const fullNameError = validateFullName(fullName);
     const dobError = validateDob(dob);
     const genderError = validateGender(gender);
-    const phoneError = validatePhone(phone);
+    const phoneFormatError = validatePhone(phone);
 
-    const newErrors = {
-      email: emailError,
+    const formatErrors = {
+      email: emailFormatError,
       fullName: fullNameError,
       dob: dobError,
       gender: genderError,
-      phone: phoneError,
+      phone: phoneFormatError,
     };
 
-    setErrors(newErrors);
+    setErrors(formatErrors);
     setTouched({ email: true, fullName: true, dob: true, gender: true, phone: true });
 
-    // Shake invalid fields
-    if (emailError) triggerShake("email");
+    if (emailFormatError) triggerShake("email");
     else if (fullNameError) triggerShake("fullName");
-    else if (phoneError) triggerShake("phone");
+    else if (phoneFormatError) triggerShake("phone");
     else if (dobError) triggerShake("dob");
     else if (genderError) triggerShake("gender");
 
-    if (emailError || fullNameError || dobError || genderError || phoneError) {
+    if (emailFormatError || fullNameError || dobError || genderError || phoneFormatError) {
       toast({
         title: "Please complete all fields",
         description: "All information is required to continue.",
         variant: "destructive",
       });
       return;
+    }
+
+    // Run uniqueness checks in parallel
+    setIsSubmitting(true);
+    try {
+      const [emailError, phoneError] = await Promise.all([
+        checkEmailUniqueness(email),
+        checkPhoneUniqueness(phone),
+      ]);
+
+      if (emailError || phoneError) {
+        setErrors((prev) => ({
+          ...prev,
+          email: emailError,
+          phone: phoneError,
+        }));
+        if (emailError) triggerShake("email");
+        else if (phoneError) triggerShake("phone");
+        toast({
+          title: emailError || phoneError || "Duplicate found",
+          variant: "destructive",
+        });
+        return;
+      }
+    } finally {
+      setIsSubmitting(false);
     }
 
     toast({
@@ -470,10 +540,10 @@ const BasicInfoScreen = () => {
                 size="xl"
                 className="w-full group"
                 onClick={handleNext}
-                disabled={!isComplete}
+                disabled={!isComplete || isSubmitting || checkingEmail || checkingPhone}
               >
-                Continue
-                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                {isSubmitting ? "Checking..." : "Continue"}
+                {!isSubmitting && <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />}
               </Button>
               
               <p className="text-center text-xs text-muted-foreground mt-4">
