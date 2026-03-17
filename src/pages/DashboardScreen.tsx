@@ -652,8 +652,8 @@ const DashboardScreen = () => {
     }
   };
 
-  // Handle starting chat with a woman - with auto-reconnect if woman is busy
-  const handleStartChatWithWoman = async (womanUserId: string, womanName: string) => {
+  // Handle starting chat with a woman - with auto-reconnect if woman is busy (max 2 retries)
+  const handleStartChatWithWoman = async (womanUserId: string, womanName: string, _reconnectDepth = 0) => {
     if (isConnecting) return;
     setIsConnecting(true);
 
@@ -682,9 +682,9 @@ const DashboardScreen = () => {
             description: t('findingAnotherUser', 'Finding another available user...'),
           });
 
-          const nextWoman = await initiateReconnect(womanUserId);
+          const nextWoman = _reconnectDepth < 2 ? await initiateReconnect(womanUserId) : null;
           if (nextWoman) {
-            await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
+            await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
           } else {
             toast({
               title: t('noOneAvailable', 'No One Available'),
@@ -734,9 +734,9 @@ const DashboardScreen = () => {
       console.error("Error starting chat:", error);
       
       // On error, try to auto-reconnect to another woman
-      const nextWoman = await initiateReconnect(womanUserId);
+      const nextWoman = _reconnectDepth < 2 ? await initiateReconnect(womanUserId) : null;
       if (nextWoman) {
-        await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName);
+        await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
       } else {
         toast({
           title: t('error', 'Error'),
