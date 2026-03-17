@@ -628,7 +628,7 @@ const WomenDashboardScreen = () => {
     }
   };
 
-  const fetchOnlineMen = async (womanUserId?: string, womanLanguage?: string, womanCountry?: string) => {
+  const fetchOnlineMen = async (womanLanguage?: string, womanCountry?: string) => {
     try {
       const effectiveWomanLanguage = womanLanguage || currentWomanLanguage;
 
