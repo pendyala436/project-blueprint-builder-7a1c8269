@@ -1460,7 +1460,7 @@ const DashboardScreen = () => {
                                 <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
                               )}
                             </div>
-                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-success/20 text-success rounded-full">
+                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
                               {woman.primary_language}
                             </span>
                           </div>
