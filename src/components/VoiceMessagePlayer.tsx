@@ -91,6 +91,7 @@ export const VoiceMessagePlayer = ({
     audio.addEventListener('error', handleError);
 
     return () => {
+      audio.pause();
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('play', handlePlay);
