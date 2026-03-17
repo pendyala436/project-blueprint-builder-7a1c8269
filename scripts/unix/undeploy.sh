@@ -45,7 +45,7 @@ EDGE_FUNCTIONS=(
     "seed-legal-documents"
     "seed-sample-users"
     "seed-super-users"
-    "shift-scheduler"
+    
     "translate-message"
     "trigger-backup"
     "verify-photo"

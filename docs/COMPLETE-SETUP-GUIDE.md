@@ -229,7 +229,7 @@ All tables have RLS enabled:
 | `reset-password` | Password reset emails | No | `/functions/v1/reset-password` |
 | `seed-legal-documents` | Seed legal docs | Service | `/functions/v1/seed-legal-documents` |
 | `seed-super-users` | Create test users | Service | `/functions/v1/seed-super-users` |
-| `shift-scheduler` | Shift scheduling | Service | `/functions/v1/shift-scheduler` |
+
 | `translate-message` | Message translation | Yes | `/functions/v1/translate-message` |
 | `trigger-backup` | Database backup | Service | `/functions/v1/trigger-backup` |
 | `verify-photo` | Photo verification | Yes | `/functions/v1/verify-photo` |

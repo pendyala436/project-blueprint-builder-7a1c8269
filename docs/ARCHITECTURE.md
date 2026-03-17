@@ -147,8 +147,6 @@ supabase/functions/
 │   └── index.ts
 ├── reset-password/              # Password reset emails
 │   └── index.ts
-├── shift-scheduler/             # Shift management
-│   └── index.ts
 ├── translate-message/           # Message translation
 │   └── index.ts
 ├── trigger-backup/              # Database backup
