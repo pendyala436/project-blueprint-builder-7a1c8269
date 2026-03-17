@@ -1460,12 +1460,19 @@ serve(async (req) => {
           );
         }
 
-        // Deduct from man's wallet (what men are charged)
-        const newBalance = wallet.balance - menCharge;
-        await supabase
-          .from("wallets")
-          .update({ balance: newBalance })
-          .eq("id", wallet.id);
+        // Atomic deduct from man's wallet (prevents stale-read race conditions)
+        const { data: newBalance, error: debitError } = await supabase.rpc('atomic_wallet_debit', {
+          p_wallet_id: wallet.id,
+          p_amount: menCharge
+        });
+
+        if (debitError || newBalance === -1) {
+          console.error('[HEARTBEAT] Atomic debit failed — insufficient balance or error');
+          return new Response(
+            JSON.stringify({ success: false, message: "Insufficient balance" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
         // Record in ledger (append-only, source of truth for frontend)
         await supabase
