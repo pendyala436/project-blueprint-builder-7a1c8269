@@ -16,7 +16,7 @@ interface IncomingChat {
 interface UseIncomingChatsResult {
   incomingChats: IncomingChat[];
   acceptChat: (sessionId: string) => void;
-  rejectChat: (sessionId: string) => Promise<void>;
+  rejectChat: (sessionId: string, reason?: 'manual' | 'auto_timeout') => Promise<void>;
   clearChat: (sessionId: string) => void;
 }
 
