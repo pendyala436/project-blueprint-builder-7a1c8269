@@ -43,43 +43,11 @@ const SecurityProvider: React.FC<SecurityProviderProps> = memo(({
   // Update ref when state changes
   devToolsRef.current = devToolsOpen;
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!enableKeyboardBlocking) return;
-
-    // Quick check for common blocked keys first - guard against undefined key
-    const key = e.key?.toLowerCase?.() || '';
-    if (!key) return;
-    
-    const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-
-    // Block DevTools shortcuts
-    if (
-      (isCtrlOrMeta && e.shiftKey && (key === 'i' || key === 'j' || key === 'c')) ||
-      (isCtrlOrMeta && key === 'u') ||
-      key === 'f12'
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      setCaptureAttempts(prev => prev + 1);
-      toast({
-        title: "Action blocked",
-        description: "This action is not allowed for security reasons.",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    // Detect PrintScreen
-    if (key === 'printscreen') {
-      e.preventDefault();
-      setCaptureAttempts(prev => prev + 1);
-      toast({
-        title: "Screenshot blocked",
-        description: "Screenshots are not allowed in this application.",
-        variant: "destructive"
-      });
-    }
-  }, [enableKeyboardBlocking, toast]);
+  const handleKeyDown = useCallback((_e: KeyboardEvent) => {
+    // Keyboard shortcut blocking removed — these client-side blocks are trivially
+    // bypassed and break developer workflows / accessibility tools.
+    // Real security is enforced server-side via RLS, JWT validation, and edge functions.
+  }, []);
 
   useEffect(() => {
     // DevTools detection with longer interval
