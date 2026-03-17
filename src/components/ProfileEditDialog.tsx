@@ -704,7 +704,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                 My Language (for Chat Matching)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Select your primary language from {profile.gender === 'female' ? womenLanguages.length : menLanguages.length}+ languages. Auto-translation is available.
+                Select your primary language from {languages.length}+ languages. Auto-translation is available.
               </p>
               
               <Popover open={languageOpen} onOpenChange={setLanguageOpen}>
