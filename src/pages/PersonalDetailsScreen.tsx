@@ -603,14 +603,15 @@ const PersonalDetailsScreen = () => {
               variant="aurora"
               size="xl"
               className="w-full group"
-              onClick={handleNext}
+              onClick={() => handleNext(false)}
+              disabled={!requiredFieldsFilled}
             >
-              Continue
+              Continue ({completedFieldsCount}/18 fields)
             </Button>
             <Button
               variant="ghost"
               className="w-full text-muted-foreground"
-              onClick={handleNext}
+              onClick={() => handleNext(true)}
             >
               Skip for now
             </Button>
