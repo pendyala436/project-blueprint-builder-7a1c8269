@@ -779,25 +779,7 @@ const DashboardScreen = () => {
         .in("user_id", onlineUserIds)
         .limit(50);
 
-      let onlineWomenList: OnlineWoman[] = femaleProfiles || [];
-
-      // Also fetch from main profiles table for online women
-      const { data: mainProfiles } = await supabase
-        .from("profiles")
-        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
-        .or("gender.eq.female,gender.eq.Female")
-        .eq("approval_status", "approved")
-        .in("user_id", onlineUserIds)
-        .limit(50);
-
-      if (mainProfiles && mainProfiles.length > 0) {
-        const existingUserIds = new Set(onlineWomenList.map(w => w.user_id));
-        mainProfiles.forEach(p => {
-          if (!existingUserIds.has(p.user_id)) {
-            onlineWomenList.push(p);
-          }
-        });
-      }
+      const onlineWomenList: OnlineWoman[] = femaleProfiles || [];
 
       if (onlineWomenList.length === 0) {
         console.log("[Dashboard] No online women found");
