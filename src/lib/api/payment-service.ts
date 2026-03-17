@@ -492,19 +492,21 @@ class PaymentService {
         }
 
         try {
-          // Poll pending_recharges table (updated by gateway webhook)
-          // Until gateway integration exists, this table won't have rows,
-          // so polling will correctly timeout rather than self-confirm.
-          const { data, error } = await supabase
-            .from('pending_recharges')
-            .select('status, confirmed_at')
-            .eq('id', paymentId)
-            .maybeSingle();
+          // Query pending_recharges via raw REST to avoid type errors
+          // (table will be created when gateway integration is added)
+          const response = await fetch(
+            `${(supabase as any).supabaseUrl}/rest/v1/pending_recharges?id=eq.${paymentId}&select=status,confirmed_at`,
+            {
+              headers: {
+                'apikey': (supabase as any).supabaseKey,
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || (supabase as any).supabaseKey}`,
+              },
+            }
+          );
 
-          if (error) {
-            // Table may not exist yet — that's expected pre-integration
-            if (error.code === '42P01') {
-              // relation does not exist — gateway not integrated yet
+          if (!response.ok) {
+            if (response.status === 404 || response.status === 400) {
+              // Table doesn't exist — gateway not integrated yet
               clearInterval(poll);
               this.activePolls.delete(paymentId);
               this.pendingPayments.delete(paymentId);
@@ -512,8 +514,11 @@ class PaymentService {
               reject(new Error('Payment gateway not yet integrated'));
               return;
             }
-            throw error;
+            throw new Error(`Poll request failed: ${response.status}`);
           }
+
+          const rows = await response.json();
+          const data = rows?.[0];
 
           if (data && (data.status === 'confirmed' || data.status === 'failed' || data.status === 'cancelled')) {
             const status: PaymentStatus = data.status === 'confirmed' ? 'success' : data.status as PaymentStatus;
