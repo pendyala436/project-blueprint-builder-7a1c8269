@@ -330,7 +330,7 @@ const ChatBillingDisplay = ({
 
         setBillingStarted(true);
 
-        if (data.end_chat || data.remaining_balance <= 0) {
+        if (data.remaining_balance !== undefined && data.remaining_balance <= 0 && !data.waiting_for_full_minute) {
           // Chat ended due to insufficient balance - AUTO DISCONNECT
           await endChatDueToBalance(chatId);
           setShowRechargeDialog(true);
@@ -364,7 +364,7 @@ const ChatBillingDisplay = ({
       } catch (error) {
         console.error("Heartbeat error:", error);
       }
-    }, 60000); // Every 60 seconds
+    }, 62000); // Every 62 seconds — 2s buffer for JS timer drift to ensure server sees >=60s elapsed
   };
 
   const formatTime = (seconds: number) => {
