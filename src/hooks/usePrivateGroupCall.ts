@@ -781,6 +781,7 @@ export function usePrivateGroupCall({
       }
 
       setupSignaling();
+      startBillingTimer(); // Start billing fallback timer for participant
 
       setState(prev => ({ 
         ...prev, 
