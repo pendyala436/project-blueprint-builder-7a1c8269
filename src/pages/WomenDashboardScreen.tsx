@@ -399,7 +399,7 @@ const WomenDashboardScreen = () => {
       return;
     }
     lastFetchMenRef.current = now;
-    fetchOnlineMen(undefined, lang, country);
+    fetchOnlineMen(lang, country);
   }, []); // stable — reads from refs, no stale closure
 
   useEffect(() => {
