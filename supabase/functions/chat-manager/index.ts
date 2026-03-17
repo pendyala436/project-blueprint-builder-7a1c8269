@@ -1465,16 +1465,19 @@ serve(async (req) => {
           .update({ balance: newBalance })
           .eq("id", wallet.id);
 
-        // Record transaction - exactly N minute(s) per entry for clean statement
+        // Record in ledger (append-only, source of truth for frontend)
         await supabase
-          .from("wallet_transactions")
+          .from("ledger_transactions")
           .insert({
-            wallet_id: wallet.id,
             user_id: session.man_user_id,
-            type: "debit",
-            amount: menCharge,
-            description: `Chat debit - ${wholeMinutes} min at ₹${session.rate_per_minute}/min`,
-            status: "completed"
+            transaction_type: "chat_debit",
+            debit: menCharge,
+            credit: 0,
+            counterparty_id: session.woman_user_id,
+            session_id: session.id,
+            rate_per_minute: session.rate_per_minute,
+            duration_seconds: wholeMinutes * 60,
+            description: `Chat debit - ${wholeMinutes} min at ₹${session.rate_per_minute}/min`
           });
 
         // Only Indian women earn from chats
