@@ -1231,6 +1231,7 @@ const DashboardScreen = () => {
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
               title="Notifications"
+              onClick={() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' })}
             >
               <BellRing className="w-[18px] h-[18px] text-primary" />
               {stats.unreadNotifications > 0 && (
@@ -1691,7 +1692,7 @@ const DashboardScreen = () => {
         </div>
 
         {/* Section 7: Recent Notifications */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
+        <div id="notifications-section" className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
           <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-sm sm:text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
             <button className="text-xs text-primary hover:underline flex items-center gap-0.5" onClick={() => currentUserId && fetchNotifications(currentUserId)}>
