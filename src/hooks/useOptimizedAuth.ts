@@ -25,21 +25,12 @@ interface PreloadedUserContext {
   } | null;
 }
 
-// Cache for user context to avoid refetching within the same session
-const userContextCache = new Map<string, { data: PreloadedUserContext; timestamp: number }>();
-const CACHE_TTL = 30 * 1000; // 30 seconds — keep short so role/approval changes propagate quickly
-
 /**
  * Preload user context on login — fetches admin role, tutorial progress,
- * profile, and female profile in parallel.
+ * profile, and female profile in parallel. Always fetches fresh data
+ * since this guards security-sensitive routing (admin access, approval status).
  */
 export async function preloadUserContext(userId: string): Promise<PreloadedUserContext> {
-  // Check cache first
-  const cached = userContextCache.get(userId);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-
   const [adminResult, tutorialResult, profileResult, femaleResult] = await Promise.all([
     supabase
       .from('user_roles')
@@ -64,21 +55,16 @@ export async function preloadUserContext(userId: string): Promise<PreloadedUserC
       .maybeSingle(),
   ]);
 
-  const context: PreloadedUserContext = {
+  return {
     isAdmin: !!adminResult.data,
     tutorialCompleted: !!tutorialResult.data?.completed,
     isFemale: profileResult.data?.gender?.toLowerCase() === 'female' || !!femaleResult.data,
     profile: profileResult.data ?? null,
     femaleProfile: femaleResult.data ?? null,
   };
-
-  // Cache the result
-  userContextCache.set(userId, { data: context, timestamp: Date.now() });
-
-  return context;
 }
 
-/** Clear cached user context (call on logout) */
+/** No-op — cache was removed; kept for API compatibility */
 export function clearUserContextCache(): void {
-  userContextCache.clear();
+  // Nothing to clear — preloadUserContext always fetches fresh data
 }
