@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuthReady } from '@/hooks/useAuthReady';
+import { useUserActivity } from '@/contexts/UserActivityContext';
 
 const MEN_IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 const WOMEN_IDLE_TIMEOUT = 45 * 60 * 1000; // 45 minutes
@@ -19,6 +20,8 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
   const [isReady, setIsReady] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const profileFetchedRef = useRef(false);
+
+  const { subscribe } = useUserActivity();
 
   // Use centralized auth state instead of independent getSession calls
   const { user: authUser, isReady: authReady } = useAuthReady();
@@ -66,7 +69,6 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
     console.log(`Auto-logout: User idle for ${idleMinutes} minutes`);
 
     try {
-      // Use userIdRef or fall back to Supabase session uid
       const { data: { session } } = await supabase.auth.getSession();
       const uid = userIdRef.current || session?.user?.id || '';
       if (uid) {
@@ -91,6 +93,7 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
     timeoutRef.current = setTimeout(logout, idleTimeout);
   }, [logout, isAuthenticated, isReady, idleTimeout]);
 
+  // Subscribe to shared activity signals instead of binding own DOM listeners
   useEffect(() => {
     if (!isAuthenticated || !isReady) {
       if (timeoutRef.current) {
@@ -99,33 +102,19 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
       return;
     }
 
-    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
-    
-    // Throttle activity events
-    let lastEventTime = 0;
-    const handleActivity = () => {
-      const now = Date.now();
-      if (now - lastEventTime > 5000) { // 5s throttle
-        lastEventTime = now;
-        resetTimer();
-      }
-    };
-
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity, { passive: true });
-    });
-
     resetTimer();
+
+    const unsubscribe = subscribe(() => {
+      resetTimer();
+    });
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity);
-      });
+      unsubscribe();
     };
-  }, [resetTimer, isAuthenticated, isReady]);
+  }, [resetTimer, isAuthenticated, isReady, subscribe]);
 
   return <>{children}</>;
 };
