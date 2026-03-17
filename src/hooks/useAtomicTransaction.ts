@@ -247,7 +247,7 @@ export const useAtomicTransaction = () => {
     giftId: string,
     message?: string
   ): Promise<GiftResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_gift_transaction", {
