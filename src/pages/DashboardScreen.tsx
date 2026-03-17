@@ -1283,7 +1283,7 @@ const DashboardScreen = () => {
                   onClick={() => setRechargeDialogOpen(true)}
                 >
                   <Wallet className="w-3.5 h-3.5" />
-                  ₹{walletBalance.toFixed(0)}
+                  {formatLocalCurrency(walletBalance)}
                 </Button>
               </div>
             </div>
