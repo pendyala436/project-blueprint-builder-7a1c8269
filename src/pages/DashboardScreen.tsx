@@ -194,7 +194,7 @@ const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   // Plain English helper - no translation, returns fallback directly
-  const t = (_key: string, fallback: string) => fallback;
+  const t = useCallback((_key: string, fallback: string) => fallback, []);
   
   const { creditWallet } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
