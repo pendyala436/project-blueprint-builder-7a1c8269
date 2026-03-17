@@ -322,7 +322,7 @@ const DashboardScreen = () => {
           setIsLoading(false);
           return;
         }
-        await loadDashboardData();
+        await loadDashboardData(session.user);
         updateUserOnlineStatus(true);
         wentOnlineRef.current = true;
         loadActiveChatCount();
@@ -512,17 +512,17 @@ const DashboardScreen = () => {
   const MAX_PARALLEL_CHATS = 3;
   const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        // Don't redirect — ProtectedRoute handles auth guard.
-        // Just stop loading to avoid stuck spinner on token refresh race.
-        setIsLoading(false);
-        return;
+      let user = userOrNull;
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          setIsLoading(false);
+          return;
+        }
+        user = session.user;
       }
-      const user = session.user;
 
       setCurrentUserId(user.id);
 
