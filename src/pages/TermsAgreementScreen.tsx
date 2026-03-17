@@ -554,7 +554,7 @@ const TermsAgreementScreen = () => {
       const city = localStorage.getItem("userCity") || "";
       const latitude = localStorage.getItem("userLatitude");
       const longitude = localStorage.getItem("userLongitude");
-      const languageCode = sessionStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
+      const languageCode = localStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
       const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
       const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
 
