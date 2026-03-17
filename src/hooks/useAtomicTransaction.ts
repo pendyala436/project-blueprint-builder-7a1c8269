@@ -408,7 +408,7 @@ export const useAtomicTransaction = () => {
     paymentMethod?: string,
     paymentDetails?: Record<string, string | number | boolean | null>
   ): Promise<WithdrawalResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_withdrawal_request", {
