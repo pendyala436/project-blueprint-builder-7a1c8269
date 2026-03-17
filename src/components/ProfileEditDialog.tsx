@@ -210,6 +210,7 @@ const LIFE_GOAL_OPTIONS = [
 
 const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEditDialogProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // State for profile data
   const [profile, setProfile] = useState<ProfileData>({
