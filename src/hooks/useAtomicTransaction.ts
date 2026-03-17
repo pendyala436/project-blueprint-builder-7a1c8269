@@ -18,7 +18,7 @@
  * - Wallets are locked in consistent order (by user_id) during transfers
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -81,7 +81,18 @@ interface WithdrawalResult {
 
 export const useAtomicTransaction = () => {
   const { toast } = useToast();
+  const processingCount = useRef(0);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const startProcessing = useCallback(() => {
+    processingCount.current += 1;
+    setIsProcessing(true);
+  }, []);
+
+  const stopProcessing = useCallback(() => {
+    processingCount.current = Math.max(0, processingCount.current - 1);
+    if (processingCount.current === 0) setIsProcessing(false);
+  }, []);
 
   /**
    * Process a wallet transaction atomically
@@ -100,7 +111,7 @@ export const useAtomicTransaction = () => {
     description?: string,
     referenceId?: string
   ): Promise<TransactionResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       // Call the atomic database function with row-level locking
@@ -146,7 +157,7 @@ export const useAtomicTransaction = () => {
       
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, [toast]);
 
@@ -166,7 +177,7 @@ export const useAtomicTransaction = () => {
     amount: number,
     description?: string
   ): Promise<TransferResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       // Call atomic transfer function (single transaction, ordered locking)
@@ -217,7 +228,7 @@ export const useAtomicTransaction = () => {
       
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, [toast]);
 
@@ -236,7 +247,7 @@ export const useAtomicTransaction = () => {
     giftId: string,
     message?: string
   ): Promise<GiftResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_gift_transaction", {
@@ -286,7 +297,7 @@ export const useAtomicTransaction = () => {
       
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, [toast]);
 
@@ -301,7 +312,7 @@ export const useAtomicTransaction = () => {
     sessionId: string,
     minutes: number
   ): Promise<BillingResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_chat_billing", {
@@ -332,7 +343,7 @@ export const useAtomicTransaction = () => {
       console.error("Billing error:", err);
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, []);
 
@@ -347,7 +358,7 @@ export const useAtomicTransaction = () => {
     sessionId: string,
     minutes: number
   ): Promise<BillingResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_video_billing", {
@@ -378,7 +389,7 @@ export const useAtomicTransaction = () => {
       console.error("Video billing error:", err);
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, []);
 
@@ -397,7 +408,7 @@ export const useAtomicTransaction = () => {
     paymentMethod?: string,
     paymentDetails?: Record<string, string | number | boolean | null>
   ): Promise<WithdrawalResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_withdrawal_request", {
@@ -444,7 +455,7 @@ export const useAtomicTransaction = () => {
       
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, [toast]);
 
