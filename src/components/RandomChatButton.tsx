@@ -25,21 +25,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isIndianLanguage } from "@/data/supportedLanguages";
 
-// Super user email patterns - they bypass balance requirements
-const SUPER_USER_PATTERNS = {
-  female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
-  male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
-  admin: /^admin([1-9]|1[0-5])@meow-meow\.com$/i,
-};
-
-const isSuperUserEmail = (email: string): boolean => {
-  if (!email) return false;
-  return (
-    SUPER_USER_PATTERNS.female.test(email) ||
-    SUPER_USER_PATTERNS.male.test(email) ||
-    SUPER_USER_PATTERNS.admin.test(email)
-  );
-};
 
 interface RandomChatButtonProps {
   userGender: "male" | "female";
