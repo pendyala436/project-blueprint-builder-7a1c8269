@@ -1256,12 +1256,7 @@ const ChatScreen = () => {
       });
     } catch (error) {
       console.error("Error sending attachment:", error);
-        toast.error("Attachment not sent", { description: ERROR_MESSAGES.chat.attachmentFailed });
-      toast({
-        title: "Error",
-        description: "Failed to send attachment",
-        variant: "destructive",
-      });
+      toast.error("Attachment not sent", { description: ERROR_MESSAGES.chat.attachmentFailed });
     } finally {
       setIsSending(false);
       setIsUploading(false);
