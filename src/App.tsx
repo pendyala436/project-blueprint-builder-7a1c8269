@@ -162,6 +162,7 @@ const App = () => (
               
               <NetworkStatusIndicator />
             </AutoLogoutWrapper>
+            </UserActivityProvider>
           </SecurityProvider>
         </BrowserRouter>
       </ErrorBoundary>
