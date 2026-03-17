@@ -1521,7 +1521,7 @@ const ChatScreen = () => {
                   disabled={actionLoading || isBlocked}
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Add Friend
+                  Send Friend Request
                 </DropdownMenuItem>
               )}
               
