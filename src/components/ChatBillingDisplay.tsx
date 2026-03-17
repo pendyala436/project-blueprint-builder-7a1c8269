@@ -68,6 +68,10 @@ const ChatBillingDisplay = ({
   const loadPricingAndWallet = useCallback(async () => {
     if (loadInProgress.current) return;
     loadInProgress.current = true;
+    // Clear any existing intervals before (re)starting to prevent duplicates
+    if (heartbeatInterval.current) { clearInterval(heartbeatInterval.current); heartbeatInterval.current = null; }
+    if (timerInterval.current) { clearInterval(timerInterval.current); timerInterval.current = null; }
+    if (messageCheckInterval.current) { clearInterval(messageCheckInterval.current); messageCheckInterval.current = null; }
     try {
       // Get current pricing
       const { data: pricing } = await supabase
