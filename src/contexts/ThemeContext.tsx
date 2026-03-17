@@ -1090,10 +1090,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--sidebar-border', resolvedMode === 'dark' ? colors.border : '230 30% 25%');
     root.style.setProperty('--sidebar-ring', colors.primary);
 
-    // Apply semantic status colors - these use PRIMARY as base for consistency
-    // Success uses accent (typically green-ish)
-    root.style.setProperty('--success', accentHsl);
-    root.style.setProperty('--success-foreground', colors.accentForeground);
+    // Apply semantic status colors - fixed values for consistent meaning
+    // Success is always green regardless of theme
+    root.style.setProperty('--success', '142 71% 45%');
+    root.style.setProperty('--success-foreground', '0 0% 100%');
     // Warning uses a warm variant derived from primary
     root.style.setProperty('--warning', '38 92% 50%');
     root.style.setProperty('--warning-foreground', '0 0% 100%');
