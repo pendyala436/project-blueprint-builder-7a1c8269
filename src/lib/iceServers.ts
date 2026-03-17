@@ -52,13 +52,21 @@ function buildIceServers(): RTCIceServer[] {
   const turnCred = import.meta.env.VITE_TURN_CREDENTIAL;
 
   if (turnUrl && turnUser && turnCred) {
+    // Primary: self-hosted coturn (UDP)
     servers.push({
       urls: turnUrl,
       username: turnUser,
       credential: turnCred,
     });
+    // Also add TCP and TLS variants for restrictive networks
+    const turnHost = turnUrl.replace(/^turns?:/, '').replace(/:\d+$/, '');
+    servers.push(
+      { urls: `turn:${turnHost}:443?transport=tcp`, username: turnUser, credential: turnCred },
+      { urls: `turns:${turnHost}:443?transport=tcp`, username: turnUser, credential: turnCred }
+    );
   } else {
-    // Use free Open Relay TURN servers as default fallback
+    // Fallback: free Open Relay TURN (no SLA, shared public credentials)
+    console.warn('[ICE] No self-hosted TURN configured — using public relay fallback');
     servers.push(...FREE_TURN_SERVERS);
   }
 
