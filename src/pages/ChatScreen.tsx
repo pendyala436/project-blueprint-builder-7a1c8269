@@ -690,6 +690,7 @@ const ChatScreen = () => {
       toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.initFailed });
     } finally {
       setIsLoading(false);
+      initializingRef.current = false;
     }
   };
 
