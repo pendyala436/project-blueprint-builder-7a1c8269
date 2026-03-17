@@ -691,17 +691,31 @@ const WomenDashboardScreen = () => {
         };
       });
 
+      // Apply match filters client-side
+      const filteredMen = onlineMen.filter(m => {
+        if (matchFilters.ageRange && m.age != null) {
+          if (m.age < matchFilters.ageRange[0] || m.age > matchFilters.ageRange[1]) return false;
+        }
+        if (matchFilters.country && matchFilters.country !== "all" && m.country) {
+          if (m.country.toLowerCase() !== matchFilters.country.toLowerCase()) return false;
+        }
+        if (matchFilters.language && matchFilters.language !== "all" && m.motherTongue) {
+          if (m.motherTongue.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
+        }
+        if (matchFilters.religion && matchFilters.religion !== "all") return true; // no religion field from RPC
+        if (matchFilters.premiumOnly && !m.hasRecharged) return false;
+        if (matchFilters.verifiedOnly) return true; // no verified field from RPC
+        return true;
+      });
+
       // Sort by load: lowest chat count first, then same language, then wallet balance
-      const sortedMen = onlineMen.sort((a, b) => {
-        // First: by active chat count (load balancing - lower is better)
+      const sortedMen = filteredMen.sort((a, b) => {
         if (a.activeChatCount !== b.activeChatCount) {
           return (a.activeChatCount || 0) - (b.activeChatCount || 0);
         }
-        // Second: same language preference
         if (a.isSameLanguage !== b.isSameLanguage) {
           return a.isSameLanguage ? -1 : 1;
         }
-        // Third: by wallet balance (higher is better for women)
         return b.walletBalance - a.walletBalance;
       });
 
