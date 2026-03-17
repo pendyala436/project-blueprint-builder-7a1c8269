@@ -1713,9 +1713,8 @@ const ChatScreen = () => {
                 
                 // ============= RECEIVER VIEW LOGIC =============
                 // Determine what the receiver sees based on their typing mode preference:
-                // - English Core: Show originalEnglish (if available), fallback to translatedMessage
-                // - Native/English Meaning: Show translatedMessage (receiver's native language)
-                // Use the typingMode state (persisted preference) instead of calling getSavedTypingMode() each time
+                // Receiver sees translatedMessage (their native language) if available
+                // Sender sees their original message
                 let displayText: string;
                 
                 if (isMine) {
