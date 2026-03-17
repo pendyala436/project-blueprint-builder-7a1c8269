@@ -954,47 +954,6 @@ const WomenDashboardScreen = () => {
     navigate('/', { replace: true });
   };
 
-  const handleChatWithUser = async (userId: string) => {
-    // Check if there's already an active session with this user
-    const { data: existingSession } = await supabase
-      .from("active_chat_sessions")
-      .select("id")
-      .eq("man_user_id", userId)
-      .eq("woman_user_id", currentUserId)
-      .eq("status", "active")
-      .maybeSingle();
-
-    if (existingSession) {
-      // Chat already exists - parallel chat container will show it
-      toast({
-        title: t('chatActive', 'Chat Active'),
-        description: t('chatAlreadyActive', 'This chat is already active'),
-      });
-      return;
-    }
-
-    // Check parallel chat limit for women (max 3)
-    const { count: activeChats } = await supabase
-      .from("active_chat_sessions")
-      .select("*", { count: "exact", head: true })
-      .eq("woman_user_id", currentUserId)
-      .eq("status", "active");
-
-    if ((activeChats || 0) >= MAX_PARALLEL_CHATS) {
-      toast({
-        title: t('maxChatsReached', 'Max Chats Reached'),
-        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time. End a chat to start a new one.'),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Stay on dashboard - incoming chat popup handles new chat requests
-    toast({
-      title: t('viewingProfile', 'Profile'),
-      description: t('waitForChatRequest', 'Wait for this user to send a chat request'),
-    });
-  };
 
   // Women cannot initiate chats - UNLESS they have Golden Badge
   const handleStartChatWithUser = async (userId: string) => {
