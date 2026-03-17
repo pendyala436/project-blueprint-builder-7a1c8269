@@ -152,7 +152,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [transliterateInstant, needsTransliteration, typingMode, onTyping]);
 
   // Handle send
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const messageToSend = typingMode === 'english' 
       ? rawInput.trim() 
       : (nativeText || rawInput).trim();
