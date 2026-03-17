@@ -1202,7 +1202,7 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                     if (!userEmail) return;
                     try {
                       const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-                        redirectTo: `${window.location.origin}/password-reset`,
+                        redirectTo: `${window.location.origin}/reset-password`,
                       });
                       if (error) throw error;
                       toast({
