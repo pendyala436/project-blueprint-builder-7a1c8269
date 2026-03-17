@@ -204,6 +204,28 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
 
       if (error) throw error;
 
+      // Sync language change to profiles and user_languages tables
+      // so matching/discovery reflects the updated language
+      if (settings.language !== originalSettings.language) {
+        await Promise.allSettled([
+          supabase
+            .from("profiles")
+            .update({
+              primary_language: settings.language,
+              preferred_language: selectedLanguageCode,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", user.id),
+          supabase
+            .from("user_languages")
+            .upsert({
+              user_id: user.id,
+              language_name: settings.language,
+              language_code: selectedLanguageCode,
+            }, { onConflict: "user_id,language_code" }),
+        ]);
+      }
+
       // Save parallel chat settings
       try {
         await setMaxParallelChats(Number(selectedParallelChats));
