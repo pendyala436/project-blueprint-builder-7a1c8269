@@ -394,7 +394,7 @@ const WomenDashboardScreen = () => {
       if (fetchMenTimeoutRef.current) clearTimeout(fetchMenTimeoutRef.current);
       fetchMenTimeoutRef.current = setTimeout(() => {
         lastFetchMenRef.current = Date.now();
-        fetchOnlineMen(undefined, currentWomanLanguageRef.current, currentWomanCountryRef.current);
+        fetchOnlineMen(currentWomanLanguageRef.current, currentWomanCountryRef.current);
       }, 3000);
       return;
     }
