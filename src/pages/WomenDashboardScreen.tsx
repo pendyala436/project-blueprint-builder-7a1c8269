@@ -394,12 +394,12 @@ const WomenDashboardScreen = () => {
       if (fetchMenTimeoutRef.current) clearTimeout(fetchMenTimeoutRef.current);
       fetchMenTimeoutRef.current = setTimeout(() => {
         lastFetchMenRef.current = Date.now();
-        fetchOnlineMen(undefined, currentWomanLanguageRef.current, currentWomanCountryRef.current);
+        fetchOnlineMen(currentWomanLanguageRef.current, currentWomanCountryRef.current);
       }, 3000);
       return;
     }
     lastFetchMenRef.current = now;
-    fetchOnlineMen(undefined, lang, country);
+    fetchOnlineMen(lang, country);
   }, []); // stable — reads from refs, no stale closure
 
   useEffect(() => {
@@ -461,7 +461,7 @@ const WomenDashboardScreen = () => {
             console.log("[WomenDashboard] user_languages INSERT:", record.language_name);
             setCurrentWomanLanguage(record.language_name);
             setCurrentWomanLanguageCode(record.language_code || "eng_Latn");
-            fetchOnlineMen(undefined, record.language_name, currentWomanCountry);
+            fetchOnlineMen(record.language_name, currentWomanCountry);
           }
         }
       )
@@ -476,7 +476,7 @@ const WomenDashboardScreen = () => {
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
             setCurrentWomanLanguageCode(newCode);
-            fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
+            fetchOnlineMen(newLanguage, currentWomanCountry);
           }
         }
       )
@@ -490,7 +490,7 @@ const WomenDashboardScreen = () => {
           console.log("[WomenDashboard] female_profiles language changed:", newLanguage);
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
-            fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
+            fetchOnlineMen(newLanguage, currentWomanCountry);
           }
         }
       )
@@ -613,7 +613,7 @@ const WomenDashboardScreen = () => {
 
       // Fetch all data with woman's language context - using allSettled for resilience
       await Promise.allSettled([
-        fetchOnlineMen(user.id, womanLanguage, userCountryValue),
+        fetchOnlineMen(womanLanguage, userCountryValue),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
         fetchTopEarnerLeaderboard(user.id),
@@ -628,7 +628,7 @@ const WomenDashboardScreen = () => {
     }
   };
 
-  const fetchOnlineMen = async (womanUserId?: string, womanLanguage?: string, womanCountry?: string) => {
+  const fetchOnlineMen = async (womanLanguage?: string, womanCountry?: string) => {
     try {
       const effectiveWomanLanguage = womanLanguage || currentWomanLanguage;
 
@@ -1593,7 +1593,7 @@ const WomenDashboardScreen = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry)}
+              onClick={() => fetchOnlineMen(currentWomanLanguage, currentWomanCountry)}
               className="gap-1 h-7 text-xs px-2"
             >
               <RefreshCw className="w-3.5 h-3.5" />
