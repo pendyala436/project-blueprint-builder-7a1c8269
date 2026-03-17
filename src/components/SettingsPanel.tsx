@@ -222,7 +222,6 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
               user_id: user.id,
               language_name: settings.language,
               language_code: selectedLanguageCode,
-              is_primary: true,
             }, { onConflict: "user_id,language_code" }),
         ]);
       }
