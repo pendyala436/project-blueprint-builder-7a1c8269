@@ -884,9 +884,9 @@ const WomenDashboardScreen = () => {
     }
   };
 
-  const fetchTodayEarnings = async (userId: string) => {
-    // NOTE: wallet balance + today_earnings are now both fetched inside fetchWalletBalance
-    // in a single RPC call. This function only handles the top earner leaderboard lookup.
+  const fetchTopEarnerLeaderboard = async (userId: string) => {
+    // Fetches the top earner for the leaderboard display.
+    // Wallet balance + today_earnings are handled by fetchWalletBalance via a single RPC call.
 
     // Use secure RPC function to get top earner (bypasses RLS safely)
     const { data: topEarnerData, error: topError } = await supabase
