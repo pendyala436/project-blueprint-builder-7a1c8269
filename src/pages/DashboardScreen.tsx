@@ -1529,7 +1529,7 @@ const DashboardScreen = () => {
                     {indianTranslatedWomen.map((woman) => (
                       <Card
                         key={woman.id}
-                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
+                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/30 bg-primary/5"
                         onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
                         <div className="flex items-center gap-3">
