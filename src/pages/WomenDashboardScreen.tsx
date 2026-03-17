@@ -490,7 +490,7 @@ const WomenDashboardScreen = () => {
           console.log("[WomenDashboard] female_profiles language changed:", newLanguage);
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
-            fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
+            fetchOnlineMen(newLanguage, currentWomanCountry);
           }
         }
       )
