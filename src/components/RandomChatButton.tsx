@@ -25,21 +25,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { isIndianLanguage } from "@/data/supportedLanguages";
 
-// Super user email patterns - they bypass balance requirements
-const SUPER_USER_PATTERNS = {
-  female: /^female([1-9]|1[0-5])@meow-meow\.com$/i,
-  male: /^male([1-9]|1[0-5])@meow-meow\.com$/i,
-  admin: /^admin([1-9]|1[0-5])@meow-meow\.com$/i,
-};
-
-const isSuperUserEmail = (email: string): boolean => {
-  if (!email) return false;
-  return (
-    SUPER_USER_PATTERNS.female.test(email) ||
-    SUPER_USER_PATTERNS.male.test(email) ||
-    SUPER_USER_PATTERNS.admin.test(email)
-  );
-};
 
 interface RandomChatButtonProps {
   userGender: "male" | "female";
@@ -96,25 +81,17 @@ export const RandomChatButton = ({
     if (userGender === "male") {
       const minBalance = 8; // Minimum balance required to start chat
       
-      // Get current user email to check if super user
-      const { data: { session: s } } = await supabase.auth.getSession();
-      const userEmail = s?.user?.email || '';
-      
-      // Super users (matching email pattern) bypass balance check entirely
-      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
-      
-      if (!isSuperUser) {
-        if (walletBalance <= 0) {
-          setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
-          setShowRechargeDialog(true);
-          onInsufficientBalance?.();
-          return;
-        } else if (walletBalance < minBalance) {
-          setRechargeMessage(`You need at least ₹${minBalance} to start a chat. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
-          setShowRechargeDialog(true);
-          onInsufficientBalance?.();
-          return;
-        }
+      // Balance check — no client-side bypasses; server (chat-manager) handles super-user logic
+      if (walletBalance <= 0) {
+        setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
+        setShowRechargeDialog(true);
+        onInsufficientBalance?.();
+        return;
+      } else if (walletBalance < minBalance) {
+        setRechargeMessage(`You need at least ₹${minBalance} to start a chat. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setShowRechargeDialog(true);
+        onInsufficientBalance?.();
+        return;
       }
     }
 
