@@ -90,7 +90,7 @@ export const LanguageSelector = ({
   }, [gender]);
 
   // Get languages - 1000+ languages available
-  const allLanguages: ProfileLanguage[] = useMemo(() => {
+  const languages: ProfileLanguage[] = useMemo(() => {
     return languages.map(lang => ({
       ...lang,
       isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
