@@ -76,6 +76,7 @@ const RegistrationCompleteScreen = () => {
 
   const [userGender, setUserGender] = useState<string | null>(null);
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
+  const [isFinalized, setIsFinalized] = useState(false);
 
   const finalizeRegistration = async () => {
     try {
