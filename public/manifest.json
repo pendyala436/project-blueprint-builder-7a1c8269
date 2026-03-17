@@ -42,10 +42,10 @@
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "Open Chat",
-      "short_name": "Chat",
-      "description": "Open your conversations",
-      "url": "/chat",
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "Open your dashboard",
+      "url": "/dashboard",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
