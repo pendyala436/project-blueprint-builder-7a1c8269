@@ -207,28 +207,27 @@ const ChatBillingDisplay = ({
     
     messageCheckInterval.current = setInterval(async () => {
       try {
-        // Get last message from each party
-        const { data: messages } = await supabase
-          .from("chat_messages")
-          .select("sender_id, created_at")
-          .eq("chat_id", chatId)
-          .order("created_at", { ascending: false })
-          .limit(10);
-
-        if (!messages || messages.length === 0) return;
+        // Get last message from each party (2 queries: 1 per sender, limit 1 each)
+        const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
+          supabase
+            .from("chat_messages")
+            .select("created_at")
+            .eq("chat_id", chatId)
+            .eq("sender_id", currentUserId)
+            .order("created_at", { ascending: false })
+            .limit(1),
+          supabase
+            .from("chat_messages")
+            .select("created_at")
+            .eq("chat_id", chatId)
+            .eq("sender_id", chatPartnerId)
+            .order("created_at", { ascending: false })
+            .limit(1),
+        ]);
 
         const now = Date.now();
-        let manLastMsg: number | null = null;
-        let womanLastMsg: number | null = null;
-
-        for (const msg of messages) {
-          if (msg.sender_id === currentUserId && !manLastMsg) {
-            manLastMsg = new Date(msg.created_at).getTime();
-          } else if (msg.sender_id === chatPartnerId && !womanLastMsg) {
-            womanLastMsg = new Date(msg.created_at).getTime();
-          }
-          if (manLastMsg && womanLastMsg) break;
-        }
+        const manLastMsg = manMsgs?.[0] ? new Date(manMsgs[0].created_at).getTime() : null;
+        const womanLastMsg = womanMsgs?.[0] ? new Date(womanMsgs[0].created_at).getTime() : null;
 
         setLastManMessageTime(manLastMsg);
         setLastWomanMessageTime(womanLastMsg);
@@ -254,7 +253,7 @@ const ChatBillingDisplay = ({
       } catch (error) {
         console.error("Error checking message activity:", error);
       }
-    }, 5000); // Check every 5 seconds
+    }, 30000); // Check every 30 seconds (reduced from 5s to minimize DB load)
   }, [currentUserId, chatPartnerId]);
 
   useEffect(() => {
