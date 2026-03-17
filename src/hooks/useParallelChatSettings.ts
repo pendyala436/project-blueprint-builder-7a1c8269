@@ -85,7 +85,7 @@ export const useParallelChatSettings = (userId?: string): UseParallelChatSetting
     setMaxChats(count);
 
     if (!userId) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ maxParallelChats: count }));
+      localStorage.setItem(`${STORAGE_KEY}_anonymous`, JSON.stringify({ maxParallelChats: count }));
       return;
     }
 
