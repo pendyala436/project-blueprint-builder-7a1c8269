@@ -737,12 +737,12 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       <CommandEmpty>No language found. Try searching by name.</CommandEmpty>
                       
                       {/* Show filtered results - increased limit */}
-                      <CommandGroup heading={`🌐 Languages (${(profile.gender === 'female' ? womenLanguages : menLanguages).filter(l => 
+                      <CommandGroup heading={`🌐 Languages (${languages.filter(l => 
                         !languageSearch || 
                         l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 
                         l.nativeName.toLowerCase().includes(languageSearch.toLowerCase())
                       ).length} available)`}>
-                        {(profile.gender === 'female' ? womenLanguages : menLanguages)
+                        {languages
                           .filter(l => 
                             !languageSearch || 
                             l.name.toLowerCase().includes(languageSearch.toLowerCase()) || 

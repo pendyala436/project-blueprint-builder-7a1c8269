@@ -89,9 +89,9 @@ export const LanguageSelector = ({
     }
   }, [gender]);
 
-  // Get languages based on gender - 1000+ languages for each gender
-  const languages: ProfileLanguage[] = useMemo(() => {
-    const sourceLanguages = userGender === 'female' ? womenLanguages : menLanguages;
+  // Get languages - 1000+ languages available
+  const allLanguages: ProfileLanguage[] = useMemo(() => {
+    return languages.map(lang => ({
     return sourceLanguages.map(lang => ({
       ...lang,
       isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
