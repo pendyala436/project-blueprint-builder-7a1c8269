@@ -4,8 +4,8 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
  * 
  * Enhanced group call hook for private groups with:
  * - Host-only video (participants are audio-only)
- * - 50 participant limit
- * - 30-minute time limit
+ * - 100 participant limit
+ * - No hard time limit — sessions run until the host ends them or midnight reset
  * - Per-minute billing with refund on early end
  */
 
