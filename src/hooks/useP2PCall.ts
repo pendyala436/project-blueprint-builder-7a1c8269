@@ -815,8 +815,8 @@ export const useP2PCall = ({
     // Notify remote peer
     void sendSignal('call-ended', { senderId: currentUserId });
 
-    // Calculate duration in minutes
-    const durationMinutes = state.callDuration / 60;
+    // Use ref for latest duration to avoid stale closure
+    const durationMinutes = callDurationRef.current / 60;
 
     // Update database - only if not already ended (prevent double-update)
     const { data: currentSession } = await supabase
