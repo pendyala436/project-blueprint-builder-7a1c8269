@@ -256,6 +256,8 @@ const ChatScreen = () => {
   
   // Store chat ID for realtime subscription (consistent format)
   const chatId = useRef<string>("");
+  // Reactive state to trigger subscription re-run when chatId is set
+  const [activeChatId, setActiveChatId] = useState<string>("");
   
   // Refs for file inputs and camera
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -434,7 +436,7 @@ const ChatScreen = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId.current, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
+  }, [activeChatId, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
 
   /**
    * useEffect: Monitor Partner Online Status and Session
@@ -559,6 +561,7 @@ const ChatScreen = () => {
       // This ensures same chat ID regardless of who initiates
       const ids = [user.id, partnerId].sort();
       chatId.current = `${ids[0]}_${ids[1]}`;
+      setActiveChatId(chatId.current);
 
       // ============= GET USER'S LANGUAGE PREFERENCE AND GENDER =============
       
