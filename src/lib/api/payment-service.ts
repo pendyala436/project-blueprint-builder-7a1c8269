@@ -469,6 +469,13 @@ class PaymentService {
 
   /**
    * Poll for payment status (for external gateway payments)
+   * 
+   * IMPORTANT: This polls a dedicated `pending_recharges` table with a `status` column
+   * that is updated by the payment gateway webhook. It does NOT check ledger_transactions,
+   * which would self-confirm since credits are inserted before polling.
+   * 
+   * Until a real gateway webhook is integrated, this will always timeout —
+   * which is the correct behavior (no false confirmations).
    */
   async pollPaymentStatus(
     paymentId: string,
@@ -481,47 +488,64 @@ class PaymentService {
         attempts++;
 
         if (!networkMonitor.isOnline()) {
-          // Pause polling when offline, will resume when online
           return;
         }
 
         try {
+          // Poll pending_recharges table (updated by gateway webhook)
+          // Until gateway integration exists, this table won't have rows,
+          // so polling will correctly timeout rather than self-confirm.
           const { data, error } = await supabase
-            .from('ledger_transactions')
-            .select('transaction_type, created_at')
+            .from('pending_recharges')
+            .select('status, confirmed_at')
             .eq('id', paymentId)
             .maybeSingle();
 
           if (error) {
-            throw error;
-          }
-
-          if (data) {
-            // Ledger transactions are append-only; presence = success
-            const status: PaymentStatus = 'success';
-
-            if (status === 'success' || status === 'failed' || status === 'cancelled') {
+            // Table may not exist yet — that's expected pre-integration
+            if (error.code === '42P01') {
+              // relation does not exist — gateway not integrated yet
               clearInterval(poll);
               this.activePolls.delete(paymentId);
               this.pendingPayments.delete(paymentId);
               this.savePendingPayments();
-
-              resolve({
-                paymentId,
-                status,
-                confirmedAt: new Date().toISOString(),
-              });
+              reject(new Error('Payment gateway not yet integrated'));
+              return;
             }
+            throw error;
+          }
+
+          if (data && (data.status === 'confirmed' || data.status === 'failed' || data.status === 'cancelled')) {
+            const status: PaymentStatus = data.status === 'confirmed' ? 'success' : data.status as PaymentStatus;
+
+            clearInterval(poll);
+            this.activePolls.delete(paymentId);
+            this.pendingPayments.delete(paymentId);
+            this.savePendingPayments();
+
+            if (onUpdate) onUpdate(status);
+
+            resolve({
+              paymentId,
+              status,
+              confirmedAt: data.confirmed_at || new Date().toISOString(),
+            });
           }
 
           if (attempts >= MAX_POLL_ATTEMPTS) {
             clearInterval(poll);
             this.activePolls.delete(paymentId);
-            reject(new Error('Payment confirmation timeout'));
+            this.pendingPayments.delete(paymentId);
+            this.savePendingPayments();
+            reject(new Error('Payment confirmation timeout — check your payment status with the gateway'));
           }
         } catch (error) {
-          // Continue polling on transient errors
           console.error('Poll error:', error);
+          if (attempts >= MAX_POLL_ATTEMPTS) {
+            clearInterval(poll);
+            this.activePolls.delete(paymentId);
+            reject(new Error('Payment confirmation failed'));
+          }
         }
       }, POLL_INTERVAL);
 

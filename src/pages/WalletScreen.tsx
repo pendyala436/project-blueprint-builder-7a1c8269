@@ -120,26 +120,19 @@ const WalletScreen = () => {
     setProcessingPayment(true);
     try {
       const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
-      // NOTE: Real payment gateway integration required.
-      // This records the recharge as PENDING until gateway webhook confirms payment.
-      // Production: redirect to gateway URL, then credit wallet only on webhook confirmation.
-      toast.info(`Redirecting to ${gateway?.name}…`, {
-        description: "Complete your payment on the gateway page.",
+
+      // ⚠️ IMPORTANT: Do NOT credit wallet here.
+      // Wallet must only be credited after payment gateway confirms via webhook.
+      // The flow should be:
+      //   1. Create a pending_recharge record in DB with amount, gateway, user_id
+      //   2. Redirect user to payment gateway
+      //   3. Gateway webhook confirms payment → edge function credits wallet
+
+      toast.error(`Payment Gateway Not Connected`, {
+        description: `${gateway?.name} integration is pending. No charges were made.`,
       });
-      const result = await creditWallet(
-        userId,
-        amount,
-        `Wallet recharge via ${gateway?.name} – PENDING GATEWAY CONFIRMATION`,
-        `RC_${selectedGateway.toUpperCase()}_${Date.now()}`
-      );
-      if (result.success) {
-        setIsAnimating(true);
-        setTimeout(() => setIsAnimating(false), 600);
-        toast.success(`₹${amount} recharge recorded — pending gateway confirmation.`);
-        loadWallet();
-      } else {
-        toast.error(result.error || "Recharge failed. Please try again.");
-      }
+
+      console.warn('[Recharge] Gateway integration pending — wallet NOT credited. Amount:', amount, 'Gateway:', gateway?.name);
     } catch (err) {
       toast.error("Recharge failed", { description: ERROR_MESSAGES.wallet.rechargeFailed });
     } finally {
