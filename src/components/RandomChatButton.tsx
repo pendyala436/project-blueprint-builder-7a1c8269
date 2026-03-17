@@ -81,14 +81,8 @@ export const RandomChatButton = ({
     if (userGender === "male") {
       const minBalance = 8; // Minimum balance required to start chat
       
-      // Get current user email to check if super user
-      const { data: { session: s } } = await supabase.auth.getSession();
-      const userEmail = s?.user?.email || '';
-      
-      // Super users (matching email pattern) bypass balance check entirely
-      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
-      
-      if (!isSuperUser) {
+      // Balance check — no client-side bypasses; server (chat-manager) handles super-user logic
+      {
         if (walletBalance <= 0) {
           setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
           setShowRechargeDialog(true);
