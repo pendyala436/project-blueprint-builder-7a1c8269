@@ -67,12 +67,7 @@ interface AnimatedGift {
   createdAt: number;
 }
 
-interface ExtensionRecord {
-  month: number;
-  year: number;
-  used: boolean;
-  reason?: string;
-}
+// ExtensionRecord is now stored in DB table group_session_extensions
 
 interface PrivateGroupCallWindowProps {
   group: {
@@ -254,17 +249,23 @@ export function PrivateGroupCallWindow({
     return () => { supabase.removeChannel(channel); };
   }, [group.id, currentUserId, addChatMessage]);
 
-  // Extension check
+  // Extension check — query DB instead of localStorage
   useEffect(() => {
     const now = new Date();
-    const storageKey = `extension_${currentUserId}_${group.id}`;
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const record: ExtensionRecord = JSON.parse(stored);
-      if (record.month === now.getMonth() && record.year === now.getFullYear() && record.used) {
+    const checkExtension = async () => {
+      const { data } = await supabase
+        .from('group_session_extensions')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('group_id', group.id)
+        .eq('extension_month', now.getMonth())
+        .eq('extension_year', now.getFullYear())
+        .maybeSingle();
+      if (data) {
         setCanExtendThisMonth(false);
       }
-    }
+    };
+    checkExtension();
   }, [currentUserId, group.id]);
 
   // Auto-start
