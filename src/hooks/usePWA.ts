@@ -430,12 +430,46 @@ export function usePWA() {
   const subscribeToPush = useCallback(async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
-      console.log('Push subscription ready:', registration);
-      // Note: You would need to set VAPID public key for production
-      return null;
+
+      // VAPID public key (publishable - safe in client code)
+      const VAPID_PUBLIC_KEY = 'BIr6ItdAyYwCl7D1Zn9MKMCgQ14NZvS9fKb_lT3__M4YMO0JcNViewkOUNIjDhfd41eAuAM16MEUeBNkvpxGGQg';
+
+      // Convert VAPID key to Uint8Array
+      const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      };
+
+      const subscription = await registration.pushManager.subscribe({
+        userApplicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+
+      // Save subscription to Supabase
+      const subscriptionJSON = subscription.toJSON();
+      const { error } = await supabase.from('push_subscriptions').upsert({
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        endpoint: subscriptionJSON.endpoint!,
+        p256dh: subscriptionJSON.keys!.p256dh!,
+        auth: subscriptionJSON.keys!.auth!,
+        user_agent: navigator.userAgent,
+      }, { onConflict: 'user_id,endpoint' });
+
+      if (error) {
+        console.error('Failed to save push subscription:', error);
+      } else {
+        console.log('Push subscription saved successfully');
+      }
+
+      return subscription;
     } catch (error) {
       console.error('Failed to subscribe to push:', error);
-      // Non-critical - push subscription
       return null;
     }
   }, []);
