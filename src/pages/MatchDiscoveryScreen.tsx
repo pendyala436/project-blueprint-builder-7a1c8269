@@ -357,8 +357,8 @@ const MatchDiscoveryScreen = () => {
         profilesQuery = profilesQuery.gte("last_active_at", fiveMinutesAgo.toISOString());
       }
 
-      // Execute the query
-      const { data: profiles } = await profilesQuery;
+      // Execute the query with a limit to prevent unbounded fetches
+      const { data: profiles } = await profilesQuery.limit(100);
 
       // Handle empty results
       if (!profiles || profiles.length === 0) {
