@@ -389,7 +389,7 @@ export const useAtomicTransaction = () => {
       console.error("Video billing error:", err);
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, []);
 
