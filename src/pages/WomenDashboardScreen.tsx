@@ -616,7 +616,7 @@ const WomenDashboardScreen = () => {
         fetchOnlineMen(user.id, womanLanguage, userCountryValue),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
-        fetchTodayEarnings(user.id),
+        fetchTopEarnerLeaderboard(user.id),
         fetchWalletBalance(user.id)
       ]);
 
