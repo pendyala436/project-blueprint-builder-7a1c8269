@@ -68,6 +68,7 @@ export const useP2PCall = ({
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+  const callDurationRef = useRef(0);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
