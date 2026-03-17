@@ -113,6 +113,7 @@ const RegistrationCompleteScreen = () => {
   };
 
   const handleGoToDashboard = () => {
+    if (!isFinalized) return;
     toast({
       title: "Welcome!",
       description: "Redirecting to your dashboard...",
