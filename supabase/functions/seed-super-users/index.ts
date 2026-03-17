@@ -247,11 +247,18 @@ Deno.serve(async (req) => {
           is_verified: true
         }, { onConflict: 'user_id' })
 
-        // Super users bypass balance checks via should_bypass_balance function
+        // Create wallet in both tables for consistency
         await supabase.from('wallets').upsert({
           user_id: userId,
           balance: 0,
           currency: 'INR'
+        }, { onConflict: 'user_id' })
+
+        await supabase.from('users_wallet').upsert({
+          user_id: userId,
+          balance: 0,
+          currency: 'INR',
+          gender: 'men'
         }, { onConflict: 'user_id' })
 
         // Add admin role
