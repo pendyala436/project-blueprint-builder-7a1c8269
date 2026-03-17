@@ -37,27 +37,14 @@ registerRoute(
   new NetworkOnly()
 );
 
-// Cache API responses with NetworkFirst strategy
-// Works across all browsers that support Service Workers
+// NEVER cache Supabase API responses — auth tokens, wallet balances,
+// chat sessions, and billing data must always be fresh.
 registerRoute(
-  ({ url }) => 
-    url.pathname.startsWith('/rest/') || 
+  ({ url }) =>
     url.hostname.includes('supabase') ||
-    url.hostname.includes('api'),
-  new NetworkFirst({
-    cacheName: `${CACHE_PREFIX}-api-${APP_VERSION}`,
-    networkTimeoutSeconds: 10,
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 60 * 60, // 1 hour
-        purgeOnQuotaError: true,
-      }),
-    ],
-  })
+    url.pathname.startsWith('/rest/') ||
+    url.pathname.startsWith('/auth/'),
+  new NetworkOnly()
 );
 
 // Cache images with CacheFirst strategy
