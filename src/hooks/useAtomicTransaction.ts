@@ -18,7 +18,7 @@
  * - Wallets are locked in consistent order (by user_id) during transfers
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
