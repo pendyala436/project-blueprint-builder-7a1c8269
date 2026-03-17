@@ -436,7 +436,7 @@ const ChatScreen = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId.current, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
+  }, [activeChatId, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
 
   /**
    * useEffect: Monitor Partner Online Status and Session
