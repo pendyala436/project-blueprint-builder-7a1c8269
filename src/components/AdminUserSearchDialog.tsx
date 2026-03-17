@@ -208,15 +208,11 @@ export const AdminUserSearchDialog = () => {
             kyc = kycData as WomenKYC | null;
           }
 
-          // Fetch wallet info
+          // Fetch wallet info via ledger service for consistency
           let wallet: WalletInfo | null = null;
-          const { data: walletData } = await supabase
-            .from("users_wallet")
-            .select("balance, currency")
-            .eq("user_id", profile.user_id)
-            .maybeSingle();
+          const walletData = await getLedgerWallet(profile.user_id);
           if (walletData) {
-            wallet = walletData as WalletInfo;
+            wallet = { balance: walletData.balance, currency: walletData.currency };
           }
 
           // Fetch chat stats
