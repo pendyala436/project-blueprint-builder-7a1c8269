@@ -121,27 +121,28 @@ const getIdTypeLabel = (type: string) => {
 };
 
 // Helper to generate signed URLs for private kyc-documents bucket
-const getSignedUrl = async (storedUrl: string): Promise<string> => {
-  if (!storedUrl) return storedUrl;
+const getSignedUrl = async (storedValue: string): Promise<string> => {
+  if (!storedValue) return storedValue;
   try {
-    // Extract the path from the public URL format
-    // URL format: https://xxx.supabase.co/storage/v1/object/public/kyc-documents/path
+    // Determine the file path — supports both raw paths and legacy full URLs
+    let filePath = storedValue;
     const bucketMarker = '/kyc-documents/';
-    const idx = storedUrl.indexOf(bucketMarker);
-    if (idx === -1) return storedUrl; // Not a storage URL, return as-is
-    
-    const filePath = storedUrl.substring(idx + bucketMarker.length);
+    const idx = storedValue.indexOf(bucketMarker);
+    if (idx !== -1) {
+      filePath = storedValue.substring(idx + bucketMarker.length);
+    }
+
     const { data, error } = await supabase.storage
       .from('kyc-documents')
       .createSignedUrl(filePath, 3600); // 1 hour expiry
     
     if (error || !data?.signedUrl) {
       console.error('[KYC] Signed URL error:', error);
-      return storedUrl; // Fallback to original
+      return storedValue; // Fallback to original
     }
     return data.signedUrl;
   } catch {
-    return storedUrl;
+    return storedValue;
   }
 };
 
