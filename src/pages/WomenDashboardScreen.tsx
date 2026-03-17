@@ -476,7 +476,7 @@ const WomenDashboardScreen = () => {
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
             setCurrentWomanLanguageCode(newCode);
-            fetchOnlineMen(undefined, newLanguage, currentWomanCountry);
+            fetchOnlineMen(newLanguage, currentWomanCountry);
           }
         }
       )
