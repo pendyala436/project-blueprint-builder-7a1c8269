@@ -847,11 +847,6 @@ const ChatScreen = () => {
     } catch (error: any) {
       console.error("Error blocking user:", error);
       toast.error("Could not block user", { description: "Unable to block this user right now. Please try again." });
-      toast({
-        title: "Error",
-        description: "Failed to block user",
-        variant: "destructive",
-      });
     } finally {
       setActionLoading(false);
     }
