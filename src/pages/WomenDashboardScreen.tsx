@@ -1070,7 +1070,7 @@ const WomenDashboardScreen = () => {
 
   // ScrollableUserList extracted to top-level component to avoid Hooks violation
 
-  const UserCard = ({ user, isPremium = false }: { user: OnlineMan; isPremium?: boolean }) => (
+  const renderUserCard = (user: OnlineMan, isPremium = false) => (
     <Card 
       className={cn(
         "group hover:shadow-lg transition-all duration-300 cursor-pointer",
@@ -1623,7 +1623,7 @@ const WomenDashboardScreen = () => {
                       <ScrollableUserList>
                         {sameLanguageMen.filter(m => m.hasRecharged).map((user, index) => (
                           <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            <UserCard user={user} isPremium={true} />
+                            {renderUserCard(user, true)}
                           </div>
                         ))}
                       </ScrollableUserList>
@@ -1641,7 +1641,7 @@ const WomenDashboardScreen = () => {
                       <ScrollableUserList>
                         {sameLanguageMen.filter(m => !m.hasRecharged).map((user, index) => (
                           <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            <UserCard user={user} isPremium={false} />
+                            {renderUserCard(user, false)}
                           </div>
                         ))}
                       </ScrollableUserList>
@@ -1676,7 +1676,7 @@ const WomenDashboardScreen = () => {
                       <ScrollableUserList>
                         {otherLanguageMen.filter(m => m.hasRecharged).map((user, index) => (
                           <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            <UserCard user={user} isPremium={true} />
+                            {renderUserCard(user, true)}
                           </div>
                         ))}
                       </ScrollableUserList>
@@ -1694,7 +1694,7 @@ const WomenDashboardScreen = () => {
                       <ScrollableUserList>
                         {otherLanguageMen.filter(m => !m.hasRecharged).map((user, index) => (
                           <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            <UserCard user={user} isPremium={false} />
+                            {renderUserCard(user, false)}
                           </div>
                         ))}
                       </ScrollableUserList>
