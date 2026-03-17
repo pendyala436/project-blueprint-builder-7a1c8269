@@ -222,6 +222,7 @@ const WomenDashboardScreen = () => {
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
   const [goldenBadgeExpiry, setGoldenBadgeExpiry] = useState<string | null>(null);
   const [isPurchasingBadge, setIsPurchasingBadge] = useState(false);
+  const [goldenBadgePrice, setGoldenBadgePrice] = useState(1000);
   const [isIndianWoman, setIsIndianWoman] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
