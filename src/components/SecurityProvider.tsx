@@ -1,11 +1,14 @@
 /**
- * Optimized Security Provider
- * - Debounced checks to reduce CPU usage
- * - Lazy initialization
- * - Memoized for performance
+ * Security Provider
+ * 
+ * Provides security context for the app. Real security is enforced
+ * server-side via RLS policies, JWT validation, and edge functions.
+ * 
+ * Client-side protections are limited to content-specific copy/select
+ * blocking on elements marked with data-protected / data-no-select.
  */
 
-import React, { useEffect, createContext, useContext, useState, memo, useCallback, useRef } from 'react';
+import React, { useEffect, createContext, useContext, useState, memo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SecurityContextType {
@@ -31,56 +34,19 @@ interface SecurityProviderProps {
 
 const SecurityProvider: React.FC<SecurityProviderProps> = memo(({
   children,
-  enableDevToolsDetection = true,
   enableConsoleProtection = false,
-  enableKeyboardBlocking = true
 }) => {
-  const [captureAttempts, setCaptureAttempts] = useState(0);
-  const [devToolsOpen, setDevToolsOpen] = useState(false);
+  const [captureAttempts] = useState(0);
   const { toast } = useToast();
-  const devToolsRef = useRef(devToolsOpen);
-
-  // Update ref when state changes
-  devToolsRef.current = devToolsOpen;
-
-  const handleKeyDown = useCallback((_e: KeyboardEvent) => {
-    // Keyboard shortcut blocking removed — these client-side blocks are trivially
-    // bypassed and break developer workflows / accessibility tools.
-    // Real security is enforced server-side via RLS, JWT validation, and edge functions.
-  }, []);
 
   useEffect(() => {
-    // DevTools detection with longer interval
-    let devToolsCheckInterval: NodeJS.Timeout | undefined;
-
-    if (enableDevToolsDetection) {
-      const checkDevTools = () => {
-        const threshold = 160;
-        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-        const isOpen = widthThreshold || heightThreshold;
-        
-        if (isOpen !== devToolsRef.current) {
-          setDevToolsOpen(isOpen);
-          if (isOpen) {
-            console.warn('[Security] Developer tools detected');
-          }
-        }
-      };
-
-      // Check less frequently - every 2 seconds instead of 1
-      devToolsCheckInterval = setInterval(checkDevTools, 2000);
-    }
-
     // Console protection in production — only suppress debug/log, preserve warn/error for diagnostics
     if (enableConsoleProtection && import.meta.env.PROD) {
       console.log = () => {};
       console.info = () => {};
-      // console.warn and console.error are intentionally preserved
-      // so runtime errors and auth failures remain visible in production logs
     }
 
-    // Selection and copy handlers
+    // Selection and copy handlers for protected content only
     const handleSelectStart = (e: Event) => {
       const target = e.target as HTMLElement;
       if (target.closest('[data-protected]') || target.closest('[data-no-select]')) {
@@ -102,27 +68,21 @@ const SecurityProvider: React.FC<SecurityProviderProps> = memo(({
       }
     };
 
-    // Add event listeners
-    document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('selectstart', handleSelectStart);
     document.addEventListener('copy', handleCopy);
 
     return () => {
-      if (devToolsCheckInterval) {
-        clearInterval(devToolsCheckInterval);
-      }
-      document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('selectstart', handleSelectStart);
       document.removeEventListener('copy', handleCopy);
     };
-  }, [enableDevToolsDetection, enableConsoleProtection, handleKeyDown, toast]);
+  }, [enableConsoleProtection, toast]);
 
   return (
     <SecurityContext.Provider 
       value={{ 
         isSecurityActive: true, 
         captureAttempts, 
-        devToolsOpen 
+        devToolsOpen: false 
       }}
     >
       {children}
