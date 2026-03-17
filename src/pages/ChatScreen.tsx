@@ -1264,6 +1264,33 @@ const ChatScreen = () => {
     return { text: message };
   };
 
+  // Signed URL cache for chat attachments
+  const signedUrlCache = useRef<Map<string, string>>(new Map());
+
+  /**
+   * Resolve attachment URL — generates signed URL for private bucket paths,
+   * passes through legacy public URLs unchanged.
+   */
+  const resolveAttachmentUrl = useCallback(async (url: string): Promise<string> => {
+    if (!url.startsWith('chat-attachment://')) return url;
+
+    const cached = signedUrlCache.current.get(url);
+    if (cached) return cached;
+
+    const storagePath = url.replace('chat-attachment://', '');
+    const { data, error } = await supabase.storage
+      .from('chat-attachments')
+      .createSignedUrl(storagePath, 3600); // 1 hour
+
+    if (error || !data?.signedUrl) {
+      console.warn('[Chat] Failed to generate signed URL:', error?.message);
+      return url;
+    }
+
+    signedUrlCache.current.set(url, data.signedUrl);
+    return data.signedUrl;
+  }, []);
+
   /**
    * formatTime Function
    * 
