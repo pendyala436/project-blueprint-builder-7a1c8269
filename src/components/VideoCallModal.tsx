@@ -44,6 +44,7 @@ const VideoCallModal = ({
   preAcquiredStream
 }: VideoCallModalProps) => {
   const { toast } = useToast();
+  const { pricing } = useChatPricing();
   const {
     callStatus,
     callDuration,
@@ -63,7 +64,7 @@ const VideoCallModal = ({
     currentUserId,
     remoteUserId,
     isInitiator,
-    ratePerMinute: 8,
+    ratePerMinute: pricing.videoRatePerMinute,
     onCallEnded: onClose,
     preAcquiredStream,
   });
