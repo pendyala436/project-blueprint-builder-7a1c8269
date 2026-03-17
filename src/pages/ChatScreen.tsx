@@ -683,11 +683,6 @@ const ChatScreen = () => {
     } catch (error) {
       console.error("Error initializing chat:", error);
       toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.initFailed });
-      toast({
-        title: "Error",
-        description: "Failed to load chat",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -852,11 +847,6 @@ const ChatScreen = () => {
     } catch (error: any) {
       console.error("Error blocking user:", error);
       toast.error("Could not block user", { description: "Unable to block this user right now. Please try again." });
-      toast({
-        title: "Error",
-        description: "Failed to block user",
-        variant: "destructive",
-      });
     } finally {
       setActionLoading(false);
     }
@@ -886,11 +876,6 @@ const ChatScreen = () => {
     } catch (error: any) {
       console.error("Error unblocking user:", error);
       toast.error("Could not unblock user", { description: "Unable to unblock this user right now. Please try again." });
-      toast({
-        title: "Error",
-        description: "Failed to unblock user",
-        variant: "destructive",
-      });
     } finally {
       setActionLoading(false);
     }
@@ -1091,12 +1076,7 @@ const ChatScreen = () => {
       
     } catch (error) {
       console.error("Error sending message:", error);
-        toast.error("Message not sent", { description: ERROR_MESSAGES.chat.sendFailed });
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
+      toast.error("Message not sent", { description: ERROR_MESSAGES.chat.sendFailed });
     } finally {
       setIsSending(false);
     }
@@ -1159,13 +1139,8 @@ const ChatScreen = () => {
       }
     } catch (error) {
       console.error("Camera error:", error);
-        const camErr = classifyError(error);
-        toast.error(camErr.title, { description: camErr.message });
-      toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to take a selfie",
-        variant: "destructive",
-      });
+      const camErr = classifyError(error);
+      toast.error(camErr.title, { description: camErr.message });
       setIsCameraOpen(false);
     }
   };
@@ -1281,12 +1256,7 @@ const ChatScreen = () => {
       });
     } catch (error) {
       console.error("Error sending attachment:", error);
-        toast.error("Attachment not sent", { description: ERROR_MESSAGES.chat.attachmentFailed });
-      toast({
-        title: "Error",
-        description: "Failed to send attachment",
-        variant: "destructive",
-      });
+      toast.error("Attachment not sent", { description: ERROR_MESSAGES.chat.attachmentFailed });
     } finally {
       setIsSending(false);
       setIsUploading(false);
