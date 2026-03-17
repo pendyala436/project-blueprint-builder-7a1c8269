@@ -228,7 +228,7 @@ export const useAtomicTransaction = () => {
       
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, [toast]);
 
