@@ -1484,15 +1484,26 @@ serve(async (req) => {
         const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
         
         if (womenEarnings > 0) {
-          await supabase
-            .from("women_earnings")
-            .insert({
+          await Promise.all([
+            supabase.from("women_earnings").insert({
               user_id: session.woman_user_id,
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
               description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
-            });
+            }),
+            supabase.from("ledger_transactions").insert({
+              user_id: session.woman_user_id,
+              transaction_type: "chat_earning",
+              debit: 0,
+              credit: womenEarnings,
+              counterparty_id: session.man_user_id,
+              session_id: session.id,
+              rate_per_minute: womenEarningRate,
+              duration_seconds: wholeMinutes * 60,
+              description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
+            })
+          ]);
         }
 
         // Update session totals
