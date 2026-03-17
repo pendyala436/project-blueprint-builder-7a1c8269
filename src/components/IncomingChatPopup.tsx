@@ -17,7 +17,7 @@ interface IncomingChatPopupProps {
   startedAt: string;
   userGender: "male" | "female";
   onAccept: (sessionId: string) => void;
-  onReject: (sessionId: string) => void;
+  onReject: (sessionId: string, reason?: 'manual' | 'auto_timeout') => void;
 }
 
 // Audio context for buzz sound
