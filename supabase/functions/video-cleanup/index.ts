@@ -81,8 +81,7 @@ serve(async (req) => {
     const deletedCount = deletedSessions?.length || 0;
     console.log(`Deleted ${deletedCount} video call session records older than 5 minutes`);
 
-    // Also cleanup any orphaned signaling data by notifying SRS to close old streams
-    // (SRS handles this automatically, but we log for monitoring)
+    // Log cleaned up sessions for monitoring
     if (deletedSessions && deletedSessions.length > 0) {
       console.log('Cleaned up call IDs:', deletedSessions.map(s => s.call_id).join(', '));
     }
