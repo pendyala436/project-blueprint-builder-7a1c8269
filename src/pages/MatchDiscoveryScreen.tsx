@@ -399,94 +399,94 @@ const MatchDiscoveryScreen = () => {
       const countriesSet = new Set<string>();
 
       // ============= CALCULATE MATCH SCORES =============
-      
-      // Process each profile to calculate match score
-      const matchedUsers: MatchUser[] = await Promise.all(
-        profiles
-          // Filter out already matched users
-          .filter(p => !matchedUserIds.has(p.user_id))
-          // Apply client-side range filters (age, height)
-          .filter(p => {
-            // Age range filter (must be done client-side for range comparison)
-            if (p.age) {
-              if (p.age < filters.ageRange[0] || p.age > filters.ageRange[1]) return false;
-            }
-            // Height range filter (must be done client-side for range comparison)
-            if (p.height_cm) {
-              if (p.height_cm < filters.heightRange[0] || p.height_cm > filters.heightRange[1]) return false;
-            }
-            return true;
-          })
-          // Map each profile to MatchUser format with calculated score
-          .map(async (profile) => {
-            // Fetch languages for this profile
-            const { data: profileLanguages } = await supabase
-              .from("user_languages")
-              .select("language_name")
-              .eq("user_id", profile.user_id);
 
-            // Extract language names
-            const theirLanguages = profileLanguages?.map(l => l.language_name) || [];
-            
-            // Add to filter options
-            theirLanguages.forEach(l => languagesSet.add(l));
-            if (profile.country) countriesSet.add(profile.country);
+      // Pre-filter profiles before processing
+      const eligibleProfiles = profiles
+        .filter(p => !matchedUserIds.has(p.user_id))
+        .filter(p => {
+          if (p.age) {
+            if (p.age < filters.ageRange[0] || p.age > filters.ageRange[1]) return false;
+          }
+          if (p.height_cm) {
+            if (p.height_cm < filters.heightRange[0] || p.height_cm > filters.heightRange[1]) return false;
+          }
+          return true;
+        });
 
-            // ============= LANGUAGE MATCHING ALGORITHM =============
-            
-            // Find common languages between current user and this profile
-            const commonLanguages = userLanguages.filter(lang => 
-              theirLanguages.includes(lang)
-            );
+      // Batch-fetch all languages in ONE query instead of N+1
+      const eligibleUserIds = eligibleProfiles.map(p => p.user_id);
+      const { data: allProfileLanguages } = eligibleUserIds.length > 0
+        ? await supabase
+            .from("user_languages")
+            .select("user_id, language_name")
+            .in("user_id", eligibleUserIds)
+        : { data: [] };
 
-            // ============= MATCH SCORE CALCULATION =============
-            
-            // Use the centralized match score calculator
-            const scoreResult = calculateMatchScore(
-              currentProfile || { user_id: user.id },
-              {
-                user_id: profile.user_id,
-                country: profile.country,
-                preferred_language: profile.preferred_language,
-                interests: profile.interests as string[] | undefined,
-                education_level: profile.education_level,
-                occupation: profile.occupation,
-                religion: profile.religion,
-                marital_status: profile.marital_status,
-                smoking_habit: profile.smoking_habit,
-                drinking_habit: profile.drinking_habit,
-                dietary_preference: profile.dietary_preference,
-                fitness_level: profile.fitness_level,
-                pet_preference: profile.pet_preference,
-                zodiac_sign: profile.zodiac_sign,
-                age: profile.age,
-                bio: profile.bio,
-                photo_url: profile.photo_url,
-              },
-              userLanguages,
-              theirLanguages
-            );
+      // Build a lookup map: user_id -> language_name[]
+      const languagesByUserId = new Map<string, string[]>();
+      (allProfileLanguages || []).forEach(row => {
+        const existing = languagesByUserId.get(row.user_id) || [];
+        existing.push(row.language_name);
+        languagesByUserId.set(row.user_id, existing);
+      });
 
-            const matchScore = scoreResult.totalScore;
+      // Process each profile synchronously (no more async per-profile)
+      const matchedUsers: MatchUser[] = eligibleProfiles.map((profile) => {
+        const theirLanguages = languagesByUserId.get(profile.user_id) || [];
 
-            // Return formatted MatchUser object
-            return {
-              matchId: `match_${profile.user_id}`,
-              userId: profile.user_id,
-              fullName: profile.full_name || "Anonymous",
-              avatar: profile.photo_url || "",
-              languages: theirLanguages,
-              country: profile.country || "Unknown",
-              matchScore: Math.min(matchScore, 100), // Cap at 100%
-              commonLanguages,
-              age: profile.age || undefined,
-              isVerified: profile.is_verified || false,
-              isPremium: profile.is_premium || false,
-              isOnline: onlineStatusMap.get(profile.user_id) || false,
-              bio: profile.bio || undefined,
-            };
-          })
-      );
+        // Add to filter options
+        theirLanguages.forEach(l => languagesSet.add(l));
+        if (profile.country) countriesSet.add(profile.country);
+
+        // Find common languages between current user and this profile
+        const commonLanguages = userLanguages.filter(lang =>
+          theirLanguages.includes(lang)
+        );
+
+        // Use the centralized match score calculator
+        const scoreResult = calculateMatchScore(
+          currentProfile || { user_id: user.id },
+          {
+            user_id: profile.user_id,
+            country: profile.country,
+            preferred_language: profile.preferred_language,
+            interests: profile.interests as string[] | undefined,
+            education_level: profile.education_level,
+            occupation: profile.occupation,
+            religion: profile.religion,
+            marital_status: profile.marital_status,
+            smoking_habit: profile.smoking_habit,
+            drinking_habit: profile.drinking_habit,
+            dietary_preference: profile.dietary_preference,
+            fitness_level: profile.fitness_level,
+            pet_preference: profile.pet_preference,
+            zodiac_sign: profile.zodiac_sign,
+            age: profile.age,
+            bio: profile.bio,
+            photo_url: profile.photo_url,
+          },
+          userLanguages,
+          theirLanguages
+        );
+
+        const matchScore = scoreResult.totalScore;
+
+        return {
+          matchId: `match_${profile.user_id}`,
+          userId: profile.user_id,
+          fullName: profile.full_name || "Anonymous",
+          avatar: profile.photo_url || "",
+          languages: theirLanguages,
+          country: profile.country || "Unknown",
+          matchScore: Math.min(matchScore, 100),
+          commonLanguages,
+          age: profile.age || undefined,
+          isVerified: profile.is_verified || false,
+          isPremium: profile.is_premium || false,
+          isOnline: onlineStatusMap.get(profile.user_id) || false,
+          bio: profile.bio || undefined,
+        };
+      });
 
       // Update filter dropdown options
       setAvailableLanguages(Array.from(languagesSet));
