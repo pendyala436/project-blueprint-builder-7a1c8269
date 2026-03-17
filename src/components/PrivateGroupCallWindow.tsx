@@ -7,8 +7,8 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
  * - Floating danmu/bullet chat comments overlaying the video
  * - Emoji/like reactions bubbling up
  * - Animated gift overlays on screen
- * - 30-minute timer countdown
- * - 50 participant limit
+ * - Elapsed time display (no hard time limit — sessions end when host stops or at midnight IST)
+ * - 100 participant limit
  * - Refund handling when host ends early
  * - One extension per month with reason
  */
