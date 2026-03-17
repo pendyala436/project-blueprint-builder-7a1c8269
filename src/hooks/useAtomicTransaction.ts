@@ -358,7 +358,7 @@ export const useAtomicTransaction = () => {
     sessionId: string,
     minutes: number
   ): Promise<BillingResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       const { data, error } = await supabase.rpc("process_video_billing", {
