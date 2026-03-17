@@ -1730,26 +1730,7 @@ const ChatScreen = () => {
                         
                         {/* Attachment preview */}
                         {attachmentUrl && (
-                          <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
-                            {attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                              <img 
-                                src={attachmentUrl} 
-                                alt="Attachment" 
-                                className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(attachmentUrl, "_blank")}
-                              />
-                            ) : (
-                              <a 
-                                href={attachmentUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className={`flex items-center gap-2 px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}
-                              >
-                                <FileText className="w-5 h-5" />
-                                <span className="text-sm underline">Download File</span>
-                              </a>
-                            )}
-                          </div>
+                          <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
                         )}
                         
                         {/* Primary message bubble - Native language (large) */}
