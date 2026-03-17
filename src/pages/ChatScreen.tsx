@@ -635,7 +635,7 @@ const ChatScreen = () => {
           description: "Chat partner not found",
           variant: "destructive",
         });
-        navigate("/dashboard");
+        navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard");
         return;
       }
 
@@ -1414,7 +1414,7 @@ const ChatScreen = () => {
               <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
             <button 
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard")}
               className="p-2 rounded-full hover:bg-muted transition-colors"
             >
               <Home className="w-5 h-5 text-foreground" />
