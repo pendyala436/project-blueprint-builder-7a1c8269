@@ -322,7 +322,7 @@ const DashboardScreen = () => {
           setIsLoading(false);
           return;
         }
-        await loadDashboardData();
+        await loadDashboardData(session.user);
         updateUserOnlineStatus(true);
         wentOnlineRef.current = true;
         loadActiveChatCount();
