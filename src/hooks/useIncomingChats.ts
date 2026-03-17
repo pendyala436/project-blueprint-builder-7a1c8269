@@ -220,7 +220,7 @@ export const useIncomingChats = (
     checkForNewChats();
 
     // User-scoped channel for efficient message routing at scale
-    const channelName = `incoming-${currentUserId}-${Date.now()}`;
+    const channelName = `incoming-${currentUserId}`;
     const column = userGender === "male" ? "man_user_id" : "woman_user_id";
 
     const channel = supabase

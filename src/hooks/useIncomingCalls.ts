@@ -86,7 +86,7 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
 
     // Subscribe to incoming calls for this user
     const channel = supabase
-      .channel(`incoming-calls-${currentUserId}-${Date.now()}`)
+      .channel(`incoming-calls-${currentUserId}`)
       .on(
         'postgres_changes',
         {

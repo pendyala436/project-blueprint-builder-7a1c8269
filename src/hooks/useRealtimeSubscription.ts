@@ -143,7 +143,7 @@ export const useMultipleRealtimeSubscriptions = (
     if (!enabled || !tablesKey) return;
 
     const tableList = tablesKey.split(',') as TableName[];
-    const channelName = `multi-rt-${Date.now()}`;
+    const channelName = `multi-rt-${tablesKey}`;
     const channel = supabase.channel(channelName);
 
     tableList.forEach((table) => {
