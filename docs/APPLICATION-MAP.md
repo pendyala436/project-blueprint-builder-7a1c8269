@@ -560,9 +560,7 @@ All edge functions are serverless Deno functions deployed to Supabase. They run 
 | `content-moderation` | **Message moderation** — AI-powered content check for inappropriate messages. Flags violations. | HTTP POST (on message send) |
 | `ai-women-approval` | **Auto-approve women** — AI checks women's profiles for eligibility (photo quality, completeness). Sets approval status. | HTTP POST (on registration) |
 | `ai-women-manager` | **Women management** — Manages women's earning eligibility, golden badge assignment, performance scoring. | Cron (periodic) |
-| `ai-election-manager` | **Election automation** — AI manages community elections: scheduling, officer assignment, vote counting, winner declaration. | Cron (periodic) |
 | `auto-approve-kyc` | **KYC auto-approval** — Automatically approves KYC applications that meet criteria. | Cron (periodic) |
-| `shift-scheduler` | **Shift management** — Creates and assigns shifts for women based on language groups and availability. | Cron (daily) |
 | `monthly-earning-rotation` | **Earning rotation** — Monthly rotation of earning-eligible women to ensure fair distribution. | Cron (monthly) |
 | `group-cleanup` | **Group state reset** — Daily midnight IST reset of all private group states (is_live, host, participants). | Cron (daily at 00:00 IST) |
 | `data-cleanup` | **Data cleanup** — Removes old/stale data across multiple tables to keep database lean. | Cron (weekly) |
