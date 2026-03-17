@@ -1,19 +1,12 @@
 /**
- * useAppSettings Hook
+ * useAppSettings Hook (Singleton)
  * 
  * PURPOSE: Fetches dynamic application settings from the database.
- * Eliminates hardcoded values by loading configuration from app_settings table.
- * 
- * ACID COMPLIANCE:
- * - Atomicity: Settings are fetched in a single transaction
- * - Consistency: Default values ensure valid state
- * - Isolation: Uses realtime subscriptions for updates
- * - Durability: Settings persist in database
+ * Uses a shared global cache so multiple components share one fetch + subscription.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 // Currency rate type
 interface CurrencyRate {
@@ -38,7 +31,6 @@ interface PaymentGateways {
 
 // Type definitions for settings
 interface AppSettings {
-  // Wallet settings
   rechargeAmounts: number[];
   withdrawalAmounts: number[];
   supportedCurrencies: string[];
@@ -46,22 +38,12 @@ interface AppSettings {
   withdrawalProcessingHours: number;
   currencyRates: Record<string, CurrencyRate>;
   paymentGateways: PaymentGateways;
-  
-  // Chat settings
   maxParallelChats: number;
   maxReconnectAttempts: number;
   maxMessageLength: number;
-  
-  // Video settings
   minVideoCallBalance: number;
-  
-  // UI settings
   mobileBreakpoint: number;
-  
-  // Security settings
   sessionTimeoutMinutes: number;
-  
-  // Storage settings
   maxFileUploadMb: number;
 }
 
@@ -119,106 +101,126 @@ const SETTING_KEY_MAP: Record<string, keyof AppSettings> = {
   max_file_upload_mb: "maxFileUploadMb",
 };
 
-export const useAppSettings = () => {
-  // State for settings
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// ─── Singleton store ────────────────────────────────────────────────
+interface StoreState {
+  settings: AppSettings;
+  isLoading: boolean;
+  error: string | null;
+}
 
-  /**
-   * Fetches all public settings from the database
-   * Parses JSON values and maps to typed settings object
-   */
-  const fetchSettings = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+let state: StoreState = { settings: DEFAULT_SETTINGS, isLoading: true, error: null };
+const listeners = new Set<() => void>();
+let subscribed = false;
+let fetchInFlight = false;
 
-      // Query all public settings
-      const { data, error: fetchError } = await supabase
-        .from("app_settings")
-        .select("setting_key, setting_value, setting_type")
-        .eq("is_public", true);
+function emit() {
+  listeners.forEach((l) => l());
+}
 
-      if (fetchError) throw fetchError;
+function setState(partial: Partial<StoreState>) {
+  state = { ...state, ...partial };
+  emit();
+}
 
-      if (data && data.length > 0) {
-        // Parse settings into typed object
-        const parsedSettings: Partial<AppSettings> = {};
+function parseRow(row: any): [keyof AppSettings, any] | null {
+  const propertyName = SETTING_KEY_MAP[row.setting_key];
+  if (!propertyName) return null;
 
-        data.forEach((row: any) => {
-          const propertyName = SETTING_KEY_MAP[row.setting_key];
-          if (propertyName) {
-            // Parse value based on type
-            let value: any;
-            try {
-              if (row.setting_type === "json") {
-                // Handle JSON values - they might already be parsed by Supabase
-                if (typeof row.setting_value === "string") {
-                  // Try parsing as JSON, but fall back to raw string if it fails
-                  try {
-                    value = JSON.parse(row.setting_value);
-                  } catch {
-                    // If JSON parse fails, use the raw string value
-                    value = row.setting_value;
-                  }
-                } else {
-                  value = row.setting_value;
-                }
-              } else if (row.setting_type === "number") {
-                value = typeof row.setting_value === "string"
-                  ? parseFloat(row.setting_value)
-                  : row.setting_value;
-              } else {
-                value = row.setting_value;
-              }
-              (parsedSettings as any)[propertyName] = value;
-            } catch (parseError) {
-              // Use raw value as fallback
-              (parsedSettings as any)[propertyName] = row.setting_value;
-              console.warn(`Failed to parse setting ${row.setting_key}, using raw value`);
-            }
-          }
-        });
-
-        // Merge with defaults for any missing settings
-        setSettings(prev => ({
-          ...DEFAULT_SETTINGS,
-          ...parsedSettings,
-        }));
+  let value: any;
+  try {
+    if (row.setting_type === "json") {
+      if (typeof row.setting_value === "string") {
+        try { value = JSON.parse(row.setting_value); } catch { value = row.setting_value; }
+      } else {
+        value = row.setting_value;
       }
-    } catch (err) {
-      console.error("Error fetching app settings:", err);
-      // App settings failure is non-critical - defaults will be used
-      setError(err instanceof Error ? err.message : "Failed to load settings");
-      // Keep default settings on error
-    } finally {
-      setIsLoading(false);
+    } else if (row.setting_type === "number") {
+      value = typeof row.setting_value === "string" ? parseFloat(row.setting_value) : row.setting_value;
+    } else {
+      value = row.setting_value;
     }
-  }, []);
+  } catch {
+    value = row.setting_value;
+  }
+
+  return [propertyName, value];
+}
+
+async function fetchSettings() {
+  if (fetchInFlight) return;
+  fetchInFlight = true;
+
+  try {
+    setState({ isLoading: true, error: null });
+
+    const { data, error: fetchError } = await supabase
+      .from("app_settings")
+      .select("setting_key, setting_value, setting_type")
+      .eq("is_public", true);
+
+    if (fetchError) throw fetchError;
+
+    if (data && data.length > 0) {
+      const parsed: Partial<AppSettings> = {};
+      data.forEach((row: any) => {
+        const result = parseRow(row);
+        if (result) (parsed as any)[result[0]] = result[1];
+      });
+      setState({ settings: { ...DEFAULT_SETTINGS, ...parsed }, isLoading: false });
+    } else {
+      setState({ isLoading: false });
+    }
+  } catch (err) {
+    console.error("Error fetching app settings:", err);
+    setState({ error: err instanceof Error ? err.message : "Failed to load settings", isLoading: false });
+  } finally {
+    fetchInFlight = false;
+  }
+}
+
+function ensureSubscription() {
+  if (subscribed) return;
+  subscribed = true;
 
   // Initial fetch
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+  fetchSettings();
 
-  // Real-time subscription for settings updates
-  useRealtimeSubscription({
-    table: "app_settings" as any,
-    onUpdate: fetchSettings,
-  });
+  // Single realtime subscription shared by all consumers
+  const channel = supabase
+    .channel("app-settings-singleton")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "app_settings" },
+      () => { fetchSettings(); }
+    )
+    .subscribe();
 
-  /**
-   * Get a specific setting value with type safety
-   */
-  const getSetting = <K extends keyof AppSettings>(key: K): AppSettings[K] => {
-    return settings[key];
-  };
+  // Never unsubscribe — this is app-lifetime
+}
+
+function subscribe(listener: () => void) {
+  ensureSubscription();
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+function getSnapshot(): StoreState {
+  return state;
+}
+
+// ─── Public hook ────────────────────────────────────────────────────
+
+export const useAppSettings = () => {
+  const snap = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  const getSetting = useCallback(<K extends keyof AppSettings>(key: K): AppSettings[K] => {
+    return snap.settings[key];
+  }, [snap.settings]);
 
   return {
-    settings,
-    isLoading,
-    error,
+    settings: snap.settings,
+    isLoading: snap.isLoading,
+    error: snap.error,
     getSetting,
     refetch: fetchSettings,
   };
