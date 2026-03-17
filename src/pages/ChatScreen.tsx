@@ -561,6 +561,7 @@ const ChatScreen = () => {
       // This ensures same chat ID regardless of who initiates
       const ids = [user.id, partnerId].sort();
       chatId.current = `${ids[0]}_${ids[1]}`;
+      setActiveChatId(chatId.current);
 
       // ============= GET USER'S LANGUAGE PREFERENCE AND GENDER =============
       
