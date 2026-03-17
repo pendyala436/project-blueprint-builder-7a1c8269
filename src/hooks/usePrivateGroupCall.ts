@@ -463,7 +463,9 @@ export function usePrivateGroupCall({
         }
 
         if (result.duplicate_skipped) {
-          console.log('[GROUP] Duplicate billing skipped');
+          // Host already billed this cycle — reset missed counter
+          missedHostCycles = 0;
+          console.log('[GROUP] Duplicate billing skipped (host is active)');
           return;
         }
 
