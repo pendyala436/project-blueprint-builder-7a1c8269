@@ -343,7 +343,7 @@ export const useAtomicTransaction = () => {
       console.error("Billing error:", err);
       return { success: false, error: errorMessage };
     } finally {
-      setIsProcessing(false);
+      stopProcessing();
     }
   }, []);
 
