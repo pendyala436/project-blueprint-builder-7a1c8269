@@ -94,11 +94,9 @@ export const LanguageGroupChat = ({
   useEffect(() => {
     if (languageName) {
       loadCommunityData();
-      subscribeToMessages();
+      const cleanup = subscribeToMessages();
+      return cleanup;
     }
-    return () => {
-      supabase.removeChannel(supabase.channel(`community-${languageName}`));
-    };
   }, [languageName, currentUserId]);
 
   // Auto-scroll to bottom
