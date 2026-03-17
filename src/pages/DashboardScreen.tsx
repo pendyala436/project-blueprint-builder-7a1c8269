@@ -462,7 +462,7 @@ const DashboardScreen = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, userLanguage, userCountryName]);
+  }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
   const loadWalletBalance = async () => {
     if (!currentUserId) return;
