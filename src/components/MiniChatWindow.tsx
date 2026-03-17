@@ -96,6 +96,7 @@ const MiniChatWindow = ({
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
+  const billingStartedRef = useRef(false);
   
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
@@ -229,12 +230,13 @@ const MiniChatWindow = ({
   useEffect(() => {
     const hasSentMessage = messages.some(m => m.senderId === currentUserId);
     const hasReceivedMessage = messages.some(m => m.senderId !== currentUserId);
-    if (hasSentMessage && hasReceivedMessage && !billingStarted) {
+    if (hasSentMessage && hasReceivedMessage && !billingStartedRef.current) {
+      billingStartedRef.current = true;
       setBillingStarted(true);
       setLastActivityTime(Date.now());
       startBilling();
     }
-  }, [messages, currentUserId, billingStarted]);
+  }, [messages, currentUserId]);
 
   useEffect(() => {
     if (messages.length > 0) {
