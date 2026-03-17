@@ -66,7 +66,7 @@ const ChatBillingDisplay = ({
   const isWrongGender = userGender !== "male";
 
   const loadPricingAndWallet = useCallback(async () => {
-    if (loadInProgress.current) return;
+    if (loadInProgress.current || isWrongGender) return;
     loadInProgress.current = true;
     // Clear any existing intervals before (re)starting to prevent duplicates
     if (heartbeatInterval.current) { clearInterval(heartbeatInterval.current); heartbeatInterval.current = null; }
