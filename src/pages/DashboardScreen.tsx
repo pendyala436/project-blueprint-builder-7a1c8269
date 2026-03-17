@@ -1118,41 +1118,26 @@ const DashboardScreen = () => {
     setProcessingPayment(true);
     
     const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
-    toast({
-      title: "Processing Payment",
-      description: `Opening ${gateway?.name} for ${formatLocalCurrency(amountINR)}...`,
-    });
 
     try {
-      // NOTE: Real payment gateway integration required.
-      // This currently records the recharge as a pending transaction.
-      // Production: replace with gateway redirect / webhook confirmation.
-      toast({
-        title: "Payment Gateway",
-        description: `Redirecting to ${gateway?.name}… (integration pending)`,
-      });
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Session expired");
 
-      // Use atomic transaction function for ACID compliance
-      const result = await creditWallet(
-        session.user.id,
-        amountINR,
-        `Recharge via ${gateway?.name} (${formatLocalCurrency(amountINR)}) – PENDING GATEWAY CONFIRMATION`,
-        `${selectedGateway.toUpperCase()}_${Date.now()}`
-      );
+      // ⚠️ IMPORTANT: Do NOT credit wallet here.
+      // Wallet must only be credited after payment gateway confirms via webhook.
+      // TODO: Replace with actual gateway redirect (Stripe Checkout, CCAvenue, etc.)
+      // The flow should be:
+      //   1. Create a pending_recharge record in DB with amount, gateway, user_id
+      //   2. Redirect user to payment gateway
+      //   3. Gateway webhook confirms payment → edge function credits wallet
+      
+      toast({
+        title: "Payment Gateway Not Connected",
+        description: `${gateway?.name} integration is pending. No charges were made.`,
+        variant: "destructive",
+      });
 
-      if (result.success) {
-        setWalletBalance(result.newBalance || walletBalance + amountINR);
-        setRechargeDialogOpen(false);
-        toast({
-          title: "Recharge Recorded",
-          description: `${formatLocalCurrency(amountINR)} will be credited once payment is confirmed.`,
-        });
-      } else {
-        throw new Error(result.error || "Recharge failed");
-      }
+      console.warn('[Recharge] Gateway integration pending — wallet NOT credited. Amount:', amountINR, 'Gateway:', gateway?.name);
     } catch (error) {
       console.error("Recharge error:", error);
       toast({
