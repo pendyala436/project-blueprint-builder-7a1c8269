@@ -88,6 +88,8 @@ export const usePartnerMonitor = ({
               message = `${partnerName} ended the chat`;
             } else if (session.end_reason === "inactivity_timeout") {
               message = "Chat ended due to inactivity";
+            } else if (session.end_reason === "auto_timeout") {
+              message = "Chat request expired - no response";
             }
 
             toast({

@@ -196,6 +196,8 @@ const MiniChatWindow = ({
               message = "Chat ended - insufficient balance";
             } else if (session.end_reason === 'user_blocked') {
               message = "Chat ended - user blocked";
+            } else if (session.end_reason === 'auto_timeout') {
+              message = "Chat request expired - no response";
             }
             toast({
               title: "Chat Disconnected",

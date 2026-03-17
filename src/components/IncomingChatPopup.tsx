@@ -17,7 +17,7 @@ interface IncomingChatPopupProps {
   startedAt: string;
   userGender: "male" | "female";
   onAccept: (sessionId: string) => void;
-  onReject: (sessionId: string) => void;
+  onReject: (sessionId: string, reason?: 'manual' | 'auto_timeout') => void;
 }
 
 // Audio context for buzz sound
@@ -106,7 +106,7 @@ const IncomingChatPopup = ({
 
     // Auto-reject after 60 seconds of no response
     const timeout = setTimeout(() => {
-      handleReject();
+      handleAutoReject();
     }, 60000);
 
     return () => {
@@ -135,7 +135,19 @@ const IncomingChatPopup = ({
     }
     stopBuzzSound();
     
-    onReject(sessionId);
+    onReject(sessionId, 'manual');
+    setIsExiting(true);
+  };
+
+  const handleAutoReject = () => {
+    // Stop buzz sound completely
+    if (buzzIntervalRef.current) {
+      clearInterval(buzzIntervalRef.current);
+      buzzIntervalRef.current = null;
+    }
+    stopBuzzSound();
+    
+    onReject(sessionId, 'auto_timeout');
     setIsExiting(true);
   };
 
