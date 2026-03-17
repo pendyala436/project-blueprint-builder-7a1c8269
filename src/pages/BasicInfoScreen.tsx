@@ -540,10 +540,10 @@ const BasicInfoScreen = () => {
                 size="xl"
                 className="w-full group"
                 onClick={handleNext}
-                disabled={!isComplete}
+                disabled={!isComplete || isSubmitting || checkingEmail || checkingPhone}
               >
-                Continue
-                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                {isSubmitting ? "Checking..." : "Continue"}
+                {!isSubmitting && <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />}
               </Button>
               
               <p className="text-center text-xs text-muted-foreground mt-4">
