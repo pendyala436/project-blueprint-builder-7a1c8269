@@ -1,0 +1,210 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000;
+const BILLING_WARNING_MS = 2 * 60 * 1000;
+const LOGOUT_TIMEOUT_MS = 15 * 60 * 1000;
+
+interface UseMiniChatBillingOptions {
+  chatId: string;
+  sessionId: string;
+  currentUserId: string;
+  userGender: "male" | "female";
+  ratePerMinute: number;
+  earningRatePerMinute: number;
+  isEarningEligible: boolean;
+  messages: { senderId: string }[];
+  onClose: () => void;
+}
+
+export const useMiniChatBilling = ({
+  chatId,
+  sessionId,
+  currentUserId,
+  userGender,
+  ratePerMinute,
+  earningRatePerMinute,
+  isEarningEligible,
+  messages,
+  onClose,
+}: UseMiniChatBillingOptions) => {
+  const { toast } = useToast();
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [billingStarted, setBillingStarted] = useState(false);
+  const [isBillingPaused, setIsBillingPaused] = useState(false);
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
+  const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
+  const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startBilling = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+
+    timerRef.current = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    heartbeatRef.current = setInterval(async () => {
+      try {
+        await supabase.functions.invoke("chat-manager", {
+          body: { action: "heartbeat", chat_id: chatId, session_id: sessionId },
+        });
+
+        if (userGender === "male") {
+          const { data: wallet } = await supabase
+            .from("users_wallet")
+            .select("balance")
+            .eq("user_id", currentUserId)
+            .maybeSingle();
+
+          if (wallet) {
+            setWalletBalance(wallet.balance);
+            if (wallet.balance < ratePerMinute) {
+              toast({
+                title: "Low Balance",
+                description: "Please recharge to continue chatting",
+                variant: "destructive",
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Heartbeat error:", error);
+      }
+    }, 60000);
+  }, [chatId, sessionId, currentUserId, userGender, ratePerMinute, toast]);
+
+  const stopBillingTimers = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+  }, []);
+
+  // Effect 1: Billing start check — fires when both parties have exchanged messages
+  useEffect(() => {
+    const hasSentMessage = messages.some((m) => m.senderId === currentUserId);
+    const hasReceivedMessage = messages.some((m) => m.senderId !== currentUserId);
+
+    if (hasSentMessage && hasReceivedMessage && !billingStarted) {
+      setBillingStarted(true);
+      setLastActivityTime(Date.now());
+      startBilling();
+    }
+  }, [messages, currentUserId, billingStarted, startBilling]);
+
+  // Effect 2: Track last message times per party
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.senderId === currentUserId) {
+        setLastUserMessageTime(Date.now());
+      } else {
+        setLastPartnerMessageTime(Date.now());
+      }
+    }
+  }, [messages, currentUserId]);
+
+  // Effect 3: Resume billing when both users reply after pause
+  useEffect(() => {
+    if (isBillingPaused && billingStarted) {
+      const userRepliedAfterPause = lastUserMessageTime > lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000;
+      const partnerRepliedAfterPause = lastPartnerMessageTime > lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000;
+
+      if (userRepliedAfterPause && partnerRepliedAfterPause) {
+        setIsBillingPaused(false);
+        setLastActivityTime(Date.now());
+        startBilling();
+        toast({
+          title: "Billing Resumed",
+          description: "Both users are active again. Charging/earning resumed.",
+        });
+      }
+    }
+  }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime, startBilling, toast]);
+
+  // Effect 4: Inactivity warning, billing pause, and logout timeout
+  useEffect(() => {
+    if (!billingStarted || isBillingPaused) return;
+
+    const warningInterval = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityTime;
+      if (timeSinceActivity > BILLING_WARNING_MS && timeSinceActivity < BILLING_PAUSE_TIMEOUT_MS) {
+        const remainingSeconds = Math.ceil((BILLING_PAUSE_TIMEOUT_MS - timeSinceActivity) / 1000);
+        setInactiveWarning(`Billing pauses in ${remainingSeconds}s - send a message!`);
+      } else {
+        setInactiveWarning(null);
+      }
+    }, 1000);
+
+    if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
+    billingPauseTimeoutRef.current = setTimeout(() => {
+      setInactiveWarning(null);
+      stopBillingTimers();
+      setIsBillingPaused(true);
+      toast({
+        title: "Billing Paused",
+        description: "No activity for 3 minutes. Charging/earning stopped. Chat remains open.",
+      });
+    }, BILLING_PAUSE_TIMEOUT_MS);
+
+    if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+    logoutTimeoutRef.current = setTimeout(async () => {
+      toast({
+        title: "Session Ended",
+        description: "No activity for 15 minutes. Logging out...",
+      });
+      try {
+        await supabase
+          .from("active_chat_sessions")
+          .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "inactivity_logout" })
+          .eq("id", sessionId);
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error("Error during inactivity logout:", error);
+      }
+      onClose();
+    }, LOGOUT_TIMEOUT_MS);
+
+    return () => {
+      clearInterval(warningInterval);
+      if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+    };
+  }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused, stopBillingTimers, toast]);
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    return () => {
+      stopBillingTimers();
+      if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
+    };
+  }, [stopBillingTimers]);
+
+  const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
+  const estimatedEarning = billingStarted && isEarningEligible ? (elapsedSeconds / 60) * earningRatePerMinute : 0;
+
+  return {
+    elapsedSeconds,
+    billingStarted,
+    isBillingPaused,
+    walletBalance,
+    setWalletBalance,
+    todayEarnings,
+    setTodayEarnings,
+    inactiveWarning,
+    lastActivityTime,
+    setLastActivityTime,
+    estimatedCost,
+    estimatedEarning,
+    stopBillingTimers,
+  };
+};
