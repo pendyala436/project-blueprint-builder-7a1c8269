@@ -1504,8 +1504,8 @@ const WomenDashboardScreen = () => {
 
           <Card className="p-3 bg-gradient-aurora border-info/30 shadow-glow">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-info/20">
-                <Users className="w-4 h-4 text-info" />
+              <div className="p-1.5 rounded-lg bg-primary/20">
+                <Users className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <p className="text-lg font-bold">{stats.rechargedMen + stats.nonRechargedMen}</p>
