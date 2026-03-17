@@ -17,7 +17,7 @@ import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import PhoneInputWithCode from "@/components/PhoneInputWithCode";
 import AuroraBackground from "@/components/AuroraBackground";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
 

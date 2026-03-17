@@ -8,7 +8,7 @@ import FormCard from "@/components/FormCard";
 import ScreenTitle from "@/components/ScreenTitle";
 import { languages } from "@/data/languages";
 import { countries } from "@/data/countries";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 

@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScreenTitle from "@/components/ScreenTitle";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { useFaceVerification } from "@/hooks/useFaceVerification";
 import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
 
