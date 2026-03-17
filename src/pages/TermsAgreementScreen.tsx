@@ -773,8 +773,8 @@ const TermsAgreementScreen = () => {
       ];
       registrationKeys.forEach(key => localStorage.removeItem(key));
       sessionStorage.removeItem("userPassword");
-      sessionStorage.removeItem("selectedLanguage");
-      sessionStorage.removeItem("selectedCountry");
+      localStorage.removeItem("selectedLanguage");
+      localStorage.removeItem("selectedCountry");
       setIsLoading(false);
     }
   };
