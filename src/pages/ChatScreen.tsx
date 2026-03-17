@@ -140,9 +140,9 @@ const ChatScreen = () => {
   
   // Navigation hook for redirects
   const navigate = useNavigate();
-  
+   
   // Extract chat partner ID from URL parameter
-  const { chatId: partnerId } = useParams<{ chatId: string }>();
+  const { partnerId } = useParams<{ partnerId: string }>();
   
   // Toast notifications hook
   const { toast } = useToast();
