@@ -132,27 +132,34 @@ const OnlineUsersScreen = () => {
 
       const { data: profiles } = await query;
 
-      // Fetch languages for each user (only users with valid photos)
-      const users: OnlineUser[] = await Promise.all(
-        (profiles || [])
-          .filter(profile => profile.photo_url && profile.photo_url.trim() !== "")
-          .map(async (profile) => {
-            const { data: languages } = await supabase
-              .from("user_languages")
-              .select("language_name")
-              .eq("user_id", profile.user_id)
-              .limit(1);
-
-            return {
-              userId: profile.user_id,
-              avatar: profile.photo_url!,
-              fullName: profile.full_name || "Anonymous",
-              onlineStatus: true,
-              motherTongue: languages?.[0]?.language_name || profile.preferred_language || "Unknown",
-              gender: profile.gender || "",
-            };
-          })
+      const validProfiles = (profiles || []).filter(
+        profile => profile.photo_url && profile.photo_url.trim() !== ""
       );
+      const validUserIds = validProfiles.map(p => p.user_id);
+
+      // Batch fetch languages for all users in a single query
+      const { data: allLanguages } = validUserIds.length > 0
+        ? await supabase
+            .from("user_languages")
+            .select("user_id, language_name")
+            .in("user_id", validUserIds)
+        : { data: [] };
+
+      const languageMap = new Map<string, string>();
+      for (const lang of allLanguages || []) {
+        if (!languageMap.has(lang.user_id)) {
+          languageMap.set(lang.user_id, lang.language_name);
+        }
+      }
+
+      const users: OnlineUser[] = validProfiles.map((profile) => ({
+        userId: profile.user_id,
+        avatar: profile.photo_url!,
+        fullName: profile.full_name || "Anonymous",
+        onlineStatus: true,
+        motherTongue: languageMap.get(profile.user_id) || profile.preferred_language || "Unknown",
+        gender: profile.gender || "",
+      }));
 
       setOnlineUsers(users);
 
