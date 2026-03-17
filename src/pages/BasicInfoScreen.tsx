@@ -68,13 +68,53 @@ const BasicInfoScreen = () => {
     setTimeout(() => setShakeField(null), 500);
   };
 
-  // Validate email
+  // Validate email (format only)
   const validateEmail = (value: string) => {
     if (!value.trim()) return "Email is required";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(value.trim())) return "Please enter a valid email";
     return undefined;
   };
+
+  // Check email uniqueness against auth
+  const checkEmailUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
+    const formatError = validateEmail(value);
+    if (formatError) return formatError;
+    setCheckingEmail(true);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("email", value.trim().toLowerCase())
+        .maybeSingle();
+      if (data) return "This email is already registered. Please log in instead.";
+      return undefined;
+    } catch {
+      return undefined; // Don't block registration on network errors
+    } finally {
+      setCheckingEmail(false);
+    }
+  }, []);
+
+  // Check phone uniqueness
+  const checkPhoneUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
+    const formatError = validatePhone(value);
+    if (formatError) return formatError;
+    setCheckingPhone(true);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("phone", value.trim())
+        .maybeSingle();
+      if (data) return "This phone number is already registered.";
+      return undefined;
+    } catch {
+      return undefined;
+    } finally {
+      setCheckingPhone(false);
+    }
+  }, []);
 
   // Validate full name
   const validateFullName = (value: string) => {
@@ -100,7 +140,7 @@ const BasicInfoScreen = () => {
     return undefined;
   };
 
-  // Validate phone
+  // Validate phone (format only)
   const validatePhone = (value: string) => {
     if (!value.trim()) return "Phone number is required";
     const result = phoneSchema.safeParse(value.trim());
