@@ -1411,7 +1411,7 @@ const ChatScreen = () => {
           {/* Back & Home buttons */}
           <div className="flex items-center gap-1">
             <button 
-              onClick={() => navigate(-1)}
+              onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/dashboard")}
               className="p-2 rounded-full hover:bg-muted transition-colors"
             >
               <ArrowLeft className="w-5 h-5 text-foreground" />
