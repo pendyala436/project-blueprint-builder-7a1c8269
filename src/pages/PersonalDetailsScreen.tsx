@@ -172,12 +172,52 @@ const PersonalDetailsScreen = () => {
     );
   };
 
-  const handleNext = () => {
+  // Minimum required fields for a non-blank profile
+  const requiredFieldsFilled = bio.trim().length >= 10 && occupation.trim() && maritalStatus;
+  const completedFieldsCount = [
+    bio.trim(), heightCm, occupation.trim(), bodyType, education,
+    maritalStatus, religion, smokingHabit, drinkingHabit,
+    dietaryPreference, fitnessLevel, petPreference,
+    travelFrequency, personalityType, zodiacSign,
+    hasChildren !== null ? "yes" : "",
+    selectedInterests.length > 0 ? "yes" : "",
+    selectedLifeGoals.length > 0 ? "yes" : "",
+  ].filter(Boolean).length;
+
+  const handleNext = (skip = false) => {
+    if (!skip) {
+      // Validate minimum required fields
+      if (!bio.trim() || bio.trim().length < 10) {
+        toast({
+          title: "Bio is required",
+          description: "Please write at least 10 characters about yourself.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!occupation.trim()) {
+        toast({
+          title: "Occupation is required",
+          description: "Please enter your occupation.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!maritalStatus) {
+        toast({
+          title: "Marital status is required",
+          description: "Please select your marital status.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // Store all personal details
     const personalDetails = {
-      bio,
+      bio: bio.trim(),
       height_cm: heightCm ? parseInt(heightCm) : null,
-      occupation,
+      occupation: occupation.trim(),
       body_type: bodyType,
       education_level: education,
       marital_status: maritalStatus,
@@ -193,12 +233,13 @@ const PersonalDetailsScreen = () => {
       zodiac_sign: zodiacSign,
       interests: selectedInterests,
       life_goals: selectedLifeGoals,
+      profile_completeness: Math.round((completedFieldsCount / 18) * 100),
     };
 
     localStorage.setItem("userPersonalDetails", JSON.stringify(personalDetails));
 
     toast({
-      title: "Details saved! ✨",
+      title: skip ? "Skipped for now" : "Details saved! ✨",
       description: "Let's upload your photos next.",
     });
 
@@ -562,14 +603,15 @@ const PersonalDetailsScreen = () => {
               variant="aurora"
               size="xl"
               className="w-full group"
-              onClick={handleNext}
+              onClick={() => handleNext(false)}
+              disabled={!requiredFieldsFilled}
             >
-              Continue
+              Continue ({completedFieldsCount}/18 fields)
             </Button>
             <Button
               variant="ghost"
               className="w-full text-muted-foreground"
-              onClick={handleNext}
+              onClick={() => handleNext(true)}
             >
               Skip for now
             </Button>
