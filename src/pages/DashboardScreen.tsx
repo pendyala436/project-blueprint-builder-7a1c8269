@@ -1231,6 +1231,7 @@ const DashboardScreen = () => {
             <button 
               className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
               title="Notifications"
+              onClick={() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' })}
             >
               <BellRing className="w-[18px] h-[18px] text-primary" />
               {stats.unreadNotifications > 0 && (
