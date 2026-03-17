@@ -149,12 +149,12 @@ const BasicInfoScreen = () => {
   };
 
   // Handle field blur
-  const handleBlur = (field: "email" | "fullName" | "dob" | "gender" | "phone") => {
+  const handleBlur = async (field: "email" | "fullName" | "dob" | "gender" | "phone") => {
     setTouched((prev) => ({ ...prev, [field]: true }));
     
     let error: string | undefined;
     if (field === "email") {
-      error = validateEmail(email);
+      error = await checkEmailUniqueness(email);
     } else if (field === "fullName") {
       error = validateFullName(fullName);
     } else if (field === "dob") {
@@ -162,7 +162,7 @@ const BasicInfoScreen = () => {
     } else if (field === "gender") {
       error = validateGender(gender);
     } else if (field === "phone") {
-      error = validatePhone(phone);
+      error = await checkPhoneUniqueness(phone);
     }
 
     if (error) {
