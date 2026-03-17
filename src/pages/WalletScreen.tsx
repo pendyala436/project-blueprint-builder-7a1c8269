@@ -66,7 +66,7 @@ const WalletScreen = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { settings } = useAppSettings();
-  const { creditWallet, isProcessing: transactionProcessing } = useAtomicTransaction();
+  const { isProcessing: transactionProcessing } = useAtomicTransaction();
 
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
