@@ -364,7 +364,7 @@ const ChatBillingDisplay = ({
       } catch (error) {
         console.error("Heartbeat error:", error);
       }
-    }, 60000); // Every 60 seconds
+    }, 62000); // Every 62 seconds — 2s buffer for JS timer drift to ensure server sees >=60s elapsed
   };
 
   const formatTime = (seconds: number) => {

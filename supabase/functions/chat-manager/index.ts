@@ -1332,14 +1332,14 @@ serve(async (req) => {
           console.log(`[HEARTBEAT] Only ${secondsElapsed.toFixed(0)}s elapsed for chat ${chat_id} - waiting for full minute`);
           return new Response(
             JSON.stringify({
-              success: true,
-              billing_started: true,
-              minutes_elapsed: 0,
-              men_charged: 0,
-              women_earned: 0,
-              remaining_balance: 0,
-              waiting_for_full_minute: true,
-              seconds_elapsed: Math.floor(secondsElapsed)
+            success: true,
+            billing_started: true,
+            minutes_elapsed: 0,
+            men_charged: 0,
+            women_earned: 0,
+            remaining_balance: wallet?.balance ?? 0,
+            waiting_for_full_minute: true,
+            seconds_elapsed: Math.floor(secondsElapsed)
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
