@@ -1211,7 +1211,6 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
                       });
                     } catch (error) {
                       console.error("Error sending reset email:", error);
-                      toast.error("Reset email failed", { description: ERROR_MESSAGES.auth.passwordResetFailed });
                       toast({
                         title: "Error",
                         description: "Failed to send reset email. Please try again.",
