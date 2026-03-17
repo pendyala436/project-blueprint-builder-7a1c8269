@@ -68,6 +68,7 @@ export const useP2PCall = ({
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+  const callDurationRef = useRef(0);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -206,6 +207,7 @@ export const useP2PCall = ({
       callTimerRef.current = setInterval(() => {
         setState(prev => {
           const newDuration = prev.callDuration + 1;
+          callDurationRef.current = newDuration;
           return {
             ...prev,
             callDuration: newDuration,
@@ -813,8 +815,8 @@ export const useP2PCall = ({
     // Notify remote peer
     void sendSignal('call-ended', { senderId: currentUserId });
 
-    // Calculate duration in minutes
-    const durationMinutes = state.callDuration / 60;
+    // Use ref for latest duration to avoid stale closure
+    const durationMinutes = callDurationRef.current / 60;
 
     // Update database - only if not already ended (prevent double-update)
     const { data: currentSession } = await supabase
@@ -859,7 +861,7 @@ export const useP2PCall = ({
     cleanup();
     setState(prev => ({ ...prev, callStatus: 'ended' }));
     onCallEnded?.();
-  }, [callId, currentUserId, state.callDuration, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry]);
+  }, [callId, currentUserId, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry]);
 
   // Toggle video on/off
   const toggleVideo = useCallback(() => {
