@@ -353,6 +353,8 @@ const ChatScreen = () => {
    */
   useEffect(() => {
     if (partnerId) {
+      // Reset guard so a new partner triggers fresh initialization
+      initializingRef.current = false;
       initializeChat(partnerId);
     }
   }, [partnerId]); // Re-run if partner ID changes
@@ -540,7 +542,10 @@ const ChatScreen = () => {
    * 
    * @param partnerId - UUID of chat partner from URL
    */
+  const initializingRef = useRef(false);
   const initializeChat = async (partnerId: string) => {
+    if (initializingRef.current) return;
+    initializingRef.current = true;
     try {
       setIsLoading(true);
 
@@ -685,6 +690,7 @@ const ChatScreen = () => {
       toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.initFailed });
     } finally {
       setIsLoading(false);
+      initializingRef.current = false;
     }
   };
 
