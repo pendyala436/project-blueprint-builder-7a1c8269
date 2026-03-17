@@ -876,11 +876,6 @@ const ChatScreen = () => {
     } catch (error: any) {
       console.error("Error unblocking user:", error);
       toast.error("Could not unblock user", { description: "Unable to unblock this user right now. Please try again." });
-      toast({
-        title: "Error",
-        description: "Failed to unblock user",
-        variant: "destructive",
-      });
     } finally {
       setActionLoading(false);
     }
