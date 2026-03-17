@@ -248,6 +248,7 @@ const RegistrationCompleteScreen = () => {
           >
             <Button
               onClick={handleGoToDashboard}
+              disabled={!isFinalized}
               className="w-full h-14 text-lg font-medium animate-bounce-subtle"
               variant="aurora"
             >
