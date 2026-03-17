@@ -61,9 +61,9 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
           const today = new Date().toISOString().split("T")[0];
           const lastReset = data.last_free_reset_date;
 
-          // Reset free minutes if it's a new day
+          // Reset free minutes if it's a new day (optimistic lock: only update if date still stale)
            if (lastReset !== today) {
-            await supabase
+            const { data: resetResult, error: resetError } = await supabase
               .from("women_chat_modes")
               .update({
                 free_minutes_used_today: 0,
@@ -77,7 +77,33 @@ export const useWomenChatMode = (userId: string | null, isIndianUser?: boolean):
                   : {}
                 )
               })
-              .eq("user_id", userId);
+              .eq("user_id", userId)
+              .neq("last_free_reset_date", today)
+              .select();
+
+            // If another tab already reset (0 rows updated), re-fetch fresh state
+            if (!resetResult?.length) {
+              console.log("[useWomenChatMode] Reset already applied by another tab, re-fetching");
+              const { data: fresh } = await supabase
+                .from("women_chat_modes")
+                .select("*")
+                .eq("user_id", userId)
+                .maybeSingle();
+              if (fresh) {
+                setCurrentMode(fresh.current_mode as WomenChatMode);
+                setFreeMinutesUsed(Number(fresh.free_minutes_used_today) || 0);
+                setExclusiveFreeLockedUntil(fresh.exclusive_free_locked_until);
+                const ffUsed = Number((fresh as any).force_free_minutes_used_today) || 0;
+                const ffLimit = Number((fresh as any).force_free_minutes_limit) || 15;
+                const ffActive = (fresh as any).is_force_free_active ?? false;
+                setForceFreeMinutesUsed(ffUsed);
+                setForceFreeMinutesLimit(ffLimit);
+                setIsForceFreeActive(ffActive && ffUsed < ffLimit);
+                setFreeMinutesLimit(isIndian ? (Number(fresh.free_minutes_limit) || 60) : Infinity);
+              }
+              setIsLoading(false);
+              return;
+            }
             
             setFreeMinutesUsed(0);
             setForceFreeMinutesUsed(0);
