@@ -204,7 +204,7 @@ const MatchDiscoveryScreen = () => {
       const userLanguages = currentUserLanguages?.map(l => l.language_name) || [];
       
       // Determine user gender - check male_profiles first, then profiles table
-      const userGender = maleProfile ? "Male" : (currentProfile?.gender || "");
+      const userGender = maleProfile ? "male" : (currentProfile?.gender?.toLowerCase() || "");
       setCurrentUserGender(userGender);
       setCurrentUserCountry(maleProfile?.country || currentProfile?.country || "");
       setCurrentUserId(user.id);
@@ -212,8 +212,8 @@ const MatchDiscoveryScreen = () => {
       // ============= DETERMINE MATCHING GENDER =============
       
       // For heterosexual matching: Males see Females, Females see Males
-      const oppositeGender = userGender === "Male" ? "Female" : 
-                            userGender === "Female" ? "Male" : "";
+      const oppositeGender = userGender === "male" ? "female" : 
+                            userGender === "female" ? "male" : "";
 
 
       // ============= BUILD DATABASE QUERY =============
