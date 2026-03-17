@@ -1425,7 +1425,7 @@ const WomenDashboardScreen = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-primary">₹{myTodayEarnings.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-primary">₹{stats.todayEarnings.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
