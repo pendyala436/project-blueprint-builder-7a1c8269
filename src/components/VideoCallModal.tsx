@@ -1,4 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
+import { useChatPricing } from "@/hooks/useChatPricing";
 import { useCallback, useEffect } from "react";
 import {
   Dialog,
