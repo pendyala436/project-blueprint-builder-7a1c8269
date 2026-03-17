@@ -13,62 +13,66 @@ export const APP_NAME = 'Meow Meow';
 export const APP_VERSION = '1.0.0';
 export const APP_DESCRIPTION = 'Real People. Real Connections';
 
-// ============= Routes =============
+// ============= Routes (synced with App.tsx) =============
 
 export const ROUTES = {
   // Auth
   HOME: '/',
   FORGOT_PASSWORD: '/forgot-password',
-  PASSWORD_RESET: '/password-reset',
-  
+  RESET_PASSWORD: '/reset-password',
+  PASSWORD_RESET_SUCCESS: '/password-reset-success',
+
   // Registration
   REGISTER: '/register',
   BASIC_INFO: '/basic-info',
-  PASSWORD_SETUP: '/password-setup',
+  PERSONAL_DETAILS: '/personal-details',
   PHOTO_UPLOAD: '/photo-upload',
   LOCATION_SETUP: '/location-setup',
   LANGUAGE_PREFERENCES: '/language-preferences',
+  PASSWORD_SETUP: '/password-setup',
   TERMS_AGREEMENT: '/terms-agreement',
   AI_PROCESSING: '/ai-processing',
-  WELCOME_TUTORIAL: '/welcome-tutorial',
   REGISTRATION_COMPLETE: '/registration-complete',
   APPROVAL_PENDING: '/approval-pending',
-  
+  WELCOME: '/welcome',
+
   // Main App
   DASHBOARD: '/dashboard',
   WOMEN_DASHBOARD: '/women-dashboard',
-  ONLINE_USERS: '/online-users',
-  FIND_MATCH: '/find-match',
-  MATCH_DISCOVERY: '/match-discovery',
-  PROFILE: '/profile/:userId',
   CHAT: '/chat/:partnerId',
+  MATCHING: '/matching',
+  MATCH_DISCOVERY: '/match-discovery',
+  ONLINE_USERS: '/online-users',
+  PROFILE: '/profile/:userId',
+  SEND_GIFT: '/send-gift/:receiverId',
   WALLET: '/wallet',
   WOMEN_WALLET: '/women-wallet',
-  TRANSACTION_HISTORY: '/transaction-history',
   SETTINGS: '/settings',
-  
-  SEND_GIFT: '/send-gift/:receiverId',
   INSTALL: '/install',
-  
+
   // Admin
   ADMIN: '/admin',
-  ADMIN_ANALYTICS: '/admin/analytics',
   ADMIN_USERS: '/admin/users',
-  ADMIN_GIFTS: '/admin/gifts',
-  ADMIN_LANGUAGES: '/admin/languages',
+  ADMIN_ANALYTICS: '/admin/analytics',
   ADMIN_CHAT_MONITORING: '/admin/chat-monitoring',
   ADMIN_FINANCE: '/admin/finance',
   ADMIN_FINANCE_REPORTS: '/admin/finance-reports',
-  ADMIN_BACKUPS: '/admin/backups',
-  ADMIN_LEGAL_DOCUMENTS: '/admin/legal-documents',
+  ADMIN_TRANSACTIONS: '/admin/transactions',
+  ADMIN_STATEMENTS: '/admin/statements',
   ADMIN_CHAT_PRICING: '/admin/chat-pricing',
-  ADMIN_PERFORMANCE: '/admin/performance',
-  ADMIN_SETTINGS: '/admin/settings',
-  ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+  ADMIN_GIFTS: '/admin/gifts',
+  ADMIN_LANGUAGES: '/admin/languages',
+  ADMIN_LANGUAGE_LIMITS: '/admin/language-limits',
+  ADMIN_KYC: '/admin/kyc',
+  ADMIN_USER_LOOKUP: '/admin/user-lookup',
   ADMIN_MODERATION: '/admin/moderation',
   ADMIN_POLICY_ALERTS: '/admin/policy-alerts',
-  ADMIN_LANGUAGE_LIMITS: '/admin/language-limits',
-  ADMIN_TRANSACTIONS: '/admin/transactions',
+  ADMIN_PERFORMANCE: '/admin/performance',
+  ADMIN_LEGAL_DOCUMENTS: '/admin/legal-documents',
+  ADMIN_BACKUPS: '/admin/backups',
+  ADMIN_AUDIT_LOGS: '/admin/audit-logs',
+  ADMIN_MESSAGING: '/admin/messaging',
+  ADMIN_SETTINGS: '/admin/settings',
 } as const;
 
 // ============= Breakpoints =============
