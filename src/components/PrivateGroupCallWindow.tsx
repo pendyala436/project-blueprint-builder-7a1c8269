@@ -67,12 +67,7 @@ interface AnimatedGift {
   createdAt: number;
 }
 
-interface ExtensionRecord {
-  month: number;
-  year: number;
-  used: boolean;
-  reason?: string;
-}
+// ExtensionRecord is now stored in DB table group_session_extensions
 
 interface PrivateGroupCallWindowProps {
   group: {
