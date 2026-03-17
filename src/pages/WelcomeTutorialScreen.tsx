@@ -56,7 +56,7 @@ const tutorialSlides: TutorialSlide[] = [
   {
     id: 4,
     title: "Connect Globally",
-    description: "Break language barriers with real-time translation. Meet people from around the world!",
+    description: "Meet people from different cultures and backgrounds. Explore connections from around the world!",
     icon: <Globe className="w-12 h-12" />,
     color: "from-secondary to-secondary/80",
   },
