@@ -1415,15 +1415,31 @@ serve(async (req) => {
           const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
           
           if (womenEarnings > 0) {
-            await supabase
-              .from("women_earnings")
-              .insert({
+            await Promise.all([
+              supabase.from("women_earnings").insert({
                 user_id: session.woman_user_id,
                 chat_session_id: session.id,
                 amount: womenEarnings,
                 earning_type: "chat",
                 description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
-              });
+              }),
+              supabase.from("wallets").update({
+                balance: supabase.rpc ? undefined : undefined // handled below
+              }).eq("user_id", "SKIP") // placeholder — actual update below
+            ]);
+            // Credit woman's wallet balance
+            await supabase.rpc('increment_wallet_balance', {
+              p_user_id: session.woman_user_id,
+              p_amount: womenEarnings
+            }).then(async ({ error }) => {
+              if (error) {
+                // Fallback: direct update if RPC doesn't exist
+                const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
+                if (wWallet) {
+                  await supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id);
+                }
+              }
+            });
           }
 
           await supabase
