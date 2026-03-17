@@ -80,8 +80,8 @@ export const useRealtimeSubscription = ({
       supabase.removeChannel(channelRef.current);
     }
 
-    // Unique channel name with timestamp for clean reconnects
-    const channelName = `rt-${table}-${Date.now()}`;
+    // Static channel name — no Date.now() to avoid re-subscription gaps
+    const channelName = `rt-${table}${filter ? `-${filter}` : ''}`;
     
     const subscriptionConfig: any = {
       event,
@@ -143,7 +143,7 @@ export const useMultipleRealtimeSubscriptions = (
     if (!enabled || !tablesKey) return;
 
     const tableList = tablesKey.split(',') as TableName[];
-    const channelName = `multi-rt-${Date.now()}`;
+    const channelName = `multi-rt-${tablesKey}`;
     const channel = supabase.channel(channelName);
 
     tableList.forEach((table) => {
