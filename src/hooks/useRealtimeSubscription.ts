@@ -80,8 +80,8 @@ export const useRealtimeSubscription = ({
       supabase.removeChannel(channelRef.current);
     }
 
-    // Unique channel name with timestamp for clean reconnects
-    const channelName = `rt-${table}-${Date.now()}`;
+    // Static channel name — no Date.now() to avoid re-subscription gaps
+    const channelName = `rt-${table}${filter ? `-${filter}` : ''}`;
     
     const subscriptionConfig: any = {
       event,
