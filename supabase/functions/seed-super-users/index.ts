@@ -137,11 +137,18 @@ Deno.serve(async (req) => {
           is_verified: true
         }, { onConflict: 'user_id' })
 
-        // Create wallet with zero balance (super users bypass balance checks via should_bypass_balance function)
+        // Create wallet in both tables for consistency
         await supabase.from('wallets').upsert({
           user_id: userId,
           balance: 0,
           currency: 'INR'
+        }, { onConflict: 'user_id' })
+
+        await supabase.from('users_wallet').upsert({
+          user_id: userId,
+          balance: 0,
+          currency: 'INR',
+          gender: 'women'
         }, { onConflict: 'user_id' })
 
         results.females.push({ email, status: 'created', userId })
