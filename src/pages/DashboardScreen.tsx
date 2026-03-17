@@ -232,6 +232,15 @@ const DashboardScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
+  const [matchFilters, setMatchFilters] = useState<MatchFilters>({
+    ageRange: [18, 60],
+    heightRange: [140, 200],
+    country: "all",
+    language: "all",
+    religion: "all",
+    premiumOnly: false,
+    verifiedOnly: false,
+  });
 
   // Chat pricing from admin settings
   const { pricing, calculateCost, hasSufficientBalance, formatPrice } = useChatPricing();
