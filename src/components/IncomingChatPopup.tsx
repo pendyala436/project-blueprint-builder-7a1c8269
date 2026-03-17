@@ -106,7 +106,7 @@ const IncomingChatPopup = ({
 
     // Auto-reject after 60 seconds of no response
     const timeout = setTimeout(() => {
-      handleReject();
+      handleAutoReject();
     }, 60000);
 
     return () => {
