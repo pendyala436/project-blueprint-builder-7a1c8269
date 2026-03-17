@@ -308,8 +308,8 @@ const ProfileDetailScreen = () => {
         }
       }
 
-      // Create chat ID
-      const chatId = [currentUserId, profile.userId].sort().join("-");
+      // Create chat ID - sorted UUIDs joined with underscore (consistent across codebase)
+      const chatId = [currentUserId, profile.userId].sort().join("_");
 
       // Check if there's already an active session
       const { data: existingSession } = await supabase

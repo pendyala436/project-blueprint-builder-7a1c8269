@@ -1661,8 +1661,9 @@ serve(async (req) => {
         // End current session
         await endChatSession(supabase, chat_id, "transferred", session);
 
-        // Start new session with new woman
-        const newChatId = `chat_${session.man_user_id}_${newWomanId}_${Date.now()}`;
+        // Start new session with new woman - sorted UUIDs joined with underscore
+        const sortedTransferIds = [String(session.man_user_id), String(newWomanId)].sort();
+        const newChatId = `${sortedTransferIds[0]}_${sortedTransferIds[1]}`;
         await supabase
           .from("active_chat_sessions")
           .insert({
