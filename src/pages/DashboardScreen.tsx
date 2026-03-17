@@ -204,6 +204,7 @@ const DashboardScreen = () => {
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for language feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
+  const userLanguageRef = useRef(userLanguage);
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // Language language code
   const [walletBalance, setWalletBalance] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
