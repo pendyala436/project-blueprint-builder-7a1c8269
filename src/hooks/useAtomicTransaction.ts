@@ -111,7 +111,7 @@ export const useAtomicTransaction = () => {
     description?: string,
     referenceId?: string
   ): Promise<TransactionResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       // Call the atomic database function with row-level locking
