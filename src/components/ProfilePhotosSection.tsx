@@ -229,17 +229,9 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
 
       // Determine display order
       const existingOfType = photos.filter(p => p.photo_type === type);
-      const displayOrder = existingOfType.length;
+      const displayOrder = type === 'selfie' ? 0 : existingOfType.length;
 
-      // If this is a selfie and one already exists, delete the old one
-      if (type === 'selfie') {
-        const existingSelfie = photos.find(p => p.photo_type === 'selfie');
-        if (existingSelfie) {
-          await deletePhoto(existingSelfie.id, existingSelfie.photo_url);
-        }
-      }
-
-      // Save to database
+      // Save to database first, before deleting anything
       const { data: newPhoto, error: dbError } = await supabase
         .from("user_photos")
         .insert({
@@ -247,12 +239,20 @@ const ProfilePhotosSection = ({ userId, expectedGender, onPhotosChange, onGender
           photo_url: publicUrl,
           photo_type: type,
           display_order: displayOrder,
-          is_primary: photos.length === 0, // First photo is primary
+          is_primary: photos.length === 0,
         })
         .select()
         .single();
 
       if (dbError) throw dbError;
+
+      // Only delete old selfie AFTER new one is confirmed saved
+      if (type === 'selfie') {
+        const existingSelfie = photos.find(p => p.photo_type === 'selfie');
+        if (existingSelfie) {
+          await deletePhoto(existingSelfie.id, existingSelfie.photo_url);
+        }
+      }
 
       // Update profile photo_url if this is the first photo or selfie
       if (photos.length === 0 || type === 'selfie') {
