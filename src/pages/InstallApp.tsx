@@ -34,12 +34,12 @@ export default function InstallApp() {
   const { isNative } = useNativeApp();
 
   // Detect device type
-  const isTablet = typeof window !== 'undefined' && 
-    (window.innerWidth >= 768 && window.innerWidth < 1024) ||
-    /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent);
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+  const isTabletUA = /iPad|Android(?!.*Mobile)/i.test(ua);
+  const isMobileUA = /iPhone|Android.*Mobile/i.test(ua);
   
-  const isMobile = typeof window !== 'undefined' && 
-    window.innerWidth < 768 || /iPhone|Android.*Mobile/i.test(navigator.userAgent);
+  const isTablet = isTabletUA || (!isMobileUA && typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024);
+  const isMobile = isMobileUA;
 
   const deviceType = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
 
