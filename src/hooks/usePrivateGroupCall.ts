@@ -800,7 +800,7 @@ export function usePrivateGroupCall({
       }));
       return false;
     }
-  }, [isOwner, checkCanJoin, initParticipantMedia, setupSignaling, pricing.groupCallRatePerMinute]);
+  }, [isOwner, checkCanJoin, initParticipantMedia, setupSignaling, startBillingTimer, pricing.groupCallRatePerMinute]);
 
   // Cleanup - stops media, peer connections, channel
   const cleanup = useCallback(() => {
