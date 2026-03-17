@@ -1631,20 +1631,22 @@ serve(async (req) => {
 
                 if (manWallet && manWallet.balance >= finalMenCharge) {
                   const { data: endNewBal } = await supabase.rpc('atomic_wallet_debit', { p_wallet_id: manWallet.id, p_amount: finalMenCharge });
-                  if (endNewBal === -1) { console.warn('[END_CHAT] Insufficient balance for final billing'); }
-                  else {
-                  await supabase.from("ledger_transactions").insert({
-                    user_id: session.man_user_id,
-                    transaction_type: "chat_debit",
-                    debit: finalMenCharge,
-                    credit: 0,
-                    counterparty_id: session.woman_user_id,
-                    session_id: session.id,
-                    rate_per_minute: finalRate,
-                    duration_seconds: wholeMinutesRemaining * 60,
-                    description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`
-                  });
-                  console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
+                  if (endNewBal === -1) {
+                    console.warn('[END_CHAT] Insufficient balance for final billing');
+                  } else {
+                    await supabase.from("ledger_transactions").insert({
+                      user_id: session.man_user_id,
+                      transaction_type: "chat_debit",
+                      debit: finalMenCharge,
+                      credit: 0,
+                      counterparty_id: session.woman_user_id,
+                      session_id: session.id,
+                      rate_per_minute: finalRate,
+                      duration_seconds: wholeMinutesRemaining * 60,
+                      description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`
+                    });
+                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
+                  }
                 }
               }
 
