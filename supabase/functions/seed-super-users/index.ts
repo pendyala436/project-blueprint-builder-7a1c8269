@@ -37,13 +37,11 @@ async function verifyAdminAuth(req: Request, supabase: any): Promise<{ isValid: 
 
   const token = authHeader.replace('Bearer ', '');
   
-  // Verify the JWT and get user
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
     return { isValid: false, error: 'Invalid or expired token' };
   }
 
-  // Check if user has admin role
   const { data: roleData } = await supabase
     .from('user_roles')
     .select('role')
@@ -56,6 +54,63 @@ async function verifyAdminAuth(req: Request, supabase: any): Promise<{ isValid: 
   }
 
   return { isValid: true, userId: user.id };
+}
+
+/**
+ * Idempotent profile seeding: only INSERT if no profile exists.
+ * Never overwrites existing profiles to preserve admin changes.
+ */
+async function ensureProfile(supabase: any, userId: string, profileData: Record<string, any>): Promise<'created' | 'exists'> {
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    return 'exists';
+  }
+
+  await supabase.from('profiles').insert({
+    user_id: userId,
+    ...profileData,
+  });
+  return 'created';
+}
+
+/**
+ * Idempotent wallet seeding: only INSERT if no wallet exists.
+ * Never resets existing balances.
+ */
+async function ensureWallets(supabase: any, userId: string, gender: 'men' | 'women'): Promise<void> {
+  const { data: existingLegacy } = await supabase
+    .from('wallets')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!existingLegacy) {
+    await supabase.from('wallets').insert({
+      user_id: userId,
+      balance: 0,
+      currency: 'INR'
+    });
+  }
+
+  const { data: existingLedger } = await supabase
+    .from('users_wallet')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!existingLedger) {
+    await supabase.from('users_wallet').insert({
+      user_id: userId,
+      balance: 0,
+      currency: 'INR',
+      gender
+    });
+  }
 }
 
 Deno.serve(async (req) => {
@@ -104,7 +159,7 @@ Deno.serve(async (req) => {
     for (let i = 1; i <= 15; i++) {
       const email = `female${i}@meow-meow.com`
       try {
-        // Create auth user
+        // Try to create auth user
         const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email,
           password,
@@ -112,20 +167,31 @@ Deno.serve(async (req) => {
           user_metadata: { full_name: `Female User ${i}`, gender: 'female' }
         })
 
+        let userId: string;
+        let authStatus: string;
+
         if (authError) {
           if (authError.message.includes('already been registered')) {
-            results.females.push({ email, status: 'already exists' })
+            // Look up existing user ID
+            const { data: { users } } = await supabase.auth.admin.listUsers();
+            const existingUser = users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              results.errors.push({ email, error: 'Auth user exists but could not be found' });
+              continue;
+            }
+            userId = existingUser.id;
+            authStatus = 'auth_exists';
           } else {
-            results.errors.push({ email, error: authError.message })
+            results.errors.push({ email, error: authError.message });
+            continue;
           }
-          continue
+        } else {
+          userId = authData.user.id;
+          authStatus = 'auth_created';
         }
 
-        const userId = authData.user.id
-
-        // Create profile
-        await supabase.from('profiles').upsert({
-          user_id: userId,
+        // Idempotent: only create profile/wallets if they don't exist
+        const profileStatus = await ensureProfile(supabase, userId, {
           full_name: `Female User ${i}`,
           gender: 'female',
           country: 'India',
@@ -135,23 +201,15 @@ Deno.serve(async (req) => {
           ai_approved: true,
           account_status: 'active',
           is_verified: true
-        }, { onConflict: 'user_id' })
+        });
 
-        // Create wallet in both tables for consistency
-        await supabase.from('wallets').upsert({
-          user_id: userId,
-          balance: 0,
-          currency: 'INR'
-        }, { onConflict: 'user_id' })
+        await ensureWallets(supabase, userId, 'women');
 
-        await supabase.from('users_wallet').upsert({
-          user_id: userId,
-          balance: 0,
-          currency: 'INR',
-          gender: 'women'
-        }, { onConflict: 'user_id' })
-
-        results.females.push({ email, status: 'created', userId })
+        results.females.push({ 
+          email, 
+          status: profileStatus === 'exists' ? 'already exists (preserved)' : 'created',
+          userId 
+        });
       } catch (err) {
         results.errors.push({ email, error: String(err) })
       }
@@ -168,19 +226,26 @@ Deno.serve(async (req) => {
           user_metadata: { full_name: `Male User ${i}`, gender: 'male' }
         })
 
+        let userId: string;
+
         if (authError) {
           if (authError.message.includes('already been registered')) {
-            results.males.push({ email, status: 'already exists' })
+            const { data: { users } } = await supabase.auth.admin.listUsers();
+            const existingUser = users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              results.errors.push({ email, error: 'Auth user exists but could not be found' });
+              continue;
+            }
+            userId = existingUser.id;
           } else {
-            results.errors.push({ email, error: authError.message })
+            results.errors.push({ email, error: authError.message });
+            continue;
           }
-          continue
+        } else {
+          userId = authData.user.id;
         }
 
-        const userId = authData.user.id
-
-        await supabase.from('profiles').upsert({
-          user_id: userId,
+        const profileStatus = await ensureProfile(supabase, userId, {
           full_name: `Male User ${i}`,
           gender: 'male',
           country: 'India',
@@ -190,23 +255,15 @@ Deno.serve(async (req) => {
           ai_approved: true,
           account_status: 'active',
           is_verified: true
-        }, { onConflict: 'user_id' })
+        });
 
-        // Create wallet in both tables for consistency
-        await supabase.from('wallets').upsert({
-          user_id: userId,
-          balance: 0,
-          currency: 'INR'
-        }, { onConflict: 'user_id' })
+        await ensureWallets(supabase, userId, 'men');
 
-        await supabase.from('users_wallet').upsert({
-          user_id: userId,
-          balance: 0,
-          currency: 'INR',
-          gender: 'men'
-        }, { onConflict: 'user_id' })
-
-        results.males.push({ email, status: 'created', userId })
+        results.males.push({ 
+          email, 
+          status: profileStatus === 'exists' ? 'already exists (preserved)' : 'created',
+          userId 
+        });
       } catch (err) {
         results.errors.push({ email, error: String(err) })
       }
@@ -223,19 +280,26 @@ Deno.serve(async (req) => {
           user_metadata: { full_name: `Admin User ${i}`, gender: 'male' }
         })
 
+        let userId: string;
+
         if (authError) {
           if (authError.message.includes('already been registered')) {
-            results.admins.push({ email, status: 'already exists' })
+            const { data: { users } } = await supabase.auth.admin.listUsers();
+            const existingUser = users?.find((u: any) => u.email === email);
+            if (!existingUser) {
+              results.errors.push({ email, error: 'Auth user exists but could not be found' });
+              continue;
+            }
+            userId = existingUser.id;
           } else {
-            results.errors.push({ email, error: authError.message })
+            results.errors.push({ email, error: authError.message });
+            continue;
           }
-          continue
+        } else {
+          userId = authData.user.id;
         }
 
-        const userId = authData.user.id
-
-        await supabase.from('profiles').upsert({
-          user_id: userId,
+        const profileStatus = await ensureProfile(supabase, userId, {
           full_name: `Admin User ${i}`,
           gender: 'male',
           country: 'India',
@@ -245,29 +309,21 @@ Deno.serve(async (req) => {
           ai_approved: true,
           account_status: 'active',
           is_verified: true
-        }, { onConflict: 'user_id' })
+        });
 
-        // Create wallet in both tables for consistency
-        await supabase.from('wallets').upsert({
-          user_id: userId,
-          balance: 0,
-          currency: 'INR'
-        }, { onConflict: 'user_id' })
+        await ensureWallets(supabase, userId, 'men');
 
-        await supabase.from('users_wallet').upsert({
-          user_id: userId,
-          balance: 0,
-          currency: 'INR',
-          gender: 'men'
-        }, { onConflict: 'user_id' })
-
-        // Add admin role
+        // Admin role is always ensured (idempotent upsert)
         await supabase.from('user_roles').upsert({
           user_id: userId,
           role: 'admin'
-        }, { onConflict: 'user_id,role' })
+        }, { onConflict: 'user_id,role' });
 
-        results.admins.push({ email, status: 'created', userId })
+        results.admins.push({ 
+          email, 
+          status: profileStatus === 'exists' ? 'already exists (preserved)' : 'created',
+          userId 
+        });
       } catch (err) {
         results.errors.push({ email, error: String(err) })
       }
