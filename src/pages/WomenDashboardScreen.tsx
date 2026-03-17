@@ -222,6 +222,7 @@ const WomenDashboardScreen = () => {
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
   const [goldenBadgeExpiry, setGoldenBadgeExpiry] = useState<string | null>(null);
   const [isPurchasingBadge, setIsPurchasingBadge] = useState(false);
+  const [goldenBadgePrice, setGoldenBadgePrice] = useState(1000);
   const [isIndianWoman, setIsIndianWoman] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
@@ -573,6 +574,17 @@ const WomenDashboardScreen = () => {
       setHasGoldenBadge(!!badgeActive);
       if (mainProfile?.golden_badge_expires_at) {
         setGoldenBadgeExpiry(mainProfile.golden_badge_expires_at);
+      }
+
+      // Fetch golden badge price from app_settings
+      const { data: badgePriceSetting } = await supabase
+        .from("app_settings")
+        .select("setting_value")
+        .eq("setting_key", "golden_badge_price")
+        .eq("is_public", true)
+        .maybeSingle();
+      if (badgePriceSetting?.setting_value) {
+        setGoldenBadgePrice(Number(badgePriceSetting.setting_value) || 1000);
       }
 
       // Check if female user needs approval (case-insensitive check)
@@ -1549,7 +1561,7 @@ const WomenDashboardScreen = () => {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xs sm:text-sm font-bold text-foreground">🌟 Golden Badge</h3>
                     <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                      Buy for ₹1,000/month to initiate chats & video calls with men
+                      Buy for ₹{goldenBadgePrice.toLocaleString()}/month to initiate chats & video calls with men
                     </p>
                   </div>
                 </div>
