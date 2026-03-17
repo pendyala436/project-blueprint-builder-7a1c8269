@@ -427,7 +427,7 @@ const WomenDashboardScreen = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'women_earnings' },
         // Only refresh wallet/earnings, not full dashboard reload
-        () => { if (currentUserId) { fetchWalletBalance(currentUserId); fetchTodayEarnings(currentUserId); } }
+        () => { if (currentUserId) { fetchWalletBalance(currentUserId); fetchTopEarnerLeaderboard(currentUserId); } }
       )
       .on(
         'postgres_changes',
