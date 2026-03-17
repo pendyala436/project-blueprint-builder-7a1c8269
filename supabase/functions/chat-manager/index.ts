@@ -1424,7 +1424,7 @@ serve(async (req) => {
                 earning_type: "chat",
                 description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
               }),
-              ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id)] : [])
+              ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
             ]);
           }
 
@@ -1460,12 +1460,19 @@ serve(async (req) => {
           );
         }
 
-        // Deduct from man's wallet (what men are charged)
-        const newBalance = wallet.balance - menCharge;
-        await supabase
-          .from("wallets")
-          .update({ balance: newBalance })
-          .eq("id", wallet.id);
+        // Atomic deduct from man's wallet (prevents stale-read race conditions)
+        const { data: newBalance, error: debitError } = await supabase.rpc('atomic_wallet_debit', {
+          p_wallet_id: wallet.id,
+          p_amount: menCharge
+        });
+
+        if (debitError || newBalance === -1) {
+          console.error('[HEARTBEAT] Atomic debit failed — insufficient balance or error');
+          return new Response(
+            JSON.stringify({ success: false, message: "Insufficient balance" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
 
         // Record in ledger (append-only, source of truth for frontend)
         await supabase
@@ -1507,7 +1514,7 @@ serve(async (req) => {
               description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
             }),
             // Credit woman's wallet balance
-            ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + womenEarnings }).eq("id", wWallet.id)] : [])
+            ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
           ]);
         }
 
@@ -1623,19 +1630,23 @@ serve(async (req) => {
                   .maybeSingle();
 
                 if (manWallet && manWallet.balance >= finalMenCharge) {
-                  await supabase.from("wallets").update({ balance: manWallet.balance - finalMenCharge }).eq("id", manWallet.id);
-                  await supabase.from("ledger_transactions").insert({
-                    user_id: session.man_user_id,
-                    transaction_type: "chat_debit",
-                    debit: finalMenCharge,
-                    credit: 0,
-                    counterparty_id: session.woman_user_id,
-                    session_id: session.id,
-                    rate_per_minute: finalRate,
-                    duration_seconds: wholeMinutesRemaining * 60,
-                    description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`
-                  });
-                  console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
+                  const { data: endNewBal } = await supabase.rpc('atomic_wallet_debit', { p_wallet_id: manWallet.id, p_amount: finalMenCharge });
+                  if (endNewBal === -1) {
+                    console.warn('[END_CHAT] Insufficient balance for final billing');
+                  } else {
+                    await supabase.from("ledger_transactions").insert({
+                      user_id: session.man_user_id,
+                      transaction_type: "chat_debit",
+                      debit: finalMenCharge,
+                      credit: 0,
+                      counterparty_id: session.woman_user_id,
+                      session_id: session.id,
+                      rate_per_minute: finalRate,
+                      duration_seconds: wholeMinutesRemaining * 60,
+                      description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`
+                    });
+                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
+                  }
                 }
               }
 
@@ -1662,7 +1673,7 @@ serve(async (req) => {
                     description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
                   }),
                   // Credit woman's wallet balance
-                  ...(wWallet ? [supabase.from("wallets").update({ balance: wWallet.balance + finalWomenEarning }).eq("id", wWallet.id)] : [])
+                  ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: finalWomenEarning })] : [])
                 ]);
               }
 

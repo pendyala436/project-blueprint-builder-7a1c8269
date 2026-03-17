@@ -3119,6 +3119,14 @@ export type Database = {
         }[]
       }
       assign_earning_slots: { Args: never; Returns: Json }
+      atomic_wallet_credit: {
+        Args: { p_amount: number; p_wallet_id: string }
+        Returns: number
+      }
+      atomic_wallet_debit: {
+        Args: { p_amount: number; p_wallet_id: string }
+        Returns: number
+      }
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
       cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
       check_men_free_minutes: { Args: { p_user_id: string }; Returns: Json }
