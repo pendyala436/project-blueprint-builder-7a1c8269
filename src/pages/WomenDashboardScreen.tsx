@@ -353,9 +353,15 @@ const WomenDashboardScreen = () => {
   }, []);
 
   const [currentWomanLanguage, setCurrentWomanLanguage] = useState<string>("");
+  const currentWomanLanguageRef = useRef(currentWomanLanguage);
   const [currentWomanLanguageCode, setCurrentWomanLanguageCode] = useState<string>("eng_Latn");
   const [currentWomanCountry, setCurrentWomanCountry] = useState<string>("");
+  const currentWomanCountryRef = useRef(currentWomanCountry);
   const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+
+  // Keep refs in sync so throttled callback always has latest values
+  useEffect(() => { currentWomanLanguageRef.current = currentWomanLanguage; }, [currentWomanLanguage]);
+  useEffect(() => { currentWomanCountryRef.current = currentWomanCountry; }, [currentWomanCountry]);
 
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
@@ -382,18 +388,19 @@ const WomenDashboardScreen = () => {
 
   const throttledFetchOnlineMen = useCallback(() => {
     const now = Date.now();
+    const lang = currentWomanLanguageRef.current;
+    const country = currentWomanCountryRef.current;
     if (now - lastFetchMenRef.current < 5000) {
-      // Debounce: schedule one fetch after quiet period
       if (fetchMenTimeoutRef.current) clearTimeout(fetchMenTimeoutRef.current);
       fetchMenTimeoutRef.current = setTimeout(() => {
         lastFetchMenRef.current = Date.now();
-        fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
+        fetchOnlineMen(undefined, currentWomanLanguageRef.current, currentWomanCountryRef.current);
       }, 3000);
       return;
     }
     lastFetchMenRef.current = now;
-    fetchOnlineMen(undefined, currentWomanLanguage, currentWomanCountry);
-  }, [currentWomanLanguage, currentWomanCountry]);
+    fetchOnlineMen(undefined, lang, country);
+  }, []); // stable — reads from refs, no stale closure
 
   useEffect(() => {
     if (!currentUserId) return;
