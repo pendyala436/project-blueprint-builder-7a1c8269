@@ -1630,7 +1630,9 @@ serve(async (req) => {
                   .maybeSingle();
 
                 if (manWallet && manWallet.balance >= finalMenCharge) {
-                  await supabase.from("wallets").update({ balance: manWallet.balance - finalMenCharge }).eq("id", manWallet.id);
+                  const { data: endNewBal } = await supabase.rpc('atomic_wallet_debit', { p_wallet_id: manWallet.id, p_amount: finalMenCharge });
+                  if (endNewBal === -1) { console.warn('[END_CHAT] Insufficient balance for final billing'); }
+                  else {
                   await supabase.from("ledger_transactions").insert({
                     user_id: session.man_user_id,
                     transaction_type: "chat_debit",
