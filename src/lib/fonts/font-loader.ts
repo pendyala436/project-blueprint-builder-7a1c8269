@@ -321,6 +321,7 @@ async function loadFontGroup(groupName: string): Promise<void> {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = group.url;
+    link.crossOrigin = 'anonymous';
     link.setAttribute('data-font-group', groupName);
     link.setAttribute('media', 'print');
     
@@ -334,7 +335,10 @@ async function loadFontGroup(groupName: string): Promise<void> {
     
     link.onerror = () => {
       loadingPromises.delete(groupName);
-      reject(new Error(`Failed to load font group: ${groupName}`));
+      // Mark as loaded to prevent retry loops — system fonts serve as fallback
+      loadedFontGroups.add(groupName);
+      console.warn(`[FontLoader] Failed to load font group "${groupName}" — using system fallback fonts. This may be caused by Content Security Policy restrictions.`);
+      resolve(); // Resolve instead of reject so callers don't need error handling
     };
     
     document.head.appendChild(link);
