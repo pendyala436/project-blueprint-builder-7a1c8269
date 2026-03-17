@@ -132,9 +132,11 @@ const ChatBillingDisplay = ({
         startHeartbeat(existingSession.chat_id);
         startTimer();
         startMessageCheck(existingSession.chat_id);
-      } else if (walletData && walletData.balance > 0 && !sessionStarted.current) {
-        // Start a new session if balance is available
-        await startChatSession();
+      } else {
+        // No active session found — do NOT create one here.
+        // Session creation is handled by the chat initiator (Dashboard/ProfileDetail).
+        // This component only attaches to existing sessions for billing display.
+        console.log("ChatBillingDisplay: No active session found, waiting for session to be created by initiator.");
       }
     } catch (error) {
       console.error("Error loading billing info:", error);
