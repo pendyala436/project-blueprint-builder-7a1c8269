@@ -220,9 +220,6 @@ const ChatScreen = () => {
   // Current user's gender for billing/earnings display
   const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
   
-  // Single typing mode - always english-meaning
-  const typingMode = 'english-meaning' as const;
-  
   // Attachment states
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
