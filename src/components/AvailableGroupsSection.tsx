@@ -134,7 +134,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
 
     if (group.participant_count >= MAX_PARTICIPANTS) {
-      toast.error('This group is full (max 100 participants)');
+      toast.error(`This group is full (max ${MAX_PARTICIPANTS} participants)`);
       return;
     }
 

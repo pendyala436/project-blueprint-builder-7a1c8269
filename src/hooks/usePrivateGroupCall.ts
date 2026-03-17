@@ -16,7 +16,8 @@ import { toast } from 'sonner';
 import { ICE_SERVERS_SFU } from '@/lib/iceServers';
 
 export const MAX_PARTICIPANTS = 100;
-export const MAX_DURATION_MINUTES = 0; // No time limit
+// Duration is enforced by the DB session, not this constant. Kept for reference only.
+export const MAX_DURATION_MINUTES = 0;
 export const BILLING_INTERVAL_SECONDS = 60; // Bill every minute
 
 interface Participant {
