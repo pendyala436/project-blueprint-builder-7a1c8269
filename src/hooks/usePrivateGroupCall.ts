@@ -395,9 +395,9 @@ export function usePrivateGroupCall({
       .from('users_wallet')
       .select('balance')
       .eq('user_id', currentUserId)
-      .single();
+      .maybeSingle();
 
-    const balance = wallet?.balance || 0;
+    const balance = wallet?.balance ?? 0;
     
     if (balance < minBalance) {
       return { canJoin: false, balance };
