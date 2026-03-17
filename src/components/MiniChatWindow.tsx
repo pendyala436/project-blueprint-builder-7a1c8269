@@ -438,6 +438,18 @@ const MiniChatWindow = ({
       return;
     }
 
+    // Content moderation - block phone numbers, emails, social media
+    const { moderateMessage } = await import('@/lib/content-moderation');
+    const moderationResult = moderateMessage(messageText);
+    if (moderationResult.isBlocked) {
+      toast({
+        title: "Message Blocked",
+        description: moderationResult.reason,
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (messageText.length === 0) {
       return;
     }
