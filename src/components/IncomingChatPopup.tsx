@@ -135,7 +135,19 @@ const IncomingChatPopup = ({
     }
     stopBuzzSound();
     
-    onReject(sessionId);
+    onReject(sessionId, 'manual');
+    setIsExiting(true);
+  };
+
+  const handleAutoReject = () => {
+    // Stop buzz sound completely
+    if (buzzIntervalRef.current) {
+      clearInterval(buzzIntervalRef.current);
+      buzzIntervalRef.current = null;
+    }
+    stopBuzzSound();
+    
+    onReject(sessionId, 'auto_timeout');
     setIsExiting(true);
   };
 
