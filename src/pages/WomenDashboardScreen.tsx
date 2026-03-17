@@ -1504,8 +1504,8 @@ const WomenDashboardScreen = () => {
 
           <Card className="p-3 bg-gradient-aurora border-info/30 shadow-glow">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-info/20">
-                <Users className="w-4 h-4 text-info" />
+              <div className="p-1.5 rounded-lg bg-primary/20">
+                <Users className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <p className="text-lg font-bold">{stats.rechargedMen + stats.nonRechargedMen}</p>
@@ -1516,8 +1516,8 @@ const WomenDashboardScreen = () => {
 
           <Card className="p-3 bg-gradient-aurora border-success/30 shadow-glow">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-success/20">
-                <Globe2 className="w-4 h-4 text-success" />
+              <div className="p-1.5 rounded-lg bg-primary/20">
+                <Globe2 className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <p className="text-lg font-bold">{sameLanguageMen.length + otherLanguageMen.length}</p>
@@ -1615,8 +1615,8 @@ const WomenDashboardScreen = () => {
             {/* Same Language Men */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
-                <span className="px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
+                <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
+                <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
                   {currentWomanLanguage}
                 </span>
                 <span className="text-xs text-muted-foreground">({sameLanguageMen.length})</span>
@@ -1671,7 +1671,7 @@ const WomenDashboardScreen = () => {
             {/* Other Language Men */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
+                <span className="text-sm font-medium text-primary">{t('otherLanguages', 'Other Languages')}</span>
                 <span className="text-xs text-muted-foreground">({otherLanguageMen.length})</span>
               </div>
               

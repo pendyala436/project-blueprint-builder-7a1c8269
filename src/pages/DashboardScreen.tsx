@@ -80,7 +80,7 @@ import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
-
+import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 interface Notification {
   id: string;
   title: string;
@@ -232,6 +232,33 @@ const DashboardScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
+  const [matchFilters, setMatchFilters] = useState<MatchFilters>({
+    ageRange: [18, 60],
+    heightRange: [140, 200],
+    bodyType: "all",
+    educationLevel: "all",
+    occupation: "all",
+    religion: "all",
+    maritalStatus: "all",
+    hasChildren: "all",
+    country: "all",
+    language: "all",
+    distanceRange: [0, 15000],
+    smokingHabit: "all",
+    drinkingHabit: "all",
+    dietaryPreference: "all",
+    fitnessLevel: "all",
+    petPreference: "all",
+    travelFrequency: "all",
+    zodiacSign: "all",
+    personalityType: "all",
+    onlineNow: false,
+    verifiedOnly: false,
+    premiumOnly: false,
+    newUsersOnly: false,
+    hasPhoto: false,
+    hasBio: false,
+  });
 
   // Chat pricing from admin settings
   const { pricing, calculateCost, hasSufficientBalance, formatPrice } = useChatPricing();
@@ -1276,6 +1303,11 @@ const DashboardScreen = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <MatchFiltersPanel 
+                  filters={matchFilters} 
+                  onFiltersChange={setMatchFilters}
+                  userCountry={userCountry}
+                />
                 <Button 
                   variant="auroraOutline" 
                   size="sm" 
@@ -1391,8 +1423,8 @@ const DashboardScreen = () => {
               {/* Same Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-success">{t('sameLanguage', 'Same Language')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-success/20 text-success rounded-full">
+                  <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
+                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
                     {userLanguage}
                   </span>
                   <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
@@ -1403,7 +1435,7 @@ const DashboardScreen = () => {
                     {sameLanguageWomen.map((woman) => (
                       <Card
                         key={woman.id}
-                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-success/50 bg-success/5"
+                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/50 bg-primary/5"
                         onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
                         <div className="flex items-center gap-3">
@@ -1428,7 +1460,7 @@ const DashboardScreen = () => {
                                 <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
                               )}
                             </div>
-                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-success/20 text-success rounded-full">
+                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
                               {woman.primary_language}
                             </span>
                           </div>
@@ -1488,7 +1520,7 @@ const DashboardScreen = () => {
               {/* Other Language Women */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-info">{t('otherLanguages', 'Other Languages')}</span>
+                  <span className="text-sm font-medium text-primary">{t('otherLanguages', 'Other Languages')}</span>
                   <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
                 </div>
                 
@@ -1497,7 +1529,7 @@ const DashboardScreen = () => {
                     {indianTranslatedWomen.map((woman) => (
                       <Card
                         key={woman.id}
-                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-info/30 bg-info/5"
+                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/30 bg-primary/5"
                         onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
                         <div className="flex items-center gap-3">
@@ -1523,7 +1555,7 @@ const DashboardScreen = () => {
                               )}
                             </div>
                             <div className="flex items-center gap-1 mt-0.5">
-                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-info/20 text-info rounded-full">
+                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
                                 {woman.primary_language}
                               </span>
                               <span className="text-[10px] text-muted-foreground">→</span>
