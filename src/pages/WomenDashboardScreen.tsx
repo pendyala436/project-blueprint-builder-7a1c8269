@@ -613,7 +613,7 @@ const WomenDashboardScreen = () => {
 
       // Fetch all data with woman's language context - using allSettled for resilience
       await Promise.allSettled([
-        fetchOnlineMen(user.id, womanLanguage, userCountryValue),
+        fetchOnlineMen(womanLanguage, userCountryValue),
         fetchMatchCount(user.id),
         fetchNotifications(user.id),
         fetchTopEarnerLeaderboard(user.id),
