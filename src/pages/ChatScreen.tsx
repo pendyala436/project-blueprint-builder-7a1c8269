@@ -256,6 +256,8 @@ const ChatScreen = () => {
   
   // Store chat ID for realtime subscription (consistent format)
   const chatId = useRef<string>("");
+  // Reactive state to trigger subscription re-run when chatId is set
+  const [activeChatId, setActiveChatId] = useState<string>("");
   
   // Refs for file inputs and camera
   const imageInputRef = useRef<HTMLInputElement>(null);
