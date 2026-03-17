@@ -1285,6 +1285,11 @@ const DashboardScreen = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <MatchFiltersPanel 
+                  filters={matchFilters} 
+                  onFiltersChange={setMatchFilters}
+                  userCountry={userCountry}
+                />
                 <Button 
                   variant="auroraOutline" 
                   size="sm" 
