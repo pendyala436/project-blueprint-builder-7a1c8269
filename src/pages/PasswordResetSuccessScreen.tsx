@@ -51,10 +51,6 @@ const PasswordResetSuccessScreen = () => {
               <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </Button>
 
-            {/* Auto-redirect notice */}
-            <p className="text-xs text-muted-foreground">
-              You will be redirected to the login page automatically
-            </p>
           </CardContent>
         </Card>
       </main>
