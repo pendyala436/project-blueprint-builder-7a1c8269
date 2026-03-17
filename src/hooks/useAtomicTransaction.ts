@@ -177,7 +177,7 @@ export const useAtomicTransaction = () => {
     amount: number,
     description?: string
   ): Promise<TransferResult> => {
-    setIsProcessing(true);
+    startProcessing();
     
     try {
       // Call atomic transfer function (single transaction, ordered locking)
