@@ -109,9 +109,23 @@ const WelcomeTutorialScreen = () => {
     }
   };
 
+  const navigateIfAuthenticated = async (destination: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      navigate(destination);
+    } else {
+      toast({
+        title: "Session expired",
+        description: "Please log in again to continue.",
+        variant: "destructive",
+      });
+      navigate("/auth", { replace: true });
+    }
+  };
+
   const handleSkip = async () => {
     await saveTutorialProgress(true);
-    navigate("/registration-complete");
+    await navigateIfAuthenticated("/registration-complete");
   };
 
   const handleComplete = async () => {
@@ -120,7 +134,7 @@ const WelcomeTutorialScreen = () => {
       title: "Tutorial Complete!",
       description: "You're ready to start connecting.",
     });
-    navigate("/registration-complete");
+    await navigateIfAuthenticated("/registration-complete");
   };
 
   const saveTutorialProgress = async (skipped: boolean) => {
