@@ -84,15 +84,12 @@ const ChatBillingDisplay = ({
         setRatePerMinute(pricing.rate_per_minute);
       }
 
-      // Get wallet balance from ledger system
-      const { data: ledgerWallet } = await supabase
-        .from("users_wallet")
+      // Get wallet balance from the same table the backend writes to
+      const { data: walletData } = await supabase
+        .from("wallets")
         .select("balance")
         .eq("user_id", currentUserId)
         .maybeSingle();
-
-      // Use users_wallet as sole source of truth
-      const walletData = ledgerWallet;
       
       if (walletData) {
         setWalletBalance(walletData.balance);
