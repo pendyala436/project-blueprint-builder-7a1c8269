@@ -1,4 +1,5 @@
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
+import { countries } from "@/data/countries";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
