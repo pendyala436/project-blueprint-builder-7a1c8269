@@ -208,8 +208,11 @@ export const FriendsBlockedPanel = ({
 
       if (error) throw error;
       if (data?.success) {
-        toast({ title: "Chat Started", description: `Chat with ${friendName} started` });
         onClose();
+        // Brief delay so the panel closes first, then toast draws attention to the new chat window
+        setTimeout(() => {
+          toast({ title: "💬 Chat Started", description: `Your chat with ${friendName} is now open below` });
+        }, 300);
       } else {
         throw new Error(data?.error || "Failed to start chat");
       }
