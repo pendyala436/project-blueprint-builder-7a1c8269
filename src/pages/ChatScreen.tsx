@@ -933,6 +933,22 @@ const ChatScreen = () => {
    * Handle going offline manually
    */
   const handleGoOffline = async () => {
+    // End the active chat session before going offline
+    if (chatId.current && isSessionActive) {
+      try {
+        await supabase.functions.invoke("chat-manager", {
+          body: {
+            action: "end_chat",
+            chat_id: chatId.current,
+            end_reason: "user_went_offline"
+          }
+        });
+        setIsSessionActive(false);
+      } catch (error) {
+        console.error("[OFFLINE] Failed to end chat session:", error);
+      }
+    }
+
     await setOnlineStatus(false);
     toast({
       title: "You're now offline",
