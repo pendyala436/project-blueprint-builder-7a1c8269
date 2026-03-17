@@ -207,13 +207,23 @@ const ChatBillingDisplay = ({
     
     messageCheckInterval.current = setInterval(async () => {
       try {
-        // Get last message from each party
-        const { data: messages } = await supabase
-          .from("chat_messages")
-          .select("sender_id, created_at")
-          .eq("chat_id", chatId)
-          .order("created_at", { ascending: false })
-          .limit(10);
+        // Get last message from each party (2 queries: 1 per sender, limit 1 each)
+        const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
+          supabase
+            .from("chat_messages")
+            .select("created_at")
+            .eq("chat_id", chatId)
+            .eq("sender_id", currentUserId)
+            .order("created_at", { ascending: false })
+            .limit(1),
+          supabase
+            .from("chat_messages")
+            .select("created_at")
+            .eq("chat_id", chatId)
+            .eq("sender_id", chatPartnerId)
+            .order("created_at", { ascending: false })
+            .limit(1),
+        ]);
 
         if (!messages || messages.length === 0) return;
 
