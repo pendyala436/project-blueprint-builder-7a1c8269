@@ -998,6 +998,44 @@ export type Database = {
           },
         ]
       }
+      group_session_extensions: {
+        Row: {
+          created_at: string
+          extension_month: number
+          extension_year: number
+          group_id: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          extension_month: number
+          extension_year: number
+          group_id: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          extension_month?: number
+          extension_year?: number
+          group_id?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_extensions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "private_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_video_access: {
         Row: {
           access_expires_at: string
