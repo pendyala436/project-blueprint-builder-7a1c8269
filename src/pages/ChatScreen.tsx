@@ -488,7 +488,8 @@ const ChatScreen = () => {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'active_chat_sessions'
+          table: 'active_chat_sessions',
+          filter: `chat_id=eq.${chatId.current}`
         },
         (payload: any) => {
           const session = payload.new;
