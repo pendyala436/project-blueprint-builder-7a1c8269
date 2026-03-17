@@ -118,7 +118,7 @@ const App = () => (
                   <Route path="/women-dashboard" element={<ProtectedRoute requiredRole="female"><WomenDashboardScreen /></ProtectedRoute>} />
 
                   {/* Shared Features */}
-                  <Route path="/chat/:chatId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
+                  <Route path="/chat/:partnerId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
                   <Route path="/matching" element={<ProtectedRoute><MatchingScreen /></ProtectedRoute>} />
                   <Route path="/match-discovery" element={<ProtectedRoute><MatchDiscoveryScreen /></ProtectedRoute>} />
                   <Route path="/online-users" element={<ProtectedRoute><OnlineUsersScreen /></ProtectedRoute>} />

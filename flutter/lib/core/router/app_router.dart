@@ -63,7 +63,7 @@ class AppRoutes {
   static const String findMatch = '/find-match';
   static const String matchDiscovery = '/match-discovery';
   static const String profile = '/profile/:userId';
-  static const String chat = '/chat/:chatId';
+  static const String chat = '/chat/:partnerId';
   static const String wallet = '/wallet';
   static const String womenWallet = '/women-wallet';
   static const String transactionHistory = '/transaction-history';
@@ -138,7 +138,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.profile, builder: (_, state) => ProfileDetailScreen(userId: state.pathParameters['userId']!)),
       
       // Chat Routes
-      GoRoute(path: AppRoutes.chat, builder: (_, state) => ChatScreen(chatId: state.pathParameters['chatId']!)),
+      GoRoute(path: AppRoutes.chat, builder: (_, state) => ChatScreen(chatId: state.pathParameters['partnerId']!)),
       
       // Wallet Routes
       GoRoute(path: AppRoutes.wallet, builder: (_, __) => const WalletScreen()),
