@@ -59,6 +59,8 @@ const BasicInfoScreen = () => {
     gender?: boolean;
     phone?: boolean;
   }>({});
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
 
   // Trigger shake animation
   const triggerShake = (field: string) => {
