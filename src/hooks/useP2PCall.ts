@@ -843,14 +843,21 @@ export const useP2PCall = ({
         }
       }
 
+      // Read back the RPC-updated totals to avoid double-counting
+      const { data: updatedSession } = await supabase
+        .from('video_call_sessions')
+        .select('total_minutes, total_earned')
+        .eq('call_id', callId)
+        .single();
+
       await supabase
         .from('video_call_sessions')
         .update({
           status: 'ended',
           ended_at: new Date().toISOString(),
           end_reason: 'user_ended',
-          total_minutes: durationMinutes,
-          total_earned: Math.ceil(durationMinutes) * ratePerMinute,
+          total_minutes: updatedSession?.total_minutes ?? durationMinutes,
+          total_earned: updatedSession?.total_earned ?? 0,
         })
         .eq('call_id', callId);
     }
