@@ -89,6 +89,7 @@ const App = () => (
       <ErrorBoundary>
         <BrowserRouter>
           <SecurityProvider>
+            <UserActivityProvider>
             <AutoLogoutWrapper>
               <Suspense fallback={<Loading />}>
                 <Routes>
