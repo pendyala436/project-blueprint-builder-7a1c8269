@@ -288,13 +288,14 @@ const DraggableMiniChatWindow = ({
 
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${currentUserId}/${chatId}/${Date.now()}.${fileExt}`;
-      const bucket = fileType === "image" ? "profile-photos" : "community-files";
+      const randomSuffix = crypto.randomUUID().slice(0, 8);
+      const fileName = `${currentUserId}/${chatId}/${Date.now()}-${randomSuffix}.${fileExt}`;
+      const bucket = "chat-attachments";
 
       const { error: uploadError } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: "3600", upsert: false });
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName);
+      const messageUrl = `chat-attachment://${fileName}`;
       const emoji = fileType === "image" ? "📷" : fileType === "video" ? "🎬" : "📎";
       const { error: messageError } = await supabase.from("chat_messages").insert({
         chat_id: chatId, sender_id: currentUserId, receiver_id: partnerId,
