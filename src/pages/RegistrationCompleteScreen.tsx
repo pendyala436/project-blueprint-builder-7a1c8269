@@ -225,8 +225,8 @@ const RegistrationCompleteScreen = () => {
           >
             {[
               "Profile created successfully",
-              "Photo verified",
-              "Identity confirmed",
+              "Photos uploaded",
+              "Account setup complete",
               "Ready to connect",
             ].map((item, index) => (
               <div
