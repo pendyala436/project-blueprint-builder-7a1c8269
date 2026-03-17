@@ -96,6 +96,7 @@ const MiniChatWindow = ({
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
+  const billingStartedRef = useRef(false);
   
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
