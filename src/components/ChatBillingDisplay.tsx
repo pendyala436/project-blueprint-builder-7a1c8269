@@ -97,15 +97,17 @@ const ChatBillingDisplay = ({
       if (walletData) {
         setWalletBalance(walletData.balance);
         const rate = pricing?.rate_per_minute || 4;
-        setIsLowBalance(walletData.balance < rate * 5); // Less than 5 minutes worth
+        setIsLowBalance(walletData.balance < rate * 5);
         
-        // Check if balance is zero or negative
         if (walletData.balance <= 0) {
+          // Balance is zero — show recharge dialog and skip session attachment
           setShowRechargeDialog(true);
+          return;
         }
       } else {
-        // No wallet found, show recharge
+        // No wallet found — show recharge dialog and skip session attachment
         setShowRechargeDialog(true);
+        return;
       }
 
       // Check for existing active session
