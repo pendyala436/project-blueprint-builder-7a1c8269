@@ -246,14 +246,15 @@ export function WomenKYCForm() {
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     if (!userId) return null;
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${folder}/${Date.now()}.${fileExt}`;
-    const { error } = await supabase.storage.from('kyc-documents').upload(fileName, file, { upsert: true });
+    const randomSuffix = crypto.randomUUID().slice(0, 8);
+    const storagePath = `${userId}/${folder}/${Date.now()}-${randomSuffix}.${fileExt}`;
+    const { error } = await supabase.storage.from('kyc-documents').upload(storagePath, file);
     if (error) {
       toast.error('Upload failed', { description: ERROR_MESSAGES.upload.failed });
       return null;
     }
-    const { data } = supabase.storage.from('kyc-documents').getPublicUrl(fileName);
-    return data.publicUrl;
+    // Store the path, not a public URL — use signed URLs for access
+    return storagePath;
   };
 
   const onSubmit = async (data: KYCFormData) => {
