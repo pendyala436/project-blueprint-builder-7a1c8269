@@ -66,6 +66,8 @@ const ChatBillingDisplay = ({
   const isWrongGender = userGender !== "male";
 
   const loadPricingAndWallet = useCallback(async () => {
+    if (loadInProgress.current) return;
+    loadInProgress.current = true;
     try {
       // Get current pricing
       const { data: pricing } = await supabase
