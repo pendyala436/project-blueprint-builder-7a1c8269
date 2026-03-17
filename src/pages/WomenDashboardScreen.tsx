@@ -576,6 +576,17 @@ const WomenDashboardScreen = () => {
         setGoldenBadgeExpiry(mainProfile.golden_badge_expires_at);
       }
 
+      // Fetch golden badge price from app_settings
+      const { data: badgePriceSetting } = await supabase
+        .from("app_settings")
+        .select("setting_value")
+        .eq("setting_key", "golden_badge_price")
+        .eq("is_public", true)
+        .maybeSingle();
+      if (badgePriceSetting?.setting_value) {
+        setGoldenBadgePrice(Number(badgePriceSetting.setting_value) || 1000);
+      }
+
       // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
         navigate("/approval-pending");
