@@ -327,8 +327,8 @@ const EnhancedParallelChatsContainer = ({
   }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat, userGender]);
 
   // Handle rejecting incoming chat - trigger fallback search
-  const handleRejectChat = useCallback(async (sessionId: string) => {
-    await rejectChat(sessionId);
+  const handleRejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
+    await rejectChat(sessionId, reason);
     
     // For men: the system will automatically try to find another match
     // This is handled by the chat-manager edge function

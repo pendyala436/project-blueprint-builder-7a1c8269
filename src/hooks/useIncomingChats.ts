@@ -262,14 +262,18 @@ export const useIncomingChats = (
     setIncomingChats(prev => prev.filter(c => c.sessionId !== sessionId));
   }, []);
 
-  const rejectChat = useCallback(async (sessionId: string) => {
+  const rejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
+    const endReason = reason === 'auto_timeout'
+      ? 'auto_timeout'
+      : userGender === "male" ? "man_rejected" : "woman_rejected";
+
     try {
       await supabase
         .from("active_chat_sessions")
         .update({
           status: "ended",
           ended_at: new Date().toISOString(),
-          end_reason: userGender === "male" ? "man_rejected" : "woman_rejected"
+          end_reason: endReason
         })
         .eq("id", sessionId);
     } catch (error) {
