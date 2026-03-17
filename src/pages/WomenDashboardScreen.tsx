@@ -1561,7 +1561,7 @@ const WomenDashboardScreen = () => {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xs sm:text-sm font-bold text-foreground">🌟 Golden Badge</h3>
                     <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                      Buy for ₹1,000/month to initiate chats & video calls with men
+                      Buy for ₹{goldenBadgePrice.toLocaleString()}/month to initiate chats & video calls with men
                     </p>
                   </div>
                 </div>
