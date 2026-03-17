@@ -2,38 +2,38 @@
 
 ## Overview
 
-This application uses **SRS (Simple Realtime Server)** for video calling and live streaming functionality. SRS is an open-source, high-performance media server that supports WebRTC, RTMP, HLS, and FLV protocols.
+This application uses **P2P WebRTC** for 1-on-1 video calling between users. Connections are established directly between peers using WebRTC, with signaling handled through Supabase Realtime (the `video_call_sessions` table).
 
 **Key Features:**
-- 1-to-1 video calls between users
-- Live streaming to multiple viewers
-- WebRTC for low-latency communication
-- HLS output for large-scale streaming
+- 1-on-1 video calls between same-language Indian users
+- Direct peer-to-peer WebRTC (no media server)
+- Self-hosted coturn TURN server for NAT traversal
 - No content storage (ephemeral streams only)
+- Per-minute billing with automatic balance checks
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────┐     WebRTC     ┌─────────────────┐
-│   User A        │◄──────────────►│   SRS Server    │
-│   (Publisher)   │                │   (localhost)   │
-└─────────────────┘                └────────┬────────┘
-                                            │
-                                            │ WebRTC/HLS
-                                            ▼
-                                   ┌─────────────────┐
-                                   │   User B        │
-                                   │   (Viewer)      │
-                                   └─────────────────┘
+┌─────────────────┐     WebRTC (P2P)     ┌─────────────────┐
+│   User A        │◄───────────────────►│   User B        │
+│   (Caller)      │                     │   (Receiver)    │
+└────────┬────────┘                     └────────┬────────┘
+         │                                       │
+         │  Signaling (SDP/ICE)                  │
+         ▼                                       ▼
+┌──────────────────────────────────────────────────────────┐
+│              Supabase Realtime                           │
+│         (video_call_sessions table)                      │
+└──────────────────────────────────────────────────────────┘
 ```
 
 **Components:**
-1. **SRS Server** - Media relay server (runs locally or on a dedicated server)
-2. **Edge Function** (`video-call-server`) - Handles signaling and SRS API calls
-3. **React Hooks** (`useSRSCall`) - Client-side WebRTC management
-4. **Cleanup Function** (`video-cleanup`) - Auto-deletes session data after 5 minutes
+1. **Supabase Realtime** — Signaling channel for SDP offers/answers and ICE candidates
+2. **coturn TURN Server** — Self-hosted relay for users behind symmetric NAT
+3. **React Hooks** (`useP2PCall`) — Client-side WebRTC management
+4. **Cleanup Function** (`video-cleanup`) — Auto-deletes session data after 5 minutes
 
 ---
 
@@ -41,188 +41,42 @@ This application uses **SRS (Simple Realtime Server)** for video calling and liv
 
 **IMPORTANT: No video/audio content is stored or recorded.**
 
-- All streams are ephemeral (real-time transmission only)
-- SRS is configured without DVR/recording capabilities
+- All streams are ephemeral (real-time peer-to-peer only)
+- No media server involved — data flows directly between peers
 - Session metadata is automatically deleted after 5 minutes
 - Cron job runs every minute to clean up old records
 
 ---
 
-## Deployment Guide
+## ICE / TURN Configuration
 
-### Option 1: Local Development (Docker)
+WebRTC requires ICE servers for NAT traversal. Configuration is in `src/lib/iceServers.ts`.
 
-1. **Install Docker** if not already installed.
+### Self-hosted coturn (recommended for production)
 
-2. **Start SRS Server:**
-   ```bash
-   docker run -d --name srs \
-     -p 1935:1935 \
-     -p 1985:1985 \
-     -p 8080:8080 \
-     ossrs/srs:5
-   ```
+Set these environment variables:
 
-3. **Verify SRS is running:**
-   ```bash
-   curl http://localhost:1985/api/v1/versions
-   ```
+```env
+VITE_TURN_URL=turn:your-coturn-server.com:3478
+VITE_TURN_USERNAME=youruser
+VITE_TURN_CREDENTIAL=yourpassword
+```
 
-4. **Access points:**
-   - API Server: `http://localhost:1985`
-   - WebRTC: `webrtc://localhost/live`
-   - HLS Playback: `http://localhost:8080/live`
-   - RTMP: `rtmp://localhost/live`
+The app automatically adds TCP and TLS variants for restrictive networks.
 
-### Option 2: Production Deployment
+### STUN Servers
 
-1. **Deploy SRS on a cloud server:**
-   ```bash
-   # On your server (Ubuntu/Debian)
-   docker run -d --name srs \
-     --restart always \
-     -p 1935:1935 \
-     -p 1985:1985 \
-     -p 8080:8080 \
-     -p 8000:8000/udp \
-     ossrs/srs:5
-   ```
-
-2. **Update environment variables in Supabase:**
-   - Go to: Supabase Dashboard → Settings → Edge Functions
-   - Add secrets:
-     - `SRS_API_URL`: `http://your-server-ip:1985`
-     - `SRS_RTC_URL`: `http://your-server-ip:1985/rtc/v1`
-
-3. **Configure HTTPS (recommended):**
-   - Use a reverse proxy (nginx/caddy) with SSL certificates
-   - Update WebRTC URLs to use WSS
-
-### Option 3: SRS Cloud (Managed)
-
-For production at scale, consider using SRS Cloud or similar managed services.
+Free STUN servers (Google, Cloudflare) are always included for basic connectivity.
 
 ---
 
-## Starting & Stopping SRS Server
+## System Rules
 
-### Start Server
-
-```bash
-# Using Docker
-docker start srs
-
-# Or run fresh container
-docker run -d --name srs \
-  -p 1935:1935 \
-  -p 1985:1985 \
-  -p 8080:8080 \
-  ossrs/srs:5
-```
-
-### Stop Server
-
-```bash
-docker stop srs
-```
-
-### Restart Server
-
-```bash
-docker restart srs
-```
-
-### View Logs
-
-```bash
-docker logs -f srs
-```
-
-### Check Server Status
-
-```bash
-# API version
-curl http://localhost:1985/api/v1/versions
-
-# Active streams
-curl http://localhost:1985/api/v1/streams/
-
-# Connected clients
-curl http://localhost:1985/api/v1/clients/
-```
-
----
-
-## Application Usage
-
-### 1-to-1 Video Calls
-
-**Starting a Call (Men's Dashboard):**
-1. User clicks "Video Call" button
-2. System finds available woman via AI matching
-3. WebRTC connection established through SRS
-4. Call timer starts, billing per minute
-
-**Receiving a Call (Women's Dashboard):**
-1. Incoming call modal appears
-2. User accepts/declines call
-3. WebRTC stream starts on accept
-
-### Live Streaming
-
-**Starting a Stream:**
-1. Click "Go Live" button
-2. Confirm stream start
-3. Camera/microphone activated
-4. Stream published to SRS
-
-**Watching a Stream:**
-1. Navigate to live streams section
-2. Click on active stream
-3. HLS/WebRTC playback begins
-
----
-
-## API Reference
-
-### Edge Function: `video-call-server`
-
-**Endpoint:** `POST /functions/v1/video-call-server`
-
-**Actions:**
-
-| Action | Description | Parameters |
-|--------|-------------|------------|
-| `srs_publish` | Start publishing stream | `streamName`, `sdp`, `callId`, `userId`, `mode` |
-| `srs_play` | Start playing stream | `streamName`, `sdp`, `callId`, `userId` |
-| `srs_unpublish` | Stop publishing | `streamName` |
-| `srs_get_viewers` | Get viewer count | `streamName` |
-| `srs_get_streams` | List active streams | - |
-| `create_room` | Create call room | `callId`, `userId`, `streamName`, `mode` |
-| `join_room` | Join existing room | `callId`, `userId` |
-| `end_call` | End call session | `callId`, `userId` |
-
-**Example Request:**
-```javascript
-const { data, error } = await supabase.functions.invoke('video-call-server', {
-  body: {
-    action: 'srs_publish',
-    streamName: 'call_user123_1234567890',
-    sdp: offerSDP,
-    callId: 'call_123',
-    userId: 'user_123',
-    mode: 'call'
-  }
-});
-```
-
-### Edge Function: `video-cleanup`
-
-**Endpoint:** `POST /functions/v1/video-cleanup`
-
-Automatically called by cron job every minute. Deletes:
-- Video call sessions older than 5 minutes
-- Ends stale active/ringing sessions
+- **India-only**: Both participants must have `country='IN'`
+- **Same language**: Both must share a primary language
+- **Minimum balance**: Men need ≥₹16 (2 minutes at ₹8/min) to start a call
+- **Billing**: Per-minute at 60-second intervals; auto-terminates on insufficient balance
+- **Priority**: Active calls take priority over chats
 
 ---
 
@@ -234,9 +88,9 @@ Automatically called by cron job every minute. Deletes:
 |--------|------|-------------|
 | `id` | UUID | Primary key |
 | `call_id` | TEXT | Unique call identifier |
-| `man_user_id` | UUID | Caller/streamer user ID |
+| `man_user_id` | UUID | Caller user ID |
 | `woman_user_id` | UUID | Receiver user ID |
-| `status` | TEXT | ringing, connecting, active, streaming, ended |
+| `status` | TEXT | ringing, connecting, active, ended |
 | `rate_per_minute` | NUMERIC | Cost per minute |
 | `total_minutes` | NUMERIC | Call duration |
 | `total_earned` | NUMERIC | Total earnings |
@@ -251,68 +105,42 @@ Automatically called by cron job every minute. Deletes:
 
 ## React Components
 
-### `useSRSCall` Hook
+### `useP2PCall` Hook
 
-```typescript
-const {
-  callStatus,      // 'idle' | 'publishing' | 'playing' | 'active' | 'ended'
-  callDuration,    // seconds
-  totalCost,       // calculated cost
-  isVideoEnabled,  // camera on/off
-  isAudioEnabled,  // mic on/off
-  viewerCount,     // for streaming
-  localVideoRef,   // ref for local video element
-  remoteVideoRef,  // ref for remote video element
-  startPublishing, // start streaming
-  startPlaying,    // start receiving
-  watchStream,     // watch live stream
-  endCall,         // end session
-  toggleVideo,     // toggle camera
-  toggleAudio,     // toggle microphone
-  getHLSUrl,       // get HLS playback URL
-} = useSRSCall({
-  callId: 'unique_call_id',
-  currentUserId: 'user_123',
-  remoteUserId: 'user_456',
-  isInitiator: true,
-  ratePerMinute: 5,
-  mode: 'call', // or 'stream'
-  onCallEnded: () => console.log('Call ended'),
-});
-```
+Manages the full WebRTC lifecycle: creating offers, handling answers, exchanging ICE candidates, and managing media streams.
 
-### Components
+### Key Components
 
 | Component | Purpose |
 |-----------|---------|
-| `SRSVideoCallModal` | Main video call UI |
-| `LiveStreamViewer` | Watch live streams |
-| `LiveStreamButton` | Start live streaming |
+| `P2PVideoCallModal` | Main video call UI |
 | `VideoCallButton` | Initiate video calls |
+| `DirectVideoCallButton` | Direct call to specific user |
+| `IncomingVideoCallWindow` | Incoming call notification |
+| `DraggableVideoCallWindow` | Minimized call window |
+
+---
+
+## Cleanup
+
+### Edge Function: `video-cleanup`
+
+**Endpoint:** `POST /functions/v1/video-cleanup`
+
+Automatically called by cron job every minute. Deletes:
+- Video call sessions older than 5 minutes
+- Ends stale active/ringing sessions
 
 ---
 
 ## Troubleshooting
 
-### SRS Server Not Responding
-
-```bash
-# Check if container is running
-docker ps | grep srs
-
-# Check container logs
-docker logs srs
-
-# Restart container
-docker restart srs
-```
-
 ### WebRTC Connection Failed
 
-1. Check browser console for errors
-2. Verify SRS server is accessible
-3. Check firewall allows ports 1985, 8080, 8000/udp
-4. Ensure HTTPS for production (WebRTC requires secure context)
+1. Check browser console for ICE errors
+2. Verify coturn TURN server is running and accessible
+3. Check firewall allows TURN ports (3478/TCP+UDP, 443/TCP)
+4. Ensure HTTPS in production (WebRTC requires secure context)
 
 ### No Video/Audio
 
@@ -327,48 +155,12 @@ docker restart srs
    SELECT * FROM cron.job;
    ```
 2. Check edge function logs in Supabase dashboard
-3. Manually trigger cleanup:
-   ```bash
-   curl -X POST https://tvneohngeracipjajzos.supabase.co/functions/v1/video-cleanup
-   ```
 
 ---
 
-## Security Considerations
+## Security
 
-1. **No Recording:** SRS is configured without DVR capabilities
+1. **No Recording:** No media server, no DVR — pure P2P
 2. **Auto-Cleanup:** Session data deleted after 5 minutes
-3. **Signaling Security:** Edge functions require authentication
-4. **RLS Policies:** Database access controlled by row-level security
-5. **HTTPS:** Use TLS in production for all connections
-
----
-
-## Performance Tuning
-
-### SRS Configuration
-
-For high-traffic deployments, customize SRS config:
-
-```bash
-docker run -d --name srs \
-  -v /path/to/srs.conf:/usr/local/srs/conf/srs.conf \
-  -p 1935:1935 \
-  -p 1985:1985 \
-  -p 8080:8080 \
-  ossrs/srs:5
-```
-
-### Scaling
-
-- **Horizontal:** Deploy multiple SRS instances behind load balancer
-- **Vertical:** Increase server resources (CPU/RAM)
-- **CDN:** Use HLS output with CDN for live streaming
-
----
-
-## Support
-
-- **SRS Documentation:** https://ossrs.io/lts/en-us/docs/v5/doc/introduction
-- **SRS GitHub:** https://github.com/ossrs/srs
-- **Supabase Edge Functions:** https://supabase.com/docs/guides/functions
+3. **Signaling Security:** Supabase RLS on video_call_sessions
+4. **HTTPS:** Required for WebRTC in production
