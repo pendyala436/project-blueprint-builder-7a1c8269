@@ -81,7 +81,18 @@ interface WithdrawalResult {
 
 export const useAtomicTransaction = () => {
   const { toast } = useToast();
+  const processingCount = useRef(0);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const startProcessing = useCallback(() => {
+    processingCount.current += 1;
+    setIsProcessing(true);
+  }, []);
+
+  const stopProcessing = useCallback(() => {
+    processingCount.current = Math.max(0, processingCount.current - 1);
+    if (processingCount.current === 0) setIsProcessing(false);
+  }, []);
 
   /**
    * Process a wallet transaction atomically
