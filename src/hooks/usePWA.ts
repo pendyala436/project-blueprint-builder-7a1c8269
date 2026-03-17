@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
