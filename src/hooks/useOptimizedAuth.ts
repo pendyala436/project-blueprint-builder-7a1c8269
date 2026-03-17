@@ -63,3 +63,8 @@ export async function preloadUserContext(userId: string): Promise<PreloadedUserC
     femaleProfile: femaleResult.data ?? null,
   };
 }
+
+/** No-op — cache was removed; kept for API compatibility */
+export function clearUserContextCache(): void {
+  // Nothing to clear — preloadUserContext always fetches fresh data
+}
