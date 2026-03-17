@@ -82,20 +82,17 @@ export const RandomChatButton = ({
       const minBalance = 8; // Minimum balance required to start chat
       
       // Balance check — no client-side bypasses; server (chat-manager) handles super-user logic
-      {
-        if (walletBalance <= 0) {
-          setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
-          setShowRechargeDialog(true);
-          onInsufficientBalance?.();
-          return;
-        } else if (walletBalance < minBalance) {
-          setRechargeMessage(`You need at least ₹${minBalance} to start a chat. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
-          setShowRechargeDialog(true);
-          onInsufficientBalance?.();
-          return;
-        }
+      if (walletBalance <= 0) {
+        setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
+        setShowRechargeDialog(true);
+        onInsufficientBalance?.();
+        return;
+      } else if (walletBalance < minBalance) {
+        setRechargeMessage(`You need at least ₹${minBalance} to start a chat. Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setShowRechargeDialog(true);
+        onInsufficientBalance?.();
+        return;
       }
-    }
 
     setIsSearching(true);
     setSearchDialogOpen(true);
