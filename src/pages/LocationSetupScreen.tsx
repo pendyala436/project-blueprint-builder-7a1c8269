@@ -52,39 +52,49 @@ const LocationSetupScreen = () => {
     setVillage("");
   };
 
-  const reverseGeocode = async (lat: number, lng: number) => {
-    try {
-      // Using OpenStreetMap Nominatim API (open source)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`,
-        {
-          headers: {
-            'User-Agent': 'MeowMeow-App/1.0'
-          }
+  const reverseGeocode = async (lat: number, lng: number, retries = 2): Promise<{ countryCode: string; stateValue: string; villageValue: string } | null> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        // Rate-limit: wait 1.1s before retries to respect Nominatim's 1 req/sec limit
+        if (attempt > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1100 * attempt));
         }
-      );
-      
-      if (!response.ok) throw new Error('Geocoding failed');
-      
-      const data = await response.json();
-      const address = data.address || {};
-      
-      // Extract country code (ISO 3166-1 alpha-2)
-      const countryCode = address.country_code?.toUpperCase() || "";
-      
-      // Extract state/province
-      const stateValue = address.state || address.province || address.region || "";
-      
-      // Extract village/town/city
-      const villageValue = address.village || address.town || address.city || 
-                          address.municipality || address.suburb || address.neighbourhood || "";
-      
-      return { countryCode, stateValue, villageValue };
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      toast.error('Location lookup failed', { description: 'Unable to determine your location name. Please enter it manually.' });
-      return null;
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`,
+          {
+            headers: {
+              'User-Agent': 'MeowMeow-App/1.0'
+            }
+          }
+        );
+
+        if (response.status === 429) {
+          console.warn(`Nominatim rate limited (attempt ${attempt + 1}/${retries + 1})`);
+          if (attempt < retries) continue;
+          throw new Error('Rate limit exceeded');
+        }
+
+        if (!response.ok) throw new Error(`Geocoding failed: ${response.status}`);
+
+        const data = await response.json();
+        const address = data.address || {};
+
+        const countryCode = address.country_code?.toUpperCase() || "";
+        const stateValue = address.state || address.province || address.region || "";
+        const villageValue = address.village || address.town || address.city ||
+                            address.municipality || address.suburb || address.neighbourhood || "";
+
+        return { countryCode, stateValue, villageValue };
+      } catch (error) {
+        if (attempt === retries) {
+          console.error('Reverse geocoding error:', error);
+          toast.error('Location lookup failed', { description: 'Unable to determine your location name. Please enter it manually.' });
+          return null;
+        }
+      }
     }
+    return null;
   };
 
   const detectLocation = useCallback(async () => {
