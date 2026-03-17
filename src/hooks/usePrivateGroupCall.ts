@@ -410,15 +410,21 @@ export function usePrivateGroupCall({
   const startBillingTimer = useCallback(() => {
     if (billingRef.current) clearInterval(billingRef.current);
 
+    let missedHostCycles = 0;
+
     billingRef.current = setInterval(async () => {
       if (!sessionRef.current) return;
       
-      // Only the host triggers billing — the RPC bills all participants atomically.
-      // Participants start the timer too as a fallback: if the host missed a cycle,
-      // the participant calls the same idempotent RPC (duplicate_skipped guards it).
       if (!isOwner) {
-        // Participant fallback: only fire if host may have missed (every 2nd cycle)
-        if (Math.random() > 0.5) return; // Stagger to reduce redundant calls
+        // Participants track consecutive cycles without a host billing update.
+        // The RPC returns duplicate_skipped when host already billed this cycle.
+        // If 2+ consecutive cycles are NOT duplicate_skipped, host is likely down
+        // — participant takes over billing deterministically.
+        if (missedHostCycles < 2) {
+          missedHostCycles++;
+          // Still attempt billing — if host is active, RPC returns duplicate_skipped
+          // and we reset the counter. If not, counter grows and we take over.
+        }
       }
       
       // Prevent concurrent billing calls
