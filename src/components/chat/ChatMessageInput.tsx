@@ -152,7 +152,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [transliterateInstant, needsTransliteration, typingMode, onTyping]);
 
   // Handle send
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const messageToSend = typingMode === 'english' 
       ? rawInput.trim() 
       : (nativeText || rawInput).trim();
@@ -162,12 +162,13 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     setIsSending(true);
     
     try {
-      // Send both the native text and original for reference
-      onSendMessage(messageToSend, typingMode === 'english' ? undefined : nativeText || undefined);
+      // Clear input immediately for responsive UX (optimistic)
       setRawInput('');
       setNativeText('');
       onTyping?.(false);
       textareaRef.current?.focus();
+      // Await the send to hold the lock until DB insert resolves
+      await onSendMessage(messageToSend, typingMode === 'english' ? undefined : nativeText || undefined);
     } finally {
       setIsSending(false);
     }
