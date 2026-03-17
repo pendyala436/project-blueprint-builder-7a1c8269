@@ -180,39 +180,66 @@ const BasicInfoScreen = () => {
     return age;
   };
 
-  const handleNext = () => {
-    // Validate all fields
-    const emailError = validateEmail(email);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNext = async () => {
+    // Validate all format rules first
+    const emailFormatError = validateEmail(email);
     const fullNameError = validateFullName(fullName);
     const dobError = validateDob(dob);
     const genderError = validateGender(gender);
-    const phoneError = validatePhone(phone);
+    const phoneFormatError = validatePhone(phone);
 
-    const newErrors = {
-      email: emailError,
+    const formatErrors = {
+      email: emailFormatError,
       fullName: fullNameError,
       dob: dobError,
       gender: genderError,
-      phone: phoneError,
+      phone: phoneFormatError,
     };
 
-    setErrors(newErrors);
+    setErrors(formatErrors);
     setTouched({ email: true, fullName: true, dob: true, gender: true, phone: true });
 
-    // Shake invalid fields
-    if (emailError) triggerShake("email");
+    if (emailFormatError) triggerShake("email");
     else if (fullNameError) triggerShake("fullName");
-    else if (phoneError) triggerShake("phone");
+    else if (phoneFormatError) triggerShake("phone");
     else if (dobError) triggerShake("dob");
     else if (genderError) triggerShake("gender");
 
-    if (emailError || fullNameError || dobError || genderError || phoneError) {
+    if (emailFormatError || fullNameError || dobError || genderError || phoneFormatError) {
       toast({
         title: "Please complete all fields",
         description: "All information is required to continue.",
         variant: "destructive",
       });
       return;
+    }
+
+    // Run uniqueness checks in parallel
+    setIsSubmitting(true);
+    try {
+      const [emailError, phoneError] = await Promise.all([
+        checkEmailUniqueness(email),
+        checkPhoneUniqueness(phone),
+      ]);
+
+      if (emailError || phoneError) {
+        setErrors((prev) => ({
+          ...prev,
+          email: emailError,
+          phone: phoneError,
+        }));
+        if (emailError) triggerShake("email");
+        else if (phoneError) triggerShake("phone");
+        toast({
+          title: emailError || phoneError || "Duplicate found",
+          variant: "destructive",
+        });
+        return;
+      }
+    } finally {
+      setIsSubmitting(false);
     }
 
     toast({
