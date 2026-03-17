@@ -469,6 +469,13 @@ class PaymentService {
 
   /**
    * Poll for payment status (for external gateway payments)
+   * 
+   * IMPORTANT: This polls a dedicated `pending_recharges` table with a `status` column
+   * that is updated by the payment gateway webhook. It does NOT check ledger_transactions,
+   * which would self-confirm since credits are inserted before polling.
+   * 
+   * Until a real gateway webhook is integrated, this will always timeout —
+   * which is the correct behavior (no false confirmations).
    */
   async pollPaymentStatus(
     paymentId: string,
@@ -481,47 +488,69 @@ class PaymentService {
         attempts++;
 
         if (!networkMonitor.isOnline()) {
-          // Pause polling when offline, will resume when online
           return;
         }
 
         try {
-          const { data, error } = await supabase
-            .from('ledger_transactions')
-            .select('transaction_type, created_at')
-            .eq('id', paymentId)
-            .maybeSingle();
+          // Query pending_recharges via raw REST to avoid type errors
+          // (table will be created when gateway integration is added)
+          const response = await fetch(
+            `${(supabase as any).supabaseUrl}/rest/v1/pending_recharges?id=eq.${paymentId}&select=status,confirmed_at`,
+            {
+              headers: {
+                'apikey': (supabase as any).supabaseKey,
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || (supabase as any).supabaseKey}`,
+              },
+            }
+          );
 
-          if (error) {
-            throw error;
-          }
-
-          if (data) {
-            // Ledger transactions are append-only; presence = success
-            const status: PaymentStatus = 'success';
-
-            if (status === 'success' || status === 'failed' || status === 'cancelled') {
+          if (!response.ok) {
+            if (response.status === 404 || response.status === 400) {
+              // Table doesn't exist — gateway not integrated yet
               clearInterval(poll);
               this.activePolls.delete(paymentId);
               this.pendingPayments.delete(paymentId);
               this.savePendingPayments();
-
-              resolve({
-                paymentId,
-                status,
-                confirmedAt: new Date().toISOString(),
-              });
+              reject(new Error('Payment gateway not yet integrated'));
+              return;
             }
+            throw new Error(`Poll request failed: ${response.status}`);
+          }
+
+          const rows = await response.json();
+          const data = rows?.[0];
+
+          if (data && (data.status === 'confirmed' || data.status === 'failed' || data.status === 'cancelled')) {
+            const status: PaymentStatus = data.status === 'confirmed' ? 'success' : data.status as PaymentStatus;
+
+            clearInterval(poll);
+            this.activePolls.delete(paymentId);
+            this.pendingPayments.delete(paymentId);
+            this.savePendingPayments();
+
+            if (onUpdate) onUpdate(status);
+
+            resolve({
+              paymentId,
+              status,
+              confirmedAt: data.confirmed_at || new Date().toISOString(),
+            });
           }
 
           if (attempts >= MAX_POLL_ATTEMPTS) {
             clearInterval(poll);
             this.activePolls.delete(paymentId);
-            reject(new Error('Payment confirmation timeout'));
+            this.pendingPayments.delete(paymentId);
+            this.savePendingPayments();
+            reject(new Error('Payment confirmation timeout — check your payment status with the gateway'));
           }
         } catch (error) {
-          // Continue polling on transient errors
           console.error('Poll error:', error);
+          if (attempts >= MAX_POLL_ATTEMPTS) {
+            clearInterval(poll);
+            this.activePolls.delete(paymentId);
+            reject(new Error('Payment confirmation failed'));
+          }
         }
       }, POLL_INTERVAL);
 
