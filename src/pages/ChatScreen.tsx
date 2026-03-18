@@ -1146,9 +1146,6 @@ const ChatScreen = () => {
       const attachmentType = selectedFile.type.startsWith("image/") ? "image" : "file";
       const messageText = newMessage.trim() || (attachmentType === "image" ? "📷 Image" : `📎 ${selectedFile.name}`);
 
-      // Translate if needed
-      const translation = await translateMessage(messageText, chatPartner.preferredLanguage);
-
       const { error } = await supabase
         .from("chat_messages")
         .insert({
@@ -1156,8 +1153,6 @@ const ChatScreen = () => {
           sender_id: currentUserId,
           receiver_id: chatPartner.userId,
           message: `${messageText}\n[attachment:${attachmentUrl}]`,
-          translated_message: translation.translatedMessage || null,
-          is_translated: translation.isTranslated,
         });
 
       if (error) throw error;
