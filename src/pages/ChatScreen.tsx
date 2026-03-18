@@ -99,15 +99,11 @@ const DEFAULT_MAX_PARALLEL_CHATS = 3;
  * Message Interface
  * 
  * Defines the structure of a chat message object.
- * Contains both original and translated content.
  */
 interface Message {
   id: string;                    // UUID of the message
   senderId: string;              // UUID of sender
-  message: string;               // Original message text (senderView)
-  translatedMessage?: string;    // Translated version (receiverView)
-  originalEnglish?: string;      // English version for English Core mode
-  isTranslated: boolean;         // Whether translation was applied
+  message: string;               // Original message text
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
