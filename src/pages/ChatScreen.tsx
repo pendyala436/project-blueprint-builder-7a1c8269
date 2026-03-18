@@ -630,9 +630,6 @@ const ChatScreen = () => {
           id: msg.id,
           senderId: msg.sender_id,
           message: msg.message,
-          translatedMessage: msg.translated_message || undefined,
-          originalEnglish: msg.original_english || undefined, // English for English Core mode
-          isTranslated: msg.is_translated || false,
           isRead: msg.is_read || false,
           createdAt: msg.created_at,
         })));
