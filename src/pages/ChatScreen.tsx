@@ -35,7 +35,7 @@ import {
   ArrowLeft,    // Back navigation icon
   Send,         // Send message icon
   Circle,       // Status indicator
-  Languages,    // Translation indicator icon
+  
   Loader2,      // Loading spinner
   MoreVertical, // Options menu icon
   Check,        // Single check (sent)
