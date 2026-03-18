@@ -1,80 +1,60 @@
-// Supported Languages Data (for matching & visibility logic)
+/**
+ * Supported Languages — used for matching & visibility rules.
+ * NOT related to translation (translation is removed).
+ */
 
 export interface SupportedLanguage {
   name: string;
+  code: string;
   isIndian: boolean;
-  script: string;
 }
 
 export const INDIAN_LANGUAGES: SupportedLanguage[] = [
-  { name: "Hindi", isIndian: true, script: "Devanagari" },
-  { name: "Bengali", isIndian: true, script: "Bengali" },
-  { name: "Telugu", isIndian: true, script: "Telugu" },
-  { name: "Tamil", isIndian: true, script: "Tamil" },
-  { name: "Marathi", isIndian: true, script: "Devanagari" },
-  { name: "Gujarati", isIndian: true, script: "Gujarati" },
-  { name: "Kannada", isIndian: true, script: "Kannada" },
-  { name: "Malayalam", isIndian: true, script: "Malayalam" },
-  { name: "Punjabi", isIndian: true, script: "Gurmukhi" },
-  { name: "Odia", isIndian: true, script: "Odia" },
-  { name: "Assamese", isIndian: true, script: "Bengali" },
-  { name: "Nepali", isIndian: true, script: "Devanagari" },
-  { name: "Urdu", isIndian: true, script: "Arabic" },
-  { name: "Konkani", isIndian: true, script: "Devanagari" },
-  { name: "Maithili", isIndian: true, script: "Devanagari" },
-  { name: "Santali", isIndian: true, script: "Ol Chiki" },
-  { name: "Bodo", isIndian: true, script: "Devanagari" },
-  { name: "Dogri", isIndian: true, script: "Devanagari" },
-  { name: "Kashmiri", isIndian: true, script: "Arabic" },
-  { name: "Sindhi", isIndian: true, script: "Arabic" },
-  { name: "Manipuri", isIndian: true, script: "Bengali" },
-  { name: "Sinhala", isIndian: true, script: "Sinhala" },
-  { name: "Bhojpuri", isIndian: true, script: "Devanagari" },
+  { name: "Hindi", code: "hi", isIndian: true },
+  { name: "Bengali", code: "bn", isIndian: true },
+  { name: "Telugu", code: "te", isIndian: true },
+  { name: "Marathi", code: "mr", isIndian: true },
+  { name: "Tamil", code: "ta", isIndian: true },
+  { name: "Urdu", code: "ur", isIndian: true },
+  { name: "Gujarati", code: "gu", isIndian: true },
+  { name: "Kannada", code: "kn", isIndian: true },
+  { name: "Malayalam", code: "ml", isIndian: true },
+  { name: "Odia", code: "or", isIndian: true },
+  { name: "Punjabi", code: "pa", isIndian: true },
+  { name: "Assamese", code: "as", isIndian: true },
+  { name: "Maithili", code: "mai", isIndian: true },
+  { name: "Sanskrit", code: "sa", isIndian: true },
+  { name: "Nepali", code: "ne", isIndian: true },
+  { name: "Konkani", code: "kok", isIndian: true },
+  { name: "Manipuri", code: "mni", isIndian: true },
+  { name: "Bodo", code: "brx", isIndian: true },
+  { name: "Dogri", code: "doi", isIndian: true },
+  { name: "Sindhi", code: "sd", isIndian: true },
+  { name: "Santali", code: "sat", isIndian: true },
+  { name: "Kashmiri", code: "ks", isIndian: true },
 ];
 
 export const NON_INDIAN_LANGUAGES: SupportedLanguage[] = [
-  { name: "English", isIndian: false, script: "Latin" },
-  { name: "Mandarin Chinese", isIndian: false, script: "Han" },
-  { name: "Spanish", isIndian: false, script: "Latin" },
-  { name: "Arabic", isIndian: false, script: "Arabic" },
-  { name: "French", isIndian: false, script: "Latin" },
-  { name: "Portuguese", isIndian: false, script: "Latin" },
-  { name: "Russian", isIndian: false, script: "Cyrillic" },
-  { name: "Indonesian", isIndian: false, script: "Latin" },
-  { name: "German", isIndian: false, script: "Latin" },
-  { name: "Japanese", isIndian: false, script: "Japanese" },
-  { name: "Egyptian Arabic", isIndian: false, script: "Arabic" },
-  { name: "Vietnamese", isIndian: false, script: "Latin" },
-  { name: "Hausa", isIndian: false, script: "Latin" },
-  { name: "Turkish", isIndian: false, script: "Latin" },
-  { name: "Swahili", isIndian: false, script: "Latin" },
-  { name: "Tagalog", isIndian: false, script: "Latin" },
-  { name: "Cantonese", isIndian: false, script: "Han" },
-  { name: "Wu Chinese", isIndian: false, script: "Han" },
-  { name: "Persian", isIndian: false, script: "Arabic" },
-  { name: "Korean", isIndian: false, script: "Hangul" },
-  { name: "Thai", isIndian: false, script: "Thai" },
-  { name: "Javanese", isIndian: false, script: "Latin" },
-  { name: "Italian", isIndian: false, script: "Latin" },
-  { name: "Levantine Arabic", isIndian: false, script: "Arabic" },
-  { name: "Amharic", isIndian: false, script: "Ethiopic" },
-  { name: "Burmese", isIndian: false, script: "Myanmar" },
-  { name: "Sundanese", isIndian: false, script: "Latin" },
-  { name: "Somali", isIndian: false, script: "Latin" },
-  { name: "Malagasy", isIndian: false, script: "Latin" },
-  { name: "Fula", isIndian: false, script: "Latin" },
-  { name: "Romanian", isIndian: false, script: "Latin" },
-  { name: "Azerbaijani", isIndian: false, script: "Latin" },
-  { name: "Dutch", isIndian: false, script: "Latin" },
-  { name: "Pashto", isIndian: false, script: "Arabic" },
-  { name: "Oromo", isIndian: false, script: "Latin" },
-  { name: "Yoruba", isIndian: false, script: "Latin" },
-  { name: "Hakka", isIndian: false, script: "Han" },
-  { name: "Kurdish", isIndian: false, script: "Arabic" },
-  { name: "Uzbek", isIndian: false, script: "Latin" },
-  { name: "Malay", isIndian: false, script: "Latin" },
-  { name: "Min Nan Chinese", isIndian: false, script: "Han" },
-  { name: "Xiang Chinese", isIndian: false, script: "Han" },
+  { name: "English", code: "en", isIndian: false },
+  { name: "Spanish", code: "es", isIndian: false },
+  { name: "French", code: "fr", isIndian: false },
+  { name: "German", code: "de", isIndian: false },
+  { name: "Portuguese", code: "pt", isIndian: false },
+  { name: "Russian", code: "ru", isIndian: false },
+  { name: "Japanese", code: "ja", isIndian: false },
+  { name: "Korean", code: "ko", isIndian: false },
+  { name: "Chinese", code: "zh", isIndian: false },
+  { name: "Arabic", code: "ar", isIndian: false },
+  { name: "Turkish", code: "tr", isIndian: false },
+  { name: "Italian", code: "it", isIndian: false },
+  { name: "Dutch", code: "nl", isIndian: false },
+  { name: "Polish", code: "pl", isIndian: false },
+  { name: "Thai", code: "th", isIndian: false },
+  { name: "Vietnamese", code: "vi", isIndian: false },
+  { name: "Indonesian", code: "id", isIndian: false },
+  { name: "Malay", code: "ms", isIndian: false },
+  { name: "Filipino", code: "fil", isIndian: false },
+  { name: "Swahili", code: "sw", isIndian: false },
 ];
 
 export const ALL_SUPPORTED_LANGUAGES: SupportedLanguage[] = [
@@ -82,21 +62,10 @@ export const ALL_SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   ...NON_INDIAN_LANGUAGES,
 ];
 
-export function isIndianLanguage(languageName: string): boolean {
-  const normalized = languageName.toLowerCase().trim();
-  return INDIAN_LANGUAGES.some(
-    lang => lang.name.toLowerCase() === normalized
-  );
-}
+const indianLanguageNames = new Set(
+  INDIAN_LANGUAGES.map(l => l.name.toLowerCase())
+);
 
-export function getIndianLanguageNames(): string[] {
-  return INDIAN_LANGUAGES.map(lang => lang.name);
-}
-
-export function getNonIndianLanguageNames(): string[] {
-  return NON_INDIAN_LANGUAGES.map(lang => lang.name);
-}
-
-export function getTotalLanguageCount(): number {
-  return ALL_SUPPORTED_LANGUAGES.length;
+export function isIndianLanguage(language: string): boolean {
+  return indianLanguageNames.has(language.toLowerCase());
 }

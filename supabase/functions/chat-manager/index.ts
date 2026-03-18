@@ -612,7 +612,6 @@ serve(async (req) => {
         });
 
         const selectedWoman = eligibleWomen[0];
-        const translationNeeded = !selectedWoman.isSameLanguage;
 
         console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
 
@@ -627,7 +626,6 @@ serve(async (req) => {
               country: selectedWoman.country
             },
             same_language: selectedWoman.isSameLanguage,
-            translation_needed: translationNeeded,
             current_load: selectedWoman.currentChats,
             total_available: eligibleWomen.length
           }),
@@ -754,7 +752,7 @@ serve(async (req) => {
         );
       }
 
-      // Match users globally - prioritizes same language, with translation support for all languages
+      // Match users globally - prioritizes same language
       case "get_available_indian_woman": {
         const requestedLanguage = preferred_language || "en";
         const requestedLanguageLower = requestedLanguage.toLowerCase().trim();
@@ -869,7 +867,6 @@ serve(async (req) => {
         const lowestLoad = eligibleWomen[0].currentChats;
         const sameLoadWomen = eligibleWomen.filter(w => w.currentChats === lowestLoad);
         const selectedWoman = sameLoadWomen[Math.floor(Math.random() * sameLoadWomen.length)];
-        const translationNeeded = !selectedWoman.isSameLanguage;
 
         console.log(`Matched man (lang: ${requestedLanguage}) with woman ${selectedWoman.user_id}, lang: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
 
@@ -884,7 +881,6 @@ serve(async (req) => {
             },
             current_load: selectedWoman.currentChats,
             same_language: selectedWoman.isSameLanguage,
-            translation_enabled: translationNeeded,
             woman_country: selectedWoman.country || "Unknown"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }

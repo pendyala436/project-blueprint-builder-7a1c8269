@@ -30,14 +30,12 @@ import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
-// Translation hook
-import { useTranslation } from "@/contexts/TranslationContext";
 // Lucide icons for UI elements
 import { 
   ArrowLeft,    // Back navigation icon
   Send,         // Send message icon
   Circle,       // Status indicator
-  Languages,    // Translation indicator icon
+  
   Loader2,      // Loading spinner
   MoreVertical, // Options menu icon
   Check,        // Single check (sent)
@@ -99,15 +97,11 @@ const DEFAULT_MAX_PARALLEL_CHATS = 3;
  * Message Interface
  * 
  * Defines the structure of a chat message object.
- * Contains both original and translated content.
  */
 interface Message {
   id: string;                    // UUID of the message
   senderId: string;              // UUID of sender
-  message: string;               // Original message text (senderView)
-  translatedMessage?: string;    // Translated version (receiverView)
-  originalEnglish?: string;      // English version for English Core mode
-  isTranslated: boolean;         // Whether translation was applied
+  message: string;               // Original message text
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
@@ -211,11 +205,8 @@ const ChatScreen = () => {
   // Current authenticated user's ID
   const [currentUserId, setCurrentUserId] = useState<string>("");
   
-  // Current user's preferred language for translations
+  // Current user's preferred language (used for matching display)
   const [currentUserLanguage, setCurrentUserLanguage] = useState<string>("");
-  
-  // Toggle for showing/hiding translation previews
-  const [showTranslations, setShowTranslations] = useState(true);
   
   // Current user's gender for billing/earnings display
   const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
@@ -393,31 +384,13 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // ============= MESSAGE DISPLAY LOGIC =============
-          // The database stores:
-          // - message: senderView (what sender sees - their native script or English)
-          // - translated_message: receiverView (what receiver sees - their native script)
-          //
-          // For incoming messages (from partner):
-          // - Use translated_message directly - it was already prepared for us (the receiver)
-          //
-          // For our own messages (echoed back):
-          // - Use message directly - it's our senderView
-
           // Add message to state (with deduplication check)
           setMessages(prev => {
-            // Check if message already exists to prevent duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            
-            // Append new message - use database values directly
-            // translated_message already contains the receiverView for partner messages
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
-              message: newMsg.message, // senderView
-              translatedMessage: newMsg.translated_message || '', // receiverView
-              originalEnglish: newMsg.original_english || undefined, // English for English Core mode
-              isTranslated: newMsg.is_translated || false,
+              message: newMsg.message,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
@@ -655,9 +628,6 @@ const ChatScreen = () => {
           id: msg.id,
           senderId: msg.sender_id,
           message: msg.message,
-          translatedMessage: msg.translated_message || undefined,
-          originalEnglish: msg.original_english || undefined, // English for English Core mode
-          isTranslated: msg.is_translated || false,
           isRead: msg.is_read || false,
           createdAt: msg.created_at,
         })));
@@ -958,53 +928,6 @@ const ChatScreen = () => {
   };
 
   /**
-   * translateMessage Function
-   * 
-   * Uses Edge Function translation via Supabase.
-   * Supports 200+ languages with server-side NLLB.
-   * 
-   * @param message - Text to translate
-   * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
-   * @param sourceLanguage - Optional source language (auto-detected if not provided)
-   * @returns Object with translatedMessage, isTranslated flag, and detectedLanguage
-   */
-  const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
-    try {
-      // Skip translation if same language
-      const src = (sourceLanguage || currentUserLanguage || "english").toLowerCase();
-      const tgt = targetLanguage.toLowerCase();
-      if (src === tgt) {
-        return { translatedMessage: message, isTranslated: false, detectedLanguage: src, translationPair: "" };
-      }
-
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
-        body: {
-          action: "translate",
-          message,
-          source_language: src,
-          target_language: tgt,
-        },
-      });
-
-      if (error || !data?.translated_message) {
-        // Fallback: return original message untranslated
-        return { translatedMessage: message, isTranslated: false, detectedLanguage: src, translationPair: "" };
-      }
-
-      return {
-        translatedMessage: data.translated_message,
-        isTranslated: true,
-        detectedLanguage: data.detected_language || src,
-        translationPair: `${src} → ${tgt}`,
-      };
-    } catch (error) {
-      console.error("Translation error:", error);
-      // Return original message on error — never block sending
-      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown", translationPair: "" };
-    }
-  };
-
-  /**
    * markAsRead Function
    * 
    * Updates a message's is_read status to true.
@@ -1020,50 +943,13 @@ const ChatScreen = () => {
   };
 
   /**
-   * convertMessageToTargetLanguage Function
-   * 
-   * Converts English typing to the target language script using browser-side Web Worker.
-   * Example: "bagunnava" → బాగున్నావా (Telugu)
-   * Example: "kaise ho" → कैसे हो (Hindi)
-   * 
-   * @param message - Text typed in English/Latin characters
-   * @param targetLanguage - Target language name (e.g., "Telugu", "Hindi")
-   * @returns Converted text in target language script
-   */
-  const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
-    try {
-      // Translation/transliteration removed - return message as-is
-      return message;
-    } catch (error) {
-      console.error("Conversion failed:", error);
-      return message;
-    }
-  };
-
-  /**
    * handleSendMessage Function
    * 
-   * Sends a new message to the chat partner:
-   * 1. Validates input
-   * 2. Uses pre-computed message views from RealtimeChatInput
-   * 3. Stores all views (senderView, receiverView, originalEnglish)
-   * 4. Inserts into database
-   * @param messageToStore - The message to store in database
-   * @param senderView - What sender sees (their language)
-   * @param receiverView - What receiver sees (their language, translated)
-   * @param messageViews - Extended views for 9 mode combinations
+   * Sends a new message to the chat partner.
+   * Messages are sent as plain text — no translation.
    */
-  const handleSendMessage = async (
-    messageToStore: string, 
-    senderView: string, 
-    receiverView: string,
-    messageViews?: any
-  ) => {
-    // ============= VALIDATION =============
-    
-    // Don't send empty messages or while already sending
-    // Use senderView for validation since that's what gets displayed
-    if (!senderView.trim() || !chatPartner || isSending) return;
+  const handleSendMessage = async (messageText: string) => {
+    if (!messageText.trim() || !chatPartner || isSending) return;
 
     // Check if blocked
     if (isBlocked || isBlockedByPartner) {
@@ -1079,7 +965,7 @@ const ChatScreen = () => {
 
     // Content moderation - block phone numbers, emails, social media
     const { moderateMessage } = await import('@/lib/content-moderation');
-    const moderationResult = moderateMessage(senderView);
+    const moderationResult = moderateMessage(messageText);
     if (moderationResult.isBlocked) {
       toast({
         title: "Message Blocked",
@@ -1092,31 +978,16 @@ const ChatScreen = () => {
     setIsSending(true);
 
     try {
-      // Check if translation occurred (receiver view differs from sender view)
-      const isTranslated = senderView !== receiverView;
-
-      // ============= INSERT MESSAGE INTO DATABASE =============
-      // Store all message views for 9 mode combinations
-      // - message: senderView (what sender sees)
-      // - translated_message: receiverView (what receiver sees in their language)
-      // - original_english: English version for English Core mode display
-      
       const { error } = await supabase
         .from("chat_messages")
         .insert({
-          chat_id: chatId.current,          // Consistent chat identifier
-          sender_id: currentUserId,          // Current user as sender
-          receiver_id: chatPartner.userId,   // Partner as receiver
-          message: senderView,               // Sender's view (what sender typed/sees)
-          translated_message: receiverView,  // Receiver's view (translated for receiver)
-          original_english: messageViews?.originalEnglish || null, // English for English Core mode
-          is_translated: isTranslated,       // Flag if translation occurred
+          chat_id: chatId.current,
+          sender_id: currentUserId,
+          receiver_id: chatPartner.userId,
+          message: messageText,
         });
 
       if (error) throw error;
-
-      // Note: Message will appear via realtime subscription
-      
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Message not sent", { description: ERROR_MESSAGES.chat.sendFailed });
@@ -1275,9 +1146,6 @@ const ChatScreen = () => {
       const attachmentType = selectedFile.type.startsWith("image/") ? "image" : "file";
       const messageText = newMessage.trim() || (attachmentType === "image" ? "📷 Image" : `📎 ${selectedFile.name}`);
 
-      // Translate if needed
-      const translation = await translateMessage(messageText, chatPartner.preferredLanguage);
-
       const { error } = await supabase
         .from("chat_messages")
         .insert({
@@ -1285,8 +1153,6 @@ const ChatScreen = () => {
           sender_id: currentUserId,
           receiver_id: chatPartner.userId,
           message: `${messageText}\n[attachment:${attachmentUrl}]`,
-          translated_message: translation.translatedMessage || null,
-          is_translated: translation.isTranslated,
         });
 
       if (error) throw error;
@@ -1482,7 +1348,6 @@ const ChatScreen = () => {
                   {chatPartner.preferredLanguage !== currentUserLanguage && (
                     <>
                       <span>•</span>
-                      <Languages className="w-3 h-3" />
                       <span>{chatPartner.preferredLanguage}</span>
                     </>
                   )}
@@ -1491,16 +1356,6 @@ const ChatScreen = () => {
             </div>
           )}
 
-          {/* Toggle translation visibility button */}
-          <button
-            onClick={() => setShowTranslations(!showTranslations)}
-            className={`p-2 rounded-full transition-colors ${
-              showTranslations ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"
-            }`}
-            title={showTranslations ? "Hide translations" : "Show translations"}
-          >
-            <Languages className="w-5 h-5" />
-          </button>
 
           {/* Friend/Block Menu */}
           <DropdownMenu>
@@ -1727,25 +1582,8 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // ============= RECEIVER VIEW LOGIC =============
-                // Determine what the receiver sees based on their typing mode preference:
-                // Receiver sees translatedMessage (their native language) if available
-                // Sender sees their original message
-                let displayText: string;
-                
-                if (isMine) {
-                  // Sender sees their own message (senderView)
-                  displayText = messageText;
-                } else {
-                  // Receiver sees translated message
-                  if (message.translatedMessage) {
-                    // Show translatedMessage (receiverNative)
-                    displayText = extractAttachment(message.translatedMessage).text;
-                  } else {
-                    // Fallback to original message
-                    displayText = messageText;
-                  }
-                }
+                // Display the message text as-is (no translation)
+                const displayText = messageText;
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
@@ -1804,24 +1642,6 @@ const ChatScreen = () => {
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
                             
-                            {/* MANDATORY English meaning (small letters) - for ALL messages */}
-                            {showTranslations && message.originalEnglish && message.originalEnglish !== displayText && (
-                              <p className={`text-xs mt-1 pt-1 border-t flex items-center gap-1 ${
-                                isMine 
-                                  ? "border-primary-foreground/20 text-primary-foreground/70" 
-                                  : "border-border/50 text-muted-foreground"
-                              }`}>
-                                <Languages className="w-3 h-3 flex-shrink-0" />
-                                <span>🌐 {message.originalEnglish}</span>
-                              </p>
-                            )}
-                            {/* Show translated message subtitle when translations are enabled */}
-                            {showTranslations && !isMine && message.isTranslated && message.translatedMessage && message.translatedMessage !== displayText && (
-                              <p className={`text-xs mt-1 pt-1 border-t flex items-center gap-1 border-border/50 text-muted-foreground`}>
-                                <Languages className="w-3 h-3 flex-shrink-0" />
-                                <span>Original: {message.message}</span>
-                              </p>
-                            )}
                           </div>
                         )}
 
@@ -1981,9 +1801,7 @@ const ChatScreen = () => {
           {/* Simple Chat Input */}
           <ChatMessageInput
             onSendMessage={async (msg) => {
-              const partnerLang = chatPartner?.preferredLanguage || "english";
-              const result = await translateMessage(msg, partnerLang, currentUserLanguage || "english");
-              handleSendMessage(msg, msg, result.translatedMessage);
+              await handleSendMessage(msg);
             }}
             disabled={isSending || isBlocked || isBlockedByPartner}
             userLanguage={currentUserLanguage || "english"}
