@@ -612,7 +612,6 @@ serve(async (req) => {
         });
 
         const selectedWoman = eligibleWomen[0];
-        const translationNeeded = !selectedWoman.isSameLanguage;
 
         console.log(`Match found: ${selectedWoman.user_id}, language: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
 
@@ -627,7 +626,6 @@ serve(async (req) => {
               country: selectedWoman.country
             },
             same_language: selectedWoman.isSameLanguage,
-            translation_needed: translationNeeded,
             current_load: selectedWoman.currentChats,
             total_available: eligibleWomen.length
           }),
