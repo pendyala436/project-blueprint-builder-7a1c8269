@@ -930,53 +930,6 @@ const ChatScreen = () => {
   };
 
   /**
-   * translateMessage Function
-   * 
-   * Uses Edge Function translation via Supabase.
-   * Supports 200+ languages with server-side NLLB.
-   * 
-   * @param message - Text to translate
-   * @param targetLanguage - Target language name (e.g., "Spanish", "Hindi")
-   * @param sourceLanguage - Optional source language (auto-detected if not provided)
-   * @returns Object with translatedMessage, isTranslated flag, and detectedLanguage
-   */
-  const translateMessage = async (message: string, targetLanguage: string, sourceLanguage?: string) => {
-    try {
-      // Skip translation if same language
-      const src = (sourceLanguage || currentUserLanguage || "english").toLowerCase();
-      const tgt = targetLanguage.toLowerCase();
-      if (src === tgt) {
-        return { translatedMessage: message, isTranslated: false, detectedLanguage: src, translationPair: "" };
-      }
-
-      const { data, error } = await supabase.functions.invoke("chat-manager", {
-        body: {
-          action: "translate",
-          message,
-          source_language: src,
-          target_language: tgt,
-        },
-      });
-
-      if (error || !data?.translated_message) {
-        // Fallback: return original message untranslated
-        return { translatedMessage: message, isTranslated: false, detectedLanguage: src, translationPair: "" };
-      }
-
-      return {
-        translatedMessage: data.translated_message,
-        isTranslated: true,
-        detectedLanguage: data.detected_language || src,
-        translationPair: `${src} → ${tgt}`,
-      };
-    } catch (error) {
-      console.error("Translation error:", error);
-      // Return original message on error — never block sending
-      return { translatedMessage: message, isTranslated: false, detectedLanguage: "unknown", translationPair: "" };
-    }
-  };
-
-  /**
    * markAsRead Function
    * 
    * Updates a message's is_read status to true.
@@ -989,27 +942,6 @@ const ChatScreen = () => {
       .from("chat_messages")
       .update({ is_read: true })
       .eq("id", messageId);
-  };
-
-  /**
-   * convertMessageToTargetLanguage Function
-   * 
-   * Converts English typing to the target language script using browser-side Web Worker.
-   * Example: "bagunnava" → బాగున్నావా (Telugu)
-   * Example: "kaise ho" → कैसे हो (Hindi)
-   * 
-   * @param message - Text typed in English/Latin characters
-   * @param targetLanguage - Target language name (e.g., "Telugu", "Hindi")
-   * @returns Converted text in target language script
-   */
-  const convertMessageToTargetLanguage = async (message: string, targetLanguage: string): Promise<string> => {
-    try {
-      // Translation/transliteration removed - return message as-is
-      return message;
-    } catch (error) {
-      console.error("Conversion failed:", error);
-      return message;
-    }
   };
 
   /**
