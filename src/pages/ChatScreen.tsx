@@ -1809,9 +1809,7 @@ const ChatScreen = () => {
           {/* Simple Chat Input */}
           <ChatMessageInput
             onSendMessage={async (msg) => {
-              const partnerLang = chatPartner?.preferredLanguage || "english";
-              const result = await translateMessage(msg, partnerLang, currentUserLanguage || "english");
-              handleSendMessage(msg, msg, result.translatedMessage);
+              await handleSendMessage(msg);
             }}
             disabled={isSending || isBlocked || isBlockedByPartner}
             userLanguage={currentUserLanguage || "english"}
