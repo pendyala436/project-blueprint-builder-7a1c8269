@@ -513,7 +513,7 @@ async function distributeWomanForCall(supabase: any, data: any, authenticatedUse
     );
   }
 
-  // Step 6: Filter STRICTLY by same language (no translation for video calls)
+  // Step 6: Filter STRICTLY by same language for video calls
   const sameLanguageWomen = womenProfiles.filter((w: any) => {
     const womanLanguage = (
       languageMap.get(w.user_id) || 
