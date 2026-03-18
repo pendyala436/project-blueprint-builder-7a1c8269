@@ -867,7 +867,6 @@ serve(async (req) => {
         const lowestLoad = eligibleWomen[0].currentChats;
         const sameLoadWomen = eligibleWomen.filter(w => w.currentChats === lowestLoad);
         const selectedWoman = sameLoadWomen[Math.floor(Math.random() * sameLoadWomen.length)];
-        const translationNeeded = !selectedWoman.isSameLanguage;
 
         console.log(`Matched man (lang: ${requestedLanguage}) with woman ${selectedWoman.user_id}, lang: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
 
@@ -882,7 +881,6 @@ serve(async (req) => {
             },
             current_load: selectedWoman.currentChats,
             same_language: selectedWoman.isSameLanguage,
-            translation_enabled: translationNeeded,
             woman_country: selectedWoman.country || "Unknown"
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
