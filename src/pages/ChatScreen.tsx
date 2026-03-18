@@ -1364,16 +1364,6 @@ const ChatScreen = () => {
             </div>
           )}
 
-          {/* Toggle translation visibility button */}
-          <button
-            onClick={() => setShowTranslations(!showTranslations)}
-            className={`p-2 rounded-full transition-colors ${
-              showTranslations ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"
-            }`}
-            title={showTranslations ? "Hide translations" : "Show translations"}
-          >
-            <Languages className="w-5 h-5" />
-          </button>
 
           {/* Friend/Block Menu */}
           <DropdownMenu>
