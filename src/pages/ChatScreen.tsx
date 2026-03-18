@@ -207,11 +207,8 @@ const ChatScreen = () => {
   // Current authenticated user's ID
   const [currentUserId, setCurrentUserId] = useState<string>("");
   
-  // Current user's preferred language for translations
+  // Current user's preferred language (used for matching display)
   const [currentUserLanguage, setCurrentUserLanguage] = useState<string>("");
-  
-  // Toggle for showing/hiding translation previews
-  const [showTranslations, setShowTranslations] = useState(true);
   
   // Current user's gender for billing/earnings display
   const [currentUserGender, setCurrentUserGender] = useState<"male" | "female">("male");
