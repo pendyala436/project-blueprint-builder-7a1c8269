@@ -1590,25 +1590,8 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // ============= RECEIVER VIEW LOGIC =============
-                // Determine what the receiver sees based on their typing mode preference:
-                // Receiver sees translatedMessage (their native language) if available
-                // Sender sees their original message
-                let displayText: string;
-                
-                if (isMine) {
-                  // Sender sees their own message (senderView)
-                  displayText = messageText;
-                } else {
-                  // Receiver sees translated message
-                  if (message.translatedMessage) {
-                    // Show translatedMessage (receiverNative)
-                    displayText = extractAttachment(message.translatedMessage).text;
-                  } else {
-                    // Fallback to original message
-                    displayText = messageText;
-                  }
-                }
+                // Display the message text as-is (no translation)
+                const displayText = messageText;
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
