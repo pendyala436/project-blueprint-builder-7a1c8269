@@ -30,8 +30,6 @@ import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
-// Translation hook
-import { useTranslation } from "@/contexts/TranslationContext";
 // Lucide icons for UI elements
 import { 
   ArrowLeft,    // Back navigation icon
