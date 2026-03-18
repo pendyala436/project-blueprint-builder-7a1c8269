@@ -752,7 +752,7 @@ serve(async (req) => {
         );
       }
 
-      // Match users globally - prioritizes same language, with translation support for all languages
+      // Match users globally - prioritizes same language
       case "get_available_indian_woman": {
         const requestedLanguage = preferred_language || "en";
         const requestedLanguageLower = requestedLanguage.toLowerCase().trim();
