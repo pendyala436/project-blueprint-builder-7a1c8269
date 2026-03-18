@@ -386,31 +386,13 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // ============= MESSAGE DISPLAY LOGIC =============
-          // The database stores:
-          // - message: senderView (what sender sees - their native script or English)
-          // - translated_message: receiverView (what receiver sees - their native script)
-          //
-          // For incoming messages (from partner):
-          // - Use translated_message directly - it was already prepared for us (the receiver)
-          //
-          // For our own messages (echoed back):
-          // - Use message directly - it's our senderView
-
           // Add message to state (with deduplication check)
           setMessages(prev => {
-            // Check if message already exists to prevent duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            
-            // Append new message - use database values directly
-            // translated_message already contains the receiverView for partner messages
             return [...prev, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
-              message: newMsg.message, // senderView
-              translatedMessage: newMsg.translated_message || '', // receiverView
-              originalEnglish: newMsg.original_english || undefined, // English for English Core mode
-              isTranslated: newMsg.is_translated || false,
+              message: newMsg.message,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
