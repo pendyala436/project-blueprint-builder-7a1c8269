@@ -390,7 +390,6 @@ async function distributeWomanForChat(supabase: any, data: any) {
     JSON.stringify({ 
       success: true, 
       woman: selectedWoman,
-      needs_translation: !selectedWoman.isSameLanguage,
       same_language: selectedWoman.isSameLanguage
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
