@@ -947,27 +947,11 @@ const ChatScreen = () => {
   /**
    * handleSendMessage Function
    * 
-   * Sends a new message to the chat partner:
-   * 1. Validates input
-   * 2. Uses pre-computed message views from RealtimeChatInput
-   * 3. Stores all views (senderView, receiverView, originalEnglish)
-   * 4. Inserts into database
-   * @param messageToStore - The message to store in database
-   * @param senderView - What sender sees (their language)
-   * @param receiverView - What receiver sees (their language, translated)
-   * @param messageViews - Extended views for 9 mode combinations
+   * Sends a new message to the chat partner.
+   * Messages are sent as plain text — no translation.
    */
-  const handleSendMessage = async (
-    messageToStore: string, 
-    senderView: string, 
-    receiverView: string,
-    messageViews?: any
-  ) => {
-    // ============= VALIDATION =============
-    
-    // Don't send empty messages or while already sending
-    // Use senderView for validation since that's what gets displayed
-    if (!senderView.trim() || !chatPartner || isSending) return;
+  const handleSendMessage = async (messageText: string) => {
+    if (!messageText.trim() || !chatPartner || isSending) return;
 
     // Check if blocked
     if (isBlocked || isBlockedByPartner) {
@@ -983,7 +967,7 @@ const ChatScreen = () => {
 
     // Content moderation - block phone numbers, emails, social media
     const { moderateMessage } = await import('@/lib/content-moderation');
-    const moderationResult = moderateMessage(senderView);
+    const moderationResult = moderateMessage(messageText);
     if (moderationResult.isBlocked) {
       toast({
         title: "Message Blocked",
@@ -996,31 +980,16 @@ const ChatScreen = () => {
     setIsSending(true);
 
     try {
-      // Check if translation occurred (receiver view differs from sender view)
-      const isTranslated = senderView !== receiverView;
-
-      // ============= INSERT MESSAGE INTO DATABASE =============
-      // Store all message views for 9 mode combinations
-      // - message: senderView (what sender sees)
-      // - translated_message: receiverView (what receiver sees in their language)
-      // - original_english: English version for English Core mode display
-      
       const { error } = await supabase
         .from("chat_messages")
         .insert({
-          chat_id: chatId.current,          // Consistent chat identifier
-          sender_id: currentUserId,          // Current user as sender
-          receiver_id: chatPartner.userId,   // Partner as receiver
-          message: senderView,               // Sender's view (what sender typed/sees)
-          translated_message: receiverView,  // Receiver's view (translated for receiver)
-          original_english: messageViews?.originalEnglish || null, // English for English Core mode
-          is_translated: isTranslated,       // Flag if translation occurred
+          chat_id: chatId.current,
+          sender_id: currentUserId,
+          receiver_id: chatPartner.userId,
+          message: messageText,
         });
 
       if (error) throw error;
-
-      // Note: Message will appear via realtime subscription
-      
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Message not sent", { description: ERROR_MESSAGES.chat.sendFailed });
