@@ -1348,7 +1348,6 @@ const ChatScreen = () => {
                   {chatPartner.preferredLanguage !== currentUserLanguage && (
                     <>
                       <span>•</span>
-                      <Languages className="w-3 h-3" />
                       <span>{chatPartner.preferredLanguage}</span>
                     </>
                   )}
