@@ -224,7 +224,7 @@ const WalletScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Payment Gateway Selection */}
+        {/* Payment Gateway */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -232,59 +232,14 @@ const WalletScreen = () => {
               {t("paymentMethod", "Payment Method")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Indian Gateways */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">🇮🇳 {t("indianGateways", "Indian Payment Gateways")}</Label>
-              <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
-                {INDIAN_GATEWAYS.map((gateway) => (
-                  <div key={gateway.id} className="relative">
-                    <RadioGroupItem value={gateway.id} id={gateway.id} className="peer sr-only" />
-                    <Label
-                      htmlFor={gateway.id}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                        "hover:border-primary/50 hover:bg-muted/50",
-                        selectedGateway === gateway.id ? "border-primary bg-primary/5" : "border-border"
-                      )}
-                    >
-                      <span className="text-2xl mb-1">{gateway.logo}</span>
-                      <span className="font-medium text-sm">{gateway.name}</span>
-                      <span className="text-[10px] text-muted-foreground text-center">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* International Gateways */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">🌍 {t("internationalGateways", "International Payment Gateways")}</Label>
-              <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
-                {INTERNATIONAL_GATEWAYS.map((gateway) => (
-                  <div key={gateway.id} className="relative">
-                    <RadioGroupItem value={gateway.id} id={`intl-${gateway.id}`} className="peer sr-only" />
-                    <Label
-                      htmlFor={`intl-${gateway.id}`}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                        "hover:border-primary/50 hover:bg-muted/50",
-                        selectedGateway === gateway.id ? "border-primary bg-primary/5" : "border-border"
-                      )}
-                    >
-                      <span className="text-2xl mb-1">{gateway.logo}</span>
-                      <span className="font-medium text-sm">{gateway.name}</span>
-                      <span className="text-[10px] text-muted-foreground text-center">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
+          <CardContent>
+            <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary bg-primary/5">
+              <span className="text-2xl">💳</span>
+              <div>
+                <span className="font-medium">PayU</span>
+                <p className="text-xs text-muted-foreground">Cards, UPI, Netbanking, Wallets</p>
+              </div>
+              <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -320,8 +275,7 @@ const WalletScreen = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <CreditCard className="h-3 w-3" />
-              {t("payingVia", "Paying via")}{" "}
-              {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name || t("selectedGateway", "selected gateway")}
+              {t("payingVia", "Paying via")} PayU — Secure Payment
             </p>
           </CardContent>
         </Card>
