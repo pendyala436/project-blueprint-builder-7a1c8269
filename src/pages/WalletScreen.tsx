@@ -40,20 +40,9 @@ interface PaymentGateway {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const INDIAN_GATEWAYS: PaymentGateway[] = [
-  { id: "ccavenue",  name: "CCAvenue",          logo: "🇮🇳", description: "Cards, Netbanking, Wallets" },
-  { id: "billdesk",  name: "BillDesk",          logo: "🏦", description: "Netbanking, Cards, EMI" },
-  { id: "upi",       name: "UPI Payments",      logo: "📱", description: "Google Pay, PhonePe, Paytm" },
+const PAYMENT_GATEWAYS: PaymentGateway[] = [
+  { id: "payu",      name: "PayU",              logo: "💳", description: "Cards, UPI, Netbanking, Wallets" },
 ];
-
-const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [
-  { id: "payu",      name: "PayU",              logo: "💳", description: "Cards, EMI, Wallets" },
-  { id: "adyen",     name: "Adyen",             logo: "🌐", description: "Global Payments, 250+ methods" },
-  { id: "cashfree",  name: "Cashfree Payments", logo: "⚡", description: "Cards, UPI, Netbanking" },
-  { id: "payglobal", name: "PayGlobal",         logo: "🌍", description: "International Wire & Cards" },
-];
-
-const ALL_GATEWAYS: PaymentGateway[] = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
   INR: <IndianRupee className="h-5 w-5" />,
