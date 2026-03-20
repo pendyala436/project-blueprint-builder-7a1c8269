@@ -9,9 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+  import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -40,20 +38,9 @@ interface PaymentGateway {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const INDIAN_GATEWAYS: PaymentGateway[] = [
-  { id: "ccavenue",  name: "CCAvenue",          logo: "🇮🇳", description: "Cards, Netbanking, Wallets" },
-  { id: "billdesk",  name: "BillDesk",          logo: "🏦", description: "Netbanking, Cards, EMI" },
-  { id: "upi",       name: "UPI Payments",      logo: "📱", description: "Google Pay, PhonePe, Paytm" },
+const PAYMENT_GATEWAYS: PaymentGateway[] = [
+  { id: "payu",      name: "PayU",              logo: "💳", description: "Cards, UPI, Netbanking, Wallets" },
 ];
-
-const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [
-  { id: "payu",      name: "PayU",              logo: "💳", description: "Cards, EMI, Wallets" },
-  { id: "adyen",     name: "Adyen",             logo: "🌐", description: "Global Payments, 250+ methods" },
-  { id: "cashfree",  name: "Cashfree Payments", logo: "⚡", description: "Cards, UPI, Netbanking" },
-  { id: "payglobal", name: "PayGlobal",         logo: "🌍", description: "International Wire & Cards" },
-];
-
-const ALL_GATEWAYS: PaymentGateway[] = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
   INR: <IndianRupee className="h-5 w-5" />,
@@ -72,7 +59,7 @@ const WalletScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [selectedGateway, setSelectedGateway] = useState("ccavenue");
+  const [selectedGateway, setSelectedGateway] = useState("payu");
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -113,33 +100,65 @@ const WalletScreen = () => {
 
   useRealtimeSubscription({ table: "users_wallet", onUpdate: loadWallet });
 
-  // ── Recharge ──────────────────────────────────────────────────────────────
+  // ── Recharge via PayU ───────────────────────────────────────────────────
   const handleRecharge = async (amount: number) => {
     if (!userId) { toast.error("Please log in to recharge"); return; }
     setSelectedAmount(amount);
     setProcessingPayment(true);
     try {
-      const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
-
-      // ⚠️ IMPORTANT: Do NOT credit wallet here.
-      // Wallet must only be credited after payment gateway confirms via webhook.
-      // The flow should be:
-      //   1. Create a pending_recharge record in DB with amount, gateway, user_id
-      //   2. Redirect user to payment gateway
-      //   3. Gateway webhook confirms payment → edge function credits wallet
-
-      toast.error(`Payment Gateway Not Connected`, {
-        description: `${gateway?.name} integration is pending. No charges were made.`,
+      // Call edge function to get PayU payment data
+      const { data: result, error } = await supabase.functions.invoke('payu-payment', {
+        body: { amount, userId }
       });
 
-      console.warn('[Recharge] Gateway integration pending — wallet NOT credited. Amount:', amount, 'Gateway:', gateway?.name);
+      if (error) throw error;
+      if (!result?.success || !result?.paymentData) {
+        throw new Error(result?.error || 'Failed to initiate payment');
+      }
+
+      const pd = result.paymentData;
+
+      // Create and submit PayU form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = pd.payuUrl;
+      form.style.display = 'none';
+
+      const fields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+      fields.forEach(field => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = field;
+        input.value = pd[field] || '';
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
     } catch (err) {
+      console.error('[PayU Recharge Error]', err);
       toast.error("Recharge failed", { description: ERROR_MESSAGES.wallet.rechargeFailed });
-    } finally {
       setProcessingPayment(false);
       setSelectedAmount(null);
     }
   };
+
+  // Handle payment return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const txnId = params.get('txnid');
+    if (paymentStatus === 'success') {
+      toast.success('Payment successful!', { description: `Transaction ${txnId} completed. Balance will update shortly.` });
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 2000);
+      loadWallet();
+      window.history.replaceState({}, '', '/wallet');
+    } else if (paymentStatus === 'failed') {
+      toast.error('Payment failed', { description: 'Your payment was not completed. No amount was charged.' });
+      window.history.replaceState({}, '', '/wallet');
+    }
+  }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -203,7 +222,7 @@ const WalletScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Payment Gateway Selection */}
+        {/* Payment Gateway */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -211,59 +230,14 @@ const WalletScreen = () => {
               {t("paymentMethod", "Payment Method")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Indian Gateways */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">🇮🇳 {t("indianGateways", "Indian Payment Gateways")}</Label>
-              <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
-                {INDIAN_GATEWAYS.map((gateway) => (
-                  <div key={gateway.id} className="relative">
-                    <RadioGroupItem value={gateway.id} id={gateway.id} className="peer sr-only" />
-                    <Label
-                      htmlFor={gateway.id}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                        "hover:border-primary/50 hover:bg-muted/50",
-                        selectedGateway === gateway.id ? "border-primary bg-primary/5" : "border-border"
-                      )}
-                    >
-                      <span className="text-2xl mb-1">{gateway.logo}</span>
-                      <span className="font-medium text-sm">{gateway.name}</span>
-                      <span className="text-[10px] text-muted-foreground text-center">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* International Gateways */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block">🌍 {t("internationalGateways", "International Payment Gateways")}</Label>
-              <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
-                {INTERNATIONAL_GATEWAYS.map((gateway) => (
-                  <div key={gateway.id} className="relative">
-                    <RadioGroupItem value={gateway.id} id={`intl-${gateway.id}`} className="peer sr-only" />
-                    <Label
-                      htmlFor={`intl-${gateway.id}`}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200",
-                        "hover:border-primary/50 hover:bg-muted/50",
-                        selectedGateway === gateway.id ? "border-primary bg-primary/5" : "border-border"
-                      )}
-                    >
-                      <span className="text-2xl mb-1">{gateway.logo}</span>
-                      <span className="font-medium text-sm">{gateway.name}</span>
-                      <span className="text-[10px] text-muted-foreground text-center">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-2 right-2 h-4 w-4 text-primary" />
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
+          <CardContent>
+            <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary bg-primary/5">
+              <span className="text-2xl">💳</span>
+              <div>
+                <span className="font-medium">PayU</span>
+                <p className="text-xs text-muted-foreground">Cards, UPI, Netbanking, Wallets</p>
+              </div>
+              <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -299,8 +273,7 @@ const WalletScreen = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <CreditCard className="h-3 w-3" />
-              {t("payingVia", "Paying via")}{" "}
-              {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name || t("selectedGateway", "selected gateway")}
+              {t("payingVia", "Paying via")} PayU — Secure Payment
             </p>
           </CardContent>
         </Card>

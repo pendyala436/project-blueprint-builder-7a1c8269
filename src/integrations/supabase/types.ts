@@ -1626,6 +1626,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_recharges: {
+        Row: {
+          amount: number
+          created_at: string | null
+          gateway: string
+          gateway_txn_id: string | null
+          id: string
+          status: string
+          txn_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          gateway?: string
+          gateway_txn_id?: string | null
+          id?: string
+          status?: string
+          txn_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          gateway?: string
+          gateway_txn_id?: string | null
+          id?: string
+          status?: string
+          txn_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_metrics: {
         Row: {
           active_chats: number
