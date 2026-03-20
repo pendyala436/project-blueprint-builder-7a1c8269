@@ -102,33 +102,65 @@ const WalletScreen = () => {
 
   useRealtimeSubscription({ table: "users_wallet", onUpdate: loadWallet });
 
-  // ── Recharge ──────────────────────────────────────────────────────────────
+  // ── Recharge via PayU ───────────────────────────────────────────────────
   const handleRecharge = async (amount: number) => {
     if (!userId) { toast.error("Please log in to recharge"); return; }
     setSelectedAmount(amount);
     setProcessingPayment(true);
     try {
-      const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
-
-      // ⚠️ IMPORTANT: Do NOT credit wallet here.
-      // Wallet must only be credited after payment gateway confirms via webhook.
-      // The flow should be:
-      //   1. Create a pending_recharge record in DB with amount, gateway, user_id
-      //   2. Redirect user to payment gateway
-      //   3. Gateway webhook confirms payment → edge function credits wallet
-
-      toast.error(`Payment Gateway Not Connected`, {
-        description: `${gateway?.name} integration is pending. No charges were made.`,
+      // Call edge function to get PayU payment data
+      const { data: result, error } = await supabase.functions.invoke('payu-payment', {
+        body: { amount, userId }
       });
 
-      console.warn('[Recharge] Gateway integration pending — wallet NOT credited. Amount:', amount, 'Gateway:', gateway?.name);
+      if (error) throw error;
+      if (!result?.success || !result?.paymentData) {
+        throw new Error(result?.error || 'Failed to initiate payment');
+      }
+
+      const pd = result.paymentData;
+
+      // Create and submit PayU form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = pd.payuUrl;
+      form.style.display = 'none';
+
+      const fields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
+      fields.forEach(field => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = field;
+        input.value = pd[field] || '';
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
     } catch (err) {
+      console.error('[PayU Recharge Error]', err);
       toast.error("Recharge failed", { description: ERROR_MESSAGES.wallet.rechargeFailed });
-    } finally {
       setProcessingPayment(false);
       setSelectedAmount(null);
     }
   };
+
+  // Handle payment return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const txnId = params.get('txnid');
+    if (paymentStatus === 'success') {
+      toast.success('Payment successful!', { description: `Transaction ${txnId} completed. Balance will update shortly.` });
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 2000);
+      loadWallet();
+      window.history.replaceState({}, '', '/wallet');
+    } else if (paymentStatus === 'failed') {
+      toast.error('Payment failed', { description: 'Your payment was not completed. No amount was charged.' });
+      window.history.replaceState({}, '', '/wallet');
+    }
+  }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
