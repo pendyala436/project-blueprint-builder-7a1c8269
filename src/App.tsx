@@ -9,6 +9,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import SecurityProvider from "@/components/SecurityProvider";
 import { AutoLogoutWrapper } from "@/components/AutoLogoutWrapper";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
 
