@@ -162,6 +162,7 @@ const App = () => (
               <Toaster />
               
               <NetworkStatusIndicator />
+              <PWAInstallPrompt />
             </AutoLogoutWrapper>
             </UserActivityProvider>
           </SecurityProvider>
