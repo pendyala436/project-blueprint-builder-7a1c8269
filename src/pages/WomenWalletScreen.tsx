@@ -65,7 +65,7 @@ const WomenWalletScreen = () => {
   const [availableBalance, setAvailableBalance] = useState(0);
   const [totalEarnings,    setTotalEarnings]    = useState(0);
   const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
-  const [minWithdrawal,    setMinWithdrawal]    = useState(10000);
+  const [minWithdrawal,    setMinWithdrawal]    = useState<number | null>(null);
   const [currentUserId,    setCurrentUserId]    = useState<string | null>(null);
 
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);

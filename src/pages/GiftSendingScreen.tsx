@@ -54,6 +54,16 @@ const GiftSendingScreen = () => {
   const navigate = useNavigate();
   const { receiverId } = useParams<{ receiverId: string }>();
   
+  // Guard: redirect if no receiverId
+  useEffect(() => {
+    if (!receiverId) {
+      toast.error("No recipient specified");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [receiverId, navigate]);
+  const navigate = useNavigate();
+  const { receiverId } = useParams<{ receiverId: string }>();
+  
   // ACID-compliant transaction hook
   const { sendGift, isProcessing: transactionProcessing } = useAtomicTransaction();
   

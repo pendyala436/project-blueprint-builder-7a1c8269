@@ -80,8 +80,8 @@ export const useRealtimeSubscription = ({
       supabase.removeChannel(channelRef.current);
     }
 
-    // Static channel name — no Date.now() to avoid re-subscription gaps
-    const channelName = `rt-${table}${filter ? `-${filter}` : ''}`;
+    // Include unique ID to avoid channel collision when same table subscribed in multiple components
+    const channelName = `rt-${table}${filter ? `-${filter}` : ''}-${Math.random().toString(36).slice(2, 8)}`;
     
     const subscriptionConfig: any = {
       event,

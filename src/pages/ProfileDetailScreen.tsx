@@ -250,7 +250,7 @@ const ProfileDetailScreen = () => {
   };
 
   const handleLike = async () => {
-    if (!profile || isLiked) return;
+    if (!profile || isLiked || profile.userId === currentUserId) return;
 
     try {
       await supabase
