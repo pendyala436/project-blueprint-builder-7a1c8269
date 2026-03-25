@@ -1217,9 +1217,9 @@ const DashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide max-w-[60vw] sm:max-w-none">
             {/* Online/Offline Toggle for Men */}
-            <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
+            <div className="flex items-center gap-1 mr-1 px-1.5 sm:px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
               <Switch
                 checked={isOnline}
                 onCheckedChange={(checked) => {
@@ -1232,7 +1232,7 @@ const DashboardScreen = () => {
                 className="data-[state=checked]:bg-primary scale-75"
               />
               <span className={`text-[10px] font-medium ${isOnline ? 'text-primary' : 'text-muted-foreground'}`}>
-                {isOnline ? 'Online' : 'Offline'}
+                {isOnline ? 'On' : 'Off'}
               </span>
             </div>
             {/* Admin Messages */}
