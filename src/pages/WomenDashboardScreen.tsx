@@ -1986,7 +1986,7 @@ const WomenDashboardScreen = () => {
 
       {/* Admin Chat Sheet */}
       <Sheet open={showAdminChat} onOpenChange={setShowAdminChat}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
