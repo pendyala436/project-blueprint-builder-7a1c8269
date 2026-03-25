@@ -90,7 +90,7 @@ export const LanguageSelector = ({
   }, [gender]);
 
   // Get languages - 1000+ languages available
-  const languages: ProfileLanguage[] = useMemo(() => {
+  const allLanguages: ProfileLanguage[] = useMemo(() => {
     return languages.map(lang => ({
       ...lang,
       isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
@@ -99,15 +99,15 @@ export const LanguageSelector = ({
 
   // Filter languages based on search
   const filteredLanguages = useMemo(() => {
-    if (!searchQuery.trim()) return languages;
+    if (!searchQuery.trim()) return allLanguages;
     const query = searchQuery.toLowerCase();
-    return languages.filter(
+    return allLanguages.filter(
       lang => 
         lang.name.toLowerCase().includes(query) ||
         lang.nativeName.toLowerCase().includes(query) ||
         (lang.script && lang.script.toLowerCase().includes(query))
     );
-  }, [languages, searchQuery]);
+  }, [allLanguages, searchQuery]);
 
   // Group languages
   const indianLanguages = useMemo(() => 
@@ -124,7 +124,7 @@ export const LanguageSelector = ({
     setIsOpen(true);
     setSearchQuery("");
     // Set temp selection to current language
-    const currentLang = languages.find(l => l.name === selectedLanguage);
+    const currentLang = allLanguages.find(l => l.name === selectedLanguage);
     setTempSelectedLanguage(currentLang || null);
   };
 
@@ -263,16 +263,16 @@ export const LanguageSelector = ({
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-background/80 border border-border/50">
           <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
-            {languages.find(l => l.name === selectedLanguage)?.nativeName?.charAt(0) || selectedLanguage?.charAt(0) || "?"}
+            {allLanguages.find(l => l.name === selectedLanguage)?.nativeName?.charAt(0) || selectedLanguage?.charAt(0) || "?"}
           </div>
           <div className="flex-1">
             <p className="font-semibold text-foreground">{selectedLanguage || "Select Language"}</p>
             <p className="text-xs text-muted-foreground">
-              {languages.find(l => l.name === selectedLanguage)?.nativeName || "Choose your language"}
+              {allLanguages.find(l => l.name === selectedLanguage)?.nativeName || "Choose your language"}
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
-            {languages.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
+            {allLanguages.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
           </Badge>
         </div>
         
@@ -321,7 +321,7 @@ export const LanguageSelector = ({
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {languages.length} languages ({indianLanguages.length} Indian + {worldLanguages.length} World)
+              Choose from {allLanguages.length} languages ({indianLanguages.length} Indian + {worldLanguages.length} World)
             </p>
           </DialogHeader>
           
