@@ -158,7 +158,7 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
 
     // Block browser back button from returning to protected pages after logout
     const handlePopState = () => {
-      const s = globalThis.__supabaseSignedOut;
+      const s = isSignedOut();
       if (s) {
         window.history.replaceState(null, '', '/');
         navigate('/', { replace: true });
