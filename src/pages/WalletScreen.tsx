@@ -107,8 +107,10 @@ const WalletScreen = () => {
     setProcessingPayment(true);
     try {
       // Call edge function to get PayU payment data
+      const returnUrl = `${window.location.origin}/wallet?payment=success`;
+      const failureUrl = `${window.location.origin}/wallet?payment=failed`;
       const { data: result, error } = await supabase.functions.invoke('payu-payment', {
-        body: { amount, userId }
+        body: { amount, userId, returnUrl, failureUrl }
       });
 
       if (error) throw error;

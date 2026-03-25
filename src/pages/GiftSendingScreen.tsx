@@ -114,7 +114,7 @@ const GiftSendingScreen = () => {
       }
     } catch (error) {
       console.error("Error loading data:", error);
-      toast.error("Gifts unavailable", { description: ERROR_MESSAGES.gifts.loadFailed });
+      toast({ title: "Gifts unavailable", description: ERROR_MESSAGES.gifts.loadFailed, variant: "destructive" });
     } finally {
       setLoading(false);
     }
