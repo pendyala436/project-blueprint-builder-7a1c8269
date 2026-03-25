@@ -689,7 +689,7 @@ const AdminChatMonitoring = () => {
               </div>
             </div>
 
-            <ScrollArea className="h-[calc(100vh-480px)]" ref={scrollRef}>
+            <ScrollArea className="h-[calc(100dvh-480px)] min-h-[150px]" ref={scrollRef}>
               <div className="space-y-3">
                 {filteredMessages.length === 0 ? (
                   <Card><CardContent className="p-8 text-center text-muted-foreground">No messages found</CardContent></Card>
