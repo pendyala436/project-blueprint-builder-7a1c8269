@@ -260,8 +260,16 @@ const AuthScreen = () => {
               lastError = error;
               continue;
             }
-            // Non-retryable error
-            toast({ title: classifyError(error).title, description: classifyError(error).message, variant: "destructive" });
+            // Non-retryable error (likely wrong credentials)
+            const newCount = failedAttempts + 1;
+            setFailedAttempts(newCount);
+            if (newCount >= MAX_LOGIN_ATTEMPTS) {
+              const lockUntil = Date.now() + LOCKOUT_DURATION_MS;
+              setLockoutUntil(lockUntil);
+              toast({ title: "Account locked", description: "Too many failed attempts. Please wait 60 seconds.", variant: "destructive" });
+            } else {
+              toast({ title: classifyError(error).title, description: `${classifyError(error).message} (${MAX_LOGIN_ATTEMPTS - newCount} attempts remaining)`, variant: "destructive" });
+            }
             setIsLoading(false);
             return;
           }
