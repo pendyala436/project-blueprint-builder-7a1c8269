@@ -126,8 +126,9 @@ const WomenWalletScreen = () => {
       toast.error(t("invalidAmount", "Invalid Amount"), { description: t("pleaseEnterValidAmount", "Please enter a valid amount") });
       return;
     }
-    if (availableBalance < minWithdrawal) {
-      toast.error(t("minimumNotMet", "Minimum Not Met"), { description: `Minimum withdrawal is ₹${minWithdrawal.toLocaleString()}` });
+    const minW = minWithdrawal ?? 5000;
+    if (availableBalance < minW) {
+      toast.error(t("minimumNotMet", "Minimum Not Met"), { description: `Minimum withdrawal is ₹${minW.toLocaleString()}` });
       return;
     }
     if (amount > availableBalance) {
