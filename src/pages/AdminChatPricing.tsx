@@ -17,7 +17,8 @@ import {
   TrendingUp,
   Video,
   ShieldCheck,
-  Info
+  Info,
+  Gift
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
