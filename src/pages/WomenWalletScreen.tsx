@@ -65,7 +65,7 @@ const WomenWalletScreen = () => {
   const [availableBalance, setAvailableBalance] = useState(0);
   const [totalEarnings,    setTotalEarnings]    = useState(0);
   const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
-  const [minWithdrawal,    setMinWithdrawal]    = useState(10000);
+  const [minWithdrawal,    setMinWithdrawal]    = useState<number | null>(null);
   const [currentUserId,    setCurrentUserId]    = useState<string | null>(null);
 
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
@@ -126,8 +126,9 @@ const WomenWalletScreen = () => {
       toast.error(t("invalidAmount", "Invalid Amount"), { description: t("pleaseEnterValidAmount", "Please enter a valid amount") });
       return;
     }
-    if (availableBalance < minWithdrawal) {
-      toast.error(t("minimumNotMet", "Minimum Not Met"), { description: `Minimum withdrawal is ₹${minWithdrawal.toLocaleString()}` });
+    const minW = minWithdrawal ?? 5000;
+    if (availableBalance < minW) {
+      toast.error(t("minimumNotMet", "Minimum Not Met"), { description: `Minimum withdrawal is ₹${minW.toLocaleString()}` });
       return;
     }
     if (amount > availableBalance) {
@@ -175,7 +176,8 @@ const WomenWalletScreen = () => {
     }
   };
 
-  const canWithdraw = availableBalance >= minWithdrawal;
+  const effectiveMin = minWithdrawal ?? 5000;
+  const canWithdraw = availableBalance >= effectiveMin;
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -276,7 +278,7 @@ const WomenWalletScreen = () => {
               <p className="text-sm text-muted-foreground">
                 {canWithdraw
                   ? t("requestWithdrawal", "Request a withdrawal to your account")
-                  : `${t("minimumBalance", "Minimum")}: ₹${minWithdrawal.toLocaleString()}`}
+                  : `${t("minimumBalance", "Minimum")}: ₹${effectiveMin.toLocaleString()}`}
               </p>
             </div>
             <Button onClick={() => setWithdrawDialogOpen(true)} disabled={!canWithdraw} className="gap-2">
@@ -288,7 +290,7 @@ const WomenWalletScreen = () => {
             <div className="mt-3 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
               <p className="text-sm text-warning">
-                {t("youNeedMore", "You need")} ₹{(minWithdrawal - availableBalance).toLocaleString()} {t("more", "more to reach the minimum")}
+                {t("youNeedMore", "You need")} ₹{(effectiveMin - availableBalance).toLocaleString()} {t("more", "more to reach the minimum")}
               </p>
             </div>
           )}

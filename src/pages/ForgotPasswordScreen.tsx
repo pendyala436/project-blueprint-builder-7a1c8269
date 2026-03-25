@@ -30,8 +30,10 @@ const ForgotPasswordScreen = () => {
 
   const validatePhone = (value: string) => {
     if (!value.trim()) return "Phone number is required";
-    const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
-    if (!phoneRegex.test(value)) return "Please enter a valid phone number";
+    // Require international format: optional +, starts with 1-9, 7-14 more digits
+    const phoneRegex = /^\+?[1-9]\d{6,14}$/;
+    const normalized = value.replace(/[\s\-()]/g, '');
+    if (!phoneRegex.test(normalized)) return "Please enter a valid phone number (e.g. +91XXXXXXXXXX)";
     return undefined;
   };
 

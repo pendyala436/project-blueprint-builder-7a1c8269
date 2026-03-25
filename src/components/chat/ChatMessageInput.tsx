@@ -11,6 +11,7 @@ interface ChatMessageInputProps {
   placeholder?: string;
   className?: string;
   userLanguage?: string;
+  maxLength?: number;
 }
 
 export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
@@ -19,6 +20,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   disabled = false,
   placeholder,
   className,
+  maxLength = 2000,
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -27,6 +29,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
+    if (value.length > maxLength) return; // Enforce max length
     setMessage(value);
 
     if (onTyping) {

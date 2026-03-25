@@ -75,18 +75,20 @@ export const useBlockCheck = (currentUserId: string | null, targetUserId: string
         {
           event: '*',
           schema: 'public',
-          table: 'user_blocks'
+          table: 'user_blocks',
+          filter: `blocked_by=eq.${currentUserId}`
         },
-        (payload: any) => {
-          // Check if this affects our relationship
-          const { blocked_by, blocked_user_id } = payload.new || payload.old || {};
-          if (
-            (blocked_by === currentUserId && blocked_user_id === targetUserId) ||
-            (blocked_by === targetUserId && blocked_user_id === currentUserId)
-          ) {
-            checkBlockStatus();
-          }
-        }
+        () => { checkBlockStatus(); }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_blocks',
+          filter: `blocked_by=eq.${targetUserId}`
+        },
+        () => { checkBlockStatus(); }
       )
       .subscribe();
 

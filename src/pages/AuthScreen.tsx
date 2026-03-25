@@ -114,6 +114,9 @@ const PasswordInput = memo(({
 
 PasswordInput.displayName = 'PasswordInput';
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 60_000; // 60 seconds
+
 const AuthScreen = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -121,6 +124,10 @@ const AuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
+  const attemptsWindowRef = useRef<number>(Date.now());
 
   // Use centralized auth state to handle redirects
   const { user, isReady } = useAuthReady();
@@ -171,6 +178,21 @@ const AuthScreen = () => {
     redirectUser();
   }, [user, isReady, navigate]);
 
+  // Rate-limiting lockout countdown
+  useEffect(() => {
+    if (!lockoutUntil) return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+      setLockoutCountdown(remaining);
+      if (remaining <= 0) {
+        setLockoutUntil(null);
+        setFailedAttempts(0);
+        attemptsWindowRef.current = Date.now();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
+
 
   const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -178,6 +200,13 @@ const AuthScreen = () => {
   }, []);
 
   const handleLogin = useCallback(async () => {
+    // Rate limiting check
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const { toast } = await import("@/hooks/use-toast");
+      toast({ title: "Too many attempts", description: `Please wait ${lockoutCountdown} seconds before trying again.`, variant: "destructive" });
+      return;
+    }
+
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
@@ -231,8 +260,16 @@ const AuthScreen = () => {
               lastError = error;
               continue;
             }
-            // Non-retryable error
-            toast({ title: classifyError(error).title, description: classifyError(error).message, variant: "destructive" });
+            // Non-retryable error (likely wrong credentials)
+            const newCount = failedAttempts + 1;
+            setFailedAttempts(newCount);
+            if (newCount >= MAX_LOGIN_ATTEMPTS) {
+              const lockUntil = Date.now() + LOCKOUT_DURATION_MS;
+              setLockoutUntil(lockUntil);
+              toast({ title: "Account locked", description: "Too many failed attempts. Please wait 60 seconds.", variant: "destructive" });
+            } else {
+              toast({ title: classifyError(error).title, description: `${classifyError(error).message} (${MAX_LOGIN_ATTEMPTS - newCount} attempts remaining)`, variant: "destructive" });
+            }
             setIsLoading(false);
             return;
           }
@@ -362,19 +399,30 @@ const AuthScreen = () => {
               </button>
             </div>
 
+            {/* Lockout Warning */}
+            {lockoutUntil && lockoutCountdown > 0 && (
+              <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-center">
+                <p className="text-sm text-destructive font-medium">
+                  Too many attempts. Try again in {lockoutCountdown}s
+                </p>
+              </div>
+            )}
+
             {/* Login Button */}
             <Button
               variant="aurora"
               size="xl"
               className="w-full group"
               onClick={handleLogin}
-              disabled={isLoading}
+              disabled={isLoading || (!!lockoutUntil && lockoutCountdown > 0)}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
                   {t('common.loading')}
                 </>
+              ) : lockoutUntil && lockoutCountdown > 0 ? (
+                <>Locked ({lockoutCountdown}s)</>
               ) : (
                 <>
                   {t('auth.login')}

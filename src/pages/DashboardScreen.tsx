@@ -328,11 +328,16 @@ const DashboardScreen = () => {
     let mounted = true;
     let loadingTimeoutId: NodeJS.Timeout;
     
-    // Safety timeout - force loading complete after 12 seconds to prevent stuck state
+    // Safety timeout - show error state after 12 seconds instead of silently rendering empty
     loadingTimeoutId = setTimeout(() => {
       if (mounted && isLoading) {
-        console.warn('[Dashboard] Loading timed out - forcing complete');
+        console.warn('[Dashboard] Loading timed out after 12s');
         setIsLoading(false);
+        toast({ 
+          title: 'Dashboard load timeout', 
+          description: 'Some data may not have loaded. Tap refresh to try again.', 
+          variant: 'destructive' 
+        });
       }
     }, 12000);
 

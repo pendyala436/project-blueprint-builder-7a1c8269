@@ -54,6 +54,14 @@ const GiftSendingScreen = () => {
   const navigate = useNavigate();
   const { receiverId } = useParams<{ receiverId: string }>();
   
+  // Guard: redirect if no receiverId
+  useEffect(() => {
+    if (!receiverId) {
+      toast.error("No recipient specified");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [receiverId, navigate]);
+  
   // ACID-compliant transaction hook
   const { sendGift, isProcessing: transactionProcessing } = useAtomicTransaction();
   
@@ -107,11 +115,6 @@ const GiftSendingScreen = () => {
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Gifts unavailable", { description: ERROR_MESSAGES.gifts.loadFailed });
-      toast({
-        title: "Error",
-        description: "Failed to load gifts",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -191,12 +194,7 @@ const GiftSendingScreen = () => {
       }
     } catch (error: any) {
       console.error("Error sending gift:", error);
-      toast.error("Gift not sent", { description: ERROR_MESSAGES.gifts.sendFailed });
-      toast({
-        title: "Error",
-        description: classifyError(error, "send the gift").message,
-        variant: "destructive",
-      });
+      toast.error("Gift not sent", { description: classifyError(error, "send the gift").message });
     } finally {
       setSending(false);
     }
