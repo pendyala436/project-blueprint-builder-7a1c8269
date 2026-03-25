@@ -114,6 +114,9 @@ const PasswordInput = memo(({
 
 PasswordInput.displayName = 'PasswordInput';
 
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 60_000; // 60 seconds
+
 const AuthScreen = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -121,6 +124,10 @@ const AuthScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
+  const attemptsWindowRef = useRef<number>(Date.now());
 
   // Use centralized auth state to handle redirects
   const { user, isReady } = useAuthReady();

@@ -52,8 +52,8 @@ const PasswordResetScreen = () => {
           body: { action: "verify-token", token },
         });
         if (error) throw error;
-        if (data?.valid && data?.userId) {
-          setUserId(data.userId);
+        if (data?.valid) {
+          // userId is no longer needed client-side — token is sufficient
           setTokenValid(true);
         } else {
           setTokenValid(false);
