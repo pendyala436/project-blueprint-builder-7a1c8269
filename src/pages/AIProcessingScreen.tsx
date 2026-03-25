@@ -132,8 +132,13 @@ const AIProcessingScreen = () => {
       // Get expected gender from registration
       const expectedGender = registeredGender || undefined;
       
-      // Classify gender using Hugging Face
-      const result = await classifyGender(imageData, expectedGender);
+      // Classify gender with 30-second timeout
+      const classifyPromise = classifyGender(imageData, expectedGender);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI_TIMEOUT')), 30000)
+      );
+      
+      const result = await Promise.race([classifyPromise, timeoutPromise]);
       
       clearInterval(progressInterval);
       setProgress(100);
