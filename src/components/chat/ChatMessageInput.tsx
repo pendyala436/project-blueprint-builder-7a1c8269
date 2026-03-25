@@ -20,6 +20,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   disabled = false,
   placeholder,
   className,
+  maxLength = 2000,
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
