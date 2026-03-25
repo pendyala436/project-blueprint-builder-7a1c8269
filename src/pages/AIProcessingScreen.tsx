@@ -168,13 +168,16 @@ const AIProcessingScreen = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Verification error:", error);
       setProgress(100);
       setVerificationStatus("failed");
+      const isTimeout = error?.message === 'AI_TIMEOUT';
       toast({
-        title: "Verification Error",
-        description: "An error occurred. Please try again.",
+        title: isTimeout ? "Verification Timed Out" : "Verification Error",
+        description: isTimeout 
+          ? "AI verification took too long. You can retry or skip for now."
+          : "An error occurred. Please try again.",
         variant: "destructive",
       });
     }
