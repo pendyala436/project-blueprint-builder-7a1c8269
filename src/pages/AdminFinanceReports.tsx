@@ -593,7 +593,7 @@ const AdminFinanceReports = () => {
   if (loading) {
     return (
       <AdminNav>
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-6">
           <Skeleton className="h-10 w-64" />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
@@ -608,13 +608,13 @@ const AdminFinanceReports = () => {
 
   return (
     <AdminNav>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" />
+          <h1 className="text-lg sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <BarChart3 className="h-5 sm:h-6 w-5 sm:w-6 text-primary" />
             Finance Reports
           </h1>
-          <p className="text-muted-foreground text-sm">Monthly spending & earnings analysis - Real-time data</p>
+          <p className="text-muted-foreground text-sm hidden sm:block">Monthly spending & earnings analysis</p>
         </div>
         <Button
           variant="outline"
@@ -630,11 +630,11 @@ const AdminFinanceReports = () => {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Select Month" />
                   </SelectTrigger>
                   <SelectContent>
@@ -648,7 +648,7 @@ const AdminFinanceReports = () => {
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="All Countries" />
                   </SelectTrigger>
                   <SelectContent>
@@ -665,7 +665,7 @@ const AdminFinanceReports = () => {
               <div className="flex items-center gap-2">
                 <Languages className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="All Languages" />
                   </SelectTrigger>
                   <SelectContent>
@@ -683,7 +683,7 @@ const AdminFinanceReports = () => {
         </Card>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -963,12 +963,14 @@ const AdminFinanceReports = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="men" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="men">Men Spending</TabsTrigger>
-            <TabsTrigger value="women">Women Earnings</TabsTrigger>
-            <TabsTrigger value="country">By Country</TabsTrigger>
-            <TabsTrigger value="language">By Language</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-4">
+              <TabsTrigger value="men" className="whitespace-nowrap text-xs sm:text-sm">Men Spending</TabsTrigger>
+              <TabsTrigger value="women" className="whitespace-nowrap text-xs sm:text-sm">Women Earnings</TabsTrigger>
+              <TabsTrigger value="country" className="whitespace-nowrap text-xs sm:text-sm">By Country</TabsTrigger>
+              <TabsTrigger value="language" className="whitespace-nowrap text-xs sm:text-sm">By Language</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Men Spending Tab */}
           <TabsContent value="men">
@@ -981,6 +983,7 @@ const AdminFinanceReports = () => {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1015,6 +1018,7 @@ const AdminFinanceReports = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1030,6 +1034,7 @@ const AdminFinanceReports = () => {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1064,6 +1069,7 @@ const AdminFinanceReports = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1079,6 +1085,7 @@ const AdminFinanceReports = () => {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1116,6 +1123,7 @@ const AdminFinanceReports = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -1131,6 +1139,7 @@ const AdminFinanceReports = () => {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1168,6 +1177,7 @@ const AdminFinanceReports = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

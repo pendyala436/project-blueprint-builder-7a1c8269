@@ -221,27 +221,27 @@ const AdminAuditLogs = () => {
 
   return (
     <AdminNav>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             Audit Logs
           </h1>
           <p className="text-sm text-muted-foreground">Track admin actions for compliance</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={loadLogs} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button onClick={exportCSV} className="gap-2">
+          <Button size="sm" onClick={exportCSV} className="gap-2">
             <Download className="h-4 w-4" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
@@ -396,6 +396,7 @@ const AdminAuditLogs = () => {
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[500px]">
+              <div className="min-w-[800px]">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
@@ -480,7 +481,7 @@ const AdminAuditLogs = () => {
                   })}
                 </TableBody>
               </Table>
-
+              </div>
               {paginatedLogs.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Shield className="h-12 w-12 mx-auto mb-4 opacity-20" />
