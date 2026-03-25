@@ -457,7 +457,7 @@ export const FriendsBlockedPanel = ({
           <TabsContent value="requests" className="flex-1 mt-0">
             <Card className="h-full">
               <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-240px)]">
+                <ScrollArea className="h-[calc(100dvh-240px)] min-h-[200px]">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
