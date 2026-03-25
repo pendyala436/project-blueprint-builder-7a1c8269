@@ -1014,8 +1014,8 @@ const DashboardScreen = () => {
         .select("user_id, is_online")
         .in("user_id", otherUserIds);
 
-      const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const statusMap = new Map((statuses as any[] || []).map(s => [s.user_id, s.is_online]));
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
       const matched: MatchedWoman[] = matches
         .map(m => {
