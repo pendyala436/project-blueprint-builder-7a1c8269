@@ -342,6 +342,7 @@ const AdminKYCManagement = () => {
   const selectedWoman = indianWomen.find(w => w.user_id === selectedUserId);
 
   return (
+    <>
     <AdminNav>
       <div className="space-y-6">
         {/* Header */}
