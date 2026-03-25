@@ -189,7 +189,8 @@ const MatchingScreen = () => {
         .in("user_id", onlineUserIds);
 
       const availabilityMap = new Map(
-        availability?.map(a => [a.user_id, a]) || []
+        (availability as any[] || []).map(a => [a.user_id, a])
+      );
       );
 
       // Fetch user settings for profile visibility
