@@ -16,7 +16,7 @@ export const useRegistrationGuard = (
   keysRef.current = requiredKeys;
 
   useEffect(() => {
-    const missing = keysRef.current.some(({ key, storage = "local" }) => {
+    const missing = keysRef.current.some(({ key, storage = "session" }) => {
       const store = storage === "session" ? sessionStorage : localStorage;
       const value = store.getItem(key);
       return !value || value.trim() === "";

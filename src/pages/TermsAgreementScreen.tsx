@@ -771,7 +771,7 @@ const TermsAgreementScreen = () => {
         "userState", "userCity", "userLatitude", "userLongitude",
         "userPrimaryLanguage", "userLanguagePreferences", "userPersonalDetails",
       ];
-      registrationKeys.forEach(key => localStorage.removeItem(key));
+      registrationKeys.forEach(key => sessionStorage.removeItem(key));
       sessionStorage.removeItem("userPassword");
       sessionStorage.removeItem("selectedLanguage");
       sessionStorage.removeItem("selectedCountry");
