@@ -221,22 +221,22 @@ const AdminAuditLogs = () => {
 
   return (
     <AdminNav>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             Audit Logs
           </h1>
           <p className="text-sm text-muted-foreground">Track admin actions for compliance</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={loadLogs} className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button onClick={exportCSV} className="gap-2">
+          <Button size="sm" onClick={exportCSV} className="gap-2">
             <Download className="h-4 w-4" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
         </div>
       </div>
