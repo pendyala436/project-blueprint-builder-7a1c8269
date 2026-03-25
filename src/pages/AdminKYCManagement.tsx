@@ -294,17 +294,22 @@ const AdminKYCManagement = () => {
     }
   };
 
+  // Rejection dialog state
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+
   const handleRejectKYC = async () => {
-    if (!selectedKYC) return;
-    const reason = prompt("Enter rejection reason:");
-    if (!reason) return;
+    if (!selectedKYC || !rejectionReason.trim()) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from("women_kyc")
         .update({
           verification_status: "rejected",
-          rejection_reason: reason,
+          rejection_reason: rejectionReason.trim(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", selectedKYC.id);
@@ -312,7 +317,9 @@ const AdminKYCManagement = () => {
       if (error) throw error;
 
       toast.success("KYC rejected");
-      setSelectedKYC({ ...selectedKYC, verification_status: "rejected", rejection_reason: reason });
+      setSelectedKYC({ ...selectedKYC, verification_status: "rejected", rejection_reason: rejectionReason.trim() });
+      setRejectDialogOpen(false);
+      setRejectionReason("");
       loadStats();
     } catch (error) {
       console.error("Error rejecting KYC:", error);
