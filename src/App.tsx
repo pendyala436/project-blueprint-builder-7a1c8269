@@ -12,6 +12,7 @@ import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
+import { useAutoAdjustUI } from "@/hooks/useAutoAdjustUI";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
