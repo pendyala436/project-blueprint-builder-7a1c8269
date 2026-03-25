@@ -236,7 +236,7 @@ const PersonalDetailsScreen = () => {
       profile_completeness: Math.round((completedFieldsCount / 18) * 100),
     };
 
-    localStorage.setItem("userPersonalDetails", JSON.stringify(personalDetails));
+    sessionStorage.setItem("userPersonalDetails", JSON.stringify(personalDetails));
 
     toast({
       title: skip ? "Skipped for now" : "Details saved! ✨",

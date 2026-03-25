@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SecurityProvider from "@/components/SecurityProvider";
@@ -14,8 +14,15 @@ import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (import.meta.env.DEV) {
+        console.error('[ReactQuery] Query error:', error);
+      }
+    },
+  }),
   defaultOptions: {
-    queries: { retry: 2, staleTime: 5 * 60 * 1000 },
+    queries: { retry: 2, staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 },
   },
 });
 
@@ -100,19 +107,19 @@ const App = () => (
                   <Route path="/reset-password" element={<PasswordResetScreen />} />
                   <Route path="/password-reset-success" element={<PasswordResetSuccessScreen />} />
 
-                  {/* Registration */}
-                  <Route path="/register" element={<LanguageCountryScreen />} />
-                  <Route path="/basic-info" element={<BasicInfoScreen />} />
-                  <Route path="/personal-details" element={<PersonalDetailsScreen />} />
-                  <Route path="/photo-upload" element={<PhotoUploadScreen />} />
-                  <Route path="/location-setup" element={<LocationSetupScreen />} />
-                  <Route path="/language-preferences" element={<LanguagePreferencesScreen />} />
-                  <Route path="/password-setup" element={<PasswordSetupScreen />} />
-                  <Route path="/terms-agreement" element={<TermsAgreementScreen />} />
-                  <Route path="/ai-processing" element={<AIProcessingScreen />} />
-                  <Route path="/registration-complete" element={<RegistrationCompleteScreen />} />
-                  <Route path="/approval-pending" element={<ApprovalPendingScreen />} />
-                  <Route path="/welcome" element={<WelcomeTutorialScreen />} />
+                  {/* Registration — each step wrapped in ErrorBoundary */}
+                  <Route path="/register" element={<ErrorBoundary showHomeButton><LanguageCountryScreen /></ErrorBoundary>} />
+                  <Route path="/basic-info" element={<ErrorBoundary showHomeButton><BasicInfoScreen /></ErrorBoundary>} />
+                  <Route path="/personal-details" element={<ErrorBoundary showHomeButton><PersonalDetailsScreen /></ErrorBoundary>} />
+                  <Route path="/photo-upload" element={<ErrorBoundary showHomeButton><PhotoUploadScreen /></ErrorBoundary>} />
+                  <Route path="/location-setup" element={<ErrorBoundary showHomeButton><LocationSetupScreen /></ErrorBoundary>} />
+                  <Route path="/language-preferences" element={<ErrorBoundary showHomeButton><LanguagePreferencesScreen /></ErrorBoundary>} />
+                  <Route path="/password-setup" element={<ErrorBoundary showHomeButton><PasswordSetupScreen /></ErrorBoundary>} />
+                  <Route path="/terms-agreement" element={<ErrorBoundary showHomeButton><TermsAgreementScreen /></ErrorBoundary>} />
+                  <Route path="/ai-processing" element={<ErrorBoundary showHomeButton><AIProcessingScreen /></ErrorBoundary>} />
+                  <Route path="/registration-complete" element={<ErrorBoundary showHomeButton><RegistrationCompleteScreen /></ErrorBoundary>} />
+                  <Route path="/approval-pending" element={<ErrorBoundary showHomeButton><ApprovalPendingScreen /></ErrorBoundary>} />
+                  <Route path="/welcome" element={<ErrorBoundary showHomeButton><WelcomeTutorialScreen /></ErrorBoundary>} />
 
                   {/* Men Dashboard */}
                   <Route path="/dashboard" element={<ProtectedRoute requiredRole="male"><DashboardScreen /></ProtectedRoute>} />

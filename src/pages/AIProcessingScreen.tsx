@@ -40,7 +40,7 @@ const AIProcessingScreen = () => {
   const { isVerifying, isLoadingModel, modelLoadProgress, classifyGender } = useGenderClassification();
   
   // Get registered gender from localStorage
-  const registeredGender = localStorage.getItem("userGender") as 'male' | 'female' | null;
+  const registeredGender = sessionStorage.getItem("userGender") as 'male' | 'female' | null;
 
   // Start camera
   const startCamera = async () => {

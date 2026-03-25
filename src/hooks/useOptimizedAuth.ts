@@ -31,7 +31,7 @@ interface PreloadedUserContext {
  * since this guards security-sensitive routing (admin access, approval status).
  */
 export async function preloadUserContext(userId: string): Promise<PreloadedUserContext> {
-  const [adminResult, tutorialResult, profileResult, femaleResult] = await Promise.all([
+  const settled = await Promise.allSettled([
     supabase
       .from('user_roles')
       .select('role')
@@ -55,6 +55,10 @@ export async function preloadUserContext(userId: string): Promise<PreloadedUserC
       .maybeSingle(),
   ]);
 
+  const [adminResult, tutorialResult, profileResult, femaleResult] = settled.map(r =>
+    r.status === 'fulfilled' ? r.value : { data: null, error: r.status === 'rejected' ? r.reason : null }
+  );
+
   return {
     isAdmin: !!adminResult.data,
     tutorialCompleted: !!tutorialResult.data?.completed,
@@ -64,7 +68,7 @@ export async function preloadUserContext(userId: string): Promise<PreloadedUserC
   };
 }
 
-/** No-op — cache was removed; kept for API compatibility */
+/** @deprecated No-op — cache was removed. This export will be deleted in a future release. */
 export function clearUserContextCache(): void {
   // Nothing to clear — preloadUserContext always fetches fresh data
 }

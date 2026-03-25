@@ -40,8 +40,8 @@ const LanguageCountryScreen = () => {
       return;
     }
 
-    localStorage.setItem("selectedLanguage", selectedLanguage);
-    localStorage.setItem("selectedCountry", selectedCountry);
+    sessionStorage.setItem("selectedLanguage", selectedLanguage);
+    sessionStorage.setItem("selectedCountry", selectedCountry);
 
     toast({
       title: "Preferences saved!",

@@ -1,8 +1,10 @@
 /**
  * useAtomicTransaction Hook
  * 
- * PURPOSE: Provides ACID-compliant transaction functions for all financial operations.
- * Uses database functions to ensure atomicity, consistency, isolation, and durability.
+ * PURPOSE: Provides transaction functions for all financial operations.
+ * NOTE: Despite the name, most operations use sequential client-side calls via
+ * Supabase RPC functions. True atomicity depends on the DB function implementation.
+ * Where possible, operations use single RPC calls that run in a DB transaction.
  * 
  * ACID PROPERTIES:
  * - Atomicity: All operations succeed or fail together (single DB transaction)

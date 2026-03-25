@@ -430,11 +430,11 @@ const TermsAgreementScreen = () => {
 
     try {
       // Get registration data from localStorage
-      const email = localStorage.getItem("userEmail") || "";
+      const email = sessionStorage.getItem("userEmail") || "";
       const password = sessionStorage.getItem("userPassword") || "";
-      const fullName = localStorage.getItem("userName") || "";
-      const gender = localStorage.getItem("userGender") || "";
-      const phone = localStorage.getItem("userPhone") || "";
+      const fullName = sessionStorage.getItem("userName") || "";
+      const gender = sessionStorage.getItem("userGender") || "";
+      const phone = sessionStorage.getItem("userPhone") || "";
 
       // Re-validate password strength to prevent bypass via direct sessionStorage manipulation
       const passwordValid =
@@ -548,15 +548,15 @@ const TermsAgreementScreen = () => {
       if (consentError) throw consentError;
 
       // Get remaining registration data from localStorage
-      const dateOfBirth = localStorage.getItem("userDob") || localStorage.getItem("userDateOfBirth") || "";
-      const countryCode = localStorage.getItem("userCountry") || "";
-      const stateCode = localStorage.getItem("userState") || "";
-      const city = localStorage.getItem("userCity") || "";
-      const latitude = localStorage.getItem("userLatitude");
-      const longitude = localStorage.getItem("userLongitude");
-      const languageCode = localStorage.getItem("selectedLanguage") || localStorage.getItem("userPrimaryLanguage") || "";
-      const pendingPhotoData = localStorage.getItem("pendingPhotoData") || "";
-      const pendingAdditionalPhotos = JSON.parse(localStorage.getItem("pendingAdditionalPhotos") || "[]");
+      const dateOfBirth = sessionStorage.getItem("userDob") || sessionStorage.getItem("userDateOfBirth") || "";
+      const countryCode = sessionStorage.getItem("userCountry") || "";
+      const stateCode = sessionStorage.getItem("userState") || "";
+      const city = sessionStorage.getItem("userCity") || "";
+      const latitude = sessionStorage.getItem("userLatitude");
+      const longitude = sessionStorage.getItem("userLongitude");
+      const languageCode = sessionStorage.getItem("selectedLanguage") || sessionStorage.getItem("userPrimaryLanguage") || "";
+      const pendingPhotoData = sessionStorage.getItem("pendingPhotoData") || "";
+      const pendingAdditionalPhotos = JSON.parse(sessionStorage.getItem("pendingAdditionalPhotos") || "[]");
 
       // Convert country code to full name
       const countryData = countries.find(c => c.code === countryCode);
@@ -575,7 +575,7 @@ const TermsAgreementScreen = () => {
       const languageName = languageData?.name || languageCode;
       
       // Get personal details from PersonalDetailsScreen
-      const personalDetails = JSON.parse(localStorage.getItem("userPersonalDetails") || "{}");
+      const personalDetails = JSON.parse(sessionStorage.getItem("userPersonalDetails") || "{}");
 
       // Calculate age from DOB
       let age: number | null = null;
@@ -732,7 +732,7 @@ const TermsAgreementScreen = () => {
       }, { onConflict: "user_id" });
 
       // Save language preferences from LanguagePreferencesScreen to user_languages table
-      const savedLanguagePrefs = localStorage.getItem("userLanguagePreferences");
+      const savedLanguagePrefs = sessionStorage.getItem("userLanguagePreferences");
       if (savedLanguagePrefs) {
         try {
           const langPrefs = JSON.parse(savedLanguagePrefs) as Array<{ code: string; name: string }>;
@@ -771,10 +771,10 @@ const TermsAgreementScreen = () => {
         "userState", "userCity", "userLatitude", "userLongitude",
         "userPrimaryLanguage", "userLanguagePreferences", "userPersonalDetails",
       ];
-      registrationKeys.forEach(key => localStorage.removeItem(key));
+      registrationKeys.forEach(key => sessionStorage.removeItem(key));
       sessionStorage.removeItem("userPassword");
-      localStorage.removeItem("selectedLanguage");
-      localStorage.removeItem("selectedCountry");
+      sessionStorage.removeItem("selectedLanguage");
+      sessionStorage.removeItem("selectedCountry");
       setIsLoading(false);
     }
   };

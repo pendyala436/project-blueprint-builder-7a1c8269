@@ -9,12 +9,10 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { clearUserContextCache } from '@/hooks/useOptimizedAuth';
 
-// Extend Window to track sign-out globally for back-button guard
-declare global {
-  // eslint-disable-next-line no-var
-  var __supabaseSignedOut: boolean;
-}
-globalThis.__supabaseSignedOut = false;
+// Module-level sign-out flag — avoids polluting globalThis/window
+let _signedOut = false;
+export const setSignedOut = (v: boolean) => { _signedOut = v; };
+export const isSignedOut = () => _signedOut;
 
 interface AuthState {
   user: User | null;
@@ -57,10 +55,10 @@ function boot() {
   //    IMPORTANT: no async work inside this callback
   supabase.auth.onAuthStateChange((_event, session) => {
     if (_event === 'SIGNED_OUT') {
-      globalThis.__supabaseSignedOut = true;
+      setSignedOut(true);
       clearUserContextCache();
     } else if (session?.user) {
-      globalThis.__supabaseSignedOut = false;
+      setSignedOut(false);
     }
     broadcast({ user: session?.user ?? null, session, isReady: true });
   });
@@ -73,9 +71,13 @@ export function useAuthReady() {
 
   useEffect(() => {
     const listener = (next: AuthState) => {
-      // Only re-render if user id or isReady actually changed
+      // Only re-render if meaningful auth state changed
       const prev = stateRef.current;
-      if (prev.isReady === next.isReady && prev.user?.id === next.user?.id) return;
+      if (
+        prev.isReady === next.isReady &&
+        prev.user?.id === next.user?.id &&
+        prev.session?.expires_at === next.session?.expires_at
+      ) return;
       stateRef.current = next;
       setState(next);
     };

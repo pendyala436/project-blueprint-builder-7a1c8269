@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthReady } from '@/hooks/useAuthReady';
+import { useAuthReady, isSignedOut } from '@/hooks/useAuthReady';
 import { Loader2 } from 'lucide-react';
 
 type RequiredRole = 'male' | 'female' | 'admin' | 'authenticated';
@@ -158,7 +158,7 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
 
     // Block browser back button from returning to protected pages after logout
     const handlePopState = () => {
-      const s = globalThis.__supabaseSignedOut;
+      const s = isSignedOut();
       if (s) {
         window.history.replaceState(null, '', '/');
         navigate('/', { replace: true });

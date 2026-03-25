@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserActivity } from '@/contexts/UserActivityContext';
+import { isSignedOut } from '@/hooks/useAuthReady';
 
 interface UseActivityBasedStatusOptions {
   inactivityTimeout?: number;
@@ -97,7 +98,7 @@ export const useActivityBasedStatus = ({
   // Set offline on unmount — only if user hasn't signed out
   useEffect(() => {
     return () => {
-      if (userId && !globalThis.__supabaseSignedOut) {
+      if (userId && !isSignedOut()) {
         supabase.from('user_status').upsert({
           user_id: userId,
           is_online: false,
