@@ -169,22 +169,22 @@ const VideoCallMiniButton = ({
         disabled={isSearching || !!activeCall}
         variant="aurora"
         size="lg"
-        className="gap-2 w-full"
+        className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
       >
         {isSearching ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Finding...
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <span className="truncate">Finding...</span>
           </>
         ) : activeCall ? (
           <>
-            <Video className="w-4 h-4" />
-            In Call
+            <Video className="w-4 h-4 shrink-0" />
+            <span className="truncate">In Call</span>
           </>
         ) : (
           <>
-            <Video className="w-4 h-4" />
-            Video Call
+            <Video className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <span className="truncate">Video Call</span>
           </>
         )}
       </Button>
