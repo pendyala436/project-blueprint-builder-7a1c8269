@@ -28,6 +28,18 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
+  // iOS keyboard height detection
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const handleResize = () => {
+      const keyboardHeight = Math.max(0, window.innerHeight - viewport.height);
+      document.documentElement.style.setProperty("--keyboard-height", `${keyboardHeight}px`);
+    };
+    viewport.addEventListener("resize", handleResize);
+    return () => viewport.removeEventListener("resize", handleResize);
+  }, []);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length > maxLength) return; // Enforce max length

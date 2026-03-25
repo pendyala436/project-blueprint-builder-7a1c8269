@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { supportsWebRTC } from "@/lib/capabilities";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import {
@@ -45,6 +46,15 @@ const VideoCallMiniButton = ({
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
   const [activeCall, setActiveCall] = useState<ActiveVideoCall | null>(null);
+
+  // WebRTC not supported — show fallback message
+  if (!supportsWebRTC()) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Video calls not supported on this browser
+      </span>
+    );
+  }
 
   const startVideoCall = async () => {
     // Get current user email to check if super user

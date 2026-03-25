@@ -935,6 +935,7 @@
     color: hsl(var(--foreground));
     background-color: hsl(var(--background));
     /* Minimum readable font size */
+    font-size: 16px; /* IE11 / Legacy Edge fallback */
     font-size: max(16px, 1rem);
     line-height: 1.5;
     /* Universal word break */
@@ -960,6 +961,7 @@
     -ms-user-select: text;
     user-select: text;
     /* Prevent zoom on iOS when focusing inputs - use 16px minimum */
+    font-size: 16px; /* IE11 / Legacy Edge fallback */
     font-size: max(16px, 1rem) !important;
     /* Better text rendering in inputs */
     -webkit-font-smoothing: antialiased;
@@ -1015,6 +1017,17 @@
     }
     ::-webkit-scrollbar-thumb:hover {
       background: hsl(var(--muted-foreground) / 0.5);
+    }
+  }
+
+  /* Firefox scrollbar support */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
+    }
+    @media (hover: none) and (pointer: coarse) {
+      * { scrollbar-width: none; }
     }
   }
 

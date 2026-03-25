@@ -371,7 +371,7 @@ const AuthScreen = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
-        <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
+        <Card className="w-full max-w-md p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
           <div className="space-y-6">
             <EmailInput 
               value={email}

@@ -76,8 +76,9 @@ const DraggableVideoCallWindow = ({
   preAcquiredStream = null,
 }: DraggableVideoCallWindowProps) => {
   const { toast } = useToast();
+  const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(isMobileDevice);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
