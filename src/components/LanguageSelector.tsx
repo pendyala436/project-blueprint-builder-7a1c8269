@@ -272,7 +272,7 @@ export const LanguageSelector = ({
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
-            {languages.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
+            {allLanguages.find(l => l.name === selectedLanguage)?.isIndian ? "🇮🇳 India" : "🌍 World"}
           </Badge>
         </div>
         
