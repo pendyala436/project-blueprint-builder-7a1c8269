@@ -181,6 +181,7 @@ const App = () => {
       </ErrorBoundary>
     </ThemeProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

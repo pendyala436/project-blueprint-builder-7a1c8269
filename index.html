@@ -194,7 +194,7 @@
 
     <!-- Cache recovery: clear stale service workers on load failures -->
     <script>
-      // If React doesn't render within 8s, clear SW cache and reload once
+      // Fix 11: If React doesn't render within 15s, clear SW cache and reload once
       (function() {
         var timer = setTimeout(function() {
           var root = document.getElementById('root');

@@ -2390,3 +2390,325 @@
 .animate-rocket-fly {
   animation: rocket-fly 2s ease-in-out infinite;
 }
+
+/* ========================================
+   PHASE 1 — FOUNDATION CSS
+   Fluid typography, spacing, OS font scaling
+   ======================================== */
+
+/* Fix 1: dvh/svh fallback — 100vh BEFORE 100dvh (already correct in existing .h-dvh etc.) */
+
+/* Fix 4: Fluid typography scale via CSS custom properties */
+:root {
+  --font-xs: clamp(0.6875rem, 0.625rem + 0.25vw, 0.75rem);
+  --font-sm: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
+  --font-base: clamp(0.875rem, 0.8rem + 0.4vw, 1rem);
+  --font-lg: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --font-xl: clamp(1.125rem, 1rem + 0.6vw, 1.375rem);
+  --font-2xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.75rem);
+  --font-3xl: clamp(1.5rem, 1.25rem + 1.25vw, 2.25rem);
+  --font-4xl: clamp(1.875rem, 1.5rem + 1.875vw, 3rem);
+}
+
+/* Fix 5: Fluid spacing scale via CSS custom properties */
+:root {
+  --space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+  --space-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
+  --space-md: clamp(0.75rem, 0.6rem + 0.75vw, 1.25rem);
+  --space-lg: clamp(1rem, 0.8rem + 1vw, 1.75rem);
+  --space-xl: clamp(1.5rem, 1.2rem + 1.5vw, 2.5rem);
+  --space-2xl: clamp(2rem, 1.5rem + 2.5vw, 4rem);
+}
+
+/* Fix 6: OS-level font scaling — use 100% not fixed px on html */
+html {
+  font-size: 100%;
+}
+
+/* ========================================
+   PHASE 2 — HTML & Theme (CSS vars)
+   ======================================== */
+
+/* Fix 10: --keyboard-height, --vw, --vh defaults */
+:root {
+  --keyboard-height: 0px;
+  --vw: 1vw;
+  --vh: 1vh;
+}
+
+/* ========================================
+   PHASE 3 — RESPONSIVE GRID SAFETY
+   ======================================== */
+
+/* Fix 12: Auto-collapse bare grid-cols on small screens */
+@media (max-width: 479px) {
+  .grid-cols-3:not([class*="sm:"]):not([class*="md:"]),
+  .grid-cols-4:not([class*="sm:"]):not([class*="md:"]),
+  .grid-cols-5:not([class*="sm:"]):not([class*="md:"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .grid-cols-2:not([class*="sm:"]):not([class*="md:"]),
+  .grid-cols-3:not([class*="sm:"]):not([class*="md:"]),
+  .grid-cols-4:not([class*="sm:"]):not([class*="md:"]),
+  .grid-cols-5:not([class*="sm:"]):not([class*="md:"]) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@layer utilities {
+  /* Fix 13: Auto-fit grid utilities */
+  .auto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: var(--space-md, 1rem);
+  }
+
+  .auto-grid-sm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: var(--space-sm, 0.75rem);
+  }
+
+  .auto-grid-lg {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+    gap: var(--space-lg, 1.25rem);
+  }
+
+  /* Fix 14: Fluid container utility */
+  .fluid-container {
+    width: 100%;
+    max-width: clamp(320px, 90vw, 1400px);
+    margin-inline: auto;
+    padding-inline: clamp(0.75rem, 2vw, 2rem);
+  }
+
+  /* Fix 15: Responsive row — stacks on mobile */
+  .responsive-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 1rem);
+  }
+
+  @media (min-width: 768px) {
+    .responsive-row {
+      flex-direction: row;
+    }
+  }
+}
+
+/* ========================================
+   PHASE 4 — MOBILE & TOUCH
+   ======================================== */
+
+@layer utilities {
+  /* Fix 18: Keyboard-aware bottom bar */
+  .keyboard-aware-bottom {
+    bottom: var(--keyboard-height, 0px);
+    bottom: calc(var(--keyboard-height, 0px) + env(safe-area-inset-bottom, 0px));
+    transition: bottom 0.15s ease-out;
+  }
+
+  /* Fix 19: Safe scroll area — prevents collapse on small screens */
+  .scroll-area-safe {
+    min-height: 180px;
+    min-height: max(180px, 20vh);
+  }
+}
+
+/* Fix 20: Mobile landscape compact layout */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Compact headers */
+  header, [role="banner"] {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  /* Compact nav */
+  nav {
+    padding-top: 0.125rem !important;
+    padding-bottom: 0.125rem !important;
+  }
+
+  /* Make dialogs scrollable in landscape */
+  [role="dialog"] {
+    max-height: 95vh !important;
+    max-height: 95dvh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Reduce oversized headings */
+  h1 { font-size: 1.125rem !important; }
+  h2 { font-size: 1rem !important; }
+
+  /* Tighten spacing */
+  .space-y-4 > * + * { margin-top: 0.5rem !important; }
+  .space-y-6 > * + * { margin-top: 0.75rem !important; }
+}
+
+/* ========================================
+   PHASE 5 — CROSS-BROWSER FIXES
+   ======================================== */
+
+@layer utilities {
+  /* Fix 21: Glass card with solid fallback */
+  .glass-card {
+    background-color: hsl(var(--card) / 0.90);
+    border: 1px solid hsl(var(--border) / 0.5);
+    border-radius: var(--radius);
+  }
+
+  @supports (backdrop-filter: blur(12px)) {
+    .glass-card {
+      background-color: hsl(var(--card) / 0.70);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+  }
+
+  /* Fix 22: Touch-safe button utility */
+  .btn-touch-safe {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Fix 23: Admin content area — prevents ultrawide stretch */
+  .admin-content-area {
+    max-width: 1400px;
+    margin-inline: auto;
+    width: 100%;
+    padding-inline: clamp(0.75rem, 2vw, 2rem);
+  }
+
+  /* Fix 24: Draggable window — full-screen on mobile */
+  .draggable-window-mobile {
+    position: fixed;
+    inset: 0;
+    border-radius: 0;
+    box-shadow: inset 0 0 40px hsl(0 0% 0% / 0.2);
+    z-index: 50;
+  }
+
+  @media (min-width: 768px) {
+    .draggable-window-mobile {
+      position: fixed;
+      inset: auto;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+    }
+  }
+}
+
+/* ========================================
+   PHASE 6 — ACCESSIBILITY & VISIBILITY
+   ======================================== */
+
+/* Fix 25: Status dots with shape — color-blindness safe */
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.status-dot[data-status="free"] {
+  background-color: hsl(var(--online));
+}
+
+.status-dot[data-status="busy"] {
+  background-color: hsl(var(--busy));
+}
+
+.status-dot[data-status="busy"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: hsl(var(--busy-foreground));
+  transform: translateY(-50%);
+  border-radius: 1px;
+}
+
+.status-dot[data-status="full"] {
+  background-color: hsl(var(--destructive));
+}
+
+.status-dot[data-status="full"]::before,
+.status-dot[data-status="full"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60%;
+  height: 2px;
+  background: hsl(var(--destructive-foreground));
+  border-radius: 1px;
+}
+
+.status-dot[data-status="full"]::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.status-dot[data-status="full"]::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Fix 26: Bottom sheet styling — dark mode visibility */
+[data-slot="bottom-sheet"] {
+  border-top: 2px solid hsl(var(--primary));
+}
+
+[data-slot="bottom-sheet"]::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: hsl(var(--muted-foreground) / 0.4);
+  border-radius: 2px;
+  margin: 0.5rem auto 0.75rem;
+}
+
+/* Fix 27: Windows High Contrast mode */
+@media (forced-colors: active) {
+  button,
+  [role="button"],
+  a,
+  input,
+  textarea,
+  select {
+    border: 1px solid ButtonText;
+  }
+
+  *:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .status-dot {
+    forced-color-adjust: none;
+  }
+}
+
+/* Fix 28: Reduced motion — global override */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
