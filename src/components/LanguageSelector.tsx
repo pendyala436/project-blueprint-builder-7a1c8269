@@ -268,7 +268,7 @@ export const LanguageSelector = ({
           <div className="flex-1">
             <p className="font-semibold text-foreground">{selectedLanguage || "Select Language"}</p>
             <p className="text-xs text-muted-foreground">
-              {languages.find(l => l.name === selectedLanguage)?.nativeName || "Choose your language"}
+              {allLanguages.find(l => l.name === selectedLanguage)?.nativeName || "Choose your language"}
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
