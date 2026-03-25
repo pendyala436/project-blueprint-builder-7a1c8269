@@ -263,7 +263,7 @@ export const LanguageSelector = ({
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-3 p-3 rounded-xl bg-background/80 border border-border/50">
           <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gradient-to-br from-primary to-accent text-primary-foreground">
-            {languages.find(l => l.name === selectedLanguage)?.nativeName?.charAt(0) || selectedLanguage?.charAt(0) || "?"}
+            {allLanguages.find(l => l.name === selectedLanguage)?.nativeName?.charAt(0) || selectedLanguage?.charAt(0) || "?"}
           </div>
           <div className="flex-1">
             <p className="font-semibold text-foreground">{selectedLanguage || "Select Language"}</p>
