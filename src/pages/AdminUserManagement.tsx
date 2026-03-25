@@ -937,8 +937,8 @@ const AdminUserManagement = () => {
                 <CardTitle>Registered Users ({totalCount})</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto"><div className="min-w-[900px]">
-                  <Table>
+                <div className="overflow-x-auto -mx-6 px-6">
+                  <Table className="min-w-[900px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>User</TableHead>
