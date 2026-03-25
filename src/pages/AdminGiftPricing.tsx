@@ -50,6 +50,7 @@ import {
   Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 
 interface GiftItem {
   id: string;
