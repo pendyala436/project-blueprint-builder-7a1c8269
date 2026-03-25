@@ -91,7 +91,10 @@ const AdminMessaging = lazy(() => import("@/pages/AdminMessaging"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-const App = () => (
+const App = () => {
+  useAutoAdjustUI();
+
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <ErrorBoundary>
