@@ -937,7 +937,7 @@ const AdminUserManagement = () => {
                 <CardTitle>Registered Users ({totalCount})</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border overflow-x-auto">
+                <ScrollArea className="w-full" orientation="horizontal"><div className="min-w-[900px]">
                   <Table>
                     <TableHeader>
                       <TableRow>

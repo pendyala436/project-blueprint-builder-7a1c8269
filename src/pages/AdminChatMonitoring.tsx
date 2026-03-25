@@ -605,58 +605,60 @@ const AdminChatMonitoring = () => {
 
   return (
     <AdminNav>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-semibold">Ghost Mode Monitoring</h1>
+          <h1 className="text-lg sm:text-xl font-semibold">Ghost Mode Monitoring</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button onClick={() => setNotificationDialogOpen(true)} variant="outline" size="sm" className="gap-2">
-            <Bell className="h-4 w-4" />Broadcast
+            <Bell className="h-4 w-4" /><span className="hidden sm:inline">Broadcast</span>
           </Button>
           <Button onClick={() => { loadMessages(); loadActiveChats(); loadActiveVideoCalls(); loadLiveGroups(); }} variant="outline" size="sm" className="gap-2">
-            <RefreshCw className="h-4 w-4" />Refresh
+            <RefreshCw className="h-4 w-4" /><span className="hidden sm:inline">Refresh</span>
           </Button>
         </div>
       </div>
 
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Card><CardContent className="p-4">
-            <div className="text-2xl font-bold">{messages.length}</div>
-            <div className="text-sm text-muted-foreground">Total Messages</div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <Card><CardContent className="p-3 sm:p-4">
+            <div className="text-xl sm:text-2xl font-bold">{messages.length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Messages</div>
           </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-2xl font-bold text-destructive">{messages.filter(m => m.flagged).length}</div>
-            <div className="text-sm text-muted-foreground">Flagged</div>
+          <Card><CardContent className="p-3 sm:p-4">
+            <div className="text-xl sm:text-2xl font-bold text-destructive">{messages.filter(m => m.flagged).length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Flagged</div>
           </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-2xl font-bold text-warning">{messages.filter(m => m.moderation_status === "pending").length}</div>
-            <div className="text-sm text-muted-foreground">Pending Review</div>
+          <Card><CardContent className="p-3 sm:p-4">
+            <div className="text-xl sm:text-2xl font-bold text-warning">{messages.filter(m => m.moderation_status === "pending").length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Pending</div>
           </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-2xl font-bold text-primary">{activeChats.length}</div>
-            <div className="text-sm text-muted-foreground">Active Chats</div>
+          <Card><CardContent className="p-3 sm:p-4">
+            <div className="text-xl sm:text-2xl font-bold text-primary">{activeChats.length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Chats</div>
           </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-2xl font-bold text-primary">{activeVideoCalls.length}</div>
-            <div className="text-sm text-muted-foreground">Video Calls</div>
+          <Card><CardContent className="p-3 sm:p-4">
+            <div className="text-xl sm:text-2xl font-bold text-primary">{activeVideoCalls.length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Video</div>
           </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-2xl font-bold text-primary">{liveGroups.length}</div>
-            <div className="text-sm text-muted-foreground">Live Groups</div>
+          <Card><CardContent className="p-3 sm:p-4">
+            <div className="text-xl sm:text-2xl font-bold text-primary">{liveGroups.length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Groups</div>
           </CardContent></Card>
         </div>
 
         <Tabs defaultValue="messages" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="messages" className="gap-2"><MessageSquare className="h-4 w-4" />Messages</TabsTrigger>
-            <TabsTrigger value="monitoring" className="gap-2"><EyeOff className="h-4 w-4" />Chat Ghost</TabsTrigger>
-            <TabsTrigger value="video-monitor" className="gap-2"><Video className="h-4 w-4" />Video Ghost</TabsTrigger>
-            <TabsTrigger value="group-monitor" className="gap-2"><Radio className="h-4 w-4" />Group Ghost</TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-2"><Bell className="h-4 w-4" />Broadcast</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5">
+              <TabsTrigger value="messages" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap"><MessageSquare className="h-4 w-4" /><span className="hidden xs:inline">Messages</span></TabsTrigger>
+              <TabsTrigger value="monitoring" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap"><EyeOff className="h-4 w-4" /><span className="hidden xs:inline">Chat</span></TabsTrigger>
+              <TabsTrigger value="video-monitor" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap"><Video className="h-4 w-4" /><span className="hidden xs:inline">Video</span></TabsTrigger>
+              <TabsTrigger value="group-monitor" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap"><Radio className="h-4 w-4" /><span className="hidden xs:inline">Group</span></TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap"><Bell className="h-4 w-4" /><span className="hidden xs:inline">Broadcast</span></TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ─── Messages Tab ─── */}
           <TabsContent value="messages" className="space-y-4">
