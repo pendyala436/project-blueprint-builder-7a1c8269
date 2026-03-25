@@ -40,6 +40,7 @@ interface BackupLog {
 
 const AdminBackupManagement = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   
   const [backups, setBackups] = useState<BackupLog[]>([]);
   const [loading, setLoading] = useState(true);
