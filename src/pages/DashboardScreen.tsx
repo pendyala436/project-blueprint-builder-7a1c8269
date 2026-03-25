@@ -1698,10 +1698,6 @@ const DashboardScreen = () => {
           )}
         </div>
 
-        {/* Language Community removed for men */}
-
-
-
 
 
 

@@ -185,11 +185,11 @@ const AdminNav = ({ children }: AdminNavProps) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
+      <header className="lg:hidden sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50 pt-[env(safe-area-inset-top)]">
         <div className="flex items-center justify-between px-4 py-3">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="auroraGhost" size="icon">
+              <Button variant="auroraGhost" size="icon" aria-label="Open navigation menu" className="min-w-[44px] min-h-[44px]">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -203,7 +203,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
             <span className="text-sm font-medium text-foreground">{activeItem.title}</span>
           </div>
 
-          <Button variant="auroraGhost" size="icon" onClick={handleLogout}>
+          <Button variant="auroraGhost" size="icon" onClick={handleLogout} aria-label="Log out" className="min-w-[44px] min-h-[44px]">
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
