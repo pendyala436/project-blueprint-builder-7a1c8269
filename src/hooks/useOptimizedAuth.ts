@@ -31,7 +31,7 @@ interface PreloadedUserContext {
  * since this guards security-sensitive routing (admin access, approval status).
  */
 export async function preloadUserContext(userId: string): Promise<PreloadedUserContext> {
-  const [adminResult, tutorialResult, profileResult, femaleResult] = await Promise.all([
+  const settled = await Promise.allSettled([
     supabase
       .from('user_roles')
       .select('role')
@@ -54,6 +54,10 @@ export async function preloadUserContext(userId: string): Promise<PreloadedUserC
       .eq('user_id', userId)
       .maybeSingle(),
   ]);
+
+  const [adminResult, tutorialResult, profileResult, femaleResult] = settled.map(r =>
+    r.status === 'fulfilled' ? r.value : { data: null, error: r.status === 'rejected' ? r.reason : null }
+  );
 
   return {
     isAdmin: !!adminResult.data,

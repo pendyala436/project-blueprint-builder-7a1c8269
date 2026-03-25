@@ -7,13 +7,18 @@
  * New code should import directly from '@/services/ledger-wallet.service'
  */
 
+/** @deprecated Import directly from '@/services/ledger-wallet.service'. This shim will be removed in a future release. */
 export {
   getLedgerWallet as getWallet,
+  /** @deprecated Use rechargeWallet from '@/services/ledger-wallet.service' */
   rechargeWallet as processRecharge,
+  /** @deprecated Use requestLedgerWithdrawal from '@/services/ledger-wallet.service' */
   requestLedgerWithdrawal as requestWithdrawal,
+  /** @deprecated Use getLedgerTransactions from '@/services/ledger-wallet.service' */
   getLedgerTransactions as getTransactions,
   getLedgerStatement,
   getWithdrawalRequests,
+  /** @deprecated Use subscribeLedgerWallet from '@/services/ledger-wallet.service' */
   subscribeLedgerWallet as subscribeToWallet,
   checkSessionBalance,
   billSessionMinute,
