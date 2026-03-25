@@ -191,6 +191,11 @@
         var timer = setTimeout(function() {
           var root = document.getElementById('root');
           if (root && root.children.length <= 1) {
+            // Skip recovery on very slow connections
+            if (navigator.connection && navigator.connection.effectiveType
+                && navigator.connection.effectiveType.includes("2g")) {
+              return;
+            }
             if (sessionStorage.getItem('sw-recovery')) return; // already tried
             sessionStorage.setItem('sw-recovery', '1');
             if ('serviceWorker' in navigator) {
@@ -205,7 +210,7 @@
             }
             setTimeout(function() { location.reload(); }, 500);
           }
-        }, 8000);
+        }, 15000);
         // Cancel timer once React renders
         var obs = new MutationObserver(function() {
           var root = document.getElementById('root');
