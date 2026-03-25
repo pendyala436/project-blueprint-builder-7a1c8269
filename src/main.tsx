@@ -4,6 +4,8 @@ import App from "./App";
 // Inline critical CSS synchronously for fastest FCP
 import "./index.css";
 
+const APP_MOUNTED_ATTR = "data-app-mounted";
+
 // Global error handler — catches anything that slips through React ErrorBoundary
 window.addEventListener('error', (event) => {
   console.error('[FATAL] Uncaught error:', event.error);
@@ -15,9 +17,13 @@ window.addEventListener('unhandledrejection', (event) => {
   // Don't show UI for minor async failures, only for startup-blocking ones
 });
 
+function markAppMounted() {
+  document.documentElement.setAttribute(APP_MOUNTED_ATTR, 'true');
+}
+
 function showFatalError(message: string) {
   const root = document.getElementById('root');
-  if (!root || root.children.length > 1) return; // React already rendered
+  if (!root || document.documentElement.getAttribute(APP_MOUNTED_ATTR) === 'true') return;
   root.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0d14;color:#fff;font-family:sans-serif;padding:20px;text-align:center">
       <div>
@@ -35,6 +41,9 @@ function showFatalError(message: string) {
 try {
   const root = createRoot(document.getElementById("root")!);
   root.render(<App />);
+  requestAnimationFrame(() => {
+    markAppMounted();
+  });
 } catch (err) {
   console.error('[FATAL] React render failed:', err);
   showFatalError(err instanceof Error ? err.message : 'React failed to start');
@@ -42,13 +51,16 @@ try {
 
 // Load polyfills in background (non-blocking)
 if (typeof window !== 'undefined') {
-  requestIdleCallback?.(() => {
+  const idleCallback = window.requestIdleCallback?.bind(window);
+  const loadPolyfills = () => {
     import("./lib/polyfills").then(({ default: loadPolyfills }) => {
       loadPolyfills();
     });
-  }) ?? setTimeout(() => {
-    import("./lib/polyfills").then(({ default: loadPolyfills }) => {
-      loadPolyfills();
-    });
-  }, 2000);
+  };
+
+  if (idleCallback) {
+    idleCallback(loadPolyfills);
+  } else {
+    setTimeout(loadPolyfills, 2000);
+  }
 }
