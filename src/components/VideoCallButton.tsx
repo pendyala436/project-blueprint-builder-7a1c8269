@@ -46,6 +46,15 @@ const VideoCallButton = ({
     stream: MediaStream | null;
   } | null>(null);
 
+  // WebRTC not supported — show fallback message
+  if (!supportsWebRTC()) {
+    return (
+      <span className="text-xs text-muted-foreground">
+        Video calls not supported on this browser
+      </span>
+    );
+  }
+
   const startVideoCall = async () => {
     // Get current user email to check if super user
     const { data: { session } } = await supabase.auth.getSession();
