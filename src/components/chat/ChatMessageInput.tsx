@@ -41,8 +41,13 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [onTyping]);
 
   const handleSend = useCallback(async () => {
-    const text = message.trim();
+    const text = message.trim().replace(/<[^>]*>/g, ""); // Sanitize HTML
     if (!text || disabled || isSending) return;
+
+    // Rate limit check
+    if (!chatRateLimiter.canProceed()) {
+      return; // Silently block rapid-fire sends
+    }
 
     setIsSending(true);
     try {
