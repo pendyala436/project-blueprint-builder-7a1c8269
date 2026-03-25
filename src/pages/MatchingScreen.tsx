@@ -774,25 +774,25 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2">
           <Button 
             variant={woman.isBusy ? "outline" : "gradient"}
             size="sm"
-            className="flex-1"
+            className="flex-1 text-[10px] xs:text-xs sm:text-sm gap-1 !px-2 sm:!px-3"
             onClick={onConnect}
             disabled={isConnecting}
           >
             {isConnecting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin shrink-0" />
             ) : woman.isBusy ? (
               <>
-                <Clock className="w-4 h-4 mr-1" />
-                Queue
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Queue</span>
               </>
             ) : (
               <>
-                <MessageCircle className="w-4 h-4 mr-1" />
-                Chat
+                <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Chat</span>
               </>
             )}
           </Button>
@@ -800,8 +800,9 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
             variant="outline" 
             size="sm"
             onClick={onViewProfile}
+            className="!px-2 sm:!px-3"
           >
-            <User className="w-4 h-4" />
+            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>
