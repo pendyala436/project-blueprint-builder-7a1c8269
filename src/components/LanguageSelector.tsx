@@ -321,7 +321,7 @@ export const LanguageSelector = ({
               Select Your Language
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Choose from {languages.length} languages ({indianLanguages.length} Indian + {worldLanguages.length} World)
+              Choose from {allLanguages.length} languages ({indianLanguages.length} Indian + {worldLanguages.length} World)
             </p>
           </DialogHeader>
           
