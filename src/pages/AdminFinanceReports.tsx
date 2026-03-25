@@ -963,12 +963,14 @@ const AdminFinanceReports = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="men" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="men">Men Spending</TabsTrigger>
-            <TabsTrigger value="women">Women Earnings</TabsTrigger>
-            <TabsTrigger value="country">By Country</TabsTrigger>
-            <TabsTrigger value="language">By Language</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-4">
+              <TabsTrigger value="men" className="whitespace-nowrap text-xs sm:text-sm">Men Spending</TabsTrigger>
+              <TabsTrigger value="women" className="whitespace-nowrap text-xs sm:text-sm">Women Earnings</TabsTrigger>
+              <TabsTrigger value="country" className="whitespace-nowrap text-xs sm:text-sm">By Country</TabsTrigger>
+              <TabsTrigger value="language" className="whitespace-nowrap text-xs sm:text-sm">By Language</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Men Spending Tab */}
           <TabsContent value="men">
