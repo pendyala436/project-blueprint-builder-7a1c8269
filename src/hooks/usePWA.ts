@@ -221,8 +221,14 @@ export function usePWA() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Listen for connection changes
-    const connection = (navigator as any).connection;
+    const connection = (navigator as any).connection as {
+      effectiveType?: string;
+      addEventListener?: (type: string, listener: () => void) => void;
+      removeEventListener?: (type: string, listener: () => void) => void;
+      addListener?: (listener: () => void) => void;
+      removeListener?: (listener: () => void) => void;
+    } | undefined;
+
     if (connection) {
       const handleConnectionChange = () => {
         setState(prev => ({
@@ -231,11 +237,21 @@ export function usePWA() {
           isSlowConnection: connection.effectiveType === '2g' || connection.effectiveType === 'slow-2g',
         }));
       };
-      connection.addEventListener('change', handleConnectionChange);
+
+      if (typeof connection.addEventListener === 'function') {
+        connection.addEventListener('change', handleConnectionChange);
+      } else {
+        connection.addListener?.(handleConnectionChange);
+      }
+
       return () => {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
-        connection.removeEventListener('change', handleConnectionChange);
+        if (typeof connection.removeEventListener === 'function') {
+          connection.removeEventListener('change', handleConnectionChange);
+        } else {
+          connection.removeListener?.(handleConnectionChange);
+        }
       };
     }
 

@@ -7,11 +7,25 @@
 
 import type { NetworkStatus, ApiEventHandler, ApiEvent } from './types';
 
+interface NetworkInformationLike extends EventTarget {
+  type?: string;
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+  addListener?: (listener: () => void) => void;
+  removeListener?: (listener: () => void) => void;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformationLike;
+}
+
 class NetworkMonitor {
   private static instance: NetworkMonitor;
   private status: NetworkStatus;
   private listeners: Set<ApiEventHandler> = new Set();
-  private connection: NetworkInformation | null = null;
+  private connection: NetworkInformationLike | null = null;
 
   private constructor() {
     this.status = {
@@ -19,7 +33,7 @@ class NetworkMonitor {
       connectionType: 'unknown',
     };
 
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator !== 'undefined' && typeof window !== 'undefined') {
       this.initializeConnectionInfo();
       this.setupEventListeners();
     }
@@ -33,7 +47,6 @@ class NetworkMonitor {
   }
 
   private initializeConnectionInfo(): void {
-    // Navigator.connection API (Chrome, Edge, Opera, Samsung Internet)
     const nav = navigator as NavigatorWithConnection;
     if (nav.connection) {
       this.connection = nav.connection;
@@ -71,14 +84,34 @@ class NetworkMonitor {
     }
   }
 
+  private addConnectionChangeListener(): void {
+    if (!this.connection) return;
+
+    if (typeof this.connection.addEventListener === 'function') {
+      this.connection.addEventListener('change', this.handleConnectionChange);
+      return;
+    }
+
+    this.connection.addListener?.(this.handleConnectionChange);
+  }
+
+  private removeConnectionChangeListener(): void {
+    if (!this.connection) return;
+
+    if (typeof this.connection.removeEventListener === 'function') {
+      this.connection.removeEventListener('change', this.handleConnectionChange);
+      return;
+    }
+
+    this.connection.removeListener?.(this.handleConnectionChange);
+  }
+
   private setupEventListeners(): void {
-    // Online/offline events (universal)
     window.addEventListener('online', this.handleOnline);
     window.addEventListener('offline', this.handleOffline);
 
-    // Connection change event (where supported)
     if (this.connection) {
-      this.connection.addEventListener('change', this.handleConnectionChange);
+      this.addConnectionChangeListener();
     }
   }
 
@@ -115,35 +148,22 @@ class NetworkMonitor {
     });
   }
 
-  /**
-   * Get current network status
-   */
   getStatus(): NetworkStatus {
-    // Refresh before returning
     if (typeof navigator !== 'undefined') {
       this.status.isOnline = navigator.onLine;
     }
     return { ...this.status };
   }
 
-  /**
-   * Check if network is online
-   */
   isOnline(): boolean {
     return typeof navigator !== 'undefined' ? navigator.onLine : true;
   }
 
-  /**
-   * Check if connection is slow (2G or slow-2g)
-   */
   isSlowConnection(): boolean {
     const effectiveType = this.status.effectiveType;
     return effectiveType === 'slow-2g' || effectiveType === '2g';
   }
 
-  /**
-   * Subscribe to network events
-   */
   subscribe(handler: ApiEventHandler): () => void {
     this.listeners.add(handler);
     return () => {
@@ -151,34 +171,15 @@ class NetworkMonitor {
     };
   }
 
-  /**
-   * Clean up listeners
-   */
   destroy(): void {
     if (typeof window !== 'undefined') {
       window.removeEventListener('online', this.handleOnline);
       window.removeEventListener('offline', this.handleOffline);
     }
-    if (this.connection) {
-      this.connection.removeEventListener('change', this.handleConnectionChange);
-    }
+    this.removeConnectionChangeListener();
     this.listeners.clear();
   }
 }
 
-// Network Information API types
-interface NetworkInformation extends EventTarget {
-  type?: string;
-  effectiveType?: string;
-  downlink?: number;
-  rtt?: number;
-  saveData?: boolean;
-}
-
-interface NavigatorWithConnection extends Navigator {
-  connection?: NetworkInformation;
-}
-
-// Export singleton
 export const networkMonitor = NetworkMonitor.getInstance();
 export default networkMonitor;
