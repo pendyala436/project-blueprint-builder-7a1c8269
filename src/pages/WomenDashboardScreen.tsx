@@ -2003,7 +2003,7 @@ const WomenDashboardScreen = () => {
 
       {/* KYC Form Sheet - Indian Women Only */}
       <Sheet open={showKYCForm} onOpenChange={setShowKYCForm}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <FileCheck className="w-5 h-5 text-primary" />
