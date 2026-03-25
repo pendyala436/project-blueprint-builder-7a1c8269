@@ -481,7 +481,7 @@ const AdminKYCManagement = () => {
                         </Button>
                       )}
                       {selectedKYC.verification_status !== "rejected" && (
-                        <Button size="sm" variant="destructive" onClick={handleRejectKYC}>
+                        <Button size="sm" variant="destructive" onClick={() => setRejectDialogOpen(true)}>
                           <XCircle className="h-4 w-4 mr-1" /> Reject
                         </Button>
                       )}
