@@ -159,7 +159,8 @@ serve(async (req) => {
       );
     }
 
-    const { action, messageId, chatId, content, userId } = await req.json();
+    const body = await req.json();
+    const { action, messageId, chatId, content, userId } = body;
     
     // For batch scan, require admin role
     if (action === "scan_recent_messages" && !authResult.isAdmin) {
