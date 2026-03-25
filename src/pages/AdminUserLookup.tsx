@@ -102,6 +102,7 @@ interface KYCRecord {
 }
 
 const AdminUserLookup = () => {
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [searchQuery, setSearchQuery] = useState("");
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
