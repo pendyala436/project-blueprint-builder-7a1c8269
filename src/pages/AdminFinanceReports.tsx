@@ -608,13 +608,13 @@ const AdminFinanceReports = () => {
 
   return (
     <AdminNav>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" />
+          <h1 className="text-lg sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <BarChart3 className="h-5 sm:h-6 w-5 sm:w-6 text-primary" />
             Finance Reports
           </h1>
-          <p className="text-muted-foreground text-sm">Monthly spending & earnings analysis - Real-time data</p>
+          <p className="text-muted-foreground text-sm hidden sm:block">Monthly spending & earnings analysis</p>
         </div>
         <Button
           variant="outline"
