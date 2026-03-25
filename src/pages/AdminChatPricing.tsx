@@ -293,6 +293,7 @@ const AdminChatPricing = () => {
             <p>• <strong>Chat:</strong> Men (Indian &amp; non-Indian) pay per minute. Women earn half per active chat. Max 3 simultaneous chats per woman.</p>
             <p>• <strong>Video Call:</strong> 1-to-1, same language only. Men pay double what women earn.</p>
             <p>• <strong>Group Call:</strong> Hosted by Indian women only. Each man charged individually. Host earns half per active man per minute.</p>
+            <p>• <strong>Gifts:</strong> 100% of gift price deducted from man's wallet. No balance = no gift. Women receive exactly half the gift price as earnings. Platform keeps the other half.</p>
             <p>• <strong>All sessions:</strong> No duplicate billing. Indian women only earn. Min withdrawal ₹5,000. Records stored 6 months.</p>
           </CardContent>
         </Card>
