@@ -61,8 +61,6 @@ const GiftSendingScreen = () => {
       navigate("/dashboard", { replace: true });
     }
   }, [receiverId, navigate]);
-  const navigate = useNavigate();
-  const { receiverId } = useParams<{ receiverId: string }>();
   
   // ACID-compliant transaction hook
   const { sendGift, isProcessing: transactionProcessing } = useAtomicTransaction();
