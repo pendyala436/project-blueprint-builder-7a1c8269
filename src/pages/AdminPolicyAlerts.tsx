@@ -84,8 +84,8 @@ interface UserProfile {
 
 const AdminPolicyAlerts = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [alerts, setAlerts] = useState<PolicyAlert[]>([]);
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [refreshing, setRefreshing] = useState(false);
