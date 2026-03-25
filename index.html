@@ -102,14 +102,22 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" /></noscript>
 
-    <!-- Prevent FOUC: detect theme before paint -->
+    <!-- Fix 7/8: Prevent FOUC for BOTH light and dark users -->
     <script>
       (function(){
-        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         var stored = localStorage.getItem("theme");
-        if (stored === "dark" || stored === "light") dark = stored === "dark";
+        var dark;
+        if (stored === "dark" || stored === "light") {
+          dark = stored === "dark";
+        } else {
+          dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        }
         document.documentElement.classList.toggle("dark", dark);
         document.documentElement.style.background = dark ? "#0a0d14" : "#f5f7fa";
+        // Fix 8: Update theme-color meta tags dynamically
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        var color = dark ? "#0a0d14" : "#f5f7fa";
+        for (var i = 0; i < metas.length; i++) metas[i].setAttribute("content", color);
       })();
     </script>
 
