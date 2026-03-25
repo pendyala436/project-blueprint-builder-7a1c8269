@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserActivity } from '@/contexts/UserActivityContext';
+import { isSignedOut } from '@/hooks/useAuthReady';
 
 interface UseActivityBasedStatusOptions {
   inactivityTimeout?: number;
