@@ -666,6 +666,31 @@ const AdminKYCManagement = () => {
         </div>
       </div>
     </AdminNav>
+
+      {/* Rejection Reason Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject KYC</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Rejection Reason</Label>
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter the reason for rejection..."
+              rows={3}
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setRejectionReason(""); }}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRejectKYC} disabled={!rejectionReason.trim()}>
+              <XCircle className="h-4 w-4 mr-1" /> Reject KYC
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
