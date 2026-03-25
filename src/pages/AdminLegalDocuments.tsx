@@ -146,16 +146,31 @@ const AdminLegalDocuments = () => {
     }
   };
 
+  const MAX_LEGAL_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+  const ALLOWED_LEGAL_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'text/html'];
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      if (!newDocument.name) {
-        setNewDocument(prev => ({
-          ...prev,
-          name: file.name.replace(/\.[^/.]+$/, ""),
-        }));
-      }
+    if (!file) return;
+
+    if (file.size > MAX_LEGAL_FILE_SIZE) {
+      toast.error("File too large", { description: "Maximum file size is 20MB" });
+      if (event.target) event.target.value = '';
+      return;
+    }
+
+    if (!ALLOWED_LEGAL_TYPES.includes(file.type)) {
+      toast.error("Invalid file type", { description: "Only PDF, DOC, DOCX, TXT, and HTML files are allowed" });
+      if (event.target) event.target.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+    if (!newDocument.name) {
+      setNewDocument(prev => ({
+        ...prev,
+        name: file.name.replace(/\.[^/.]+$/, ""),
+      }));
     }
   };
 
