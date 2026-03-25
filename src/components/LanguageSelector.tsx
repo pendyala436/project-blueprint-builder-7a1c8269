@@ -124,7 +124,7 @@ export const LanguageSelector = ({
     setIsOpen(true);
     setSearchQuery("");
     // Set temp selection to current language
-    const currentLang = languages.find(l => l.name === selectedLanguage);
+    const currentLang = allLanguages.find(l => l.name === selectedLanguage);
     setTempSelectedLanguage(currentLang || null);
   };
 
