@@ -76,6 +76,7 @@ const documentTypes = [
 
 const AdminLegalDocuments = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isProduction } = useProductionMode();

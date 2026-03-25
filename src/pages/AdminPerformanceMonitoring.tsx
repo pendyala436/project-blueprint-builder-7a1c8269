@@ -73,6 +73,7 @@ const chartConfig = {
 
 const AdminPerformanceMonitoring = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("1h");
   const [metrics, setMetrics] = useState<SystemMetric[]>([]);
