@@ -31,9 +31,9 @@
     <meta name="msapplication-config" content="/browserconfig.xml" />
     <meta name="msapplication-tap-highlight" content="no" />
     
-    <!-- Theme Colors - All Browsers -->
+    <!-- Theme Colors - All Browsers (Fix 8: correct light-mode color) -->
     <meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="dark light" />
     <meta name="format-detection" content="telephone=no" />
 
@@ -102,14 +102,22 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" /></noscript>
 
-    <!-- Prevent FOUC: detect theme before paint -->
+    <!-- Fix 7/8: Prevent FOUC for BOTH light and dark users -->
     <script>
       (function(){
-        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         var stored = localStorage.getItem("theme");
-        if (stored === "dark" || stored === "light") dark = stored === "dark";
+        var dark;
+        if (stored === "dark" || stored === "light") {
+          dark = stored === "dark";
+        } else {
+          dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        }
         document.documentElement.classList.toggle("dark", dark);
         document.documentElement.style.background = dark ? "#0a0d14" : "#f5f7fa";
+        // Fix 8: Update theme-color meta tags dynamically
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        var color = dark ? "#0a0d14" : "#f5f7fa";
+        for (var i = 0; i < metas.length; i++) metas[i].setAttribute("content", color);
       })();
     </script>
 
@@ -186,7 +194,7 @@
 
     <!-- Cache recovery: clear stale service workers on load failures -->
     <script>
-      // If React doesn't render within 8s, clear SW cache and reload once
+      // Fix 11: If React doesn't render within 15s, clear SW cache and reload once
       (function() {
         var timer = setTimeout(function() {
           var root = document.getElementById('root');
@@ -230,13 +238,13 @@
 
   <body>
     <noscript>
-      <div style="padding: 20px; text-align: center; background: #0a0d14; color: #c4d4e8; min-height: 100vh; font-family: system-ui, sans-serif;">
-        <h1 style="color: #2dd4bf; margin-top: 40vh;">Meow Meow</h1>
-        <p>Please enable JavaScript to use this app.</p>
+      <div style="padding: 20px; text-align: center; background: #0a0d14; color: #c4d4e8; min-height: 100vh; min-height: 100dvh; font-family: system-ui, -apple-system, sans-serif;">
+        <h1 style="color: #2dd4bf; margin-top: 40vh; font-size: clamp(1.25rem, 4vw, 2rem);">Meow Meow</h1>
+        <p style="font-size: clamp(0.875rem, 2.5vw, 1rem);">Please enable JavaScript to use this app.</p>
       </div>
     </noscript>
     <div id="root">
-      <!-- Inline instant loading state - removed by React on hydration -->
+      <!-- Inline instant loading state — removed by React on mount -->
       <div class="app-loading" aria-hidden="true"></div>
     </div>
     <script type="module" src="/src/main.tsx"></script>

@@ -12,6 +12,7 @@ import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
+import { useAutoAdjustUI } from "@/hooks/useAutoAdjustUI";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -91,7 +92,10 @@ const AdminMessaging = lazy(() => import("@/pages/AdminMessaging"));
 const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
-const App = () => (
+const App = () => {
+  useAutoAdjustUI();
+
+  return (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <ErrorBoundary>
@@ -177,6 +181,7 @@ const App = () => (
       </ErrorBoundary>
     </ThemeProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
