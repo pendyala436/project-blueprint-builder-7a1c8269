@@ -215,7 +215,8 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
           .maybeSingle();
         const gender = profileData?.gender?.toLowerCase();
 
-        const syncOps = [
+        // Sync to all relevant tables
+        await Promise.allSettled([
           supabase
             .from("profiles")
             .update({
@@ -231,26 +232,20 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
               language_name: settings.language,
               language_code: selectedLanguageCode,
             }, { onConflict: "user_id,language_code" }),
-        ];
+        ]);
 
         // Sync to gender-specific profile table so dashboard picks up the change
         if (gender === "male") {
-          syncOps.push(
-            supabase
-              .from("male_profiles")
-              .update({ primary_language: settings.language, preferred_language: settings.language })
-              .eq("user_id", user.id)
-          );
+          await supabase
+            .from("male_profiles")
+            .update({ primary_language: settings.language, preferred_language: settings.language })
+            .eq("user_id", user.id);
         } else if (gender === "female") {
-          syncOps.push(
-            supabase
-              .from("female_profiles")
-              .update({ primary_language: settings.language, preferred_language: settings.language })
-              .eq("user_id", user.id)
-          );
+          await supabase
+            .from("female_profiles")
+            .update({ primary_language: settings.language, preferred_language: settings.language })
+            .eq("user_id", user.id);
         }
-
-        await Promise.allSettled(syncOps);
       }
 
       // Save parallel chat settings
