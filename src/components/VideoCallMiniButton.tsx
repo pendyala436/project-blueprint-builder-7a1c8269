@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { supportsWebRTC } from "@/lib/capabilities";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { useChatPricing } from "@/hooks/useChatPricing";
 import {
