@@ -257,11 +257,21 @@ const AdminPerformanceMonitoring = () => {
     </Card>
   );
 
-  if (loading) {
+  if (adminLoading || !isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <AdminNav>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      </AdminNav>
     );
   }
 
