@@ -137,7 +137,7 @@ const AdminMessaging = () => {
         .select('user_id, full_name, gender, is_indian')
         .in('user_id', userIds);
 
-      const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+      const profileMap = new Map((profiles || []).map(p => [p.user_id as string, p as { full_name: string | null; gender: string | null; is_indian: boolean | null }]));
 
       const threads: InboxThread[] = userIds.map(uid => {
         const userMsgs = userMessages.filter(m => m.sender_id === uid);

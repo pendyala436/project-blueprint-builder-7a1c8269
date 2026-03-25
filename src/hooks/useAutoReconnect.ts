@@ -129,7 +129,7 @@ export const useAutoReconnect = (
         .in("user_id", filteredIds);
 
       const availabilityMap = new Map(
-        availability?.map(a => [a.user_id, a]) || []
+        availability?.map(a => [a.user_id, a as { max_concurrent_chats: number; current_chat_count: number; is_available: boolean }]) || []
       );
 
       // Get languages

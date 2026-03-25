@@ -132,7 +132,7 @@ export const LanguageGroupChat = ({
           .select("user_id, full_name, photo_url")
           .in("user_id", senderIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p as { full_name: string | null; photo_url: string | null }]) || []);
 
         setMessages(messagesData.map(m => ({
           id: m.id,

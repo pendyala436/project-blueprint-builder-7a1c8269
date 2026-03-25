@@ -179,7 +179,7 @@ export const useIncomingChats = (
           .select("user_id, full_name, photo_url, primary_language")
           .in("user_id", partnerIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p as { full_name: string | null; photo_url: string | null; primary_language: string | null }]) || []);
 
         // Build incoming chats
         const newIncomingChats: IncomingChat[] = [];
