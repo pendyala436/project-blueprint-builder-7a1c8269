@@ -71,9 +71,13 @@ export function useAuthReady() {
 
   useEffect(() => {
     const listener = (next: AuthState) => {
-      // Only re-render if user id or isReady actually changed
+      // Only re-render if meaningful auth state changed
       const prev = stateRef.current;
-      if (prev.isReady === next.isReady && prev.user?.id === next.user?.id) return;
+      if (
+        prev.isReady === next.isReady &&
+        prev.user?.id === next.user?.id &&
+        prev.session?.expires_at === next.session?.expires_at
+      ) return;
       stateRef.current = next;
       setState(next);
     };
