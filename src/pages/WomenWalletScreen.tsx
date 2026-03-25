@@ -290,7 +290,7 @@ const WomenWalletScreen = () => {
             <div className="mt-3 p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
               <p className="text-sm text-warning">
-                {t("youNeedMore", "You need")} ₹{(minWithdrawal - availableBalance).toLocaleString()} {t("more", "more to reach the minimum")}
+                {t("youNeedMore", "You need")} ₹{(effectiveMin - availableBalance).toLocaleString()} {t("more", "more to reach the minimum")}
               </p>
             </div>
           )}
