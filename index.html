@@ -31,7 +31,7 @@
     <meta name="msapplication-config" content="/browserconfig.xml" />
     <meta name="msapplication-tap-highlight" content="no" />
     
-    <!-- Theme Colors - All Browsers (Fix 8: correct light-mode color) -->
+    <!-- Theme Colors -->
     <meta name="theme-color" content="#0a0d14" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)" />
     <meta name="color-scheme" content="dark light" />
@@ -82,47 +82,52 @@
     <meta name="twitter:site" content="@meowmeowapp" />
     <meta name="twitter:image" content="/icons/icon-512x512.png" />
 
-    <!-- Preconnect to external resources for faster loading -->
+    <!-- Preconnect to external resources -->
     <link rel="preconnect" href="https://tvneohngeracipjajzos.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://tvneohngeracipjajzos.supabase.co" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- 
-      Font Loading Strategy: On-Demand
-      
-      Only the base Latin font is preloaded. All other scripts (900+ languages)
-      are loaded dynamically when text in that script is detected.
-      This dramatically improves initial page load performance.
-      
-      See: src/lib/fonts/font-loader.ts for the dynamic loading system.
-    -->
-    
-    <!-- Preload base Latin fonts + Quicksand/Inter for non-blocking render -->
+    <!-- Font loading with JS fallback for Safari < 12 and older Android -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" /></noscript>
+    <script>
+      // Font loading fallback: if preload onload trick didn't work, load via JS
+      (function(){
+        setTimeout(function(){
+          var fonts = document.querySelectorAll('link[rel="preload"][as="style"]');
+          for (var i = 0; i < fonts.length; i++) {
+            if (fonts[i].rel === 'preload') {
+              fonts[i].rel = 'stylesheet';
+            }
+          }
+        }, 3000);
+      })();
+    </script>
 
-    <!-- Fix 7/8: Prevent FOUC for BOTH light and dark users -->
+    <!-- Prevent FOUC for light and dark modes -->
     <script>
       (function(){
-        var stored = localStorage.getItem("theme");
-        var dark;
-        if (stored === "dark" || stored === "light") {
-          dark = stored === "dark";
-        } else {
-          dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        try {
+          var stored = localStorage.getItem("theme");
+          var dark;
+          if (stored === "dark" || stored === "light") {
+            dark = stored === "dark";
+          } else {
+            dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          }
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.style.background = dark ? "#0a0d14" : "#f5f7fa";
+          var metas = document.querySelectorAll('meta[name="theme-color"]');
+          var color = dark ? "#0a0d14" : "#f5f7fa";
+          for (var i = 0; i < metas.length; i++) metas[i].setAttribute("content", color);
+        } catch(e) {
+          // localStorage may throw in private browsing
         }
-        document.documentElement.classList.toggle("dark", dark);
-        document.documentElement.style.background = dark ? "#0a0d14" : "#f5f7fa";
-        // Fix 8: Update theme-color meta tags dynamically
-        var metas = document.querySelectorAll('meta[name="theme-color"]');
-        var color = dark ? "#0a0d14" : "#f5f7fa";
-        for (var i = 0; i < metas.length; i++) metas[i].setAttribute("content", color);
       })();
     </script>
 
     <style>
-      /* Safe area padding for notched devices */
       :root {
         --sat: env(safe-area-inset-top);
         --sar: env(safe-area-inset-right);
@@ -131,10 +136,8 @@
         --keyboard-height: 0px;
       }
       
-      /* Instant render - no FOUC */
       html { visibility: visible; opacity: 1; }
       
-      /* Critical CSS for instant paint */
       body {
         margin: 0;
         background: #0a0d14;
@@ -144,23 +147,15 @@
         -moz-osx-font-smoothing: grayscale;
       }
       
-      /* Light mode body bg override */
-      html:not(.dark) body {
-        background: #f5f7fa;
-      }
+      html:not(.dark) body { background: #f5f7fa; }
       
       #root {
         min-height: 100vh;
         min-height: 100dvh;
       }
-      html:not(.dark) #root {
-        background: #f5f7fa;
-      }
-      html.dark #root {
-        background: #0a0d14;
-      }
+      html:not(.dark) #root { background: #f5f7fa; }
+      html.dark #root { background: #0a0d14; }
       
-      /* Instant loading placeholder */
       .app-loading {
         display: flex;
         align-items: center;
@@ -182,17 +177,14 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-      .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
+      .hide-scrollbar::-webkit-scrollbar { display: none; }
       
-      /* iOS keyboard height CSS variable support */
       .chat-input-bar {
         bottom: var(--keyboard-height, env(safe-area-inset-bottom));
       }
     </style>
 
-    <!-- Cache recovery: clear stale service workers on genuine load failures only -->
+    <!-- Cache recovery: clear stale service workers on genuine load failures -->
     <script>
       (function() {
         var APP_MOUNTED_ATTR = 'data-app-mounted';
@@ -203,60 +195,91 @@
           return document.documentElement.getAttribute(APP_MOUNTED_ATTR) === 'true';
         }
 
+        // Force SW update check on Android
         if (isAndroid && 'serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            regs.forEach(function(r) {
-              if (r.active) r.update();
+          try {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              regs.forEach(function(r) {
+                if (r.active) r.update();
+              });
             });
-          });
+          } catch(e) {}
         }
 
         var timer = setTimeout(function() {
           var root = document.getElementById('root');
           if (!root || isMounted()) return;
 
-          if (navigator.connection && navigator.connection.effectiveType
-              && navigator.connection.effectiveType.includes('2g')) {
-            return;
-          }
+          // Don't recover on very slow connections
+          try {
+            if (navigator.connection && navigator.connection.effectiveType
+                && navigator.connection.effectiveType.includes('2g')) {
+              return;
+            }
+          } catch(e) {}
 
           var recoveryKey = 'sw-recovery';
           var attempts = parseInt(sessionStorage.getItem(recoveryKey) || '0', 10);
-          if (attempts >= 1) {
-            root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0d14;color:#fff;font-family:sans-serif;padding:20px;text-align:center"><div><h1 style="font-size:20px;margin-bottom:12px">Loading failed</h1><p style="color:#888;margin-bottom:20px;font-size:14px">The app could not load. This is usually caused by a stale cache or an older Android browser.</p><button onclick="(async function(){if(\'serviceWorker\' in navigator){var r=await navigator.serviceWorker.getRegistrations();await Promise.all(r.map(function(r){return r.unregister()}))}if(\'caches\' in window){var k=await caches.keys();await Promise.all(k.map(function(k){return caches.delete(k)}))}sessionStorage.clear();location.reload()})()" style="padding:12px 28px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;min-height:44px">Clear Cache & Reload</button></div></div>';
+
+          // Allow up to 3 recovery attempts before showing hard-fail
+          if (attempts >= 3) {
+            root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0d14;color:#fff;font-family:sans-serif;padding:20px;text-align:center"><div><h1 style="font-size:20px;margin-bottom:12px">Loading failed</h1><p style="color:#888;margin-bottom:20px;font-size:14px">The app could not load. This is usually caused by a stale cache or an older browser.</p><button onclick="(async function(){try{if(\'serviceWorker\' in navigator){var r=await navigator.serviceWorker.getRegistrations();await Promise.all(r.map(function(r){return r.unregister()}))}if(\'caches\' in window){var k=await caches.keys();await Promise.all(k.map(function(k){return caches.delete(k)}))}sessionStorage.clear();location.reload()}catch(e){location.reload()}})()" style="padding:12px 28px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;min-height:44px">Clear Cache & Reload</button></div></div>';
             return;
           }
 
           sessionStorage.setItem(recoveryKey, String(attempts + 1));
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-              regs.forEach(function(r) { r.unregister(); });
-            });
-          }
+
+          // Hard-wipe caches FIRST, then unregister SW
+          var cleanupPromises = [];
           if ('caches' in window) {
-            caches.keys().then(function(keys) {
-              keys.forEach(function(k) { caches.delete(k); });
-            });
+            cleanupPromises.push(
+              caches.keys().then(function(keys) {
+                return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+              })
+            );
           }
-          setTimeout(function() { location.reload(); }, 700);
+          if ('serviceWorker' in navigator) {
+            cleanupPromises.push(
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                return Promise.all(regs.map(function(r) { return r.unregister(); }));
+              })
+            );
+          }
+
+          Promise.all(cleanupPromises).then(function() {
+            setTimeout(function() { location.reload(); }, 500);
+          }).catch(function() {
+            setTimeout(function() { location.reload(); }, 500);
+          });
         }, timeout);
 
-        var observer = new MutationObserver(function() {
-          if (isMounted()) {
-            clearTimeout(timer);
-            sessionStorage.removeItem('sw-recovery');
-            observer.disconnect();
-          }
-        });
-
-        observer.observe(document.documentElement, {
-          attributes: true,
-          attributeFilter: [APP_MOUNTED_ATTR]
-        });
+        var observer;
+        try {
+          observer = new MutationObserver(function() {
+            if (isMounted()) {
+              clearTimeout(timer);
+              sessionStorage.removeItem('sw-recovery');
+              observer.disconnect();
+            }
+          });
+          observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: [APP_MOUNTED_ATTR]
+          });
+        } catch(e) {
+          // MutationObserver not supported — fallback poll
+          var poll = setInterval(function() {
+            if (isMounted()) {
+              clearTimeout(timer);
+              sessionStorage.removeItem('sw-recovery');
+              clearInterval(poll);
+            }
+          }, 1000);
+        }
       })();
     </script>
 
-    <!-- Preload main script for faster execution -->
+    <!-- Preload main script -->
     <link rel="modulepreload" href="/src/main.tsx" />
   </head>
 
@@ -268,32 +291,32 @@
       </div>
     </noscript>
     <div id="root">
-      <!-- Inline instant loading state — removed by React on mount -->
       <div class="app-loading" aria-hidden="true"></div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Android WebView/Chrome: force check for SW updates after load -->
+    <!-- Android: force SW update after load, gated by app-mounted check -->
     <script>
       if (/Android/i.test(navigator.userAgent) && 'serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.ready.then(function(reg) {
-            // Force update check
-            reg.update();
-            // Listen for new SW and auto-activate
-            reg.addEventListener('updatefound', function() {
-              var newWorker = reg.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', function() {
-                  if (newWorker.state === 'activated') {
-                    // New SW activated, reload to get fresh content
-                    if (document.visibilityState === 'visible') {
-                      location.reload();
+          try {
+            navigator.serviceWorker.ready.then(function(reg) {
+              reg.update();
+              reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'activated') {
+                      // Only reload if app has mounted — prevents infinite reload loop
+                      if (document.visibilityState === 'visible'
+                          && document.documentElement.getAttribute('data-app-mounted') === 'true') {
+                        location.reload();
+                      }
                     }
-                  }
-                });
-              }
+                  });
+                }
+              });
             });
-          });
+          } catch(e) {}
         });
       }
     </script>

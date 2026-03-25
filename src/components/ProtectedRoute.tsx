@@ -3,7 +3,8 @@ import { toast } from "sonner";
  * ProtectedRoute – single source of route guarding.
  *
  * Uses the global useAuthReady() hook so every component shares the same
- * session state. Role check runs once per mount (not on every token refresh).
+ * session state. Role check result is cached in module-level state to avoid
+ * redundant DB queries on every route navigation.
  */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -18,17 +19,48 @@ interface Props {
   requiredRole?: RequiredRole;
 }
 
+// ── Module-level role cache ─────────────────────────────────────────
+// Caches the last role-check result per user to avoid 3x DB queries on every
+// protected route mount. Invalidated on SIGNED_OUT.
+interface RoleCacheEntry {
+  userId: string;
+  isAdmin: boolean;
+  isFemale: boolean;
+  isMale: boolean;
+  timestamp: number;
+}
+
+let roleCache: RoleCacheEntry | null = null;
+const ROLE_CACHE_TTL = 60_000; // 60s — matches revalidation interval
+
+function clearRoleCache() {
+  roleCache = null;
+}
+
+// Listen for sign-out to invalidate cache (module-level, runs once)
+supabase.auth.onAuthStateChange((event) => {
+  if (event === 'SIGNED_OUT') {
+    clearRoleCache();
+  }
+});
+
 const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => {
   const navigate = useNavigate();
   const { user, isReady } = useAuthReady();
   const [authorized, setAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
   const checkedForUser = useRef<string | null>(null);
-  const REVALIDATE_INTERVAL_MS = 60_000; // Re-check role every 60s
+  const REVALIDATE_INTERVAL_MS = 60_000;
 
-  // Core role-check logic extracted for reuse
-  const checkRole = async (userId: string, isRevalidation = false) => {
-    const MAX_RETRIES = isRevalidation ? 1 : 3;
+  // Resolve role info — uses cache if valid
+  const resolveRoles = async (userId: string, forceRefresh = false): Promise<RoleCacheEntry> => {
+    // Return cached result if fresh
+    if (!forceRefresh && roleCache && roleCache.userId === userId
+        && (Date.now() - roleCache.timestamp) < ROLE_CACHE_TTL) {
+      return roleCache;
+    }
+
+    const MAX_RETRIES = forceRefresh ? 1 : 3;
     let profileRes: any, femaleRes: any, adminRes: any;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -57,21 +89,28 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
     const isFemale = profileRes.data?.gender?.toLowerCase() === 'female' || !!femaleRes.data;
     const isMale = !isFemale && !isAdmin;
 
+    const entry: RoleCacheEntry = { userId, isAdmin, isFemale, isMale, timestamp: Date.now() };
+    roleCache = entry;
+    return entry;
+  };
+
+  // Evaluate authorization against required role
+  const evaluateAccess = (roles: RoleCacheEntry): { ok: boolean; to: string } => {
     let ok = false;
     let to = '/';
 
     switch (requiredRole) {
       case 'admin':
-        ok = isAdmin;
-        if (!ok) to = isFemale ? '/women-dashboard' : '/dashboard';
+        ok = roles.isAdmin;
+        if (!ok) to = roles.isFemale ? '/women-dashboard' : '/dashboard';
         break;
       case 'female':
-        ok = isFemale && !isAdmin;
-        if (!ok) to = isAdmin ? '/admin' : '/dashboard';
+        ok = roles.isFemale && !roles.isAdmin;
+        if (!ok) to = roles.isAdmin ? '/admin' : '/dashboard';
         break;
       case 'male':
-        ok = isMale && !isAdmin;
-        if (!ok) to = isAdmin ? '/admin' : isFemale ? '/women-dashboard' : '/dashboard';
+        ok = roles.isMale && !roles.isAdmin;
+        if (!ok) to = roles.isAdmin ? '/admin' : roles.isFemale ? '/women-dashboard' : '/dashboard';
         break;
       case 'authenticated':
         ok = true;
@@ -104,9 +143,10 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
 
     (async () => {
       try {
-        const { ok, to } = await checkRole(user.id);
+        const roles = await resolveRoles(user.id);
         if (!mounted) return;
 
+        const { ok, to } = evaluateAccess(roles);
         if (ok) {
           checkedForUser.current = user.id;
           setAuthorized(true);
@@ -130,7 +170,8 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
 
     const interval = setInterval(async () => {
       try {
-        const { ok, to } = await checkRole(user.id, true);
+        const roles = await resolveRoles(user.id, true);
+        const { ok, to } = evaluateAccess(roles);
         if (!ok) {
           console.warn(`[ProtectedRoute] Role revoked for user ${user.id}, redirecting`);
           checkedForUser.current = null;
@@ -156,10 +197,8 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       }
     });
 
-    // Block browser back button from returning to protected pages after logout
     const handlePopState = () => {
-      const s = isSignedOut();
-      if (s) {
+      if (isSignedOut()) {
         window.history.replaceState(null, '', '/');
         navigate('/', { replace: true });
       }
