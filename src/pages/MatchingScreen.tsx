@@ -191,7 +191,6 @@ const MatchingScreen = () => {
       const availabilityMap = new Map(
         (availability as any[] || []).map(a => [a.user_id, a])
       );
-      );
 
       // Fetch user settings for profile visibility
       const { data: userSettings } = await supabase
