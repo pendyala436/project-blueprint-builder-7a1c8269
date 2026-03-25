@@ -14,8 +14,15 @@ import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (import.meta.env.DEV) {
+        console.error('[ReactQuery] Query error:', error);
+      }
+    },
+  }),
   defaultOptions: {
-    queries: { retry: 2, staleTime: 5 * 60 * 1000 },
+    queries: { retry: 2, staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 },
   },
 });
 
