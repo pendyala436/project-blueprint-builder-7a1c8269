@@ -47,7 +47,8 @@ const OnlineUsersScreen = () => {
 
   useEffect(() => {
     loadOnlineUsers();
-    setupRealtimeSubscription();
+    const cleanup = setupRealtimeSubscription();
+    return cleanup;
   }, []);
 
   useEffect(() => {

@@ -399,19 +399,30 @@ const AuthScreen = () => {
               </button>
             </div>
 
+            {/* Lockout Warning */}
+            {lockoutUntil && lockoutCountdown > 0 && (
+              <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-center">
+                <p className="text-sm text-destructive font-medium">
+                  Too many attempts. Try again in {lockoutCountdown}s
+                </p>
+              </div>
+            )}
+
             {/* Login Button */}
             <Button
               variant="aurora"
               size="xl"
               className="w-full group"
               onClick={handleLogin}
-              disabled={isLoading}
+              disabled={isLoading || (!!lockoutUntil && lockoutCountdown > 0)}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
                   {t('common.loading')}
                 </>
+              ) : lockoutUntil && lockoutCountdown > 0 ? (
+                <>Locked ({lockoutCountdown}s)</>
               ) : (
                 <>
                   {t('auth.login')}

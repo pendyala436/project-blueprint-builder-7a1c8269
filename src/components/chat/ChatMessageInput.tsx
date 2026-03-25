@@ -29,6 +29,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
+    if (value.length > maxLength) return; // Enforce max length
     setMessage(value);
 
     if (onTyping) {
