@@ -983,6 +983,7 @@ const AdminFinanceReports = () => {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
