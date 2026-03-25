@@ -522,6 +522,20 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
         </CardContent>
       </Card>
 
+      {/* Install App */}
+      <Card>
+        <CardContent className={cn("pt-4", compact && "px-4 pb-4")}>
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3"
+            onClick={() => navigate("/install")}
+          >
+            <Globe className="h-4 w-4 text-primary" />
+            {t('installApp', 'Install App on Your Device')}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Account Deletion */}
       <AccountDeletionSection compact={compact} />
 

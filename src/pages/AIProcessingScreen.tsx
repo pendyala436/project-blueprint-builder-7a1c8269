@@ -132,8 +132,13 @@ const AIProcessingScreen = () => {
       // Get expected gender from registration
       const expectedGender = registeredGender || undefined;
       
-      // Classify gender using Hugging Face
-      const result = await classifyGender(imageData, expectedGender);
+      // Classify gender with 30-second timeout
+      const classifyPromise = classifyGender(imageData, expectedGender);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('AI_TIMEOUT')), 30000)
+      );
+      
+      const result = await Promise.race([classifyPromise, timeoutPromise]);
       
       clearInterval(progressInterval);
       setProgress(100);
@@ -163,13 +168,16 @@ const AIProcessingScreen = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Verification error:", error);
       setProgress(100);
       setVerificationStatus("failed");
+      const isTimeout = error?.message === 'AI_TIMEOUT';
       toast({
-        title: "Verification Error",
-        description: "An error occurred. Please try again.",
+        title: isTimeout ? "Verification Timed Out" : "Verification Error",
+        description: isTimeout 
+          ? "AI verification took too long. You can retry or skip for now."
+          : "An error occurred. Please try again.",
         variant: "destructive",
       });
     }

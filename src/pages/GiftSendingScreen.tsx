@@ -114,7 +114,7 @@ const GiftSendingScreen = () => {
       }
     } catch (error) {
       console.error("Error loading data:", error);
-      toast.error("Gifts unavailable", { description: ERROR_MESSAGES.gifts.loadFailed });
+      toast({ title: "Gifts unavailable", description: ERROR_MESSAGES.gifts.loadFailed, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -194,7 +194,7 @@ const GiftSendingScreen = () => {
       }
     } catch (error: any) {
       console.error("Error sending gift:", error);
-      toast.error("Gift not sent", { description: classifyError(error, "send the gift").message });
+      toast({ title: "Gift not sent", description: classifyError(error, "send the gift").message, variant: "destructive" });
     } finally {
       setSending(false);
     }
