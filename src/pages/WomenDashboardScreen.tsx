@@ -1369,22 +1369,22 @@ const WomenDashboardScreen = () => {
               size="lg"
               hasGoldenBadge={true}
               chatMode={chatMode.currentMode}
-              className="w-full"
+              className="w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3 gap-1 sm:gap-2"
             />
           ) : (
             <Button
               variant="aurora"
               size="lg"
-              className="gap-2 w-full"
+              className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
               onClick={handlePurchaseGoldenBadge}
               disabled={isPurchasingBadge}
             >
               {isPurchasingBadge ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin shrink-0" />
               ) : (
                 <>
-                  <Star className="h-5 w-5" />
-                  Get Badge to Chat
+                  <Star className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                  <span className="truncate">Get Badge</span>
                 </>
               )}
             </Button>
@@ -1392,14 +1392,14 @@ const WomenDashboardScreen = () => {
           <Button
             variant="aurora"
             size="lg"
-            className="gap-2 w-full"
+            className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
             onClick={() => {
               const el = document.getElementById('women-private-groups-section');
               el?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            <Video className="h-5 w-5" />
-            Private Groups
+            <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="truncate">Private Groups</span>
           </Button>
         </div>
 
