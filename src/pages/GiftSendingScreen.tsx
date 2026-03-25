@@ -186,12 +186,7 @@ const GiftSendingScreen = () => {
       }
     } catch (error: any) {
       console.error("Error sending gift:", error);
-      toast.error("Gift not sent", { description: ERROR_MESSAGES.gifts.sendFailed });
-      toast({
-        title: "Error",
-        description: classifyError(error, "send the gift").message,
-        variant: "destructive",
-      });
+      toast.error("Gift not sent", { description: classifyError(error, "send the gift").message });
     } finally {
       setSending(false);
     }
