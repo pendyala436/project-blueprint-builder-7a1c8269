@@ -1362,13 +1362,14 @@ const DashboardScreen = () => {
         </div>
 
         {/* Quick Connect: Random Chat, Video Call & Private Groups */}
-        <div className="grid grid-cols-3 gap-2 animate-fade-in" style={{ animationDelay: "0.03s" }}>
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 animate-fade-in" style={{ animationDelay: "0.03s" }}>
           <RandomChatButton 
             userGender="male"
             userLanguage={userLanguage}
             userCountry={userCountry}
             walletBalance={walletBalance}
             onInsufficientBalance={() => setRechargeDialogOpen(true)}
+            className="text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
           />
           <VideoCallMiniButton 
             currentUserId={currentUserId}
@@ -1379,14 +1380,14 @@ const DashboardScreen = () => {
           <Button
             variant="aurora"
             size="lg"
-            className="gap-2"
+            className="gap-1 sm:gap-2 text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3 w-full"
             onClick={() => {
               const el = document.getElementById('private-groups-section');
               el?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            <Video className="h-5 w-5" />
-            Groups
+            <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="truncate">Groups</span>
           </Button>
         </div>
 

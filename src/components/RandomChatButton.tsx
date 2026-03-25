@@ -353,15 +353,15 @@ export const RandomChatButton = ({
         variant={variant}
         size={size}
         onClick={findRandomPartner}
-        className={`gap-2 ${className}`}
+        className={`gap-1 sm:gap-2 w-full ${className}`}
         disabled={isSearching}
       >
         {isSearching ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin shrink-0" />
         ) : (
-          <Shuffle className="h-5 w-5" />
+          <Shuffle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
         )}
-        Random Chat
+        <span className="truncate">Random Chat</span>
       </Button>
 
       <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
