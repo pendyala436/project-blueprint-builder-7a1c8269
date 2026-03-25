@@ -722,32 +722,32 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
         )}
 
         {/* Status badges */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 backdrop-blur-sm">
-            <Circle className={`w-2 h-2 ${woman.isBusy ? "fill-amber-500 text-amber-500" : "fill-emerald-500 text-emerald-500"} animate-pulse`} />
-            <span className="text-xs font-medium text-foreground">
-              {woman.isBusy ? "Busy" : "Available"}
+        <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-col gap-0.5 sm:gap-1">
+          <div className="flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-background/80 backdrop-blur-sm">
+            <Circle className={`w-1.5 h-1.5 sm:w-2 sm:h-2 ${woman.isBusy ? "fill-amber-500 text-amber-500" : "fill-emerald-500 text-emerald-500"} animate-pulse`} />
+            <span className="text-[9px] sm:text-xs font-medium text-foreground">
+              {woman.isBusy ? "Busy" : "Free"}
             </span>
           </div>
           {isPriority && (
-            <div className="px-2 py-1 rounded-full bg-primary/90 text-primary-foreground text-xs font-medium text-center">
-              Same Language
+            <div className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-primary/90 text-primary-foreground text-[9px] sm:text-xs font-medium text-center">
+              Same Lang
             </div>
           )}
           {showTranslationBadge && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/90 text-warning-foreground text-xs font-medium">
-              <Languages className="w-3 h-3" />
-              <span>Translate</span>
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-warning/90 text-warning-foreground text-[9px] sm:text-xs font-medium">
+              <Languages className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <span>Auto</span>
             </div>
           )}
           {woman.aiVerified && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-info/90 text-info-foreground text-xs font-medium">
-              <Shield className="w-3 h-3" />
-              <span>Verified</span>
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-info/90 text-info-foreground text-[9px] sm:text-xs font-medium">
+              <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <span>✓</span>
             </div>
           )}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-success/90 text-success-foreground text-xs font-medium">
-            <IndianRupee className="w-3 h-3" />
+          <div className="flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-success/90 text-success-foreground text-[9px] sm:text-xs font-medium">
+            <IndianRupee className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             <span>Earns</span>
           </div>
         </div>
