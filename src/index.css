@@ -1019,6 +1019,17 @@
     }
   }
 
+  /* Firefox scrollbar support */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
+    }
+    @media (hover: none) and (pointer: coarse) {
+      * { scrollbar-width: none; }
+    }
+  }
+
   /* Disable tap highlight on mobile */
   * {
     -webkit-tap-highlight-color: transparent;
