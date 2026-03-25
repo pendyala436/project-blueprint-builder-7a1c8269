@@ -317,9 +317,22 @@ const PersonalDetailsScreen = () => {
                   type="number"
                   placeholder="170"
                   value={heightCm}
-                  onChange={(e) => setHeightCm(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Only allow valid height range
+                    if (val === "" || (Number(val) >= 0 && Number(val) <= 250)) {
+                      setHeightCm(val);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (heightCm && (Number(heightCm) < 100 || Number(heightCm) > 250)) {
+                      setHeightCm("");
+                      toast({ title: "Invalid height", description: "Height must be between 100-250 cm", variant: "destructive" });
+                    }
+                  }}
                   min="100"
                   max="250"
+                  inputMode="numeric"
                 />
               </div>
               <div className="space-y-2">
