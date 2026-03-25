@@ -17,7 +17,8 @@ import {
   TrendingUp,
   Video,
   ShieldCheck,
-  Info
+  Info,
+  Gift
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
@@ -292,6 +293,7 @@ const AdminChatPricing = () => {
             <p>• <strong>Chat:</strong> Men (Indian &amp; non-Indian) pay per minute. Women earn half per active chat. Max 3 simultaneous chats per woman.</p>
             <p>• <strong>Video Call:</strong> 1-to-1, same language only. Men pay double what women earn.</p>
             <p>• <strong>Group Call:</strong> Hosted by Indian women only. Each man charged individually. Host earns half per active man per minute.</p>
+            <p>• <strong>Gifts:</strong> 100% of gift price deducted from man's wallet. No balance = no gift. Women receive exactly half the gift price as earnings. Platform keeps the other half.</p>
             <p>• <strong>All sessions:</strong> No duplicate billing. Indian women only earn. Min withdrawal ₹5,000. Records stored 6 months.</p>
           </CardContent>
         </Card>
@@ -636,7 +638,57 @@ const AdminChatPricing = () => {
           </CardContent>
         </Card>
 
-        {/* ── Withdrawal Settings ───────────────────────────────────────── */}
+        {/* ── Gift Pricing Rules ───────────────────────────────────────── */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-primary" />
+              Gift Pricing Rules
+            </CardTitle>
+            <CardDescription>
+              Fixed rules for gift transactions between men and women. Gift prices are managed in Gift Pricing settings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-destructive/10"><IndianRupee className="h-5 w-5 text-destructive" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Men Pay (Wallet Deduction)</p>
+                  <p className="text-2xl font-bold">100%</p>
+                  <p className="text-xs text-muted-foreground">Full gift price deducted from man's wallet. No balance = gift blocked.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Women Receive (Earnings Credit)</p>
+                  <p className="text-2xl font-bold text-primary">50%</p>
+                  <p className="text-xs text-muted-foreground">Half the gift price credited to woman's earnings balance.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10"><TrendingUp className="h-5 w-5 text-primary" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Platform Profit Per Gift</p>
+                  <p className="text-2xl font-bold text-primary">50%</p>
+                  <p className="text-xs text-muted-foreground">Platform retains the other half of every gift transaction.</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-muted/50 border border-border">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                Gift prices are configured in <strong>Admin → Gift Pricing</strong>. Men cannot send gifts if their wallet balance is insufficient. Negative balances are never allowed.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
