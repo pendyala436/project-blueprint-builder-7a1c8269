@@ -102,6 +102,17 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Mono:wght@400;500&display=swap" /></noscript>
 
+    <!-- Prevent FOUC: detect theme before paint -->
+    <script>
+      (function(){
+        var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var stored = localStorage.getItem("theme");
+        if (stored === "dark" || stored === "light") dark = stored === "dark";
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.background = dark ? "#0a0d14" : "#f5f7fa";
+      })();
+    </script>
+
     <style>
       /* Safe area padding for notched devices */
       :root {
@@ -109,6 +120,7 @@
         --sar: env(safe-area-inset-right);
         --sab: env(safe-area-inset-bottom);
         --sal: env(safe-area-inset-left);
+        --keyboard-height: 0px;
       }
       
       /* Instant render - no FOUC */
@@ -119,12 +131,24 @@
         margin: 0;
         background: #0a0d14;
         min-height: 100vh;
+        min-height: 100dvh;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
       
+      /* Light mode body bg override */
+      html:not(.dark) body {
+        background: #f5f7fa;
+      }
+      
       #root {
         min-height: 100vh;
+        min-height: 100dvh;
+      }
+      html:not(.dark) #root {
+        background: #f5f7fa;
+      }
+      html.dark #root {
         background: #0a0d14;
       }
       
@@ -134,7 +158,11 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
+        min-height: 100dvh;
         background: linear-gradient(135deg, #0a0d14 0%, #111827 100%);
+      }
+      html:not(.dark) .app-loading {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf3 100%);
       }
       
       html {
@@ -148,6 +176,11 @@
       }
       .hide-scrollbar::-webkit-scrollbar {
         display: none;
+      }
+      
+      /* iOS keyboard height CSS variable support */
+      .chat-input-bar {
+        bottom: var(--keyboard-height, env(safe-area-inset-bottom));
       }
     </style>
 
