@@ -1242,7 +1242,7 @@ const WomenDashboardScreen = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40 shadow-sm">
+      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40 shadow-sm pt-[env(safe-area-inset-top)]">
         <div className="max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MeowLogo size="sm" />
@@ -1252,21 +1252,21 @@ const WomenDashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             {/* Admin Messages */}
             <button 
-              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
               onClick={() => setShowAdminMessages(true)}
-              title="Admin Messages"
+              aria-label="Admin Messages"
             >
               <Mail className="w-[18px] h-[18px] text-primary" />
             </button>
 
             {/* Admin Chat */}
             <button 
-              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
               onClick={() => setShowAdminChat(true)}
-              title="Chat with Admin"
+              aria-label="Chat with Admin"
             >
               <Shield className="w-[18px] h-[18px] text-primary" />
             </button>
@@ -1274,9 +1274,9 @@ const WomenDashboardScreen = () => {
             {/* KYC - Indian Women Only */}
             {isIndianWoman && (
               <button 
-                className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+                className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
                 onClick={() => setShowKYCForm(true)}
-                title="Bank KYC for Payouts"
+                aria-label="Bank KYC for Payouts"
               >
                 <FileCheck className="w-[18px] h-[18px] text-primary" />
               </button>
@@ -1284,25 +1284,27 @@ const WomenDashboardScreen = () => {
 
             {/* Friends & Blocked */}
             <button 
-              className="relative p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
+              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
               onClick={() => setShowFriendsPanel(true)}
-              title="Friends & Blocked Users"
+              aria-label="Friends and Blocked Users"
             >
-              <Users2 className="w-5 h-5 text-primary" />
+              <Users2 className="w-[18px] h-[18px] text-primary" />
             </button>
 
             <button 
-              className="p-2.5 rounded-xl hover:bg-accent/80 transition-all duration-200"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
               onClick={() => navigate("/settings")}
+              aria-label="Settings"
             >
-              <Settings className="w-5 h-5 text-primary" />
+              <Settings className="w-[18px] h-[18px] text-primary" />
             </button>
 
             <button 
-              className="p-2.5 rounded-xl hover:bg-destructive/10 transition-all duration-200"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200"
               onClick={handleLogout}
+              aria-label="Log out"
             >
-              <LogOut className="w-5 h-5 text-destructive/70" />
+              <LogOut className="w-[18px] h-[18px] text-destructive/70" />
             </button>
           </div>
         </div>
@@ -1967,7 +1969,7 @@ const WomenDashboardScreen = () => {
 
       {/* Admin Messages Sheet */}
       <Sheet open={showAdminMessages} onOpenChange={setShowAdminMessages}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5 text-primary" />
@@ -1984,7 +1986,7 @@ const WomenDashboardScreen = () => {
 
       {/* Admin Chat Sheet */}
       <Sheet open={showAdminChat} onOpenChange={setShowAdminChat}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
@@ -2001,7 +2003,7 @@ const WomenDashboardScreen = () => {
 
       {/* KYC Form Sheet - Indian Women Only */}
       <Sheet open={showKYCForm} onOpenChange={setShowKYCForm}>
-        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl">
+        <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <FileCheck className="w-5 h-5 text-primary" />

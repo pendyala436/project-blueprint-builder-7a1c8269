@@ -395,13 +395,14 @@ const AdminDashboard = () => {
               Manage & monitor • {adminEmail}
             </p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 flex-wrap">
             <Button 
               onClick={handleRunCleanup} 
               disabled={runningCleanup}
               variant="outline"
               size="sm"
               className="text-xs sm:text-sm"
+              aria-label={runningCleanup ? "Running cleanup" : "Run cleanup tasks"}
             >
               <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
               {runningCleanup ? "Cleaning..." : "Cleanup"}
@@ -412,6 +413,7 @@ const AdminDashboard = () => {
                 disabled={seedingUsers}
                 size="sm"
                 className="bg-gradient-to-r from-primary to-secondary text-xs sm:text-sm"
+                aria-label={seedingUsers ? "Seeding users" : "Seed super users"}
               >
                 <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" />
                 {seedingUsers ? "Seeding..." : "Seed Users"}
