@@ -68,7 +68,7 @@ export async function preloadUserContext(userId: string): Promise<PreloadedUserC
   };
 }
 
-/** No-op — cache was removed; kept for API compatibility */
+/** @deprecated No-op — cache was removed. This export will be deleted in a future release. */
 export function clearUserContextCache(): void {
   // Nothing to clear — preloadUserContext always fetches fresh data
 }

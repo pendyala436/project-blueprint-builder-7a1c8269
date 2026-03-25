@@ -9,12 +9,10 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { clearUserContextCache } from '@/hooks/useOptimizedAuth';
 
-// Extend Window to track sign-out globally for back-button guard
-declare global {
-  // eslint-disable-next-line no-var
-  var __supabaseSignedOut: boolean;
-}
-globalThis.__supabaseSignedOut = false;
+// Module-level sign-out flag — avoids polluting globalThis/window
+let _signedOut = false;
+export const setSignedOut = (v: boolean) => { _signedOut = v; };
+export const isSignedOut = () => _signedOut;
 
 interface AuthState {
   user: User | null;
