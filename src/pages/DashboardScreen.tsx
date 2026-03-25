@@ -1212,9 +1212,9 @@ const DashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide">
             {/* Online/Offline Toggle for Men */}
-            <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/30">
+            <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
               <Switch
                 checked={isOnline}
                 onCheckedChange={(checked) => {
