@@ -191,9 +191,9 @@ const PhotoUploadScreen = () => {
 
     try {
       // Get the expected gender from registration data (defensive: ignore invalid values)
-      const storedGender = localStorage.getItem("userGender");
+      const storedGender = sessionStorage.getItem("userGender");
       const expectedGender = storedGender === "male" || storedGender === "female" ? storedGender : null;
-      if (storedGender && !expectedGender) localStorage.removeItem("userGender");
+      if (storedGender && !expectedGender) sessionStorage.removeItem("userGender");
       
       // Use client-side face-api.js for photo verification
       const result = await verifyFace(selfiePreview, expectedGender || undefined);
@@ -204,7 +204,7 @@ const PhotoUploadScreen = () => {
         // If a concrete gender was detected and differs from expected, update the stored gender
         const detected = result.detectedGender;
         if ((detected === "male" || detected === "female") && expectedGender !== detected) {
-          localStorage.setItem("userGender", detected);
+          sessionStorage.setItem("userGender", detected);
           toast({
             title: "Gender updated",
             description: `Your profile gender has been set to ${detected} based on AI detection`,
@@ -287,11 +287,11 @@ const PhotoUploadScreen = () => {
 
       if (selfiePreview) {
         const compressed = await compressImage(selfiePreview);
-        localStorage.setItem("pendingPhotoData", compressed);
+        sessionStorage.setItem("pendingPhotoData", compressed);
       }
       if (additionalPhotos.length > 0) {
         const compressedPhotos = await Promise.all(additionalPhotos.map(p => compressImage(p)));
-        localStorage.setItem("pendingAdditionalPhotos", JSON.stringify(compressedPhotos));
+        sessionStorage.setItem("pendingAdditionalPhotos", JSON.stringify(compressedPhotos));
       }
     } catch (storageError) {
       console.warn("Failed to save photos:", storageError);

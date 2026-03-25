@@ -248,12 +248,12 @@ const BasicInfoScreen = () => {
     });
     
     // Store data for next screens
-    localStorage.setItem("userEmail", email);
-    localStorage.setItem("userGender", gender);
-    localStorage.setItem("userPhone", phone);
-    localStorage.setItem("userName", fullName);
+    sessionStorage.setItem("userEmail", email);
+    sessionStorage.setItem("userGender", gender);
+    sessionStorage.setItem("userPhone", phone);
+    sessionStorage.setItem("userName", fullName);
     if (dob) {
-      localStorage.setItem("userDob", dob.toISOString());
+      sessionStorage.setItem("userDob", dob.toISOString());
     }
     
     // Navigate to personal details screen

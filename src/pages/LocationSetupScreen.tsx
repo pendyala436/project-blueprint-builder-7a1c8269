@@ -200,11 +200,11 @@ const LocationSetupScreen = () => {
     }
 
     // Save location data to localStorage for later use during account creation
-    localStorage.setItem("userCountry", country);
-    localStorage.setItem("userState", state || "");
-    localStorage.setItem("userCity", village || "");
-    if (latitude) localStorage.setItem("userLatitude", latitude.toString());
-    if (longitude) localStorage.setItem("userLongitude", longitude.toString());
+    sessionStorage.setItem("userCountry", country);
+    sessionStorage.setItem("userState", state || "");
+    sessionStorage.setItem("userCity", village || "");
+    if (latitude) sessionStorage.setItem("userLatitude", latitude.toString());
+    if (longitude) sessionStorage.setItem("userLongitude", longitude.toString());
 
     toast({
       title: "Location saved",

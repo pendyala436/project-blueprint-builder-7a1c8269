@@ -63,8 +63,8 @@ const LanguagePreferencesScreen = () => {
       if (!session?.user) {
         // During registration, no session yet — save to localStorage and continue
         if (selectedLanguages.length > 0) {
-          localStorage.setItem("userLanguagePreferences", JSON.stringify(selectedLanguages));
-          localStorage.setItem("userPrimaryLanguage", selectedLanguages[0].code);
+          sessionStorage.setItem("userLanguagePreferences", JSON.stringify(selectedLanguages));
+          sessionStorage.setItem("userPrimaryLanguage", selectedLanguages[0].code);
         }
         toast({
           title: "Preferences saved!",
