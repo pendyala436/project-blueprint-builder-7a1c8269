@@ -576,7 +576,7 @@ const AdminTransactionHistory = () => {
           </div>
 
           {/* Activity Stats */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="p-3 text-center">
               <p className="text-xs text-muted-foreground">Transactions</p>
               <p className="text-2xl font-bold">{stats.totalTransactions}</p>
