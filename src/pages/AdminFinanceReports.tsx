@@ -1069,6 +1069,7 @@ const AdminFinanceReports = () => {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
