@@ -396,6 +396,7 @@ const AdminAuditLogs = () => {
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[500px]">
+              <div className="min-w-[800px]">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
