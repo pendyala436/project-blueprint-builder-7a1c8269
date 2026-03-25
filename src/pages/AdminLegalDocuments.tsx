@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useProductionMode } from "@/hooks/useProductionMode";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { 
   ArrowLeft, 
   FileText, 
@@ -75,6 +76,7 @@ const documentTypes = [
 
 const AdminLegalDocuments = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isProduction } = useProductionMode();
@@ -356,14 +358,21 @@ const AdminLegalDocuments = () => {
     types: [...new Set(documents.map(d => d.document_type))].length,
   };
 
-  if (loading) {
+  if (adminLoading || !isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading legal documents...</p>
-        </div>
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <AdminNav>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AdminNav>
     );
   }
 

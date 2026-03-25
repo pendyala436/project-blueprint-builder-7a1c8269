@@ -50,6 +50,7 @@ import {
   Home,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 
 interface GiftItem {
   id: string;
@@ -88,8 +89,8 @@ const EMOJI_OPTIONS = ["🎁", "🌹", "❤️", "💐", "🍫", "💍", "🧸",
 
 const AdminGiftPricing = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -117,45 +118,11 @@ const AdminGiftPricing = () => {
   });
 
   useEffect(() => {
-    checkAdminAccess();
-  }, []);
-
-  useEffect(() => {
     if (isAdmin) {
       fetchGifts();
       fetchTransactionStats();
     }
   }, [isAdmin]);
-
-  const checkAdminAccess = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        navigate("/");
-        return;
-      }
-      const user = session.user;
-
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!roleData) {
-        toast.error("Access denied. Admin privileges required.");
-        navigate("/dashboard");
-        return;
-      }
-
-      setIsAdmin(true);
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      toast.error("Failed to verify admin access");
-      navigate("/dashboard");
-    }
-  };
 
   const fetchGifts = useCallback(async () => {
     try {
@@ -415,12 +382,16 @@ const AdminGiftPricing = () => {
     return CURRENCY_OPTIONS.find(c => c.code === code)?.symbol || "₹";
   };
 
-  if (loading) {
-    return (<AdminNav><div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-16 w-full" /><Skeleton className="h-96 w-full" /></div></AdminNav>);
+  if (adminLoading || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  if (!isAdmin) {
-    return null;
+  if (loading) {
+    return (<AdminNav><div className="space-y-6"><Skeleton className="h-12 w-full" /><Skeleton className="h-16 w-full" /><Skeleton className="h-96 w-full" /></div></AdminNav>);
   }
 
   return (

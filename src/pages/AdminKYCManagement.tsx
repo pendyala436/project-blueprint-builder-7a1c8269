@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -294,17 +295,22 @@ const AdminKYCManagement = () => {
     }
   };
 
+  // Rejection dialog state
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+
   const handleRejectKYC = async () => {
-    if (!selectedKYC) return;
-    const reason = prompt("Enter rejection reason:");
-    if (!reason) return;
+    if (!selectedKYC || !rejectionReason.trim()) {
+      toast.error("Please enter a rejection reason");
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from("women_kyc")
         .update({
           verification_status: "rejected",
-          rejection_reason: reason,
+          rejection_reason: rejectionReason.trim(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", selectedKYC.id);
@@ -312,7 +318,9 @@ const AdminKYCManagement = () => {
       if (error) throw error;
 
       toast.success("KYC rejected");
-      setSelectedKYC({ ...selectedKYC, verification_status: "rejected", rejection_reason: reason });
+      setSelectedKYC({ ...selectedKYC, verification_status: "rejected", rejection_reason: rejectionReason.trim() });
+      setRejectDialogOpen(false);
+      setRejectionReason("");
       loadStats();
     } catch (error) {
       console.error("Error rejecting KYC:", error);
@@ -334,6 +342,7 @@ const AdminKYCManagement = () => {
   const selectedWoman = indianWomen.find(w => w.user_id === selectedUserId);
 
   return (
+    <>
     <AdminNav>
       <div className="space-y-6">
         {/* Header */}
@@ -474,7 +483,7 @@ const AdminKYCManagement = () => {
                         </Button>
                       )}
                       {selectedKYC.verification_status !== "rejected" && (
-                        <Button size="sm" variant="destructive" onClick={handleRejectKYC}>
+                        <Button size="sm" variant="destructive" onClick={() => setRejectDialogOpen(true)}>
                           <XCircle className="h-4 w-4 mr-1" /> Reject
                         </Button>
                       )}
@@ -659,6 +668,31 @@ const AdminKYCManagement = () => {
         </div>
       </div>
     </AdminNav>
+
+      {/* Rejection Reason Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject KYC</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Rejection Reason</Label>
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter the reason for rejection..."
+              rows={3}
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => { setRejectDialogOpen(false); setRejectionReason(""); }}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRejectKYC} disabled={!rejectionReason.trim()}>
+              <XCircle className="h-4 w-4 mr-1" /> Reject KYC
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
