@@ -41,13 +41,18 @@ function boot() {
     broadcast({ user: null, session: null, isReady: true });
   });
 
-  // Safety timeout: if Supabase is unreachable, don't block the UI forever
+  // Safety timeout: 12s for slow mobile networks (2G/3G), was 5s
   const timeout = setTimeout(() => {
     if (!globalState.isReady) {
-      console.warn('[Auth] Session restore timed out after 5s, proceeding without session');
+      console.warn('[Auth] Session restore timed out after 12s, proceeding without session');
       broadcast({ user: null, session: null, isReady: true });
+
+      // Continue listening — if getSession resolves late, update state
+      sessionPromise.then(() => {
+        // Already handled by the .then() above — this is a no-op safety net
+      });
     }
-  }, 5000);
+  }, 12000);
 
   sessionPromise.finally(() => clearTimeout(timeout));
 

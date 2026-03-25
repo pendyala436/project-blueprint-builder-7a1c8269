@@ -269,7 +269,7 @@ const AdminTransactionHistory = () => {
         .select("user_id, full_name, gender, country")
         .in("user_id", Array.from(allUserIds));
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
       // Fetch gift names
       const giftIds = giftsResult.data?.map(g => g.gift_id) || [];

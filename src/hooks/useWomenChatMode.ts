@@ -334,11 +334,11 @@ async function endChatsWithNonRechargedMen(userId: string) {
       .select("user_id, balance")
       .in("user_id", manIds);
 
-    const walletMap = new Map(wallets?.map(w => [w.user_id, w.balance]) || []);
+    const walletMap = new Map(wallets?.map(w => [w.user_id, w.balance as number]) || []);
 
     // End sessions with men who have zero balance
     for (const session of sessions) {
-      const balance = walletMap.get(session.man_user_id) || 0;
+      const balance = (walletMap.get(session.man_user_id) || 0) as number;
       if (balance <= 0) {
         await supabase
           .from("active_chat_sessions")
@@ -368,11 +368,11 @@ async function endChatsWithRechargedMen(userId: string) {
       .select("user_id, balance")
       .in("user_id", manIds);
 
-    const walletMap = new Map(wallets?.map(w => [w.user_id, w.balance]) || []);
+    const walletMap = new Map(wallets?.map(w => [w.user_id, w.balance as number]) || []);
 
     // End sessions with men who have balance > 0
     for (const session of sessions) {
-      const balance = walletMap.get(session.man_user_id) || 0;
+      const balance = (walletMap.get(session.man_user_id) || 0) as number;
       if (balance > 0) {
         await supabase
           .from("active_chat_sessions")

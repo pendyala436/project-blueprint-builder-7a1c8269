@@ -836,7 +836,7 @@ const DashboardScreen = () => {
         .in("user_id", womenUserIds);
 
       const availabilityMap = new Map(
-        availabilityData?.map(a => [a.user_id, a]) || []
+        (availabilityData as any[] || []).map(a => [a.user_id, a])
       );
 
       // Get languages
@@ -845,7 +845,7 @@ const DashboardScreen = () => {
         .select("user_id, language_name")
         .in("user_id", womenUserIds);
 
-      const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
+      const languageMap = new Map((userLanguages as any[] || []).map(l => [l.user_id, l.language_name as string]));
 
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
@@ -1014,8 +1014,8 @@ const DashboardScreen = () => {
         .select("user_id, is_online")
         .in("user_id", otherUserIds);
 
-      const statusMap = new Map(statuses?.map(s => [s.user_id, s.is_online]) || []);
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      const statusMap = new Map((statuses as any[] || []).map(s => [s.user_id, s.is_online]));
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
       const matched: MatchedWoman[] = matches
         .map(m => {

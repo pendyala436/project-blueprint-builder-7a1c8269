@@ -129,7 +129,7 @@ export const useAutoReconnect = (
         .in("user_id", filteredIds);
 
       const availabilityMap = new Map(
-        availability?.map(a => [a.user_id, a]) || []
+        (availability as any[] || []).map(a => [a.user_id, a])
       );
 
       // Get languages

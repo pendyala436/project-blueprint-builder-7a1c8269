@@ -137,14 +137,14 @@ const AdminMessaging = () => {
         .select('user_id, full_name, gender, is_indian')
         .in('user_id', userIds);
 
-      const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
       const threads: InboxThread[] = userIds.map(uid => {
         const userMsgs = userMessages.filter(m => m.sender_id === uid);
-        const profile = profileMap.get(uid);
+        const profile = profileMap.get(uid) as any;
         const unread = userMsgs.filter(m => !m.is_read).length;
         return {
-          user_id: uid,
+          user_id: uid as string,
           user_name: profile?.full_name || 'Unknown User',
           gender: profile?.gender || 'Unknown',
           is_indian: profile?.is_indian || false,

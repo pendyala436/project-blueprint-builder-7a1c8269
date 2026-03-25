@@ -149,8 +149,8 @@ const EnhancedParallelChatsContainer = ({
       const earningRatePerMinute = pricing?.women_earning_rate || 2;
 
       const chatsWithUserMessages = new Set(messages.map(m => m.chat_id));
-      const profileMap = new Map(profiles.map(p => [p.user_id, p]));
-      const statusMap = new Map(statuses.map(s => [s.user_id, s.is_online]));
+      const profileMap = new Map((profiles as any[]).map(p => [p.user_id, p]));
+      const statusMap = new Map((statuses as any[]).map(s => [s.user_id, s.is_online as boolean]));
 
       // CRITICAL: Strictly ONE window per partner - use Map to deduplicate
       const partnerToSession = new Map<string, typeof sessions[0]>();

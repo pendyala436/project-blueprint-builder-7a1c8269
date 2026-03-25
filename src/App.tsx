@@ -1,11 +1,11 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, ReactNode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import SecurityProvider from "@/components/SecurityProvider";
 import { AutoLogoutWrapper } from "@/components/AutoLogoutWrapper";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
@@ -13,6 +13,7 @@ import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { Loader2 } from "lucide-react";
 import { useAutoAdjustUI } from "@/hooks/useAutoAdjustUI";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -33,155 +34,198 @@ const Loading = () => (
   </div>
 );
 
+/** Per-route Suspense wrapper with error boundary — isolates chunk failures */
+const RouteSuspense = ({ children }: { children: ReactNode }) => (
+  <ErrorBoundary showHomeButton>
+    <Suspense fallback={<Loading />}>{children}</Suspense>
+  </ErrorBoundary>
+);
+
+/** Configuration error screen shown when Supabase env vars are missing */
+const ConfigError = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="max-w-md w-full text-center space-y-4">
+      <h1 className="text-2xl font-bold text-foreground">Configuration Error</h1>
+      <p className="text-muted-foreground">
+        The app is missing required Supabase configuration. Please ensure
+        VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY are set.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="px-6 py-3 bg-primary text-primary-foreground rounded-lg"
+      >
+        Retry
+      </button>
+    </div>
+  </div>
+);
+
+// Resilient lazy imports — retry once on chunk failure
+function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
+  return lazy(() =>
+    factory().catch(() =>
+      new Promise<{ default: React.ComponentType<any> }>((resolve) => {
+        setTimeout(() => resolve(factory()), 1500);
+      })
+    )
+  );
+}
+
 // Auth & Registration
-const AuthScreen = lazy(() => import("@/pages/AuthScreen"));
-const ForgotPasswordScreen = lazy(() => import("@/pages/ForgotPasswordScreen"));
-const PasswordResetScreen = lazy(() => import("@/pages/PasswordResetScreen"));
-const PasswordResetSuccessScreen = lazy(() => import("@/pages/PasswordResetSuccessScreen"));
-const LanguageCountryScreen = lazy(() => import("@/pages/LanguageCountryScreen"));
-const BasicInfoScreen = lazy(() => import("@/pages/BasicInfoScreen"));
-const PersonalDetailsScreen = lazy(() => import("@/pages/PersonalDetailsScreen"));
-const PhotoUploadScreen = lazy(() => import("@/pages/PhotoUploadScreen"));
-const LocationSetupScreen = lazy(() => import("@/pages/LocationSetupScreen"));
-const LanguagePreferencesScreen = lazy(() => import("@/pages/LanguagePreferencesScreen"));
-const PasswordSetupScreen = lazy(() => import("@/pages/PasswordSetupScreen"));
-const TermsAgreementScreen = lazy(() => import("@/pages/TermsAgreementScreen"));
-const AIProcessingScreen = lazy(() => import("@/pages/AIProcessingScreen"));
-const RegistrationCompleteScreen = lazy(() => import("@/pages/RegistrationCompleteScreen"));
-const ApprovalPendingScreen = lazy(() => import("@/pages/ApprovalPendingScreen"));
-const WelcomeTutorialScreen = lazy(() => import("@/pages/WelcomeTutorialScreen"));
+const AuthScreen = lazyRetry(() => import("@/pages/AuthScreen"));
+const ForgotPasswordScreen = lazyRetry(() => import("@/pages/ForgotPasswordScreen"));
+const PasswordResetScreen = lazyRetry(() => import("@/pages/PasswordResetScreen"));
+const PasswordResetSuccessScreen = lazyRetry(() => import("@/pages/PasswordResetSuccessScreen"));
+const LanguageCountryScreen = lazyRetry(() => import("@/pages/LanguageCountryScreen"));
+const BasicInfoScreen = lazyRetry(() => import("@/pages/BasicInfoScreen"));
+const PersonalDetailsScreen = lazyRetry(() => import("@/pages/PersonalDetailsScreen"));
+const PhotoUploadScreen = lazyRetry(() => import("@/pages/PhotoUploadScreen"));
+const LocationSetupScreen = lazyRetry(() => import("@/pages/LocationSetupScreen"));
+const LanguagePreferencesScreen = lazyRetry(() => import("@/pages/LanguagePreferencesScreen"));
+const PasswordSetupScreen = lazyRetry(() => import("@/pages/PasswordSetupScreen"));
+const TermsAgreementScreen = lazyRetry(() => import("@/pages/TermsAgreementScreen"));
+const AIProcessingScreen = lazyRetry(() => import("@/pages/AIProcessingScreen"));
+const RegistrationCompleteScreen = lazyRetry(() => import("@/pages/RegistrationCompleteScreen"));
+const ApprovalPendingScreen = lazyRetry(() => import("@/pages/ApprovalPendingScreen"));
+const WelcomeTutorialScreen = lazyRetry(() => import("@/pages/WelcomeTutorialScreen"));
 
 // Dashboards
-const DashboardScreen = lazy(() => import("@/pages/DashboardScreen"));
-const WomenDashboardScreen = lazy(() => import("@/pages/WomenDashboardScreen"));
+const DashboardScreen = lazyRetry(() => import("@/pages/DashboardScreen"));
+const WomenDashboardScreen = lazyRetry(() => import("@/pages/WomenDashboardScreen"));
 
 // Features
-const ChatScreen = lazy(() => import("@/pages/ChatScreen"));
-const MatchingScreen = lazy(() => import("@/pages/MatchingScreen"));
-const MatchDiscoveryScreen = lazy(() => import("@/pages/MatchDiscoveryScreen"));
-const OnlineUsersScreen = lazy(() => import("@/pages/OnlineUsersScreen"));
-const ProfileDetailScreen = lazy(() => import("@/pages/ProfileDetailScreen"));
-const GiftSendingScreen = lazy(() => import("@/pages/GiftSendingScreen"));
-const WalletScreen = lazy(() => import("@/pages/WalletScreen"));
-const WomenWalletScreen = lazy(() => import("@/pages/WomenWalletScreen"));
-const SettingsScreen = lazy(() => import("@/pages/SettingsScreen"));
-const InstallApp = lazy(() => import("@/pages/InstallApp"));
+const ChatScreen = lazyRetry(() => import("@/pages/ChatScreen"));
+const MatchingScreen = lazyRetry(() => import("@/pages/MatchingScreen"));
+const MatchDiscoveryScreen = lazyRetry(() => import("@/pages/MatchDiscoveryScreen"));
+const OnlineUsersScreen = lazyRetry(() => import("@/pages/OnlineUsersScreen"));
+const ProfileDetailScreen = lazyRetry(() => import("@/pages/ProfileDetailScreen"));
+const GiftSendingScreen = lazyRetry(() => import("@/pages/GiftSendingScreen"));
+const WalletScreen = lazyRetry(() => import("@/pages/WalletScreen"));
+const WomenWalletScreen = lazyRetry(() => import("@/pages/WomenWalletScreen"));
+const SettingsScreen = lazyRetry(() => import("@/pages/SettingsScreen"));
+const InstallApp = lazyRetry(() => import("@/pages/InstallApp"));
 
 // Admin
-const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
-const AdminUserManagement = lazy(() => import("@/pages/AdminUserManagement"));
-const AdminAnalyticsDashboard = lazy(() => import("@/pages/AdminAnalyticsDashboard"));
-const AdminChatMonitoring = lazy(() => import("@/pages/AdminChatMonitoring"));
-const AdminFinanceDashboard = lazy(() => import("@/pages/AdminFinanceDashboard"));
-const AdminFinanceReports = lazy(() => import("@/pages/AdminFinanceReports"));
-const AdminTransactionHistory = lazy(() => import("@/pages/AdminTransactionHistory"));
-const AdminStatementsPage = lazy(() => import("@/pages/admin/AdminStatementsPage"));
-const AdminChatPricing = lazy(() => import("@/pages/AdminChatPricing"));
-const AdminGiftPricing = lazy(() => import("@/pages/AdminGiftPricing"));
-const AdminLanguageGroups = lazy(() => import("@/pages/AdminLanguageGroups"));
-const AdminLanguageLimits = lazy(() => import("@/pages/AdminLanguageLimits"));
-const AdminKYCManagement = lazy(() => import("@/pages/AdminKYCManagement"));
-const AdminUserLookup = lazy(() => import("@/pages/AdminUserLookup"));
-const AdminModerationScreen = lazy(() => import("@/pages/AdminModerationScreen"));
-const AdminPolicyAlerts = lazy(() => import("@/pages/AdminPolicyAlerts"));
-const AdminPerformanceMonitoring = lazy(() => import("@/pages/AdminPerformanceMonitoring"));
-const AdminLegalDocuments = lazy(() => import("@/pages/AdminLegalDocuments"));
-const AdminBackupManagement = lazy(() => import("@/pages/AdminBackupManagement"));
-const AdminAuditLogs = lazy(() => import("@/pages/AdminAuditLogs"));
-const AdminMessaging = lazy(() => import("@/pages/AdminMessaging"));
-const AdminSettings = lazy(() => import("@/pages/AdminSettings"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
+const AdminDashboard = lazyRetry(() => import("@/pages/AdminDashboard"));
+const AdminUserManagement = lazyRetry(() => import("@/pages/AdminUserManagement"));
+const AdminAnalyticsDashboard = lazyRetry(() => import("@/pages/AdminAnalyticsDashboard"));
+const AdminChatMonitoring = lazyRetry(() => import("@/pages/AdminChatMonitoring"));
+const AdminFinanceDashboard = lazyRetry(() => import("@/pages/AdminFinanceDashboard"));
+const AdminFinanceReports = lazyRetry(() => import("@/pages/AdminFinanceReports"));
+const AdminTransactionHistory = lazyRetry(() => import("@/pages/AdminTransactionHistory"));
+const AdminStatementsPage = lazyRetry(() => import("@/pages/admin/AdminStatementsPage"));
+const AdminChatPricing = lazyRetry(() => import("@/pages/AdminChatPricing"));
+const AdminGiftPricing = lazyRetry(() => import("@/pages/AdminGiftPricing"));
+const AdminLanguageGroups = lazyRetry(() => import("@/pages/AdminLanguageGroups"));
+const AdminLanguageLimits = lazyRetry(() => import("@/pages/AdminLanguageLimits"));
+const AdminKYCManagement = lazyRetry(() => import("@/pages/AdminKYCManagement"));
+const AdminUserLookup = lazyRetry(() => import("@/pages/AdminUserLookup"));
+const AdminModerationScreen = lazyRetry(() => import("@/pages/AdminModerationScreen"));
+const AdminPolicyAlerts = lazyRetry(() => import("@/pages/AdminPolicyAlerts"));
+const AdminPerformanceMonitoring = lazyRetry(() => import("@/pages/AdminPerformanceMonitoring"));
+const AdminLegalDocuments = lazyRetry(() => import("@/pages/AdminLegalDocuments"));
+const AdminBackupManagement = lazyRetry(() => import("@/pages/AdminBackupManagement"));
+const AdminAuditLogs = lazyRetry(() => import("@/pages/AdminAuditLogs"));
+const AdminMessaging = lazyRetry(() => import("@/pages/AdminMessaging"));
+const AdminSettings = lazyRetry(() => import("@/pages/AdminSettings"));
+const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 
-const App = () => {
+/** Inner component that lives inside BrowserRouter — safe to use router hooks */
+const AppShell = () => {
   useAutoAdjustUI();
 
+  if (!isSupabaseConfigured) {
+    return <ConfigError />;
+  }
+
   return (
+    <SecurityProvider>
+      <UserActivityProvider>
+        <AutoLogoutWrapper>
+          <Routes>
+            {/* Auth */}
+            <Route path="/" element={<RouteSuspense><AuthScreen /></RouteSuspense>} />
+            <Route path="/forgot-password" element={<RouteSuspense><ForgotPasswordScreen /></RouteSuspense>} />
+            <Route path="/reset-password" element={<RouteSuspense><PasswordResetScreen /></RouteSuspense>} />
+            <Route path="/password-reset-success" element={<RouteSuspense><PasswordResetSuccessScreen /></RouteSuspense>} />
+
+            {/* Registration */}
+            <Route path="/register" element={<RouteSuspense><LanguageCountryScreen /></RouteSuspense>} />
+            <Route path="/basic-info" element={<RouteSuspense><BasicInfoScreen /></RouteSuspense>} />
+            <Route path="/personal-details" element={<RouteSuspense><PersonalDetailsScreen /></RouteSuspense>} />
+            <Route path="/photo-upload" element={<RouteSuspense><PhotoUploadScreen /></RouteSuspense>} />
+            <Route path="/location-setup" element={<RouteSuspense><LocationSetupScreen /></RouteSuspense>} />
+            <Route path="/language-preferences" element={<RouteSuspense><LanguagePreferencesScreen /></RouteSuspense>} />
+            <Route path="/password-setup" element={<RouteSuspense><PasswordSetupScreen /></RouteSuspense>} />
+            <Route path="/terms-agreement" element={<RouteSuspense><TermsAgreementScreen /></RouteSuspense>} />
+            <Route path="/ai-processing" element={<RouteSuspense><AIProcessingScreen /></RouteSuspense>} />
+            <Route path="/registration-complete" element={<RouteSuspense><RegistrationCompleteScreen /></RouteSuspense>} />
+            <Route path="/approval-pending" element={<RouteSuspense><ApprovalPendingScreen /></RouteSuspense>} />
+            <Route path="/welcome" element={<RouteSuspense><WelcomeTutorialScreen /></RouteSuspense>} />
+
+            {/* Men Dashboard */}
+            <Route path="/dashboard" element={<ProtectedRoute requiredRole="male"><DashboardScreen /></ProtectedRoute>} />
+
+            {/* Women Dashboard */}
+            <Route path="/women-dashboard" element={<ProtectedRoute requiredRole="female"><WomenDashboardScreen /></ProtectedRoute>} />
+
+            {/* Shared Features */}
+            <Route path="/chat/:partnerId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
+            <Route path="/matching" element={<ProtectedRoute><MatchingScreen /></ProtectedRoute>} />
+            <Route path="/match-discovery" element={<ProtectedRoute><MatchDiscoveryScreen /></ProtectedRoute>} />
+            <Route path="/online-users" element={<ProtectedRoute><OnlineUsersScreen /></ProtectedRoute>} />
+            <Route path="/profile/:userId" element={<ProtectedRoute><ProfileDetailScreen /></ProtectedRoute>} />
+            <Route path="/send-gift/:receiverId" element={<ProtectedRoute><GiftSendingScreen /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute><WalletScreen /></ProtectedRoute>} />
+            <Route path="/women-wallet" element={<ProtectedRoute requiredRole="female"><WomenWalletScreen /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
+            <Route path="/install" element={<RouteSuspense><InstallApp /></RouteSuspense>} />
+
+            {/* Admin */}
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUserManagement /></ProtectedRoute>} />
+            <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalyticsDashboard /></ProtectedRoute>} />
+            <Route path="/admin/chat-monitoring" element={<ProtectedRoute requiredRole="admin"><AdminChatMonitoring /></ProtectedRoute>} />
+            <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><AdminFinanceDashboard /></ProtectedRoute>} />
+            <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><AdminFinanceReports /></ProtectedRoute>} />
+            <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><AdminTransactionHistory /></ProtectedRoute>} />
+            <Route path="/admin/statements" element={<ProtectedRoute requiredRole="admin"><AdminStatementsPage /></ProtectedRoute>} />
+            <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><AdminChatPricing /></ProtectedRoute>} />
+            <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><AdminGiftPricing /></ProtectedRoute>} />
+            <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><AdminLanguageGroups /></ProtectedRoute>} />
+            <Route path="/admin/language-limits" element={<ProtectedRoute requiredRole="admin"><AdminLanguageLimits /></ProtectedRoute>} />
+            <Route path="/admin/kyc" element={<ProtectedRoute requiredRole="admin"><AdminKYCManagement /></ProtectedRoute>} />
+            <Route path="/admin/user-lookup" element={<ProtectedRoute requiredRole="admin"><AdminUserLookup /></ProtectedRoute>} />
+            <Route path="/admin/moderation" element={<ProtectedRoute requiredRole="admin"><AdminModerationScreen /></ProtectedRoute>} />
+            <Route path="/admin/policy-alerts" element={<ProtectedRoute requiredRole="admin"><AdminPolicyAlerts /></ProtectedRoute>} />
+            <Route path="/admin/performance" element={<ProtectedRoute requiredRole="admin"><AdminPerformanceMonitoring /></ProtectedRoute>} />
+            <Route path="/admin/legal-documents" element={<ProtectedRoute requiredRole="admin"><AdminLegalDocuments /></ProtectedRoute>} />
+            <Route path="/admin/backups" element={<ProtectedRoute requiredRole="admin"><AdminBackupManagement /></ProtectedRoute>} />
+            <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><AdminAuditLogs /></ProtectedRoute>} />
+            <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><AdminMessaging /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+
+            <Route path="*" element={<RouteSuspense><NotFound /></RouteSuspense>} />
+          </Routes>
+          <Toaster />
+          <NetworkStatusIndicator />
+          <PWAInstallPrompt />
+        </AutoLogoutWrapper>
+      </UserActivityProvider>
+    </SecurityProvider>
+  );
+};
+
+const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <ErrorBoundary>
         <BrowserRouter>
-          <SecurityProvider>
-            <UserActivityProvider>
-            <AutoLogoutWrapper>
-              <Suspense fallback={<Loading />}>
-                <Routes>
-                  {/* Auth */}
-                  <Route path="/" element={<AuthScreen />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-                  <Route path="/reset-password" element={<PasswordResetScreen />} />
-                  <Route path="/password-reset-success" element={<PasswordResetSuccessScreen />} />
-
-                  {/* Registration — each step wrapped in ErrorBoundary */}
-                  <Route path="/register" element={<ErrorBoundary showHomeButton><LanguageCountryScreen /></ErrorBoundary>} />
-                  <Route path="/basic-info" element={<ErrorBoundary showHomeButton><BasicInfoScreen /></ErrorBoundary>} />
-                  <Route path="/personal-details" element={<ErrorBoundary showHomeButton><PersonalDetailsScreen /></ErrorBoundary>} />
-                  <Route path="/photo-upload" element={<ErrorBoundary showHomeButton><PhotoUploadScreen /></ErrorBoundary>} />
-                  <Route path="/location-setup" element={<ErrorBoundary showHomeButton><LocationSetupScreen /></ErrorBoundary>} />
-                  <Route path="/language-preferences" element={<ErrorBoundary showHomeButton><LanguagePreferencesScreen /></ErrorBoundary>} />
-                  <Route path="/password-setup" element={<ErrorBoundary showHomeButton><PasswordSetupScreen /></ErrorBoundary>} />
-                  <Route path="/terms-agreement" element={<ErrorBoundary showHomeButton><TermsAgreementScreen /></ErrorBoundary>} />
-                  <Route path="/ai-processing" element={<ErrorBoundary showHomeButton><AIProcessingScreen /></ErrorBoundary>} />
-                  <Route path="/registration-complete" element={<ErrorBoundary showHomeButton><RegistrationCompleteScreen /></ErrorBoundary>} />
-                  <Route path="/approval-pending" element={<ErrorBoundary showHomeButton><ApprovalPendingScreen /></ErrorBoundary>} />
-                  <Route path="/welcome" element={<ErrorBoundary showHomeButton><WelcomeTutorialScreen /></ErrorBoundary>} />
-
-                  {/* Men Dashboard */}
-                  <Route path="/dashboard" element={<ProtectedRoute requiredRole="male"><DashboardScreen /></ProtectedRoute>} />
-
-                  {/* Women Dashboard */}
-                  <Route path="/women-dashboard" element={<ProtectedRoute requiredRole="female"><WomenDashboardScreen /></ProtectedRoute>} />
-
-                  {/* Shared Features */}
-                  <Route path="/chat/:partnerId" element={<ProtectedRoute><ChatScreen /></ProtectedRoute>} />
-                  <Route path="/matching" element={<ProtectedRoute><MatchingScreen /></ProtectedRoute>} />
-                  <Route path="/match-discovery" element={<ProtectedRoute><MatchDiscoveryScreen /></ProtectedRoute>} />
-                  <Route path="/online-users" element={<ProtectedRoute><OnlineUsersScreen /></ProtectedRoute>} />
-                  <Route path="/profile/:userId" element={<ProtectedRoute><ProfileDetailScreen /></ProtectedRoute>} />
-                  <Route path="/send-gift/:receiverId" element={<ProtectedRoute><GiftSendingScreen /></ProtectedRoute>} />
-                  <Route path="/wallet" element={<ProtectedRoute><WalletScreen /></ProtectedRoute>} />
-                  <Route path="/women-wallet" element={<ProtectedRoute requiredRole="female"><WomenWalletScreen /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
-                  <Route path="/install" element={<InstallApp />} />
-
-                  {/* Admin — each page wrapped in its own ErrorBoundary */}
-                  <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminDashboard /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminUserManagement /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminAnalyticsDashboard /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/chat-monitoring" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminChatMonitoring /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminFinanceDashboard /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminFinanceReports /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminTransactionHistory /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/statements" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminStatementsPage /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminChatPricing /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminGiftPricing /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminLanguageGroups /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/language-limits" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminLanguageLimits /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/kyc" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminKYCManagement /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/user-lookup" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminUserLookup /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/moderation" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminModerationScreen /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/policy-alerts" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminPolicyAlerts /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/performance" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminPerformanceMonitoring /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/legal-documents" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminLegalDocuments /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/backups" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminBackupManagement /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminAuditLogs /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminMessaging /></ErrorBoundary></ProtectedRoute>} />
-                  <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><ErrorBoundary showHomeButton><AdminSettings /></ErrorBoundary></ProtectedRoute>} />
-
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-              <Toaster />
-              
-              <NetworkStatusIndicator />
-              <PWAInstallPrompt />
-            </AutoLogoutWrapper>
-            </UserActivityProvider>
-          </SecurityProvider>
+          <AppShell />
         </BrowserRouter>
       </ErrorBoundary>
     </ThemeProvider>
   </QueryClientProvider>
-  );
-};
+);
 
 export default App;
