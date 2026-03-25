@@ -763,23 +763,23 @@ const AdminChatMonitoring = () => {
               </Card>
             ) : (
               <>
-                <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+                <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
                   <Select value={monitorLanguageGroupFilter} onValueChange={setMonitorLanguageGroupFilter}>
-                    <SelectTrigger className="w-[200px]"><Users className="h-4 w-4 mr-2" /><SelectValue placeholder="Language Group" /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[200px]"><Users className="h-4 w-4 mr-2" /><SelectValue placeholder="Language Group" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Language Groups</SelectItem>
                       {languageGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.languages.length})</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Select value={monitorCountryFilter} onValueChange={setMonitorCountryFilter}>
-                    <SelectTrigger className="w-[200px]"><Globe className="h-4 w-4 mr-2" /><SelectValue placeholder="Country" /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[200px]"><Globe className="h-4 w-4 mr-2" /><SelectValue placeholder="Country" /></SelectTrigger>
                     <SelectContent><ScrollArea className="h-[300px]">
                       <SelectItem value="all">All Countries</SelectItem>
                       {countries.map(c => <SelectItem key={c.code} value={c.name}>{c.flag} {c.name}</SelectItem>)}
                     </ScrollArea></SelectContent>
                   </Select>
                   <Select value={monitorLanguageFilter} onValueChange={setMonitorLanguageFilter}>
-                    <SelectTrigger className="w-[200px]"><Languages className="h-4 w-4 mr-2" /><SelectValue placeholder="Language" /></SelectTrigger>
+                    <SelectTrigger className="w-full sm:w-[200px]"><Languages className="h-4 w-4 mr-2" /><SelectValue placeholder="Language" /></SelectTrigger>
                     <SelectContent><ScrollArea className="h-[300px]">
                       <SelectItem value="all">All Languages</SelectItem>
                       {languages.map(l => <SelectItem key={l.code} value={l.name}>{l.name} ({l.nativeName})</SelectItem>)}
