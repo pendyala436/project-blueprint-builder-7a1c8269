@@ -648,7 +648,7 @@ const AdminFinanceReports = () => {
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="All Countries" />
                   </SelectTrigger>
                   <SelectContent>
