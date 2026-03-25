@@ -665,7 +665,7 @@ const AdminFinanceReports = () => {
               <div className="flex items-center gap-2">
                 <Languages className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="All Languages" />
                   </SelectTrigger>
                   <SelectContent>
