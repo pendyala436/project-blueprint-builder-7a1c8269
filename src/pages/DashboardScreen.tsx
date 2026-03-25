@@ -845,7 +845,7 @@ const DashboardScreen = () => {
         .select("user_id, language_name")
         .in("user_id", womenUserIds);
 
-      const languageMap = new Map(userLanguages?.map(l => [l.user_id, l.language_name]) || []);
+      const languageMap = new Map((userLanguages as any[] || []).map(l => [l.user_id, l.language_name as string]));
 
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
