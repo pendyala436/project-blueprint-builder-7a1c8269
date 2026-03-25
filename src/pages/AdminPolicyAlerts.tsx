@@ -114,39 +114,7 @@ const AdminPolicyAlerts = () => {
     high: 0,
   });
 
-  useEffect(() => {
-    checkAdminAccess();
-  }, []);
-
-  const checkAdminAccess = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        navigate("/");
-        return;
-      }
-      const user = session.user;
-
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .in("role", ["admin", "moderator"])
-        .maybeSingle();
-
-      if (!roleData) {
-        toast.error("Access denied. Admin or Moderator privileges required.");
-        navigate("/dashboard");
-        return;
-      }
-
-      setIsAdmin(true);
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      toast.error("Access check failed", { description: "Unable to verify admin access. Please refresh." });
-      navigate("/dashboard");
-    }
-  };
+  // Admin access is now handled by useAdminAccess hook
 
   const loadStats = useCallback(async () => {
     try {
