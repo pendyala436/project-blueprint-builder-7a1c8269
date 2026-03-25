@@ -836,7 +836,7 @@ const DashboardScreen = () => {
         .in("user_id", womenUserIds);
 
       const availabilityMap = new Map(
-        availabilityData?.map(a => [a.user_id, a]) || []
+        (availabilityData as any[] || []).map(a => [a.user_id, a])
       );
 
       // Get languages
