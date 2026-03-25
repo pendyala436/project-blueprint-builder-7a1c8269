@@ -1092,7 +1092,7 @@ const AdminUserManagement = () => {
                       )}
                     </TableBody>
                   </Table>
-                </div></div>
+                </div>
 
                 {/* Pagination */}
                 {totalPages > 1 && (
