@@ -90,7 +90,7 @@ export const LanguageSelector = ({
   }, [gender]);
 
   // Get languages - 1000+ languages available
-  const languages: ProfileLanguage[] = useMemo(() => {
+  const allLanguages: ProfileLanguage[] = useMemo(() => {
     return languages.map(lang => ({
       ...lang,
       isIndian: INDIAN_LANGUAGE_CODES.has(lang.code)
@@ -99,15 +99,15 @@ export const LanguageSelector = ({
 
   // Filter languages based on search
   const filteredLanguages = useMemo(() => {
-    if (!searchQuery.trim()) return languages;
+    if (!searchQuery.trim()) return allLanguages;
     const query = searchQuery.toLowerCase();
-    return languages.filter(
+    return allLanguages.filter(
       lang => 
         lang.name.toLowerCase().includes(query) ||
         lang.nativeName.toLowerCase().includes(query) ||
         (lang.script && lang.script.toLowerCase().includes(query))
     );
-  }, [languages, searchQuery]);
+  }, [allLanguages, searchQuery]);
 
   // Group languages
   const indianLanguages = useMemo(() => 
