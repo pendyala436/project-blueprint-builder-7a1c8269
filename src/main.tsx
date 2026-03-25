@@ -1,5 +1,4 @@
 import { createRoot } from "react-dom/client";
-import App from "./App";
 
 // Inline critical CSS synchronously for fastest FCP
 import "./index.css";
@@ -7,23 +6,24 @@ import "./index.css";
 const APP_MOUNTED_ATTR = "data-app-mounted";
 
 // Global error handler — catches anything that slips through React ErrorBoundary
-window.addEventListener('error', (event) => {
-  console.error('[FATAL] Uncaught error:', event.error);
-  showFatalError(event.error?.message || 'Unknown error');
+window.addEventListener("error", (event) => {
+  console.error("[FATAL] Uncaught error:", event.error);
+  showFatalError(event.error?.message || "Unknown error");
 });
 
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('[FATAL] Unhandled rejection:', event.reason);
-  // Don't show UI for minor async failures, only for startup-blocking ones
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("[FATAL] Unhandled rejection:", event.reason);
+  showFatalError(event.reason instanceof Error ? event.reason.message : "Startup failed");
 });
 
 function markAppMounted() {
-  document.documentElement.setAttribute(APP_MOUNTED_ATTR, 'true');
+  document.documentElement.setAttribute(APP_MOUNTED_ATTR, "true");
 }
 
 function showFatalError(message: string) {
-  const root = document.getElementById('root');
-  if (!root || document.documentElement.getAttribute(APP_MOUNTED_ATTR) === 'true') return;
+  const root = document.getElementById("root");
+  if (!root || document.documentElement.getAttribute(APP_MOUNTED_ATTR) === "true") return;
+
   root.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0d14;color:#fff;font-family:sans-serif;padding:20px;text-align:center">
       <div>
@@ -37,20 +37,27 @@ function showFatalError(message: string) {
   `;
 }
 
-// Render with error boundary
-try {
-  const root = createRoot(document.getElementById("root")!);
+async function bootstrap() {
+  const rootElement = document.getElementById("root");
+  if (!rootElement) {
+    throw new Error("Root element not found");
+  }
+
+  const root = createRoot(rootElement);
+  const { default: App } = await import("./App");
   root.render(<App />);
   requestAnimationFrame(() => {
     markAppMounted();
   });
-} catch (err) {
-  console.error('[FATAL] React render failed:', err);
-  showFatalError(err instanceof Error ? err.message : 'React failed to start');
 }
 
+bootstrap().catch((err) => {
+  console.error("[FATAL] App bootstrap failed:", err);
+  showFatalError(err instanceof Error ? err.message : "App failed to start");
+});
+
 // Load polyfills in background (non-blocking)
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   const idleCallback = window.requestIdleCallback?.bind(window);
   const loadPolyfills = () => {
     import("./lib/polyfills").then(({ default: loadPolyfills }) => {

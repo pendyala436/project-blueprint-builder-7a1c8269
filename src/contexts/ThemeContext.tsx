@@ -1022,26 +1022,30 @@ const STORAGE_KEY_THEME = 'app-theme';
 const STORAGE_KEY_MODE = 'app-theme-mode';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeId, setThemeId] = useState<ThemeId>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem(STORAGE_KEY_THEME) as ThemeId) || 'aurora';
+  const getStoredValue = <T extends string>(key: string, fallback: T): T => {
+    if (typeof window === 'undefined') return fallback;
+    try {
+      return (localStorage.getItem(key) as T) || fallback;
+    } catch {
+      return fallback;
     }
-    return 'aurora';
-  });
+  };
 
-  const [mode, setModeState] = useState<ThemeMode>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem(STORAGE_KEY_MODE) as ThemeMode) || 'system';
+  const persistValue = (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Ignore storage failures in restricted browsers/webviews
     }
-    return 'system';
-  });
+  };
 
+  const [themeId, setThemeId] = useState<ThemeId>(() => getStoredValue(STORAGE_KEY_THEME, 'aurora' as ThemeId));
+  const [mode, setModeState] = useState<ThemeMode>(() => getStoredValue(STORAGE_KEY_MODE, 'system' as ThemeMode));
   const [resolvedMode, setResolvedMode] = useState<'light' | 'dark'>('light');
 
-  // Resolve system preference
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const updateResolvedMode = () => {
       if (mode === 'system') {
         setResolvedMode(mediaQuery.matches ? 'dark' : 'light');
@@ -1050,37 +1054,48 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const addMediaListener = () => {
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', updateResolvedMode);
+      } else {
+        mediaQuery.addListener?.(updateResolvedMode);
+      }
+    };
+
+    const removeMediaListener = () => {
+      if (typeof mediaQuery.removeEventListener === 'function') {
+        mediaQuery.removeEventListener('change', updateResolvedMode);
+      } else {
+        mediaQuery.removeListener?.(updateResolvedMode);
+      }
+    };
+
     updateResolvedMode();
-    mediaQuery.addEventListener('change', updateResolvedMode);
-    return () => mediaQuery.removeEventListener('change', updateResolvedMode);
+    addMediaListener();
+    return () => removeMediaListener();
   }, [mode]);
 
-  // Apply theme colors to CSS variables
   useEffect(() => {
     const theme = THEMES[themeId];
     const colors = theme[resolvedMode];
     const root = document.documentElement;
 
-    // Apply dark class for dark mode
     root.classList.toggle('dark', resolvedMode === 'dark');
 
-    // Apply all color variables
     Object.entries(colors).forEach(([key, value]) => {
       const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
       root.style.setProperty(`--${cssKey}`, value);
     });
 
-    // Update gradients based on theme
     const primaryHsl = colors.primary;
     const accentHsl = colors.accent;
     const secondaryHsl = colors.secondary;
-    
+
     root.style.setProperty('--gradient-primary', `linear-gradient(135deg, hsl(${primaryHsl}), hsl(${accentHsl}))`);
     root.style.setProperty('--gradient-hero', `linear-gradient(180deg, hsl(${colors.background}) 0%, hsl(${colors.card}) 100%)`);
     root.style.setProperty('--gradient-aurora', `linear-gradient(135deg, hsl(${primaryHsl}), hsl(${secondaryHsl}), hsl(${accentHsl}))`);
     root.style.setProperty('--shadow-glow', `0 0 40px hsl(${primaryHsl} / 0.25)`);
 
-    // Update sidebar colors
     root.style.setProperty('--sidebar-background', resolvedMode === 'dark' ? colors.card : '230 35% 15%');
     root.style.setProperty('--sidebar-foreground', resolvedMode === 'dark' ? colors.foreground : '200 50% 95%');
     root.style.setProperty('--sidebar-primary', colors.primary);
@@ -1090,31 +1105,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--sidebar-border', resolvedMode === 'dark' ? colors.border : '230 30% 25%');
     root.style.setProperty('--sidebar-ring', colors.primary);
 
-    // Apply semantic status colors - fixed values for consistent meaning
-    // Success is always green regardless of theme
     root.style.setProperty('--success', '142 71% 45%');
     root.style.setProperty('--success-foreground', '0 0% 100%');
-    // Warning uses a warm variant derived from primary
     root.style.setProperty('--warning', '38 92% 50%');
     root.style.setProperty('--warning-foreground', '0 0% 100%');
-    // Info uses primary color
     root.style.setProperty('--info', primaryHsl);
     root.style.setProperty('--info-foreground', colors.primaryForeground);
-    // Status indicators
     root.style.setProperty('--online', accentHsl);
     root.style.setProperty('--offline', colors.mutedForeground);
     root.style.setProperty('--busy', '38 92% 50%');
     root.style.setProperty('--away', '38 92% 50%');
-
   }, [themeId, resolvedMode]);
 
-  // Persist to localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_THEME, themeId);
+    persistValue(STORAGE_KEY_THEME, themeId);
   }, [themeId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MODE, mode);
+    persistValue(STORAGE_KEY_MODE, mode);
   }, [mode]);
 
   const setTheme = (newThemeId: ThemeId) => {
