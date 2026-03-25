@@ -1252,59 +1252,59 @@ const WomenDashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-0.5 sm:gap-1">
+          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide max-w-[60vw] sm:max-w-none">
             {/* Admin Messages */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowAdminMessages(true)}
               aria-label="Admin Messages"
             >
-              <Mail className="w-[18px] h-[18px] text-primary" />
+              <Mail className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             {/* Admin Chat */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowAdminChat(true)}
               aria-label="Chat with Admin"
             >
-              <Shield className="w-[18px] h-[18px] text-primary" />
+              <Shield className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             {/* KYC - Indian Women Only */}
             {isIndianWoman && (
               <button 
-                className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
+                className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
                 onClick={() => setShowKYCForm(true)}
                 aria-label="Bank KYC for Payouts"
               >
-                <FileCheck className="w-[18px] h-[18px] text-primary" />
+                <FileCheck className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
               </button>
             )}
 
             {/* Friends & Blocked */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowFriendsPanel(true)}
               aria-label="Friends and Blocked Users"
             >
-              <Users2 className="w-[18px] h-[18px] text-primary" />
+              <Users2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             <button 
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => navigate("/settings")}
               aria-label="Settings"
             >
-              <Settings className="w-[18px] h-[18px] text-primary" />
+              <Settings className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             <button 
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200"
+              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200 flex-shrink-0"
               onClick={handleLogout}
               aria-label="Log out"
             >
-              <LogOut className="w-[18px] h-[18px] text-destructive/70" />
+              <LogOut className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-destructive/70" />
             </button>
           </div>
         </div>
@@ -1369,22 +1369,22 @@ const WomenDashboardScreen = () => {
               size="lg"
               hasGoldenBadge={true}
               chatMode={chatMode.currentMode}
-              className="w-full"
+              className="w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3 gap-1 sm:gap-2"
             />
           ) : (
             <Button
               variant="aurora"
               size="lg"
-              className="gap-2 w-full"
+              className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
               onClick={handlePurchaseGoldenBadge}
               disabled={isPurchasingBadge}
             >
               {isPurchasingBadge ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin shrink-0" />
               ) : (
                 <>
-                  <Star className="h-5 w-5" />
-                  Get Badge to Chat
+                  <Star className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                  <span className="truncate">Get Badge</span>
                 </>
               )}
             </Button>
@@ -1392,14 +1392,14 @@ const WomenDashboardScreen = () => {
           <Button
             variant="aurora"
             size="lg"
-            className="gap-2 w-full"
+            className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
             onClick={() => {
               const el = document.getElementById('women-private-groups-section');
               el?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            <Video className="h-5 w-5" />
-            Private Groups
+            <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+            <span className="truncate">Private Groups</span>
           </Button>
         </div>
 

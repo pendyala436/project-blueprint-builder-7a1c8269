@@ -619,7 +619,7 @@ const MatchingScreen = () => {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
               {sameLanguageWomen.map((woman) => (
                 <WomanCard 
                   key={woman.userId}
@@ -651,7 +651,7 @@ const MatchingScreen = () => {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
               {otherWomen.map((woman) => (
                 <WomanCard 
                   key={woman.userId}
@@ -722,77 +722,77 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
         )}
 
         {/* Status badges */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/80 backdrop-blur-sm">
-            <Circle className={`w-2 h-2 ${woman.isBusy ? "fill-amber-500 text-amber-500" : "fill-emerald-500 text-emerald-500"} animate-pulse`} />
-            <span className="text-xs font-medium text-foreground">
-              {woman.isBusy ? "Busy" : "Available"}
+        <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex flex-col gap-0.5 sm:gap-1">
+          <div className="flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-background/80 backdrop-blur-sm">
+            <Circle className={`w-1.5 h-1.5 sm:w-2 sm:h-2 ${woman.isBusy ? "fill-amber-500 text-amber-500" : "fill-emerald-500 text-emerald-500"} animate-pulse`} />
+            <span className="text-[9px] sm:text-xs font-medium text-foreground">
+              {woman.isBusy ? "Busy" : "Free"}
             </span>
           </div>
           {isPriority && (
-            <div className="px-2 py-1 rounded-full bg-primary/90 text-primary-foreground text-xs font-medium text-center">
-              Same Language
+            <div className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-primary/90 text-primary-foreground text-[9px] sm:text-xs font-medium text-center">
+              Same Lang
             </div>
           )}
           {showTranslationBadge && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/90 text-warning-foreground text-xs font-medium">
-              <Languages className="w-3 h-3" />
-              <span>Translate</span>
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-warning/90 text-warning-foreground text-[9px] sm:text-xs font-medium">
+              <Languages className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <span>Auto</span>
             </div>
           )}
           {woman.aiVerified && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-info/90 text-info-foreground text-xs font-medium">
-              <Shield className="w-3 h-3" />
-              <span>Verified</span>
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-info/90 text-info-foreground text-[9px] sm:text-xs font-medium">
+              <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <span>✓</span>
             </div>
           )}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-success/90 text-success-foreground text-xs font-medium">
-            <IndianRupee className="w-3 h-3" />
+          <div className="flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full bg-success/90 text-success-foreground text-[9px] sm:text-xs font-medium">
+            <IndianRupee className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             <span>Earns</span>
           </div>
         </div>
       </div>
 
       {/* Info */}
-      <div className="p-4 space-y-3">
+      <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3">
         <div>
-          <h4 className="font-semibold text-foreground truncate">{woman.fullName}</h4>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+          <h4 className="font-semibold text-sm sm:text-base text-foreground truncate">{woman.fullName}</h4>
+          <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm text-muted-foreground flex-wrap">
             {woman.age && <span>{woman.age} yrs</span>}
             <span>•</span>
-            <div className="flex items-center gap-1">
-              <Languages className="w-3.5 h-3.5" />
-              <span>{woman.motherTongue}</span>
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Languages className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span className="truncate max-w-[60px] sm:max-w-none">{woman.motherTongue}</span>
             </div>
             {woman.country && (
               <>
                 <span>•</span>
-                <span>{woman.country}</span>
+                <span className="truncate max-w-[50px] sm:max-w-none">{woman.country}</span>
               </>
             )}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2">
           <Button 
             variant={woman.isBusy ? "outline" : "gradient"}
             size="sm"
-            className="flex-1"
+            className="flex-1 text-[10px] xs:text-xs sm:text-sm gap-1 !px-2 sm:!px-3"
             onClick={onConnect}
             disabled={isConnecting}
           >
             {isConnecting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin shrink-0" />
             ) : woman.isBusy ? (
               <>
-                <Clock className="w-4 h-4 mr-1" />
-                Queue
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Queue</span>
               </>
             ) : (
               <>
-                <MessageCircle className="w-4 h-4 mr-1" />
-                Chat
+                <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Chat</span>
               </>
             )}
           </Button>
@@ -800,8 +800,9 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
             variant="outline" 
             size="sm"
             onClick={onViewProfile}
+            className="!px-2 sm:!px-3"
           >
-            <User className="w-4 h-4" />
+            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>

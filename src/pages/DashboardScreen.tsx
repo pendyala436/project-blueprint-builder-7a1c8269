@@ -1217,9 +1217,9 @@ const DashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide max-w-[60vw] sm:max-w-none">
             {/* Online/Offline Toggle for Men */}
-            <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
+            <div className="flex items-center gap-1 mr-1 px-1.5 sm:px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
               <Switch
                 checked={isOnline}
                 onCheckedChange={(checked) => {
@@ -1232,64 +1232,64 @@ const DashboardScreen = () => {
                 className="data-[state=checked]:bg-primary scale-75"
               />
               <span className={`text-[10px] font-medium ${isOnline ? 'text-primary' : 'text-muted-foreground'}`}>
-                {isOnline ? 'Online' : 'Offline'}
+                {isOnline ? 'On' : 'Off'}
               </span>
             </div>
             {/* Admin Messages */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowAdminMessages(true)}
               aria-label="Admin Messages"
             >
-              <Mail className="w-[18px] h-[18px] text-primary" />
+              <Mail className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             {/* Admin Chat */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowAdminChat(true)}
               aria-label="Chat with Admin"
             >
-              <Shield className="w-[18px] h-[18px] text-primary" />
+              <Shield className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             {/* Notifications */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               aria-label={`Notifications${stats.unreadNotifications > 0 ? ` (${stats.unreadNotifications} unread)` : ''}`}
               onClick={() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              <BellRing className="w-[18px] h-[18px] text-primary" />
+              <BellRing className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
               {stats.unreadNotifications > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
               )}
             </button>
 
             {/* Friends & Blocked */}
             <button 
-              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
+              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowFriendsPanel(true)}
               aria-label="Friends and Blocked Users"
             >
-              <Users2 className="w-[18px] h-[18px] text-primary" />
+              <Users2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             {/* Settings */}
             <button 
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
+              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => navigate('/settings')}
               aria-label="Settings"
             >
-              <Settings className="w-[18px] h-[18px] text-primary" />
+              <Settings className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
             </button>
 
             {/* Logout */}
             <button 
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200 flex-shrink-0"
+              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200 flex-shrink-0"
               onClick={handleLogout}
               aria-label="Log out"
             >
-              <LogOut className="w-[18px] h-[18px] text-destructive/70" />
+              <LogOut className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-destructive/70" />
             </button>
           </div>
         </div>
