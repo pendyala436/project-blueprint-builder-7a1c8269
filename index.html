@@ -194,8 +194,21 @@
 
     <!-- Cache recovery: clear stale service workers on load failures -->
     <script>
-      // Fix 11: If React doesn't render within 15s, clear SW cache and reload once
+      // Fix 11: If React doesn't render within timeout, clear SW cache and reload
+      // Android Chrome is aggressive with SW caching — use shorter timeout on Android
       (function() {
+        var isAndroid = /Android/i.test(navigator.userAgent);
+        var timeout = isAndroid ? 8000 : 15000; // 8s on Android, 15s elsewhere
+        
+        // Android-specific: Force SW update check on every page load
+        if (isAndroid && 'serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(r) {
+              if (r.active) r.update();
+            });
+          });
+        }
+        
         var timer = setTimeout(function() {
           var root = document.getElementById('root');
           if (root && root.children.length <= 1) {
@@ -204,8 +217,14 @@
                 && navigator.connection.effectiveType.includes("2g")) {
               return;
             }
-            if (sessionStorage.getItem('sw-recovery')) return; // already tried
-            sessionStorage.setItem('sw-recovery', '1');
+            var recoveryKey = 'sw-recovery';
+            var attempts = parseInt(sessionStorage.getItem(recoveryKey) || '0');
+            if (attempts >= 2) {
+              // After 2 failed attempts, show manual recovery UI
+              root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0d14;color:#fff;font-family:sans-serif;padding:20px;text-align:center"><div><h1 style="font-size:20px;margin-bottom:12px">Loading failed</h1><p style="color:#888;margin-bottom:20px;font-size:14px">The app could not load. This is usually caused by a stale cache.</p><button onclick="(async function(){if(\'serviceWorker\' in navigator){var r=await navigator.serviceWorker.getRegistrations();await Promise.all(r.map(function(r){return r.unregister()}))}if(\'caches\' in window){var k=await caches.keys();await Promise.all(k.map(function(k){return caches.delete(k)}))}sessionStorage.clear();location.reload()})()" style="padding:12px 28px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;min-height:44px">Clear Cache & Reload</button></div></div>';
+              return;
+            }
+            sessionStorage.setItem(recoveryKey, String(attempts + 1));
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.getRegistrations().then(function(regs) {
                 regs.forEach(function(r) { r.unregister(); });
@@ -218,7 +237,7 @@
             }
             setTimeout(function() { location.reload(); }, 500);
           }
-        }, 15000);
+        }, timeout);
         // Cancel timer once React renders
         var obs = new MutationObserver(function() {
           var root = document.getElementById('root');
