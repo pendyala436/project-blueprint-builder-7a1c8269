@@ -72,18 +72,12 @@ const THEME_OPTIONS = [
   { value: "system", label: "System" },
 ];
 
-const LANGUAGE_OPTIONS = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "hi", label: "Hindi" },
-  { value: "zh", label: "Chinese" },
-  { value: "ar", label: "Arabic" },
-  { value: "pt", label: "Portuguese" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "ja", label: "Japanese" },
-  { value: "ko", label: "Korean" },
-];
+import { languages } from "@/data/languages";
+
+const LANGUAGE_OPTIONS = languages.map(lang => ({
+  value: lang.code,
+  label: lang.name,
+}));
 
 const AdminSettings = () => {
   const navigate = useNavigate();
