@@ -935,6 +935,7 @@
     color: hsl(var(--foreground));
     background-color: hsl(var(--background));
     /* Minimum readable font size */
+    font-size: 16px; /* IE11 / Legacy Edge fallback */
     font-size: max(16px, 1rem);
     line-height: 1.5;
     /* Universal word break */
