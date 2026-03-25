@@ -1212,9 +1212,9 @@ const DashboardScreen = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide">
             {/* Online/Offline Toggle for Men */}
-            <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/30">
+            <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
               <Switch
                 checked={isOnline}
                 onCheckedChange={(checked) => {
@@ -1232,7 +1232,7 @@ const DashboardScreen = () => {
             </div>
             {/* Admin Messages */}
             <button 
-              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowAdminMessages(true)}
               title="Admin Messages"
             >
@@ -1241,7 +1241,7 @@ const DashboardScreen = () => {
 
             {/* Admin Chat */}
             <button 
-              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowAdminChat(true)}
               title="Chat with Admin"
             >
@@ -1250,7 +1250,7 @@ const DashboardScreen = () => {
 
             {/* Notifications */}
             <button 
-              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               title="Notifications"
               onClick={() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' })}
             >
@@ -1262,7 +1262,7 @@ const DashboardScreen = () => {
 
             {/* Friends & Blocked */}
             <button 
-              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="relative p-2 rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => setShowFriendsPanel(true)}
               title="Friends & Blocked Users"
             >
@@ -1271,15 +1271,16 @@ const DashboardScreen = () => {
 
             {/* Settings */}
             <button 
-              className="p-2 rounded-lg hover:bg-accent/80 transition-all duration-200"
+              className="p-2 rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
               onClick={() => navigate('/settings')}
+              title="Settings"
             >
               <Settings className="w-[18px] h-[18px] text-primary" />
             </button>
 
             {/* Logout */}
             <button 
-              className="p-2 rounded-lg hover:bg-destructive/10 transition-all duration-200"
+              className="p-2 rounded-lg hover:bg-destructive/10 transition-all duration-200 flex-shrink-0"
               onClick={handleLogout}
             >
               <LogOut className="w-[18px] h-[18px] text-destructive/70" />
