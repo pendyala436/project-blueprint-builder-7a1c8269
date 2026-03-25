@@ -200,6 +200,13 @@ const AuthScreen = () => {
   }, []);
 
   const handleLogin = useCallback(async () => {
+    // Rate limiting check
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const { toast } = await import("@/hooks/use-toast");
+      toast({ title: "Too many attempts", description: `Please wait ${lockoutCountdown} seconds before trying again.`, variant: "destructive" });
+      return;
+    }
+
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
