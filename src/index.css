@@ -960,6 +960,7 @@
     -ms-user-select: text;
     user-select: text;
     /* Prevent zoom on iOS when focusing inputs - use 16px minimum */
+    font-size: 16px; /* IE11 / Legacy Edge fallback */
     font-size: max(16px, 1rem) !important;
     /* Better text rendering in inputs */
     -webkit-font-smoothing: antialiased;
