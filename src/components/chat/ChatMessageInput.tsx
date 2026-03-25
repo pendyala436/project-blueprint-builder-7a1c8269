@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2 } from 'lucide-react';
+import { chatRateLimiter } from '@/lib/validation';
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
@@ -40,8 +41,13 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [onTyping]);
 
   const handleSend = useCallback(async () => {
-    const text = message.trim();
+    const text = message.trim().replace(/<[^>]*>/g, ""); // Sanitize HTML
     if (!text || disabled || isSending) return;
+
+    // Rate limit check
+    if (!chatRateLimiter.canProceed()) {
+      return; // Silently block rapid-fire sends
+    }
 
     setIsSending(true);
     try {

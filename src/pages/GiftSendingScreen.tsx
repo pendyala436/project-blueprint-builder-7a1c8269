@@ -168,6 +168,17 @@ const GiftSendingScreen = () => {
       return;
     }
 
+    // Validate gift message length and sanitize
+    const sanitizedMessage = giftMessage
+      ? giftMessage.replace(/<[^>]*>/g, "").trim().slice(0, 200)
+      : undefined;
+
+    // Prevent sending gift to self
+    if (currentUserId === receiverId) {
+      toast({ title: "Error", description: "You cannot send a gift to yourself", variant: "destructive" });
+      return;
+    }
+
     setSending(true);
     try {
       // Use atomic transaction function for ACID compliance
@@ -175,7 +186,7 @@ const GiftSendingScreen = () => {
         currentUserId,
         receiverId,
         selectedGift.id,
-        giftMessage || undefined
+        sanitizedMessage
       );
 
       if (result.success) {

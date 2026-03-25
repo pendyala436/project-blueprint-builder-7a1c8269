@@ -426,20 +426,41 @@ const ProfileEditDialog = ({ open, onOpenChange, onProfileUpdated }: ProfileEdit
    * Protected fields (phone, gender) are NOT sent to update
    */
   const handleSave = async () => {
+    // Client-side validation before saving
+    if (profile.full_name && (profile.full_name.trim().length < 2 || profile.full_name.trim().length > 100)) {
+      toast({ title: "Invalid Name", description: "Name must be between 2-100 characters", variant: "destructive" });
+      return;
+    }
+    if (profile.bio && profile.bio.trim().length > 500) {
+      toast({ title: "Bio too long", description: "Bio must be less than 500 characters", variant: "destructive" });
+      return;
+    }
+    if (profile.height_cm !== null && profile.height_cm !== undefined && (profile.height_cm < 100 || profile.height_cm > 250)) {
+      toast({ title: "Invalid Height", description: "Height must be between 100-250 cm", variant: "destructive" });
+      return;
+    }
+    if (profile.occupation && profile.occupation.trim().length > 50) {
+      toast({ title: "Occupation too long", description: "Occupation must be less than 50 characters", variant: "destructive" });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       const user = session.user;
 
+      // Sanitize text fields before saving
+      const sanitize = (v: string | null) => v ? v.replace(/<[^>]*>/g, "").trim() : v;
+
       // Note: phone and gender are NOT included as they are protected fields
       const profileData = {
-        full_name: profile.full_name,
+        full_name: sanitize(profile.full_name),
         date_of_birth: profile.date_of_birth,
         country: profile.country,
         state: profile.state,
-        bio: profile.bio,
-        occupation: profile.occupation,
+        bio: sanitize(profile.bio),
+        occupation: sanitize(profile.occupation),
         education_level: profile.education_level,
         height_cm: profile.height_cm,
         body_type: profile.body_type,
