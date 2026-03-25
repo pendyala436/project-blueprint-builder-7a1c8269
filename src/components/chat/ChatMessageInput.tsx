@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2 } from 'lucide-react';
+import { chatRateLimiter } from '@/lib/validation';
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
