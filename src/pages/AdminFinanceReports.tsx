@@ -630,7 +630,7 @@ const AdminFinanceReports = () => {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
