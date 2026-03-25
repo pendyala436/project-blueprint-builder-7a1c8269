@@ -11,6 +11,7 @@ interface ChatMessageInputProps {
   placeholder?: string;
   className?: string;
   userLanguage?: string;
+  maxLength?: number;
 }
 
 export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
