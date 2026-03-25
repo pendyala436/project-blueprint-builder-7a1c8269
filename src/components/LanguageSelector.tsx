@@ -148,6 +148,14 @@ export const LanguageSelector = ({
       }
       const user = session.user;
 
+      // Determine user gender for profile sync
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("gender")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const gender = profileData?.gender?.toLowerCase();
+
       // Update profile preferred language
       await supabase
         .from("profiles")
@@ -156,6 +164,19 @@ export const LanguageSelector = ({
           primary_language: tempSelectedLanguage.name 
         })
         .eq("user_id", user.id);
+
+      // Sync to gender-specific profile table so dashboard picks up the change
+      if (gender === "male") {
+        await supabase
+          .from("male_profiles")
+          .update({ primary_language: tempSelectedLanguage.name, preferred_language: tempSelectedLanguage.name })
+          .eq("user_id", user.id);
+      } else if (gender === "female") {
+        await supabase
+          .from("female_profiles")
+          .update({ primary_language: tempSelectedLanguage.name, preferred_language: tempSelectedLanguage.name })
+          .eq("user_id", user.id);
+      }
 
       // Update or insert user_languages
       const { data: existingLang } = await supabase

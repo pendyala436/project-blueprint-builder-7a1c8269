@@ -207,12 +207,21 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
       // Sync language change to profiles and user_languages tables
       // so matching/discovery reflects the updated language
       if (settings.language !== originalSettings.language) {
+        // Determine user gender for profile sync
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("gender")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const gender = profileData?.gender?.toLowerCase();
+
+        // Sync to all relevant tables
         await Promise.allSettled([
           supabase
             .from("profiles")
             .update({
               primary_language: settings.language,
-              preferred_language: selectedLanguageCode,
+              preferred_language: settings.language,
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", user.id),
@@ -224,6 +233,19 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
               language_code: selectedLanguageCode,
             }, { onConflict: "user_id,language_code" }),
         ]);
+
+        // Sync to gender-specific profile table so dashboard picks up the change
+        if (gender === "male") {
+          await supabase
+            .from("male_profiles")
+            .update({ primary_language: settings.language, preferred_language: settings.language })
+            .eq("user_id", user.id);
+        } else if (gender === "female") {
+          await supabase
+            .from("female_profiles")
+            .update({ primary_language: settings.language, preferred_language: settings.language })
+            .eq("user_id", user.id);
+        }
       }
 
       // Save parallel chat settings
