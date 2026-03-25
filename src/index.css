@@ -1023,7 +1023,30 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* iOS-specific styles */
+  /* Focus-visible for keyboard accessibility (WCAG 2.1) */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
+
+  /* Skip to content link for screen readers */
+  .skip-to-content {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    z-index: 9999;
+    padding: 0.75rem 1.5rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 var(--radius) 0;
+  }
+  .skip-to-content:focus {
+    top: 0;
+  }
+
   .ios-notch {
     /* Extra padding for notch area */
   }
