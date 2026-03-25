@@ -178,6 +178,21 @@ const AuthScreen = () => {
     redirectUser();
   }, [user, isReady, navigate]);
 
+  // Rate-limiting lockout countdown
+  useEffect(() => {
+    if (!lockoutUntil) return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+      setLockoutCountdown(remaining);
+      if (remaining <= 0) {
+        setLockoutUntil(null);
+        setFailedAttempts(0);
+        attemptsWindowRef.current = Date.now();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
+
 
   const validateEmail = useCallback((email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
