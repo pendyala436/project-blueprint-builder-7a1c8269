@@ -278,7 +278,7 @@ const WomenWalletScreen = () => {
               <p className="text-sm text-muted-foreground">
                 {canWithdraw
                   ? t("requestWithdrawal", "Request a withdrawal to your account")
-                  : `${t("minimumBalance", "Minimum")}: ₹${minWithdrawal.toLocaleString()}`}
+                  : `${t("minimumBalance", "Minimum")}: ₹${effectiveMin.toLocaleString()}`}
               </p>
             </div>
             <Button onClick={() => setWithdrawDialogOpen(true)} disabled={!canWithdraw} className="gap-2">
