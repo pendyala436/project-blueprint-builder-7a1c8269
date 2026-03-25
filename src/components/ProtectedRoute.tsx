@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthReady } from '@/hooks/useAuthReady';
+import { useAuthReady, isSignedOut } from '@/hooks/useAuthReady';
 import { Loader2 } from 'lucide-react';
 
 type RequiredRole = 'male' | 'female' | 'admin' | 'authenticated';
