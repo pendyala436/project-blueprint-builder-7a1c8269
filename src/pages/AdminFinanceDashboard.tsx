@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import AdminNav from "@/components/AdminNav";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import { Button } from "@/components/ui/button";
