@@ -575,7 +575,7 @@ export const FriendsBlockedPanel = ({
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-300px)]">
+                <ScrollArea className="h-[calc(100dvh-300px)] min-h-[180px]">
                   {browseLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
