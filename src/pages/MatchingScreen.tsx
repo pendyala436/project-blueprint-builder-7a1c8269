@@ -754,20 +754,20 @@ const WomanCard = ({ woman, onConnect, onViewProfile, isConnecting, isPriority, 
       </div>
 
       {/* Info */}
-      <div className="p-4 space-y-3">
+      <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3">
         <div>
-          <h4 className="font-semibold text-foreground truncate">{woman.fullName}</h4>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+          <h4 className="font-semibold text-sm sm:text-base text-foreground truncate">{woman.fullName}</h4>
+          <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm text-muted-foreground flex-wrap">
             {woman.age && <span>{woman.age} yrs</span>}
             <span>•</span>
-            <div className="flex items-center gap-1">
-              <Languages className="w-3.5 h-3.5" />
-              <span>{woman.motherTongue}</span>
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Languages className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span className="truncate max-w-[60px] sm:max-w-none">{woman.motherTongue}</span>
             </div>
             {woman.country && (
               <>
                 <span>•</span>
-                <span>{woman.country}</span>
+                <span className="truncate max-w-[50px] sm:max-w-none">{woman.country}</span>
               </>
             )}
           </div>
