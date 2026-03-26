@@ -6,11 +6,12 @@ import { toast } from "sonner";
  * session state. Role check result is cached in module-level state to avoid
  * redundant DB queries on every route navigation.
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthReady, isSignedOut } from '@/hooks/useAuthReady';
 import { Loader2 } from 'lucide-react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 type RequiredRole = 'male' | 'female' | 'admin' | 'authenticated';
 
@@ -219,7 +220,17 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
     );
   }
 
-  return authorized ? <>{children}</> : null;
+  return authorized ? (
+    <ErrorBoundary showHomeButton>
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  ) : null;
 };
 
 export default ProtectedRoute;
