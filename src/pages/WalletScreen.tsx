@@ -39,7 +39,8 @@ interface PaymentGateway {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const PAYMENT_GATEWAYS: PaymentGateway[] = [
-  { id: "payu",      name: "PayU",              logo: "💳", description: "Cards, UPI, Netbanking, Wallets" },
+  { id: "cashfree",  name: "Cashfree",          logo: "⚡", description: "Cards, UPI, Netbanking" },
+  { id: "razorpay",  name: "Razorpay",          logo: "💳", description: "Cards, UPI, Wallets, EMI" },
 ];
 
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
