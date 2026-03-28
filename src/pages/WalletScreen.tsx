@@ -289,7 +289,8 @@ const WalletScreen = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <CreditCard className="h-3 w-3" />
-              {t("payingVia", "Paying via")} PayU — Secure Payment
+              {t("payingVia", "Paying via")} {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name ?? 'Cashfree'} — Secure Payment
+            </p>
             </p>
           </CardContent>
         </Card>
