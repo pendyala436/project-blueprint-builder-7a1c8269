@@ -1874,51 +1874,19 @@ const DashboardScreen = () => {
               </RadioGroup>
             </div>
 
-            {/* International Payment Gateways */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
-                🌍 {t('internationalPaymentMethods', 'International Payment Methods')}
-              </Label>
-              <RadioGroup
-                value={selectedGateway}
-                onValueChange={setSelectedGateway}
-                className="grid grid-cols-2 gap-3"
-              >
-                {INTERNATIONAL_GATEWAYS.map((gateway) => (
-                  <div key={gateway.id} className="relative">
-                    <RadioGroupItem
-                      value={gateway.id}
-                      id={`intl-gateway-${gateway.id}`}
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor={`intl-gateway-${gateway.id}`}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
-                        "hover:border-primary/50 hover:bg-muted/50",
-                        selectedGateway === gateway.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border"
-                      )}
-                    >
-                      <span className="text-2xl mb-1">{gateway.logo}</span>
-                      <span className="font-semibold text-sm">{gateway.name}</span>
-                      <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Recharge Amounts Dropdown */}
+            {/* Recharge Amounts Dropdown + Custom Amount */}
             <div className="space-y-3">
               <Label className="text-sm font-medium block">Select Amount</Label>
               <Select
                 value={selectedAmount?.toString() || ""}
-                onValueChange={(value) => setSelectedAmount(Number(value))}
+                onValueChange={(value) => {
+                  if (value === "custom") {
+                    setSelectedAmount(null);
+                  } else {
+                    setSelectedAmount(Number(value));
+                    setCustomAmount("");
+                  }
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose recharge amount" />
@@ -1929,8 +1897,32 @@ const DashboardScreen = () => {
                       {formatLocalCurrency(amountINR)} (₹{amountINR})
                     </SelectItem>
                   ))}
+                  <SelectItem value="custom">Custom Amount</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Custom Amount Input */}
+              {(!selectedAmount || customAmount) && (
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                    <input
+                      type="number"
+                      min="10"
+                      max="100000"
+                      placeholder="Enter custom amount"
+                      value={customAmount}
+                      onChange={(e) => {
+                        setCustomAmount(e.target.value);
+                        const val = Number(e.target.value);
+                        if (val >= 10) setSelectedAmount(val);
+                        else setSelectedAmount(null);
+                      }}
+                      className="w-full pl-8 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              )}
 
               <Button
                 variant="aurora"
