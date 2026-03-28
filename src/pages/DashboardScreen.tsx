@@ -221,9 +221,10 @@ const DashboardScreen = () => {
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState("ccavenue");
+  const [selectedGateway, setSelectedGateway] = useState("cashfree");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [customAmount, setCustomAmount] = useState("");
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
