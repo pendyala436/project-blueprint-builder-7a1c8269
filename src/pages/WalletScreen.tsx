@@ -64,6 +64,7 @@ const WalletScreen = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [customAmount, setCustomAmount] = useState("");
 
   const RECHARGE_AMOUNTS = settings.rechargeAmounts;
 
@@ -101,45 +102,37 @@ const WalletScreen = () => {
 
   useRealtimeSubscription({ table: "users_wallet", onUpdate: loadWallet });
 
-  // ── Recharge via PayU ───────────────────────────────────────────────────
+  // ── Recharge via Cashfree ───────────────────────────────────────────────
   const handleRecharge = async (amount: number) => {
-    if (!userId) { toast.error("Please log in to recharge"); return; }
+    if (!userId || amount < 10) { toast.error("Please enter a valid amount (min ₹10)"); return; }
     setSelectedAmount(amount);
     setProcessingPayment(true);
     try {
-      // Call edge function to get PayU payment data
-      const returnUrl = `${window.location.origin}/wallet?payment=success`;
-      const failureUrl = `${window.location.origin}/wallet?payment=failed`;
-      const { data: result, error } = await supabase.functions.invoke('payu-payment', {
-        body: { amount, userId, returnUrl, failureUrl }
+      const returnUrl = `${window.location.origin}/wallet?payment={order_status}&order_id={order_id}`;
+      const { data, error } = await supabase.functions.invoke('cashfree-payment', {
+        body: { amount, userId, returnUrl }
       });
 
       if (error) throw error;
-      if (!result?.success || !result?.paymentData) {
-        throw new Error(result?.error || 'Failed to initiate payment');
+      if (!data?.success || !data?.paymentSessionId) {
+        throw new Error(data?.error || 'Failed to create payment order');
       }
 
-      const pd = result.paymentData;
-
-      // Create and submit PayU form
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = pd.payuUrl;
-      form.style.display = 'none';
-
-      const fields = ['key', 'txnid', 'amount', 'productinfo', 'firstname', 'email', 'phone', 'surl', 'furl', 'hash'];
-      fields.forEach(field => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = field;
-        input.value = pd[field] || '';
-        form.appendChild(input);
-      });
-
-      document.body.appendChild(form);
-      form.submit();
+      // Load Cashfree SDK and redirect
+      const script = document.createElement('script');
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+      script.onload = () => {
+        const cashfree = (window as any).Cashfree({ mode: "production" });
+        cashfree.checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
+      };
+      script.onerror = () => {
+        toast.error("Failed to load payment gateway");
+        setProcessingPayment(false);
+        setSelectedAmount(null);
+      };
+      document.head.appendChild(script);
     } catch (err) {
-      console.error('[PayU Recharge Error]', err);
+      console.error('[Cashfree Recharge Error]', err);
       toast.error("Recharge failed", { description: ERROR_MESSAGES.wallet.rechargeFailed });
       setProcessingPayment(false);
       setSelectedAmount(null);
@@ -150,15 +143,30 @@ const WalletScreen = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
-    const txnId = params.get('txnid');
-    if (paymentStatus === 'success') {
-      toast.success('Payment successful!', { description: `Transaction ${txnId} completed. Balance will update shortly.` });
-      setIsAnimating(true);
-      setTimeout(() => setIsAnimating(false), 2000);
-      loadWallet();
-      window.history.replaceState({}, '', '/wallet');
-    } else if (paymentStatus === 'failed') {
-      toast.error('Payment failed', { description: 'Your payment was not completed. No amount was charged.' });
+    const orderId = params.get('order_id');
+    if (paymentStatus && orderId) {
+      const verifyPayment = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('cashfree-payment/verify', {
+            body: { orderId }
+          });
+          if (error) throw error;
+          if (data?.credited) {
+            toast.success('Payment successful! 🎉', { description: `₹${data.amount} added to your wallet.` });
+            setIsAnimating(true);
+            setTimeout(() => setIsAnimating(false), 2000);
+            loadWallet();
+          } else if (data?.alreadyCredited) {
+            toast.info('Already processed', { description: 'This payment was already credited.' });
+          } else {
+            toast.error('Payment not completed', { description: `Status: ${data?.status || 'Unknown'}` });
+          }
+        } catch (err) {
+          console.error('[Payment Verify]', err);
+          toast.error('Verification failed', { description: 'Please check your balance.' });
+        }
+      };
+      verifyPayment();
       window.history.replaceState({}, '', '/wallet');
     }
   }, []);
@@ -271,12 +279,12 @@ const WalletScreen = () => {
               {RECHARGE_AMOUNTS.map((amount) => (
                 <Button
                   key={amount}
-                  variant={selectedAmount === amount ? "default" : "outline"}
+                  variant={selectedAmount === amount && !customAmount ? "default" : "outline"}
                   className={cn(
                     "h-14 text-lg font-semibold transition-all duration-200",
-                    selectedAmount === amount && "scale-95"
+                    selectedAmount === amount && !customAmount && "scale-95"
                   )}
-                  onClick={() => handleRecharge(amount)}
+                  onClick={() => { setCustomAmount(""); handleRecharge(amount); }}
                   disabled={processingPayment}
                 >
                   {processingPayment && selectedAmount === amount ? (
@@ -287,6 +295,37 @@ const WalletScreen = () => {
                 </Button>
               ))}
             </div>
+
+            {/* Custom Amount */}
+            <div className="mt-4 space-y-2">
+              <Label className="text-sm font-medium">{t("customAmount", "Custom Amount")}</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100000"
+                    placeholder="Enter amount (min ₹10)"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2.5 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    const val = Number(customAmount);
+                    if (val >= 10) handleRecharge(val);
+                    else toast.error("Minimum amount is ₹10");
+                  }}
+                  disabled={processingPayment || !customAmount || Number(customAmount) < 10}
+                >
+                  {processingPayment && customAmount ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Pay"}
+                </Button>
+              </div>
+            </div>
+
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <CreditCard className="h-3 w-3" />
               {t("payingVia", "Paying via")} {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name ?? 'Cashfree'} — Secure Payment

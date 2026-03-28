@@ -221,9 +221,10 @@ const DashboardScreen = () => {
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState("ccavenue");
+  const [selectedGateway, setSelectedGateway] = useState("cashfree");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [customAmount, setCustomAmount] = useState("");
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
@@ -1120,8 +1121,39 @@ const DashboardScreen = () => {
     navigate('/', { replace: true });
   };
 
+  // Handle Cashfree payment return from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment');
+    const orderId = params.get('order_id');
+    if (paymentStatus && orderId) {
+      // Verify with backend
+      const verifyPayment = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('cashfree-payment/verify', {
+            body: { orderId }
+          });
+          if (error) throw error;
+          if (data?.credited) {
+            toast({ title: "Payment Successful! 🎉", description: `₹${data.amount} added to your wallet.` });
+            loadWalletBalance();
+          } else if (data?.status === 'PAID' && data?.alreadyCredited) {
+            toast({ title: "Already Credited", description: "This payment was already processed." });
+          } else {
+            toast({ title: "Payment Not Completed", description: `Status: ${data?.status || 'Unknown'}. No amount charged.`, variant: "destructive" });
+          }
+        } catch (err) {
+          console.error('[Payment Verify]', err);
+          toast({ title: "Verification Failed", description: "Please check your wallet balance.", variant: "destructive" });
+        }
+      };
+      verifyPayment();
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+
   const handleRecharge = async (amountINR: number) => {
-    if (processingPayment) return; // Prevent double-submit
+    if (processingPayment || amountINR < 1) return;
     setSelectedAmount(amountINR);
     setProcessingPayment(true);
     
@@ -1131,21 +1163,39 @@ const DashboardScreen = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Session expired");
 
-      // ⚠️ IMPORTANT: Do NOT credit wallet here.
-      // Wallet must only be credited after payment gateway confirms via webhook.
-      // TODO: Replace with actual gateway redirect (Stripe Checkout, CCAvenue, etc.)
-      // The flow should be:
-      //   1. Create a pending_recharge record in DB with amount, gateway, user_id
-      //   2. Redirect user to payment gateway
-      //   3. Gateway webhook confirms payment → edge function credits wallet
-      
-      toast({
-        title: "Payment Gateway Not Connected",
-        description: `${gateway?.name} integration is pending. No charges were made.`,
-        variant: "destructive",
-      });
+      if (selectedGateway === 'cashfree') {
+        const returnUrl = `${window.location.origin}/dashboard?payment={order_status}&order_id={order_id}`;
+        const { data, error } = await supabase.functions.invoke('cashfree-payment', {
+          body: { amount: amountINR, userId: session.user.id, returnUrl }
+        });
 
-      console.warn('[Recharge] Gateway integration pending — wallet NOT credited. Amount:', amountINR, 'Gateway:', gateway?.name);
+        if (error) throw error;
+        if (!data?.success || !data?.paymentSessionId) {
+          throw new Error(data?.error || 'Failed to create payment order');
+        }
+
+        // Load Cashfree JS SDK and redirect
+        const script = document.createElement('script');
+        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+        script.onload = () => {
+          const cashfree = (window as any).Cashfree({ mode: "production" });
+          cashfree.checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
+        };
+        script.onerror = () => {
+          toast({ title: "Payment Error", description: "Failed to load payment gateway. Please try again.", variant: "destructive" });
+          setProcessingPayment(false);
+          setSelectedAmount(null);
+        };
+        document.head.appendChild(script);
+        return; // Don't reset state — user is being redirected
+      } else {
+        // Razorpay — placeholder
+        toast({
+          title: "Razorpay Coming Soon",
+          description: `Razorpay integration is in progress. Please use Cashfree.`,
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Recharge error:", error);
       toast({
@@ -1824,51 +1874,19 @@ const DashboardScreen = () => {
               </RadioGroup>
             </div>
 
-            {/* International Payment Gateways */}
-            <div>
-              <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
-                🌍 {t('internationalPaymentMethods', 'International Payment Methods')}
-              </Label>
-              <RadioGroup
-                value={selectedGateway}
-                onValueChange={setSelectedGateway}
-                className="grid grid-cols-2 gap-3"
-              >
-                {INTERNATIONAL_GATEWAYS.map((gateway) => (
-                  <div key={gateway.id} className="relative">
-                    <RadioGroupItem
-                      value={gateway.id}
-                      id={`intl-gateway-${gateway.id}`}
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor={`intl-gateway-${gateway.id}`}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
-                        "hover:border-primary/50 hover:bg-muted/50",
-                        selectedGateway === gateway.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border"
-                      )}
-                    >
-                      <span className="text-2xl mb-1">{gateway.logo}</span>
-                      <span className="font-semibold text-sm">{gateway.name}</span>
-                      <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
-                      )}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* Recharge Amounts Dropdown */}
+            {/* Recharge Amounts Dropdown + Custom Amount */}
             <div className="space-y-3">
               <Label className="text-sm font-medium block">Select Amount</Label>
               <Select
                 value={selectedAmount?.toString() || ""}
-                onValueChange={(value) => setSelectedAmount(Number(value))}
+                onValueChange={(value) => {
+                  if (value === "custom") {
+                    setSelectedAmount(null);
+                  } else {
+                    setSelectedAmount(Number(value));
+                    setCustomAmount("");
+                  }
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose recharge amount" />
@@ -1879,8 +1897,32 @@ const DashboardScreen = () => {
                       {formatLocalCurrency(amountINR)} (₹{amountINR})
                     </SelectItem>
                   ))}
+                  <SelectItem value="custom">Custom Amount</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Custom Amount Input */}
+              {(!selectedAmount || customAmount) && (
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                    <input
+                      type="number"
+                      min="10"
+                      max="100000"
+                      placeholder="Enter custom amount"
+                      value={customAmount}
+                      onChange={(e) => {
+                        setCustomAmount(e.target.value);
+                        const val = Number(e.target.value);
+                        if (val >= 10) setSelectedAmount(val);
+                        else setSelectedAmount(null);
+                      }}
+                      className="w-full pl-8 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              )}
 
               <Button
                 variant="aurora"
