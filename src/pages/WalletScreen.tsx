@@ -60,7 +60,7 @@ const WalletScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [selectedGateway, setSelectedGateway] = useState("payu");
+  const [selectedGateway, setSelectedGateway] = useState("cashfree");
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
