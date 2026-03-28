@@ -64,6 +64,7 @@ const WalletScreen = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [customAmount, setCustomAmount] = useState("");
 
   const RECHARGE_AMOUNTS = settings.rechargeAmounts;
 
