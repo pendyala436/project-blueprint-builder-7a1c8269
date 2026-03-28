@@ -279,12 +279,12 @@ const WalletScreen = () => {
               {RECHARGE_AMOUNTS.map((amount) => (
                 <Button
                   key={amount}
-                  variant={selectedAmount === amount ? "default" : "outline"}
+                  variant={selectedAmount === amount && !customAmount ? "default" : "outline"}
                   className={cn(
                     "h-14 text-lg font-semibold transition-all duration-200",
-                    selectedAmount === amount && "scale-95"
+                    selectedAmount === amount && !customAmount && "scale-95"
                   )}
-                  onClick={() => handleRecharge(amount)}
+                  onClick={() => { setCustomAmount(""); handleRecharge(amount); }}
                   disabled={processingPayment}
                 >
                   {processingPayment && selectedAmount === amount ? (
@@ -295,6 +295,37 @@ const WalletScreen = () => {
                 </Button>
               ))}
             </div>
+
+            {/* Custom Amount */}
+            <div className="mt-4 space-y-2">
+              <Label className="text-sm font-medium">{t("customAmount", "Custom Amount")}</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100000"
+                    placeholder="Enter amount (min ₹10)"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2.5 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    const val = Number(customAmount);
+                    if (val >= 10) handleRecharge(val);
+                    else toast.error("Minimum amount is ₹10");
+                  }}
+                  disabled={processingPayment || !customAmount || Number(customAmount) < 10}
+                >
+                  {processingPayment && customAmount ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Pay"}
+                </Button>
+              </div>
+            </div>
+
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <CreditCard className="h-3 w-3" />
               {t("payingVia", "Paying via")} {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name ?? 'Cashfree'} — Secure Payment
