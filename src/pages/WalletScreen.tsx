@@ -39,7 +39,8 @@ interface PaymentGateway {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const PAYMENT_GATEWAYS: PaymentGateway[] = [
-  { id: "payu",      name: "PayU",              logo: "💳", description: "Cards, UPI, Netbanking, Wallets" },
+  { id: "cashfree",  name: "Cashfree",          logo: "⚡", description: "Cards, UPI, Netbanking" },
+  { id: "razorpay",  name: "Razorpay",          logo: "💳", description: "Cards, UPI, Wallets, EMI" },
 ];
 
 const CURRENCY_SYMBOLS: Record<string, React.ReactNode> = {
@@ -59,7 +60,7 @@ const WalletScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [selectedGateway, setSelectedGateway] = useState("payu");
+  const [selectedGateway, setSelectedGateway] = useState("cashfree");
   const [isAnimating, setIsAnimating] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -233,13 +234,26 @@ const WalletScreen = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary bg-primary/5">
-              <span className="text-2xl">💳</span>
-              <div>
-                <span className="font-medium">PayU</span>
-                <p className="text-xs text-muted-foreground">Cards, UPI, Netbanking, Wallets</p>
-              </div>
-              <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />
+            <div className="space-y-2">
+              {PAYMENT_GATEWAYS.map((gw) => (
+                <div
+                  key={gw.id}
+                  onClick={() => setSelectedGateway(gw.id)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                    selectedGateway === gw.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl">{gw.logo}</span>
+                  <div>
+                    <span className="font-medium">{gw.name}</span>
+                    <p className="text-xs text-muted-foreground">{gw.description}</p>
+                  </div>
+                  {selectedGateway === gw.id && <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -275,7 +289,7 @@ const WalletScreen = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <CreditCard className="h-3 w-3" />
-              {t("payingVia", "Paying via")} PayU — Secure Payment
+              {t("payingVia", "Paying via")} {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name ?? 'Cashfree'} — Secure Payment
             </p>
           </CardContent>
         </Card>

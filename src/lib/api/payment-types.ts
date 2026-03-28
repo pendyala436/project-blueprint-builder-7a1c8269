@@ -20,8 +20,7 @@ export type PaymentMethod =
   | 'card'
   | 'netbanking'
   | 'razorpay'
-  | 'stripe'
-  | 'paypal';
+  | 'cashfree';
 
 // Payment request
 export interface PaymentRequest {

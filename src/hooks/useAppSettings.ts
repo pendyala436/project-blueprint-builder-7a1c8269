@@ -63,16 +63,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   paymentGateways: {
     indian: [
-      { id: "ccavenue", name: "CCAvenue", logo: "🇮🇳", description: "Cards, Netbanking, Wallets", features: ["Cards", "Netbanking", "Wallets"] },
-      { id: "billdesk", name: "BillDesk", logo: "🏦", description: "Netbanking, Cards, EMI", features: ["Netbanking", "Cards", "EMI"] },
-      { id: "upi", name: "UPI Payments", logo: "📱", description: "Google Pay, PhonePe, Paytm", features: ["Google Pay", "PhonePe", "Paytm UPI"] },
+      { id: "cashfree", name: "Cashfree", logo: "⚡", description: "Cards, UPI, Netbanking", features: ["Cards", "UPI", "Netbanking"] },
+      { id: "razorpay", name: "Razorpay", logo: "💳", description: "Cards, UPI, Wallets, EMI", features: ["Cards", "UPI", "Wallets", "EMI"] },
     ],
-    international: [
-      { id: "payu", name: "PayU", logo: "💳", description: "Cards, EMI, Wallets", features: ["Cards", "EMI", "Wallets"] },
-      { id: "adyen", name: "Adyen", logo: "🌐", description: "Global Payments, 250+ methods", features: ["Cards", "Apple Pay", "Google Pay"] },
-      { id: "cashfree", name: "Cashfree Payments", logo: "⚡", description: "Cards, UPI, Netbanking", features: ["Cards", "UPI", "Netbanking"] },
-      { id: "payglobal", name: "PayGlobal", logo: "🌍", description: "International Wire & Cards", features: ["Wire Transfer", "Cards", "Wallets"] },
-    ],
+    international: [],
   },
   maxParallelChats: 3,
   maxReconnectAttempts: 3,
