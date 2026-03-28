@@ -234,13 +234,26 @@ const WalletScreen = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-3 p-3 rounded-lg border-2 border-primary bg-primary/5">
-              <span className="text-2xl">💳</span>
-              <div>
-                <span className="font-medium">PayU</span>
-                <p className="text-xs text-muted-foreground">Cards, UPI, Netbanking, Wallets</p>
-              </div>
-              <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />
+            <div className="space-y-2">
+              {PAYMENT_GATEWAYS.map((gw) => (
+                <div
+                  key={gw.id}
+                  onClick={() => setSelectedGateway(gw.id)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                    selectedGateway === gw.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <span className="text-2xl">{gw.logo}</span>
+                  <div>
+                    <span className="font-medium">{gw.name}</span>
+                    <p className="text-xs text-muted-foreground">{gw.description}</p>
+                  </div>
+                  {selectedGateway === gw.id && <CheckCircle2 className="ml-auto h-5 w-5 text-primary" />}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
