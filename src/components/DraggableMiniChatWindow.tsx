@@ -76,11 +76,17 @@ const DraggableMiniChatWindow = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEarningEligible, setIsEarningEligible] = useState(false);
+  const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const sessionStartedRef = useRef(false);
   const sendingRef = useRef(false);
+  const previewTimeoutRef = useRef<NodeJS.Timeout>();
   const MAX_MESSAGE_LENGTH = 10000;
+
+  const langNorm = (currentUserLanguage || 'english').toLowerCase().trim();
+  const isNonEnglish = langNorm !== 'english';
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
