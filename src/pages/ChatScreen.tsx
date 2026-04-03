@@ -1024,7 +1024,15 @@ const ChatScreen = () => {
    * Messages are sent as plain text; translation happens via realtime subscription.
    */
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !chatPartner || isSending) return;
+    if (!messageText.trim() || isSending) return;
+    if (!chatPartner) {
+      toast({
+        title: "Not ready",
+        description: "Chat is still loading. Please wait.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Check if blocked
     if (isBlocked || isBlockedByPartner) {
