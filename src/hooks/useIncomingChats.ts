@@ -2,6 +2,25 @@ import { toast } from "sonner";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Global set of session IDs that the current user initiated
+// Used to prevent showing accept/reject popup for self-initiated chats
+const selfInitiatedSessionIds = new Set<string>();
+const selfInitiatedChatIds = new Set<string>();
+
+/**
+ * Mark a session/chat as self-initiated so the incoming chat popup won't show for it.
+ * Call this immediately after creating a chat session via chat-manager.
+ */
+export const markChatAsSelfInitiated = (sessionId?: string, chatId?: string) => {
+  if (sessionId) selfInitiatedSessionIds.add(sessionId);
+  if (chatId) selfInitiatedChatIds.add(chatId);
+  // Auto-cleanup after 60 seconds to prevent memory leak
+  setTimeout(() => {
+    if (sessionId) selfInitiatedSessionIds.delete(sessionId);
+    if (chatId) selfInitiatedChatIds.delete(chatId);
+  }, 60000);
+};
+
 interface IncomingChat {
   sessionId: string;
   chatId: string;
@@ -115,9 +134,12 @@ export const useIncomingChats = (
           return;
         }
 
-        // Filter out already accepted or rejected sessions
+        // Filter out already accepted, rejected, or self-initiated sessions
         const pendingSessions = sessions.filter(
-          s => !acceptedChatsRef.current.has(s.id) && !rejectedChatsRef.current.has(s.id)
+          s => !acceptedChatsRef.current.has(s.id) && 
+               !rejectedChatsRef.current.has(s.id) &&
+               !selfInitiatedSessionIds.has(s.id) &&
+               !selfInitiatedChatIds.has(s.chat_id)
         );
         if (pendingSessions.length === 0) {
           isCheckingRef = false;

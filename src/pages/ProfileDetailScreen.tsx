@@ -353,6 +353,12 @@ const ProfileDetailScreen = () => {
         throw new Error(data?.message || "Failed to start chat");
       }
 
+      // Mark as self-initiated to prevent incoming chat popup
+      if (data?.session_id || data?.chat_id) {
+        const { markChatAsSelfInitiated } = await import("@/hooks/useIncomingChats");
+        markChatAsSelfInitiated(data.session_id, data.chat_id);
+      }
+
       if (data.chat_id) {
         await supabase.from("chat_messages").insert({
           chat_id: data.chat_id,

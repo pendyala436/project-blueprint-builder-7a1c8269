@@ -392,6 +392,12 @@ const MatchingScreen = () => {
 
       if (error) throw error;
 
+      // Mark as self-initiated to prevent incoming chat popup
+      if (data?.session_id || data?.chat_id) {
+        const { markChatAsSelfInitiated } = await import("@/hooks/useIncomingChats");
+        markChatAsSelfInitiated(data.session_id, data.chat_id);
+      }
+
       if (data?.success) {
         setActiveChatId(data.chat_id);
         setConnectionStatus("connected");
