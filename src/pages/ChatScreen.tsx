@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
 import { translateForViewer } from "@/lib/translation-service";
+import { moderateMessage } from '@/lib/content-moderation';
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
@@ -393,9 +394,10 @@ const ChatScreen = () => {
           let englishText: string | undefined;
           let isTranslated = false;
 
-          if (currentUserLanguage) {
+          const langToUse = currentUserLanguage || 'English';
+          if (langToUse) {
             try {
-              const result = await translateForViewer(newMsg.message, currentUserLanguage);
+              const result = await translateForViewer(newMsg.message, langToUse);
               translatedMessage = result.nativeText;
               englishText = result.englishText;
               isTranslated = translatedMessage !== newMsg.message;
@@ -432,6 +434,17 @@ const ChatScreen = () => {
       supabase.removeChannel(channel);
     };
   }, [activeChatId, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
+
+  // Issue 2.2: Re-translate history when language loads late
+  useEffect(() => {
+    const langToUse = currentUserLanguage || 'English';
+    if (langToUse && messages.length > 0) {
+      const untranslated = messages.filter(m => !m.isTranslated && !m.translatedMessage);
+      if (untranslated.length > 0) {
+        translateHistoryMessages(messages, langToUse);
+      }
+    }
+  }, [currentUserLanguage]);
 
   /**
    * useEffect: Monitor Partner Online Status and Session
@@ -549,11 +562,14 @@ const ChatScreen = () => {
         }
       });
 
-      const results = await Promise.all(translationPromises);
+      const results = await Promise.allSettled(translationPromises);
 
-      // Update messages state with translations
+      // Update messages state with translations (only fulfilled)
       setMessages(prev => prev.map(m => {
-        const translation = results.find(r => r && r.id === m.id);
+        const translation = results
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .map(r => r.value)
+          .find(r => r && r.id === m.id);
         if (translation) {
           return {
             ...m,
@@ -1022,7 +1038,15 @@ const ChatScreen = () => {
    * Messages are sent as plain text; translation happens via realtime subscription.
    */
   const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim() || !chatPartner || isSending) return;
+    if (!messageText.trim() || isSending) return;
+    if (!chatPartner) {
+      toast({
+        title: "Not ready",
+        description: "Chat is still loading. Please wait.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Check if blocked
     if (isBlocked || isBlockedByPartner) {
@@ -1037,7 +1061,6 @@ const ChatScreen = () => {
     }
 
     // Content moderation - block phone numbers, emails, social media
-    const { moderateMessage } = await import('@/lib/content-moderation');
     const moderationResult = moderateMessage(messageText);
     if (moderationResult.isBlocked) {
       toast({
@@ -1891,6 +1914,14 @@ const ChatScreen = () => {
               />
             )}
           </div>
+          
+          {/* Issue 2.3: Show explanation when blocked */}
+          {(isBlocked || isBlockedByPartner) && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive text-sm rounded-md mx-2 mb-1">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>{isBlocked ? "You have blocked this user. Unblock to send messages." : "You cannot send messages to this user."}</span>
+            </div>
+          )}
           
           {/* Simple Chat Input */}
           <ChatMessageInput

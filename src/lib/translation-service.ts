@@ -29,7 +29,7 @@ export interface TranslationResult {
 function isLatinScript(text: string): boolean {
   const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
   if (!cleaned) return false;
-  return /^[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF]+$/.test(cleaned);
+  return /^[a-zA-Z\u00C0-\u024F\u0250-\u02AF\u1E00-\u1EFF\u0100-\u017F]+$/.test(cleaned);
 }
 
 /**
@@ -87,9 +87,15 @@ export async function translateBatch(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return texts;
 
   try {
+    // Issue 3.2: Add 5-second timeout to batch translation (matching translateText)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: { texts, sourceLang, targetLang },
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.warn('[Translation] Batch error:', error.message);
@@ -97,8 +103,12 @@ export async function translateBatch(
     }
 
     return data?.translations || texts;
-  } catch (err) {
-    console.warn('[Translation] Batch failed:', err);
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      console.warn('[Translation] Batch request timed out after 5s');
+    } else {
+      console.warn('[Translation] Batch failed:', err);
+    }
     return texts;
   }
 }

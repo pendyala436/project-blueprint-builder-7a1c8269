@@ -81,7 +81,7 @@ const MiniChatWindow = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [areButtonsExpanded, setAreButtonsExpanded] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -108,7 +108,12 @@ const MiniChatWindow = ({
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
+  const blockMountedRef = useRef(false);
   useEffect(() => {
+    if (!blockMountedRef.current) {
+      blockMountedRef.current = true;
+      return;
+    }
     if (isBlocked) {
       toast({
         title: "Chat Ended",
@@ -167,7 +172,7 @@ const MiniChatWindow = ({
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
-        toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.loadFailed });
+        toast({ title: "Chat unavailable", description: ERROR_MESSAGES.chat.loadFailed, variant: "destructive" });
       }
     };
 
@@ -386,12 +391,13 @@ const MiniChatWindow = ({
           let englishText: string | undefined;
           let isTranslated = false;
 
-          if (isPartnerMessage && partnerLanguage && currentUserLanguage) {
+          const langToUse = currentUserLanguage || 'English';
+          if (isPartnerMessage && partnerLanguage) {
             try {
               const result = await translateChatMessage(
                 newMsg.message,
                 partnerLanguage,
-                currentUserLanguage
+                langToUse
               );
               if (result.isTranslated) {
                 translatedMessage = result.translated;
@@ -401,10 +407,10 @@ const MiniChatWindow = ({
             } catch {
               // Fallback: show original (English fallback)
             }
-          } else if (!isPartnerMessage && currentUserLanguage) {
+          } else if (!isPartnerMessage) {
             // For own messages, get English subtitle
             try {
-              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+              englishText = await getEnglishTranslation(newMsg.message, langToUse);
             } catch {
               // ignore
             }
@@ -571,7 +577,7 @@ const MiniChatWindow = ({
       });
     } catch (error) {
       console.error("Error closing chat via chat-manager:", error);
-      toast.error("Chat not closed", { description: "Unable to close this chat session properly." });
+      toast({ title: "Chat not closed", description: "Unable to close this chat session properly.", variant: "destructive" });
       // Fallback: directly update session
       try {
         await supabase
