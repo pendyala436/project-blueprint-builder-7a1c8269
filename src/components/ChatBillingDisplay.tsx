@@ -382,57 +382,15 @@ const ChatBillingDisplay = ({
 
   return (
     <>
-      <div className={cn(
-        "flex items-center gap-4 px-4 py-2 text-sm border-b",
-        inactiveWarning ? "bg-destructive/10 border-destructive/30" :
-        !billingStarted ? "bg-muted/50 border-muted" : 
-        isLowBalance ? "bg-destructive/10 border-destructive/30" : "bg-primary/5 border-primary/20"
-      )}>
-        {inactiveWarning ? (
-          <>
-            <div className="flex items-center gap-1.5 text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span className="text-xs font-medium">{inactiveWarning}</span>
-            </div>
-            <div className="flex items-center gap-1.5 ml-auto">
-              <Wallet className="h-3.5 w-3.5" />
-              <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
-            </div>
-          </>
-        ) : !billingStarted ? (
-          <>
-            {/* Not billing yet - waiting for two-way conversation */}
-            <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span className="text-xs">Waiting for {waitingFor}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Wallet className="h-3.5 w-3.5" />
-              <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
-            </div>
-          </>
-        ) : (
-          <>
-
-            {/* Timer */}
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-mono">{formatTime(elapsedSeconds)}</span>
-            </div>
-
-
-            {/* Balance */}
-            <div className={cn(
-              "flex items-center gap-1.5 ml-auto",
-              isLowBalance && "text-destructive"
-            )}>
-              {isLowBalance && <AlertTriangle className="h-3.5 w-3.5" />}
-              <Wallet className="h-3.5 w-3.5" />
-              <span className="font-medium">₹{walletBalance.toFixed(0)}</span>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Billing bar hidden - no pricing info shown to users */}
+      {inactiveWarning && (
+        <div className="flex items-center gap-4 px-4 py-2 text-sm border-b bg-destructive/10 border-destructive/30">
+          <div className="flex items-center gap-1.5 text-destructive">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">{inactiveWarning}</span>
+          </div>
+        </div>
+      )}
 
       {/* Recharge Dialog */}
       <Dialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
