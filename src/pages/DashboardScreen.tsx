@@ -814,9 +814,9 @@ const DashboardScreen = () => {
       const womenUserIds = onlineWomenList.map(w => w.user_id);
       const { data: chatCounts } = await supabase
         .from("active_chat_sessions")
-        .select("woman_user_id")
+        .select("woman_user_id, status")
         .in("woman_user_id", womenUserIds)
-        .eq("status", "active");
+        .in("status", ["active", "pending"]);
 
       const chatCountMap = new Map<string, number>();
       chatCounts?.forEach(chat => {
