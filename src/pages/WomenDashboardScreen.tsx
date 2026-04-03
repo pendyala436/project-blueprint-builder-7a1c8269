@@ -509,7 +509,7 @@ const WomenDashboardScreen = () => {
       .from("active_chat_sessions")
       .select("*", { count: "exact", head: true })
       .eq("woman_user_id", currentUserId)
-      .eq("status", "active");
+      .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
   };
