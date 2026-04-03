@@ -146,20 +146,25 @@ const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
   const [canUp, setCanUp] = useState(false);
   const [canDown, setCanDown] = useState(false);
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     const el = listScrollRef.current;
     if (!el) return;
     setCanUp(el.scrollTop > 10);
     setCanDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
-  };
+  }, []);
 
   useEffect(() => {
     const el = listScrollRef.current;
     if (!el) return;
     checkScroll();
     el.addEventListener('scroll', checkScroll, { passive: true });
-    return () => el.removeEventListener('scroll', checkScroll);
-  }, []);
+    const observer = new ResizeObserver(() => checkScroll());
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      observer.disconnect();
+    };
+  }, [checkScroll]);
 
   return (
     <div className="relative">
