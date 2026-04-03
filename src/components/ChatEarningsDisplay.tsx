@@ -135,7 +135,7 @@ const ChatEarningsDisplay = ({
       }
     } catch (error) {
       console.error("Error loading earnings:", error);
-      toast.error("Earnings unavailable", { description: "Unable to load your earnings. Please refresh the page." });
+      toast({ title: "Earnings unavailable", description: "Unable to load your earnings. Please refresh the page.", variant: "destructive" });
     }
   }, [currentUserId, chatPartnerId]);
 

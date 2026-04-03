@@ -751,7 +751,11 @@ const DashboardScreen = () => {
         description: `${t('startingChatWith', 'Starting chat with')} ${womanName} (${formatPrice(data.rate_per_minute || pricing.ratePerMinute)}/min)`,
       });
 
-      // Chat session created - parallel chat container will display it automatically
+      // Force a small delay then dispatch a custom event to trigger chat container reload
+      // This ensures the chat window opens immediately without waiting for realtime subscription
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('force-reload-chats'));
+      }, 300);
     } catch (error: any) {
       console.error("Error starting chat:", error);
       

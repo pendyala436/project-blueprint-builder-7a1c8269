@@ -206,7 +206,7 @@ const EnhancedParallelChatsContainer = ({
       setActiveChats(chats);
     } catch (error) {
       console.error("[EnhancedParallelChats] Error loading chats:", error);
-      toast.error("Chats unavailable", { description: ERROR_MESSAGES.chat.loadFailed });
+      toast({ title: "Chats unavailable", description: ERROR_MESSAGES.chat.loadFailed, variant: "destructive" });
     } finally {
       isLoadingRef.current = false;
     }
@@ -214,6 +214,13 @@ const EnhancedParallelChatsContainer = ({
 
   // Debounced version for real-time updates - prevents overwhelming database
   const debouncedLoadChats = useDebounce(loadActiveChats, 300);
+
+  // Listen for force-reload events from dashboard chat initiation
+  useEffect(() => {
+    const handler = () => loadActiveChats(true);
+    window.addEventListener('force-reload-chats', handler);
+    return () => window.removeEventListener('force-reload-chats', handler);
+  }, [loadActiveChats]);
 
   // Subscribe to chat changes - OPTIMIZED with user-specific filters
   useEffect(() => {
@@ -266,7 +273,7 @@ const EnhancedParallelChatsContainer = ({
           });
         } catch (invokeError) {
           console.error("Error calling chat-manager:", invokeError);
-        toast.error("Chat unavailable", { description: "Unable to open this chat. Please try again in a moment." });
+        toast({ title: "Chat unavailable", description: "Unable to open this chat. Please try again in a moment.", variant: "destructive" });
           // Fallback: directly update session
           await supabase
             .from("active_chat_sessions")
@@ -287,7 +294,7 @@ const EnhancedParallelChatsContainer = ({
       }
     } catch (error) {
       console.error("Error closing chat:", error);
-      toast.error("Chat not closed", { description: "Unable to close this chat. Please refresh and try again." });
+      toast({ title: "Chat not closed", description: "Unable to close this chat. Please refresh and try again.", variant: "destructive" });
     }
   }, [userGender, currentUserId, loadActiveChats, activeChats]);
 
