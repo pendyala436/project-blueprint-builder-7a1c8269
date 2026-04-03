@@ -922,16 +922,6 @@ const DashboardScreen = () => {
       return;
     }
 
-    // Check chat limit
-    if (activeChatCount >= 3) {
-      toast({
-        title: t('maxChatsReached', 'Max Chats Reached'),
-        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Guard: check parallel chat limit before connecting
     if (!canStartNewChat) {
       toast({
