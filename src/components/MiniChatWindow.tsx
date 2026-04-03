@@ -444,9 +444,15 @@ const MiniChatWindow = ({
               // Fallback: show original (English fallback)
             }
           } else if (!isPartnerMessage) {
-            // For own messages, get English subtitle
+            // For own messages, translate to sender's native language + get English subtitle
+            const langToUseOwn = currentUserLanguage || 'English';
             try {
-              englishText = await getEnglishTranslation(newMsg.message, langToUse);
+              const result = await translateForViewer(newMsg.message, langToUseOwn);
+              if (result.nativeText !== newMsg.message) {
+                translatedMessage = result.nativeText;
+                isTranslated = true;
+              }
+              englishText = result.englishText;
             } catch {
               // ignore
             }
