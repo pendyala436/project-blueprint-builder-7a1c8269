@@ -716,6 +716,7 @@ export function usePrivateGroupCall({
           joinedAt: Date.now(),
           amountPaid: 0,
           balanceRemaining: 0,
+          micEnabled: true, // Host mic always enabled
         }]]),
         totalEarnings: 0,
       };
