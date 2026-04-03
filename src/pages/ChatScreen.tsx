@@ -390,6 +390,7 @@ const ChatScreen = () => {
           // Translate incoming messages from partner
           const isFromPartner = newMsg.sender_id !== currentUserId;
           let translatedMessage: string | undefined;
+          let englishText: string | undefined;
           let isTranslated = false;
 
           if (isFromPartner && chatPartner && currentUserLanguage) {
@@ -403,8 +404,16 @@ const ChatScreen = () => {
                 translatedMessage = result.translated;
                 isTranslated = true;
               }
+              englishText = result.englishText;
             } catch {
               // Fallback: show original message (English fallback)
+            }
+          } else if (!isFromPartner && currentUserLanguage) {
+            // For own messages, get English translation for subtitle
+            try {
+              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+            } catch {
+              // ignore
             }
           }
           
@@ -416,6 +425,7 @@ const ChatScreen = () => {
               senderId: newMsg.sender_id,
               message: newMsg.message,
               translatedMessage,
+              englishText,
               isTranslated,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
