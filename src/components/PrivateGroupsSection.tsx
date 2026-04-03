@@ -171,23 +171,19 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         : g
     ));
 
+    // GRP-H-02: Stop local media stream
+    if (activeGroupStream) {
+      activeGroupStream.getTracks().forEach(t => t.stop());
+      setActiveGroupStream(null);
+    }
+
     try {
-      // Update DB to mark group as not live
-      const { error } = await supabase
-        .from('private_groups')
-        .update({
-          is_live: false,
-          stream_id: null,
-          current_host_id: null,
-          current_host_name: null,
-          participant_count: 0,
-        })
-        .eq('id', group.id);
+      // GRP-C-02: Use safe stop-live RPC that deactivates memberships instead of deleting
+      const { data: stopResult, error: stopError } = await supabase.rpc('stop_live_safe', {
+        p_group_id: group.id,
+      });
 
-      if (error) throw error;
-
-      // Clean up memberships
-      await supabase.from('group_memberships').delete().eq('group_id', group.id);
+      if (stopError) throw stopError;
 
       // Restore host availability
       const [{ count: chatCount }, { count: videoCount }] = await Promise.all([

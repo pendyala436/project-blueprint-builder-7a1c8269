@@ -190,17 +190,23 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const handleLeaveGroup = () => {
     if (activeGroupVideo) {
-      // Decrement participant count
+      // GRP-H-02: Stop local audio stream tracks before leaving
+      if (activeGroupStream) {
+        activeGroupStream.getTracks().forEach(t => t.stop());
+        setActiveGroupStream(null);
+      }
+
+      // Atomic decrement
       supabase
         .from('private_groups')
         .update({ participant_count: Math.max(0, activeGroupVideo.participant_count - 1) })
         .eq('id', activeGroupVideo.id)
         .then(() => fetchGroups());
 
-      // Remove membership
+      // Deactivate membership instead of deleting (GRP-C-02 consistency)
       supabase
         .from('group_memberships')
-        .delete()
+        .update({ has_access: false })
         .eq('group_id', activeGroupVideo.id)
         .eq('user_id', currentUserId);
     }
