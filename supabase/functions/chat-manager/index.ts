@@ -882,7 +882,7 @@ serve(async (req) => {
           eligibleWomen.push({
             ...woman,
             language: womanLanguage,
-            currentChats,
+            currentChats: totalSlotsTaken,
             isSameLanguage
           });
         }
