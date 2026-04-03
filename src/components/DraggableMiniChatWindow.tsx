@@ -483,38 +483,51 @@ const DraggableMiniChatWindow = ({
           </ScrollArea>
 
           {/* Input area */}
-          <div className="p-2 border-t">
-            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => {
-              const fileType = fileInputRef.current?.dataset.fileType as "image" | "video" | "document";
-              handleFileUpload(e, fileType);
-            }} />
-            <div className="flex items-center gap-1">
-              <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={isUploading}>
-                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-40 p-1 z-[100] bg-popover border shadow-lg" side="top" align="start">
-                  <div className="flex flex-col gap-0.5">
-                    <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("image/*", "image")}>
-                      <Image className="h-4 w-4 mr-2 text-blue-500" />Photo
-                    </Button>
-                    <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("video/*", "video")}>
-                      <Video className="h-4 w-4 mr-2 text-purple-500" />Video
-                    </Button>
-                    <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput(".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar", "document")}>
-                      <FileText className="h-4 w-4 mr-2 text-orange-500" />Document
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <div className="flex-1">
-                <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyPress} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full" disabled={isUploading} />
+          <div className="border-t">
+            {/* Native script preview */}
+            {(nativePreview || isPreviewLoading) && newMessage.trim() && (
+              <div className="px-2 py-1 border-b border-border/30 flex items-center gap-1.5 bg-muted/30">
+                <Languages className="h-3 w-3 text-primary flex-shrink-0" />
+                {isPreviewLoading ? (
+                  <span className="text-[10px] text-muted-foreground italic">Converting...</span>
+                ) : nativePreview ? (
+                  <span className="text-[11px] unicode-text text-primary font-medium" dir="auto">{nativePreview}</span>
+                ) : null}
               </div>
-              <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
-                <Send className="h-3.5 w-3.5" />
-              </Button>
+            )}
+            <div className="p-2">
+              <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => {
+                const fileType = fileInputRef.current?.dataset.fileType as "image" | "video" | "document";
+                handleFileUpload(e, fileType);
+              }} />
+              <div className="flex items-center gap-1">
+                <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={isUploading}>
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-40 p-1 z-[100] bg-popover border shadow-lg" side="top" align="start">
+                    <div className="flex flex-col gap-0.5">
+                      <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("image/*", "image")}>
+                        <Image className="h-4 w-4 mr-2 text-blue-500" />Photo
+                      </Button>
+                      <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("video/*", "video")}>
+                        <Video className="h-4 w-4 mr-2 text-purple-500" />Video
+                      </Button>
+                      <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput(".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar", "document")}>
+                        <FileText className="h-4 w-4 mr-2 text-orange-500" />Document
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex-1">
+                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyPress} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
+                </div>
+                <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
 
