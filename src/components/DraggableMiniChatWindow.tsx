@@ -131,7 +131,10 @@ const DraggableMiniChatWindow = ({
     onClose,
   });
 
-  // --- Native preview for transliteration ---
+  // --- Native preview for all input types ---
+  // Latin input (transliteration) → show native script preview
+  // English input → show native translation preview
+  // Native script input → no preview needed (already in native)
   const isLatinScript = (text: string): boolean => {
     const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
     if (!cleaned) return false;
@@ -141,19 +144,39 @@ const DraggableMiniChatWindow = ({
   useEffect(() => {
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     const trimmed = newMessage.trim();
-    if (!trimmed || !isNonEnglish || !isLatinScript(trimmed)) {
+
+    // No preview needed if: empty, English user, or native script (already in native)
+    if (!trimmed || !isNonEnglish) {
       setNativePreview(null);
       setIsPreviewLoading(false);
       return;
     }
+
+    const inputIsLatin = isLatinScript(trimmed);
+
+    // Native script input → user already typed in native, no preview needed
+    if (!inputIsLatin) {
+      setNativePreview(null);
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    // Latin/English input → translate to user's native language for preview
     setIsPreviewLoading(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
-        const result = await translateText(trimmed, 'English', currentUserLanguage || 'English');
+        // Use auto-detect → user's language (handles both English and transliteration)
+        const result = await translateText(trimmed, 'auto', currentUserLanguage || 'English');
         if (result && result !== trimmed) {
           setNativePreview(result);
         } else {
-          setNativePreview(null);
+          // If auto-detect didn't convert, try English → target explicitly
+          const fallback = await translateText(trimmed, 'English', currentUserLanguage || 'English');
+          if (fallback && fallback !== trimmed) {
+            setNativePreview(fallback);
+          } else {
+            setNativePreview(null);
+          }
         }
       } catch {
         setNativePreview(null);

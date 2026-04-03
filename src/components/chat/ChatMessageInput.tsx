@@ -115,33 +115,50 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     return () => viewport.removeEventListener("resize", handleResize);
   }, []);
 
-  // Debounced native script preview — converts transliteration to native script
-  // Only runs when user types Latin characters and their language is non-English
+  // Debounced native script preview — converts Latin/English to native script
+  // Latin input (transliteration like "bagunnava") → native script (బాగున్నావా)
+  // English input ("How are you?") → native translation (నువ్వు ఎలా ఉన్నావు)
+  // Native script input → no preview needed (already in native)
   useEffect(() => {
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
 
     const trimmed = message.trim();
-    if (!trimmed || !isNonEnglish || !isLatinScript(trimmed)) {
+    if (!trimmed || !isNonEnglish) {
       setNativePreview(null);
       return;
     }
 
+    const inputIsLatin = isLatinScript(trimmed);
+
+    // Native script input → already in native, no preview needed
+    if (!inputIsLatin) {
+      setNativePreview(null);
+      return;
+    }
+
+    // Latin/English input → translate to user's native language
     setIsPreviewLoading(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
-        const result = await translateText(trimmed, 'English', userLanguage || 'English');
-        // Only show preview if it's different from the input (actual conversion happened)
+        // Auto-detect handles both English and transliteration
+        const result = await translateText(trimmed, 'auto', userLanguage || 'English');
         if (result && result !== trimmed) {
           setNativePreview(result);
         } else {
-          setNativePreview(null);
+          // Fallback: treat as English → target
+          const fallback = await translateText(trimmed, 'English', userLanguage || 'English');
+          if (fallback && fallback !== trimmed) {
+            setNativePreview(fallback);
+          } else {
+            setNativePreview(null);
+          }
         }
       } catch {
         setNativePreview(null);
       } finally {
         setIsPreviewLoading(false);
       }
-    }, 600); // 600ms debounce
+    }, 600);
 
     return () => {
       if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
