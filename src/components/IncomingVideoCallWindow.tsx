@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { cn } from "@/lib/utils";
+import { useChatPricing } from "@/hooks/useChatPricing";
 
 // Audio context for ringtone
 let ringCtx: AudioContext | null = null;
