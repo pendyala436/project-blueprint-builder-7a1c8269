@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fetchPublicProfile } from "@/lib/profile-queries";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
