@@ -181,14 +181,10 @@ export const useIncomingChats = (
           return;
         }
 
-        // Get all partner profiles
+        // Get all partner profiles using secure RPC
         const partnerIds = incomingSessions.map(s => s[partnerColumn as keyof typeof s] as string);
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url, primary_language")
-          .in("user_id", partnerIds);
-
-        const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+        const profiles = await fetchPublicProfiles(partnerIds);
+        const profileMap = new Map(profiles.map(p => [p.user_id, p]));
 
         const newIncomingChats: IncomingChat[] = [];
         for (const session of incomingSessions) {
