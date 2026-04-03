@@ -254,6 +254,7 @@ const DraggableMiniChatWindow = ({
     const messageTimestamp = new Date().toISOString();
 
     setNewMessage("");
+    setNativePreview(null);
     billing.setLastActivityTime(Date.now());
 
     setMessages((prev) => [...prev, { id: tempId, senderId: currentUserId, message: inputText, createdAt: messageTimestamp }]);
