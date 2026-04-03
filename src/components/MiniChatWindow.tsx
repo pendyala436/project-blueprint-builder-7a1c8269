@@ -777,9 +777,10 @@ const MiniChatWindow = ({
                       <p className="unicode-text" dir="auto">
                         {!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message}
                       </p>
-                      {!isOwn && msg.isTranslated && msg.translatedMessage && (
-                        <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">
-                          {msg.message}
+                      {/* English translation shown below every bubble */}
+                      {msg.englishText && msg.englishText.toLowerCase() !== (!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message).toLowerCase() && (
+                        <p className="text-[9px] opacity-50 italic mt-0.5" dir="ltr">
+                          {msg.englishText.toLowerCase()}
                         </p>
                       )}
                       <span className="text-[8px] opacity-50 block mt-0.5">
