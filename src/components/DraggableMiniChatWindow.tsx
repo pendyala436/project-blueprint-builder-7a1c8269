@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronUp, TrendingUp, Wallet, AlertTriangle,
   Move, Paperclip, Image, Video, FileText, Mic, MoreHorizontal, Languages
 } from "lucide-react";
-import { translateText } from "@/lib/translation-service";
+import { translateText, isLatinScript as isLatinScriptCheck, isLatinScriptLanguage } from "@/lib/translation-service";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
