@@ -1781,6 +1781,7 @@ const DashboardScreen = () => {
             <p>Join any live private group call at <span className="font-semibold text-primary">₹{pricing?.groupCallRatePerMinute || 4}/min</span>. Min 5 min balance required.</p>
           </div>
           <AvailableGroupsSection
+            key={privateGroupsRefreshKey}
             currentUserId={currentUserId}
             userName={userName || 'User'}
             userPhoto={userPhoto}
