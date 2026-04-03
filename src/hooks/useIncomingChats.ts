@@ -293,7 +293,7 @@ export const useIncomingChats = (
         .eq("id", sessionId);
     } catch (error) {
       console.error("Error rejecting chat:", error);
-      toast.error("Could not decline chat", { description: "Unable to decline this chat request. Please try again." });
+      toast("Could not decline chat. Please try again.");
     }
     
     setIncomingChats(prev => prev.filter(c => c.sessionId !== sessionId));
