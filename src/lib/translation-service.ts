@@ -149,7 +149,7 @@ export async function translateForViewer(
   const inputIsLatin = isLatinScript(message);
 
   try {
-    // Always get English translation for subtitle (parallel)
+    // Always get English translation for subtitle (parallel with native translation)
     const englishPromise = translateText(message, 'auto', 'English');
 
     let nativeText: string;
@@ -157,12 +157,10 @@ export async function translateForViewer(
     if (viewerLang === 'english') {
       // Viewer speaks English — just get English translation
       nativeText = await englishPromise;
-      // If English translation failed (returned same non-Latin text), still use it
       return { nativeText: nativeText || message, englishText: nativeText || message };
     }
 
-    // Non-English viewer
-    // Step 1: Try auto-detect → viewer's language
+    // Non-English viewer — run auto→viewerLang and auto→English in parallel
     const [autoResult, englishResult] = await Promise.all([
       translateText(message, 'auto', viewerLanguage),
       englishPromise,
@@ -170,19 +168,43 @@ export async function translateForViewer(
 
     nativeText = autoResult;
 
-    // Step 2: If input is Latin script and auto-detect didn't convert it,
-    // try English → viewerLang (handles transliteration like "bagunnava" → "బాగున్నావా")
-    if (inputIsLatin && nativeText === message) {
-      nativeText = await translateText(message, 'English', viewerLanguage);
+    // For Latin script input: auto-detect often fails for transliterated text
+    // Try multiple fallback strategies
+    if (inputIsLatin) {
+      const isStillLatin = isLatinScript(nativeText);
+
+      // If auto-detect returned Latin text (didn't convert to native script),
+      // try English → viewerLang to get native script
+      if (isStillLatin) {
+        // Strategy A: Use the English translation as bridge → viewerLang
+        const englishMeaning = englishResult || nativeText;
+        if (englishMeaning && englishMeaning !== message) {
+          const fromEnglish = await translateText(englishMeaning, 'English', viewerLanguage);
+          if (fromEnglish && !isLatinScript(fromEnglish)) {
+            nativeText = fromEnglish;
+          }
+        }
+        // Strategy B: Direct English → viewerLang with original text
+        if (isLatinScript(nativeText)) {
+          const directResult = await translateText(message, 'English', viewerLanguage);
+          if (directResult && !isLatinScript(directResult)) {
+            nativeText = directResult;
+          }
+        }
+      }
     }
 
-    // Step 3: If still unchanged, the language may be unsupported — use English as fallback
-    if (nativeText === message) {
-      nativeText = englishResult || message;
+    // If still unchanged or same as input, use English as fallback display
+    if (nativeText === message && englishResult && englishResult !== message) {
+      // For non-Latin input that wasn't translated, keep it as-is (it's already native script)
+      // For Latin input that couldn't be converted, show English meaning
+      if (inputIsLatin) {
+        nativeText = englishResult;
+      }
     }
 
     return {
-      nativeText,
+      nativeText: nativeText || message,
       englishText: englishResult || message,
     };
   } catch {
