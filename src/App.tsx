@@ -11,6 +11,7 @@ import { AutoLogoutWrapper } from "@/components/AutoLogoutWrapper";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { UserActivityProvider } from "@/contexts/UserActivityContext";
+import { TranslationProvider } from "@/contexts/TranslationContext";
 import { Loader2 } from "lucide-react";
 import { useAutoAdjustUI } from "@/hooks/useAutoAdjustUI";
 import { isSupabaseConfigured } from "@/integrations/supabase/client";
@@ -219,11 +220,13 @@ const AppShell = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <ErrorBoundary>
-        <BrowserRouter>
-          <AppShell />
-        </BrowserRouter>
-      </ErrorBoundary>
+      <TranslationProvider>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <AppShell />
+          </BrowserRouter>
+        </ErrorBoundary>
+      </TranslationProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
