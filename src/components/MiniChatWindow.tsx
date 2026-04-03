@@ -410,7 +410,7 @@ const MiniChatWindow = ({
           } else if (!isPartnerMessage) {
             // For own messages, get English subtitle
             try {
-              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+              englishText = await getEnglishTranslation(newMsg.message, langToUse);
             } catch {
               // ignore
             }
