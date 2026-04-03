@@ -1413,7 +1413,7 @@ const DashboardScreen = () => {
         </div>
 
         {/* Quick Connect: Random Chat, Video Call & Private Groups */}
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 animate-fade-in" style={{ animationDelay: "0.03s" }}>
+        <div className={`grid ${userCountry === "IN" ? "grid-cols-3" : "grid-cols-2"} gap-1.5 sm:gap-2 animate-fade-in`} style={{ animationDelay: "0.03s" }}>
           <RandomChatButton 
             userGender="male"
             userLanguage={userLanguage}
