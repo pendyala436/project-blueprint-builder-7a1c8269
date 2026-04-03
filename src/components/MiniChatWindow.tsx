@@ -815,7 +815,7 @@ const MiniChatWindow = ({
                           ? "text-primary dark:text-primary"
                           : "text-emerald-800 dark:text-emerald-200"
                       )} dir="auto">
-                        {!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message}
+                        {msg.translatedMessage ? msg.translatedMessage : msg.message}
                       </p>
                       {/* English subtitle below every bubble */}
                       {msg.englishText && msg.englishText.toLowerCase() !== (!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message).toLowerCase() && (
