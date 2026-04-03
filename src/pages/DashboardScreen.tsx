@@ -517,7 +517,7 @@ const DashboardScreen = () => {
       .from("active_chat_sessions")
       .select("*", { count: "exact", head: true })
       .eq("man_user_id", currentUserId)
-      .eq("status", "active");
+      .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
   };
