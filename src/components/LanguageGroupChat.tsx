@@ -185,12 +185,12 @@ export const LanguageGroupChat = ({
 
         const statusMap = new Map(statusRes.data?.map(s => [s.user_id, s.is_online]) || []);
 
-        setMembers(profilesRes.data?.map(p => ({
+        setMembers(profilesData.filter(p => p.gender === "female").map(p => ({
           userId: p.user_id,
           fullName: p.full_name || "Unknown",
           photoUrl: p.photo_url,
           isOnline: statusMap.get(p.user_id) || false
-        })) || []);
+        })));
       }
     } catch (error) {
       console.error("Error loading members:", error);
