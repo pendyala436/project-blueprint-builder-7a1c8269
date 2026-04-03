@@ -218,15 +218,18 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
   };
 
-  // Auto-fix stale groups that are marked live but have no host
+  // Auto-fix stale groups that are marked live but have no host (runs once on load, not on every groups change)
+  const staleFixedRef = useRef(false);
   useEffect(() => {
+    if (staleFixedRef.current || groups.length === 0) return;
     const staleGroups = groups.filter(g => g.is_live && !g.current_host_id);
-    staleGroups.forEach(async (g) => {
-      await supabase.from('private_groups').update({
+    if (staleGroups.length === 0) return;
+    staleFixedRef.current = true;
+    Promise.all(staleGroups.map(g =>
+      supabase.from('private_groups').update({
         is_live: false, stream_id: null, current_host_id: null, current_host_name: null, participant_count: 0,
-      }).eq('id', g.id);
-    });
-    if (staleGroups.length > 0) fetchGroups();
+      }).eq('id', g.id)
+    )).then(() => fetchGroups());
   }, [groups]);
 
   if (isLoading) {
