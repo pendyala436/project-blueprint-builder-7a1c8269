@@ -647,13 +647,19 @@ const ChatScreen = () => {
 
       // Transform database records to Message interface
       if (existingMessages) {
-        setMessages(existingMessages.map(msg => ({
+        const loadedMessages: Message[] = existingMessages.map(msg => ({
           id: msg.id,
           senderId: msg.sender_id,
           message: msg.message,
           isRead: msg.is_read || false,
           createdAt: msg.created_at,
-        })));
+        }));
+        setMessages(loadedMessages);
+
+        // Translate all history messages for current viewer (in background)
+        if (motherTongue) {
+          translateHistoryMessages(loadedMessages, motherTongue);
+        }
 
         // ============= MARK UNREAD MESSAGES AS READ =============
         
