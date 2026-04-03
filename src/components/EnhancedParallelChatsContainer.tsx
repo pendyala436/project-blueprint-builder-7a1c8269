@@ -206,7 +206,7 @@ const EnhancedParallelChatsContainer = ({
       setActiveChats(chats);
     } catch (error) {
       console.error("[EnhancedParallelChats] Error loading chats:", error);
-      toast.error("Chats unavailable", { description: ERROR_MESSAGES.chat.loadFailed });
+      toast({ title: "Chats unavailable", description: ERROR_MESSAGES.chat.loadFailed, variant: "destructive" });
     } finally {
       isLoadingRef.current = false;
     }
