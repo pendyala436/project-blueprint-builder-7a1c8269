@@ -157,7 +157,8 @@ export async function translateForViewer(
     if (viewerLang === 'english') {
       // Viewer speaks English — just get English translation
       nativeText = await englishPromise;
-      return { nativeText, englishText: nativeText };
+      // If English translation failed (returned same non-Latin text), still use it
+      return { nativeText: nativeText || message, englishText: nativeText || message };
     }
 
     // Non-English viewer
@@ -185,8 +186,13 @@ export async function translateForViewer(
       englishText: englishResult || message,
     };
   } catch {
-    // On any failure, English fallback
-    return { nativeText: message, englishText: message };
+    // On any failure, try English fallback one more time
+    try {
+      const englishFallback = await translateText(message, 'auto', 'English');
+      return { nativeText: englishFallback || message, englishText: englishFallback || message };
+    } catch {
+      return { nativeText: message, englishText: message };
+    }
   }
 }
 
