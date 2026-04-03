@@ -124,6 +124,7 @@ export const usePartnerMonitor = ({
       .subscribe();
 
     return () => {
+      if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
       supabase.removeChannel(statusChannel);
       supabase.removeChannel(sessionChannel);
     };
