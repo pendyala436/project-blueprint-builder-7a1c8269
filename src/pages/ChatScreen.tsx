@@ -554,13 +554,15 @@ const ChatScreen = () => {
    * Uses auto-detect so transliteration, native script, and English all work.
    */
   const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
-    // Process in batches of 5 to avoid overwhelming the edge function
     const batchSize = 5;
     for (let i = 0; i < msgs.length; i += batchSize) {
       const batch = msgs.slice(i, i + batchSize);
       const translationPromises = batch.map(async (msg) => {
         try {
-          const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+          // CHT-05 FIX: Use refs for current values
+          const msgSenderLang = msg.senderId === currentUserIdRef.current 
+            ? currentUserLanguageRef.current 
+            : chatPartnerRef.current?.preferredLanguage;
           const result = await translateForViewer(msg.message, viewerLanguage, msgSenderLang);
           return {
             id: msg.id,
@@ -575,7 +577,6 @@ const ChatScreen = () => {
 
       const results = await Promise.allSettled(translationPromises);
 
-      // Update messages state with translations (only fulfilled)
       setMessages(prev => prev.map(m => {
         const translation = results
           .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
@@ -592,7 +593,7 @@ const ChatScreen = () => {
         return m;
       }));
     }
-  }, []);
+  }, []); // Stable — uses refs internally
 
   /**
    * initializeChat Function
