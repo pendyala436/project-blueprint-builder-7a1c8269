@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
+import { useChatPricing } from "@/hooks/useChatPricing";
 import { 
   Heart, 
   ArrowLeft,
@@ -16,8 +17,19 @@ import {
   Loader2,
   X,
   Sparkles,
-  Home
+  Home,
+  Wallet
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -64,6 +76,10 @@ const ProfileDetailScreen = () => {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
   const [currentUserGender, setCurrentUserGender] = useState("");
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [rechargeMessage, setRechargeMessage] = useState("");
+  const { pricing } = useChatPricing();
 
   useEffect(() => {
     if (userId) {
@@ -121,7 +137,8 @@ const ProfileDetailScreen = () => {
         languagesResult,
         photosResult,
         statusResult,
-        matchResult
+        matchResult,
+        walletResult
       ] = await Promise.all([
         supabase.from("profiles")
           .select("gender, has_golden_badge, golden_badge_expires_at")
@@ -143,10 +160,14 @@ const ProfileDetailScreen = () => {
           .select("id")
           .eq("user_id", user.id)
           .eq("matched_user_id", targetUserId).maybeSingle(),
+        supabase.from("wallets")
+          .select("balance")
+          .eq("user_id", user.id).maybeSingle(),
       ]);
 
       const currentUserProfile = currentUserResult.data;
       const profileData = profileResult.data;
+      setWalletBalance(walletResult.data?.balance || 0);
 
       const gender = currentUserProfile?.gender?.toLowerCase() || "";
       setCurrentUserGender(gender);
@@ -288,9 +309,27 @@ const ProfileDetailScreen = () => {
         .eq("user_id", currentUserId)
         .maybeSingle();
 
-      const currentUserGender = currentProfile?.gender?.toLowerCase();
-      const isMale = currentUserGender === "male";
-      const isFemale = currentUserGender === "female";
+      const localGender = currentProfile?.gender?.toLowerCase();
+      const isMale = localGender === "male";
+      const isFemale = localGender === "female";
+
+      // Check super user bypass
+      const userEmail = (await supabase.auth.getSession()).data.session?.user?.email || '';
+      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
+
+      // Men must have sufficient wallet balance to start chat
+      if (isMale && !isSuperUser) {
+        const minBalance = pricing.ratePerMinute * 2;
+        if (walletBalance <= 0) {
+          setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
+          setShowRechargeDialog(true);
+          return;
+        } else if (walletBalance < minBalance) {
+          setRechargeMessage(`Insufficient balance (₹${walletBalance}). Minimum ₹${minBalance} required to start a chat.`);
+          setShowRechargeDialog(true);
+          return;
+        }
+      }
 
       // Women without golden badge cannot initiate chats
       if (isFemale) {
@@ -679,6 +718,27 @@ const ProfileDetailScreen = () => {
           </div>
         </Card>
       </main>
+
+      {/* Recharge Required Dialog */}
+      <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-destructive" />
+              Recharge Required
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {rechargeMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/wallet')}>
+              Recharge Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
