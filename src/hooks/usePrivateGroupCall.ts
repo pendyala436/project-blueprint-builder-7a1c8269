@@ -30,6 +30,7 @@ interface Participant {
   joinedAt: number;
   amountPaid: number;
   balanceRemaining: number;
+  micEnabled: boolean; // Whether host has enabled this participant's mic
 }
 
 interface PeerConnectionEntry {
