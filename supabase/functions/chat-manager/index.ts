@@ -881,15 +881,18 @@ serve(async (req) => {
           );
         }
 
-        // Sort by load only (language-agnostic random chat)
-        // Lower chat count = higher priority (load balancing)
+        // FILL-FIRST LOGIC: Fill each woman to max 3 chats before assigning to the next
+        // This ensures each woman gets fully utilized before moving on
+        // Sort by chat count DESCENDING (highest first, but still < max)
+        // so women who already have 1-2 chats get filled up first
         eligibleWomen.sort((a, b) => {
-          return a.currentChats - b.currentChats;
+          // Higher chat count first (fill-first) — women with 2 chats before women with 1, etc.
+          return b.currentChats - a.currentChats;
         });
 
         // Among women with same chat count, pick randomly
-        const lowestLoad = eligibleWomen[0].currentChats;
-        const sameLoadWomen = eligibleWomen.filter(w => w.currentChats === lowestLoad);
+        const highestLoad = eligibleWomen[0].currentChats;
+        const sameLoadWomen = eligibleWomen.filter(w => w.currentChats === highestLoad);
         const selectedWoman = sameLoadWomen[Math.floor(Math.random() * sameLoadWomen.length)];
 
         console.log(`Matched man (lang: ${requestedLanguage}) with woman ${selectedWoman.user_id}, lang: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
