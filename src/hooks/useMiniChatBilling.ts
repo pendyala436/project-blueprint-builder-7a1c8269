@@ -158,17 +158,16 @@ export const useMiniChatBilling = ({
     if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     logoutTimeoutRef.current = setTimeout(async () => {
       toast({
-        title: "Session Ended",
-        description: "No activity for 15 minutes. Logging out...",
+        title: "Chat Ended",
+        description: "No activity for 15 minutes. This chat has been closed.",
       });
       try {
         await supabase
           .from("active_chat_sessions")
-          .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "inactivity_logout" })
+          .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "inactivity_timeout" })
           .eq("id", sessionId);
-        await supabase.auth.signOut();
       } catch (error) {
-        console.error("Error during inactivity logout:", error);
+        console.error("Error during inactivity close:", error);
       }
       onClose();
     }, LOGOUT_TIMEOUT_MS);
