@@ -29,7 +29,7 @@ export interface TranslationResult {
 function isLatinScript(text: string): boolean {
   const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
   if (!cleaned) return false;
-  return /^[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF]+$/.test(cleaned);
+  return /^[a-zA-Z\u00C0-\u024F\u0250-\u02AF\u1E00-\u1EFF\u0100-\u017F]+$/.test(cleaned);
 }
 
 /**
