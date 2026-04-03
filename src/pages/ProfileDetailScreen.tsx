@@ -76,6 +76,10 @@ const ProfileDetailScreen = () => {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
   const [currentUserGender, setCurrentUserGender] = useState("");
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [showRechargeDialog, setShowRechargeDialog] = useState(false);
+  const [rechargeMessage, setRechargeMessage] = useState("");
+  const { pricing } = useChatPricing();
 
   useEffect(() => {
     if (userId) {
