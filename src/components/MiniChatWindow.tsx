@@ -428,34 +428,18 @@ const MiniChatWindow = ({
           let isTranslated = false;
 
           const langToUse = currentUserLanguage || 'English';
-          if (isPartnerMessage && partnerLanguage) {
-            try {
-              const result = await translateChatMessage(
-                newMsg.message,
-                partnerLanguage,
-                langToUse
-              );
-              if (result.isTranslated) {
-                translatedMessage = result.translated;
-                isTranslated = true;
-              }
-              englishText = result.englishText;
-            } catch {
-              // Fallback: show original (English fallback)
+          try {
+            const result = await translateForViewer(newMsg.message, langToUse);
+            if (result.nativeText !== newMsg.message) {
+              translatedMessage = result.nativeText;
+              isTranslated = true;
             }
-          } else if (!isPartnerMessage) {
-            // For own messages, translate to sender's native language + get English subtitle
-            const langToUseOwn = currentUserLanguage || 'English';
+            englishText = result.englishText;
+          } catch {
+            // Fallback: try to at least get English subtitle
             try {
-              const result = await translateForViewer(newMsg.message, langToUseOwn);
-              if (result.nativeText !== newMsg.message) {
-                translatedMessage = result.nativeText;
-                isTranslated = true;
-              }
-              englishText = result.englishText;
-            } catch {
-              // ignore
-            }
+              englishText = await getEnglishTranslation(newMsg.message, 'auto');
+            } catch { /* final fallback: no subtitle */ }
           }
           
           setMessages(prev => {
