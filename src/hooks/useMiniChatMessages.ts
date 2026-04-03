@@ -121,7 +121,9 @@ export const useMiniChatMessages = ({
         // Background-translate older messages for viewer (all languages, including English)
         olderMsgs.forEach(async (msg) => {
           try {
-            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English');
+            // Determine sender's language: if sender is current user, use currentUserLanguage; else partnerLanguage
+            const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English', msgSenderLang);
             setMessages(prev => prev.map(m => 
               m.id === msg.id ? { ...m, translatedMessage: result.displayText, englishText: result.englishText, isTranslated: result.isTranslated } : m
             ));
