@@ -1019,7 +1019,7 @@ const ChatScreen = () => {
    * handleSendMessage Function
    * 
    * Sends a new message to the chat partner.
-   * Messages are sent as plain text — no translation.
+   * Messages are sent as plain text; translation happens via realtime subscription.
    */
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || !chatPartner || isSending) return;
