@@ -259,7 +259,7 @@ export function PrivateGroupCallWindow({
           }
 
           // Also add a chat message so gift is visible in chat log for ALL users
-          addChatMessage(senderName, `🎁 sent ${emoji} ${giftName} (₹${price})`, msg.sender_id === currentUserId);
+          addChatMessage(senderName, `🎁 sent ${emoji} ${giftName}`, msg.sender_id === currentUserId);
           return;
         }
 
@@ -548,11 +548,6 @@ export function PrivateGroupCallWindow({
               {formatTime(remainingTime)}
             </Badge>
           )}
-          {isOwner && totalEarnings > 0 && (
-            <Badge className="bg-green-600/90 text-white text-[11px] gap-1 border-0">
-              <DollarSign className="h-3 w-3" /> ₹{totalEarnings.toFixed(0)}
-            </Badge>
-          )}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={() => setIsFullscreen(!isFullscreen)}>
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
@@ -585,7 +580,7 @@ export function PrivateGroupCallWindow({
             <span className="text-8xl drop-shadow-2xl">{gift.emoji}</span>
             <div className="bg-black/60 backdrop-blur-md rounded-2xl px-5 py-2 text-center">
               <p className="text-white font-bold text-lg">{gift.senderName}</p>
-              <p className="text-amber-400 text-sm font-medium">sent {gift.name} • ₹{gift.price}</p>
+              <p className="text-amber-400 text-sm font-medium">sent {gift.name}</p>
             </div>
           </div>
         </div>
@@ -861,7 +856,7 @@ export function PrivateGroupCallWindow({
               <Gift className="h-5 w-5 text-amber-500" /> Send a Gift to Host
             </DialogTitle>
             <DialogDescription>
-              You pay the full gift price. The host earns 50% of every gift.
+              Choose a gift to send to the host.
             </DialogDescription>
           </DialogHeader>
 
@@ -874,8 +869,6 @@ export function PrivateGroupCallWindow({
               >
                 <span className="text-3xl">{gift.emoji}</span>
                 <span className="text-xs font-medium text-foreground">{gift.name}</span>
-                <span className="text-xs font-bold text-destructive">₹{gift.price}</span>
-                <span className="text-[10px] text-muted-foreground">Host gets ₹{(gift.price / 2).toFixed(0)}</span>
               </button>
             ))}
             {gifts.length === 0 && (

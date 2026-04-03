@@ -609,8 +609,6 @@ const DraggableVideoCallWindow = ({
               <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs" data-no-drag>
                 <Clock className="w-3 h-3" />
                 <span className="font-mono">{formatDuration(callDuration)}</span>
-                <IndianRupee className="w-3 h-3 ml-1" />
-                <span>{totalCost}</span>
               </div>
             )}
 

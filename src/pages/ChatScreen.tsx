@@ -80,9 +80,6 @@ import {
 } from "@/components/ui/alert-dialog";
 // Supabase client for database and realtime operations
 import { supabase } from "@/integrations/supabase/client";
-// Billing and earnings display components
-import ChatBillingDisplay from "@/components/ChatBillingDisplay";
-import ChatEarningsDisplay from "@/components/ChatEarningsDisplay";
 // Activity status tracking hook
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
@@ -1630,31 +1627,6 @@ const ChatScreen = () => {
       )}
 
       {/* Translation happens automatically via realtime subscription */}
-
-      {/* ============= BILLING/EARNINGS BAR ============= */}
-      {chatPartner && (
-        <>
-          <ChatBillingDisplay
-            chatPartnerId={chatPartner.userId}
-            currentUserId={currentUserId}
-            userGender={currentUserGender}
-            onSessionEnd={(reason) => {
-              toast({
-                title: "Chat Ended",
-                description: reason === "insufficient_balance" 
-                  ? "Your balance ran out. Please recharge to continue chatting."
-                  : "Chat session ended.",
-                variant: "destructive"
-              });
-            }}
-          />
-          <ChatEarningsDisplay
-            chatPartnerId={chatPartner.userId}
-            currentUserId={currentUserId}
-            userGender={currentUserGender}
-          />
-        </>
-      )}
 
       {/* ============= MESSAGES AREA ============= */}
       <main className="flex-1 overflow-y-auto px-4 py-4">
