@@ -25,6 +25,7 @@ export const usePartnerMonitor = ({
 
   useEffect(() => {
     let partnerOnlineStatus = isPartnerOnline;
+    let offlineDebounceTimer: NodeJS.Timeout | null = null;
 
     const statusChannel = supabase
       .channel(`partner-user-status-${partnerId}`)
@@ -41,25 +42,44 @@ export const usePartnerMonitor = ({
           const wasOnline = partnerOnlineStatus;
 
           if (newStatus && newStatus.is_online === false && wasOnline) {
-            toast({
-              title: "Partner Disconnected",
-              description: `${partnerName} went offline. You are now free to chat with others.`,
-            });
+            // Debounce offline detection by 15 seconds to handle brief network glitches
+            if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
+            offlineDebounceTimer = setTimeout(async () => {
+              // Re-check partner status before closing
+              const { data: currentStatus } = await supabase
+                .from("user_status")
+                .select("is_online")
+                .eq("user_id", partnerId)
+                .maybeSingle();
 
-            try {
-              await supabase
-                .from("active_chat_sessions")
-                .update({
-                  status: "ended",
-                  ended_at: new Date().toISOString(),
-                  end_reason: "partner_offline",
-                })
-                .eq("id", sessionId);
-            } catch (error) {
-              console.error("Error ending chat on partner offline:", error);
+              if (currentStatus && currentStatus.is_online === false) {
+                toast({
+                  title: "Partner Disconnected",
+                  description: `${partnerName} went offline. You are now free to chat with others.`,
+                });
+
+                try {
+                  await supabase
+                    .from("active_chat_sessions")
+                    .update({
+                      status: "ended",
+                      ended_at: new Date().toISOString(),
+                      end_reason: "partner_offline",
+                    })
+                    .eq("id", sessionId);
+                } catch (error) {
+                  console.error("Error ending chat on partner offline:", error);
+                }
+
+                onClose();
+              }
+            }, 15000);
+          } else if (newStatus && newStatus.is_online === true) {
+            // Partner came back online, cancel any pending offline timer
+            if (offlineDebounceTimer) {
+              clearTimeout(offlineDebounceTimer);
+              offlineDebounceTimer = null;
             }
-
-            onClose();
           }
 
           partnerOnlineStatus = newStatus?.is_online ?? false;
@@ -104,6 +124,7 @@ export const usePartnerMonitor = ({
       .subscribe();
 
     return () => {
+      if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
       supabase.removeChannel(statusChannel);
       supabase.removeChannel(sessionChannel);
     };
