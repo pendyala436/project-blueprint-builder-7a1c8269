@@ -26,8 +26,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-// App logo component
 import MeowLogo from "@/components/MeowLogo";
+import { translateChatMessage } from "@/lib/translation-service";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
@@ -102,6 +102,8 @@ interface Message {
   id: string;                    // UUID of the message
   senderId: string;              // UUID of sender
   message: string;               // Original message text
+  translatedMessage?: string;    // Translated message for display
+  isTranslated?: boolean;        // Whether translation was applied
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
@@ -384,6 +386,27 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
+          // Translate incoming messages from partner
+          const isFromPartner = newMsg.sender_id !== currentUserId;
+          let translatedMessage: string | undefined;
+          let isTranslated = false;
+
+          if (isFromPartner && chatPartner && currentUserLanguage) {
+            try {
+              const result = await translateChatMessage(
+                newMsg.message,
+                chatPartner.preferredLanguage,
+                currentUserLanguage
+              );
+              if (result.isTranslated) {
+                translatedMessage = result.translated;
+                isTranslated = true;
+              }
+            } catch {
+              // Fallback: show original message (English fallback)
+            }
+          }
+          
           // Add message to state (with deduplication check)
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -391,6 +414,8 @@ const ChatScreen = () => {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
+              translatedMessage,
+              isTranslated,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
@@ -1582,8 +1607,9 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // Display the message text as-is (no translation)
-                const displayText = messageText;
+                // Display translated message if available, otherwise original
+                const displayText = (!isMine && message.translatedMessage) ? message.translatedMessage : messageText;
+                const showOriginal = !isMine && message.isTranslated && message.translatedMessage;
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
@@ -1641,7 +1667,12 @@ const ChatScreen = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
-                            
+                            {/* Show original text below translation for received messages */}
+                            {showOriginal && (
+                              <p className="text-xs mt-1 opacity-60 whitespace-pre-wrap break-words unicode-text" dir="auto">
+                                {messageText}
+                              </p>
+                            )}
                           </div>
                         )}
 

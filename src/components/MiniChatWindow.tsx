@@ -1,4 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
+import { translateChatMessage } from "@/lib/translation-service";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ interface Message {
   id: string;
   senderId: string;
   message: string;
+  translatedMessage?: string;
+  isTranslated?: boolean;
   createdAt: string;
 }
 
@@ -373,9 +376,29 @@ const MiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        (payload: any) => {
+        async (payload: any) => {
           const newMsg = payload.new;
           const isPartnerMessage = newMsg.sender_id !== currentUserId;
+          
+          // Translate incoming partner messages
+          let translatedMessage: string | undefined;
+          let isTranslated = false;
+
+          if (isPartnerMessage && partnerLanguage && currentUserLanguage) {
+            try {
+              const result = await translateChatMessage(
+                newMsg.message,
+                partnerLanguage,
+                currentUserLanguage
+              );
+              if (result.isTranslated) {
+                translatedMessage = result.translated;
+                isTranslated = true;
+              }
+            } catch {
+              // Fallback: show original (English fallback)
+            }
+          }
           
           setMessages(prev => {
             const existingRealIndex = prev.findIndex(m => m.id === newMsg.id);
@@ -390,13 +413,11 @@ const MiniChatWindow = ({
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
+              translatedMessage,
+              isTranslated,
               createdAt: newMsg.created_at
             }];
           });
-
-          if (isPartnerMessage) {
-            setLastActivityTime(Date.now());
-          }
 
           if (isMinimized && isPartnerMessage) {
             setUnreadCount(prev => prev + 1);
@@ -742,7 +763,14 @@ const MiniChatWindow = ({
                           : "bg-muted rounded-bl-sm"
                       )}
                     >
-                      <p className="unicode-text" dir="auto">{msg.message}</p>
+                      <p className="unicode-text" dir="auto">
+                        {!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message}
+                      </p>
+                      {!isOwn && msg.isTranslated && msg.translatedMessage && (
+                        <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">
+                          {msg.message}
+                        </p>
+                      )}
                       <span className="text-[8px] opacity-50 block mt-0.5">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
