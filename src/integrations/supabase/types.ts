@@ -3260,6 +3260,29 @@ export type Database = {
         }
         Returns: Json
       }
+      get_browsable_female_profiles: {
+        Args: never
+        Returns: {
+          account_status: string
+          age: number
+          approval_status: string
+          bio: string
+          country: string
+          full_name: string
+          has_golden_badge: boolean
+          id: string
+          interests: string[]
+          is_premium: boolean
+          is_verified: boolean
+          last_active_at: string
+          life_goals: string[]
+          photo_url: string
+          preferred_language: string
+          primary_language: string
+          state: string
+          user_id: string
+        }[]
+      }
       get_dashboard_stats: { Args: { p_user_id: string }; Returns: Json }
       get_ledger_statement:
         | {
