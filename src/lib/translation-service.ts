@@ -77,29 +77,70 @@ export async function translateBatch(
 
 /**
  * Translate a chat message for display.
- * Translates from sender's language to receiver's language.
- * If both speak the same language or translation fails, returns original.
+ * Returns:
+ *  - translated: message in receiver's language
+ *  - englishText: English translation (shown below every bubble)
+ *  - isTranslated: whether translation was applied
+ * 
+ * If translation fails, returns original text as English fallback.
  */
 export async function translateChatMessage(
   message: string,
   senderLanguage: string,
   receiverLanguage: string
-): Promise<{ translated: string; isTranslated: boolean }> {
-  if (!message?.trim()) return { translated: message, isTranslated: false };
+): Promise<{ translated: string; englishText: string; isTranslated: boolean }> {
+  if (!message?.trim()) return { translated: message, englishText: message, isTranslated: false };
   
   const srcNorm = (senderLanguage || 'english').toLowerCase().trim();
   const tgtNorm = (receiverLanguage || 'english').toLowerCase().trim();
   
-  // Same language — no translation needed
-  if (srcNorm === tgtNorm) return { translated: message, isTranslated: false };
+  // Both speak English — no translation needed
+  if (srcNorm === 'english' && tgtNorm === 'english') {
+    return { translated: message, englishText: message, isTranslated: false };
+  }
 
   try {
-    const translated = await translateText(message, senderLanguage, receiverLanguage);
-    // If translation returned the same text, it probably failed
-    const isTranslated = translated !== message;
-    return { translated, isTranslated };
+    // Translate to receiver's language (if different from sender)
+    let translated = message;
+    let isTranslated = false;
+    
+    if (srcNorm !== tgtNorm) {
+      translated = await translateText(message, senderLanguage, receiverLanguage);
+      isTranslated = translated !== message;
+    }
+    
+    // Always get English translation for subtitle
+    let englishText = message;
+    if (srcNorm !== 'english') {
+      englishText = await translateText(message, senderLanguage, 'English');
+    }
+    // If sender is English, the original IS English
+    if (srcNorm === 'english') {
+      englishText = message;
+    }
+    
+    return { translated, englishText, isTranslated };
   } catch {
     // Fallback to English / original
-    return { translated: message, isTranslated: false };
+    return { translated: message, englishText: message, isTranslated: false };
+  }
+}
+
+/**
+ * Get English translation of a message (for subtitle display).
+ * Used for sender's own messages too.
+ */
+export async function getEnglishTranslation(
+  message: string,
+  sourceLang: string
+): Promise<string> {
+  if (!message?.trim()) return message;
+  const srcNorm = (sourceLang || 'english').toLowerCase().trim();
+  if (srcNorm === 'english') return message;
+  
+  try {
+    return await translateText(message, sourceLang, 'English');
+  } catch {
+    return message; // fallback
   }
 }
