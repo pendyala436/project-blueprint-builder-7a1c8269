@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
-import { translateChatMessage, getEnglishTranslation } from "@/lib/translation-service";
+import { translateForViewer } from "@/lib/translation-service";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
