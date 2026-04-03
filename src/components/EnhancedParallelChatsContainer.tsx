@@ -117,10 +117,10 @@ const EnhancedParallelChatsContainer = ({
           .select("rate_per_minute, women_earning_rate")
           .eq("is_active", true)
           .maybeSingle(),
-        supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url, primary_language")
-          .in("user_id", partnerIds),
+        (async () => {
+          const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+          return { data: await fetchPublicProfiles(partnerIds), error: null };
+        })(),
         supabase
           .from("user_status")
           .select("user_id, is_online")

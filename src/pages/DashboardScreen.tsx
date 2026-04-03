@@ -1002,11 +1002,9 @@ const DashboardScreen = () => {
         m.user_id === userId ? m.matched_user_id : m.user_id
       );
 
-      // Fetch profiles for matched users
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, photo_url, age, country, primary_language, gender")
-        .in("user_id", otherUserIds);
+      // Fetch profiles for matched users via secure RPC
+      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+      const profiles = await fetchPublicProfiles(otherUserIds);
 
       // Fetch online status
       const { data: statuses } = await supabase
