@@ -812,8 +812,8 @@ serve(async (req) => {
 
         const womenIds = womenProfiles.map(w => w.user_id);
 
-        // Get availability, video calls, and languages in parallel
-        const [{ data: availabilities }, { data: activeVideoCalls }, { data: userLanguages }] = await Promise.all([
+        // Get availability, video calls, pending sessions, and languages in parallel
+        const [{ data: availabilities }, { data: activeVideoCalls }, { data: pendingSessions }, { data: userLanguages }] = await Promise.all([
           supabase
             .from("women_availability")
             .select("user_id, current_chat_count, max_concurrent_chats, is_available")
@@ -823,11 +823,23 @@ serve(async (req) => {
             .select("woman_user_id")
             .in("woman_user_id", womenIds)
             .eq("status", "active"),
+          // Count pending sessions too — these slots are reserved
+          supabase
+            .from("active_chat_sessions")
+            .select("woman_user_id")
+            .in("woman_user_id", womenIds)
+            .eq("status", "pending"),
           supabase
             .from("user_languages")
             .select("user_id, language_name")
             .in("user_id", womenIds)
         ]);
+
+        // Count pending sessions per woman
+        const pendingCountMap = new Map<string, number>();
+        (pendingSessions || []).forEach((s: any) => {
+          pendingCountMap.set(s.woman_user_id, (pendingCountMap.get(s.woman_user_id) || 0) + 1);
+        });
 
         const usersInVideoCall = new Set((activeVideoCalls || []).map((v: any) => v.woman_user_id));
 
@@ -847,11 +859,13 @@ serve(async (req) => {
         for (const woman of womenProfiles) {
           const avail = availabilityMap.get(woman.user_id);
           const maxChats = avail?.max_concurrent_chats || 3;
-          const currentChats = avail?.current_chat_count || 0;
+          const activeChats = avail?.current_chat_count || 0;
+          const pendingChats = pendingCountMap.get(woman.user_id) || 0;
+          const totalSlotsTaken = activeChats + pendingChats; // active + pending = reserved slots
           const isAvailable = avail?.is_available !== false;
           
-          // Check if woman has capacity and is not in a video call
-          if (currentChats >= maxChats || !isAvailable || usersInVideoCall.has(woman.user_id)) {
+          // Check if woman has capacity (including pending) and is not in a video call
+          if (totalSlotsTaken >= maxChats || !isAvailable || usersInVideoCall.has(woman.user_id)) {
             continue;
           }
 
@@ -868,7 +882,7 @@ serve(async (req) => {
           eligibleWomen.push({
             ...woman,
             language: womanLanguage,
-            currentChats,
+            currentChats: totalSlotsTaken,
             isSameLanguage
           });
         }
@@ -881,15 +895,18 @@ serve(async (req) => {
           );
         }
 
-        // Sort by load only (language-agnostic random chat)
-        // Lower chat count = higher priority (load balancing)
+        // FILL-FIRST LOGIC: Fill each woman to max 3 chats before assigning to the next
+        // This ensures each woman gets fully utilized before moving on
+        // Sort by chat count DESCENDING (highest first, but still < max)
+        // so women who already have 1-2 chats get filled up first
         eligibleWomen.sort((a, b) => {
-          return a.currentChats - b.currentChats;
+          // Higher chat count first (fill-first) — women with 2 chats before women with 1, etc.
+          return b.currentChats - a.currentChats;
         });
 
         // Among women with same chat count, pick randomly
-        const lowestLoad = eligibleWomen[0].currentChats;
-        const sameLoadWomen = eligibleWomen.filter(w => w.currentChats === lowestLoad);
+        const highestLoad = eligibleWomen[0].currentChats;
+        const sameLoadWomen = eligibleWomen.filter(w => w.currentChats === highestLoad);
         const selectedWoman = sameLoadWomen[Math.floor(Math.random() * sameLoadWomen.length)];
 
         console.log(`Matched man (lang: ${requestedLanguage}) with woman ${selectedWoman.user_id}, lang: ${selectedWoman.language}, same_language: ${selectedWoman.isSameLanguage}, load: ${selectedWoman.currentChats}`);
@@ -1022,7 +1039,7 @@ serve(async (req) => {
           .from("active_chat_sessions")
           .select("*", { count: "exact", head: true })
           .eq("man_user_id", man_user_id)
-          .eq("status", "active");
+          .in("status", ["active", "pending"]);
 
         if ((manActiveChats || 0) >= MAX_PARALLEL_CHATS) {
           return new Response(
@@ -1031,12 +1048,12 @@ serve(async (req) => {
           );
         }
 
-        // Check woman's active chat count (max 3 parallel sessions)
+        // Check woman's active + pending chat count (max 3 parallel sessions)
         const { count: womanActiveChats } = await supabase
           .from("active_chat_sessions")
           .select("*", { count: "exact", head: true })
           .eq("woman_user_id", woman_user_id)
-          .eq("status", "active");
+          .in("status", ["active", "pending"]);
 
         if ((womanActiveChats || 0) >= MAX_PARALLEL_CHATS) {
           return new Response(
@@ -1107,14 +1124,14 @@ serve(async (req) => {
           .from("active_chat_sessions")
           .delete()
           .eq("chat_id", chatId)
-          .neq("status", "active");
+          .not("status", "in", '("active","pending")');
 
-        // Check for existing active session with this chat ID
+        // Check for existing active or pending session with this chat ID
         const { data: existingSession } = await supabase
           .from("active_chat_sessions")
           .select("*")
           .eq("chat_id", chatId)
-          .eq("status", "active")
+          .in("status", ["active", "pending"])
           .maybeSingle();
 
         let session;
@@ -1123,7 +1140,8 @@ serve(async (req) => {
           session = existingSession;
           console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
         } else {
-          // Try insert, handle duplicate key race condition gracefully
+          // Create session as 'pending' - woman must accept before it becomes 'active'
+          // This prevents the woman from going busy before she accepts
           const { data: newSession, error: sessionError } = await supabase
             .from("active_chat_sessions")
             .insert({
@@ -1131,7 +1149,7 @@ serve(async (req) => {
               man_user_id,
               woman_user_id,
               rate_per_minute: ratePerMinute,
-              status: "active"
+              status: "pending"
             })
             .select()
             .single();
@@ -1158,26 +1176,12 @@ serve(async (req) => {
           }
         }
 
-        // Update woman's availability
-        const { data: currentAvailability } = await supabase
-          .from("women_availability")
-          .select("current_chat_count")
-          .eq("user_id", woman_user_id)
-          .maybeSingle();
+        // NOTE: Woman's availability count is NOT updated here.
+        // It will be updated by the DB trigger when the session transitions from 'pending' to 'active'
+        // (i.e., when the woman accepts the chat).
 
-        if (currentAvailability) {
-          await supabase
-            .from("women_availability")
-            .update({
-              current_chat_count: currentAvailability.current_chat_count + 1,
-              last_assigned_at: new Date().toISOString()
-            })
-            .eq("user_id", woman_user_id);
-        }
-
-        // Update both users' status
+        // Update man's status only (woman's status stays unchanged until she accepts)
         await updateUserStatus(man_user_id);
-        await updateUserStatus(woman_user_id);
 
         console.log(`Chat started: ${chatId}`);
 

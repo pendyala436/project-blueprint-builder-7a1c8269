@@ -814,9 +814,9 @@ const DashboardScreen = () => {
       const womenUserIds = onlineWomenList.map(w => w.user_id);
       const { data: chatCounts } = await supabase
         .from("active_chat_sessions")
-        .select("woman_user_id")
+        .select("woman_user_id, status")
         .in("woman_user_id", womenUserIds)
-        .eq("status", "active");
+        .in("status", ["active", "pending"]);
 
       const chatCountMap = new Map<string, number>();
       chatCounts?.forEach(chat => {
@@ -1499,9 +1499,15 @@ const DashboardScreen = () => {
                               </AvatarFallback>
                             </Avatar>
                             <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-online"
-                            )} />
+                              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center text-[8px] font-bold",
+                              (woman.active_chat_count || 0) >= 3 
+                                ? "bg-destructive text-destructive-foreground" 
+                                : (woman.active_chat_count || 0) > 0
+                                  ? "bg-amber-500 text-white"
+                                  : "bg-online text-online-foreground"
+                            )}>
+                              {woman.active_chat_count || 0}
+                            </div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -1593,9 +1599,15 @@ const DashboardScreen = () => {
                               </AvatarFallback>
                             </Avatar>
                             <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-                              (woman.active_chat_count || 0) >= 3 ? "bg-destructive" : "bg-online"
-                            )} />
+                              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center text-[8px] font-bold",
+                              (woman.active_chat_count || 0) >= 3 
+                                ? "bg-destructive text-destructive-foreground" 
+                                : (woman.active_chat_count || 0) > 0
+                                  ? "bg-amber-500 text-white"
+                                  : "bg-online text-online-foreground"
+                            )}>
+                              {woman.active_chat_count || 0}
+                            </div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
