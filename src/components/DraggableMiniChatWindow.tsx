@@ -469,6 +469,16 @@ const DraggableMiniChatWindow = ({
         <>
           <ScrollArea className="flex-1 p-2">
             <div className="space-y-1.5">
+              {/* CHT-H-03: Load earlier messages button */}
+              {hasOlderMessages && (
+                <button
+                  onClick={loadOlderMessages}
+                  disabled={isLoadingOlder}
+                  className="w-full text-center text-[10px] text-primary hover:underline py-1 disabled:opacity-50"
+                >
+                  {isLoadingOlder ? "Loading..." : "↑ Load earlier messages"}
+                </button>
+              )}
               {messages.length === 0 && (
                 <p className="text-center text-[10px] text-muted-foreground py-4">Say hi to start! Billing begins when both reply.</p>
               )}
