@@ -238,7 +238,6 @@ export async function getQuickMatchScore(
     ]);
 
     const currentProfile = currentProfileResult.data;
-    const otherProfile = otherProfileResult.data;
 
     if (!currentProfile || !otherProfile) {
       return 50; // Default score if profiles not found

@@ -127,10 +127,8 @@ export const LanguageGroupChat = ({
       if (messagesData && messagesData.length > 0) {
         const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
         
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url")
-          .in("user_id", senderIds);
+        const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+        const profiles = await fetchPublicProfiles(senderIds);
 
         const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
