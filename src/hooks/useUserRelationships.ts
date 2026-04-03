@@ -122,11 +122,9 @@ export const useUserRelationships = (userId: string | null) => {
       let onlineMap = new Map<string, boolean>();
 
       if (userIdArray.length > 0) {
-        const [profilesResult, statusResult] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("user_id, full_name, photo_url, age, country, primary_language")
-            .in("user_id", userIdArray),
+        const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+        const [profilesData, statusResult] = await Promise.all([
+          fetchPublicProfiles(userIdArray),
           supabase
             .from("user_status")
             .select("user_id, is_online")
@@ -134,7 +132,7 @@ export const useUserRelationships = (userId: string | null) => {
         ]);
 
         profileMap = new Map(
-          (profilesResult.data as ProfileData[] || []).map(p => [p.user_id, p] as const)
+          (profilesData as ProfileData[] || []).map(p => [p.user_id, p] as const)
         );
         onlineMap = new Map(
           (statusResult.data as StatusData[] || []).map(s => [s.user_id, s.is_online] as const)

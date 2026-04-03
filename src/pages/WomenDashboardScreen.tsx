@@ -803,11 +803,9 @@ const WomenDashboardScreen = () => {
         m.user_id === userId ? m.matched_user_id : m.user_id
       );
 
-      const [profilesRes, statusesRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url, age, country, primary_language, gender")
-          .in("user_id", otherUserIds),
+      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+      const [profiles, statusesRes] = await Promise.all([
+        fetchPublicProfiles(otherUserIds),
         supabase
           .from("user_status")
           .select("user_id, is_online")
@@ -815,7 +813,7 @@ const WomenDashboardScreen = () => {
       ]);
 
       const statusMap = new Map((statusesRes.data as any[] || []).map(s => [s.user_id, s.is_online]));
-      const profileMap = new Map((profilesRes.data as any[] || []).map(p => [p.user_id, p]));
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
       const matched: MatchedMan[] = matches
         .map(m => {

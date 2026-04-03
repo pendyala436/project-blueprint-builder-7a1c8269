@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { fetchPublicProfile } from "@/lib/profile-queries";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -143,9 +144,7 @@ const ProfileDetailScreen = () => {
         supabase.from("profiles")
           .select("gender, has_golden_badge, golden_badge_expires_at")
           .eq("user_id", user.id).maybeSingle(),
-        supabase.from("profiles")
-          .select("*")
-          .eq("user_id", targetUserId).maybeSingle(),
+        fetchPublicProfile(targetUserId).then(data => ({ data, error: null })),
         supabase.from("user_languages")
           .select("language_name")
           .eq("user_id", targetUserId),
@@ -191,15 +190,8 @@ const ProfileDetailScreen = () => {
 
       setIsLiked(!!matchResult.data);
 
-      // Calculate age
-      let age: number | null = null;
-      if (profileData.date_of_birth) {
-        const birthDate = new Date(profileData.date_of_birth);
-        const today = new Date();
-        age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
-      }
+      // Use age from profile (date_of_birth is not exposed in public profile for privacy)
+      let age: number | null = profileData.age || null;
 
       const allLanguages = languagesResult.data?.map(l => l.language_name) || [];
       let motherTongue = profileData.preferred_language || allLanguages[0] || "Not specified";

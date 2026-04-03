@@ -3351,6 +3351,52 @@ export type Database = {
           wallet_balance: number
         }[]
       }
+      get_public_profiles: {
+        Args: { user_ids?: string[] }
+        Returns: {
+          account_status: string
+          age: number
+          ai_approved: boolean
+          approval_status: string
+          avg_response_time_seconds: number
+          bio: string
+          body_type: string
+          city: string
+          country: string
+          created_at: string
+          earning_badge_type: string
+          education_level: string
+          full_name: string
+          gender: string
+          golden_badge_expires_at: string
+          has_golden_badge: boolean
+          height_cm: number
+          id: string
+          interests: string[]
+          is_earning_eligible: boolean
+          is_indian: boolean
+          is_premium: boolean
+          is_verified: boolean
+          language: string
+          last_active_at: string
+          life_goals: string[]
+          marital_status: string
+          monthly_chat_minutes: number
+          occupation: string
+          performance_score: number
+          photo_url: string
+          preferred_language: string
+          primary_language: string
+          profile_completeness: number
+          promoted_from_free: boolean
+          religion: string
+          state: string
+          total_chats_count: number
+          updated_at: string
+          user_id: string
+          verification_status: boolean
+        }[]
+      }
       get_top_earner_today: {
         Args: never
         Returns: {
