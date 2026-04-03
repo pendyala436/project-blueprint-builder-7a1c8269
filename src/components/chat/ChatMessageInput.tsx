@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2, Languages } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
-import { translateText } from '@/lib/translation-service';
+import { translateText, isLatinScript, isLatinScriptLanguage } from '@/lib/translation-service';
 
 // Dynamic labels — translated live via Lingva, no hardcoded values
 const DEFAULT_LABELS = { placeholder: 'Type a message...', send: 'Send', preview: 'Preview' };
