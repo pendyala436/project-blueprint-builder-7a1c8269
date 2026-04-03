@@ -270,6 +270,11 @@ const ChatScreen = () => {
     };
   }, []);
   
+  // CHT-01 FIX: Keep refs in sync with state
+  useEffect(() => { chatPartnerRef.current = chatPartner; }, [chatPartner]);
+  useEffect(() => { currentUserLanguageRef.current = currentUserLanguage; }, [currentUserLanguage]);
+  useEffect(() => { currentUserIdRef.current = currentUserId; }, [currentUserId]);
+  
   // ============= ACTIVITY STATUS TRACKING =============
   
   // Track user activity and update online status
