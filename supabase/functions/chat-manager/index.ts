@@ -1126,7 +1126,8 @@ serve(async (req) => {
           session = existingSession;
           console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
         } else {
-          // Try insert, handle duplicate key race condition gracefully
+          // Create session as 'pending' - woman must accept before it becomes 'active'
+          // This prevents the woman from going busy before she accepts
           const { data: newSession, error: sessionError } = await supabase
             .from("active_chat_sessions")
             .insert({
@@ -1134,7 +1135,7 @@ serve(async (req) => {
               man_user_id,
               woman_user_id,
               rate_per_minute: ratePerMinute,
-              status: "active"
+              status: "pending"
             })
             .select()
             .single();
