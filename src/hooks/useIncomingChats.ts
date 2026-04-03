@@ -201,6 +201,11 @@ export const useIncomingChats = (
 
     checkForNewChats();
 
+    // Poll every 3 seconds as fallback (realtime may miss events due to timing)
+    const pollInterval = setInterval(() => {
+      checkForNewChats();
+    }, 3000);
+
     const channelName = `incoming-${currentUserId}`;
     const column = userGender === "male" ? "man_user_id" : "woman_user_id";
 
@@ -236,6 +241,7 @@ export const useIncomingChats = (
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [currentUserId, userGender]);
