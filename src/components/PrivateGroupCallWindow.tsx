@@ -249,7 +249,9 @@ export function PrivateGroupCallWindow({
           const emoji = parts[1] || '🎁';
           const giftName = parts[2] || 'Gift';
           const price = parseFloat(parts[3]) || 0;
-          const senderName = msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id);
+          // Use the sender's real name embedded in the message (parts[4]),
+          // falling back to participant lookup, then generic fallback
+          const senderName = parts[4] || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id));
 
           // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
@@ -395,12 +397,13 @@ export function PrivateGroupCallWindow({
         setShowGiftDialog(false);
 
         // Broadcast gift to all participants via group_messages with a special prefix
+        // Include sender's actual name so all recipients display it correctly
         const { error: msgErr } = await supabase
           .from('group_messages')
           .insert({
             group_id: group.id,
             sender_id: currentUserId,
-            message: `__GIFT__::${gift.emoji}::${gift.name}::${gift.price}`,
+            message: `__GIFT__::${gift.emoji}::${gift.name}::${gift.price}::${userName}`,
           });
         if (msgErr) console.error('Failed to broadcast gift message:', msgErr);
       } else {
