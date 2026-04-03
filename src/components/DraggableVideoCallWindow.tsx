@@ -164,7 +164,7 @@ const DraggableVideoCallWindow = ({
 
       const { data: friendData } = await supabase
         .from("user_friends")
-        .select("id, status, user_id")
+        .select("id, status")
         .or(`and(user_id.eq.${currentUserId},friend_id.eq.${remoteUserId}),and(user_id.eq.${remoteUserId},friend_id.eq.${currentUserId})`)
         .maybeSingle();
 
@@ -177,8 +177,16 @@ const DraggableVideoCallWindow = ({
       }
     } catch (error) {
       console.error("Error loading relationship:", error);
-      // Non-critical - relationship status defaults to none
     }
+  };
+
+  const swallowControlEvent = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleControlPointerDown = (e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
   };
 
   // Load relationship status
@@ -187,6 +195,18 @@ const DraggableVideoCallWindow = ({
       loadRelationshipStatus();
     }
   }, [currentUserId, remoteUserId]);
+
+  // Auto-close if blocked from either side
+  useEffect(() => {
+    if (isBlockedByEither) {
+      toast({
+        title: "Call Ended",
+        description: isBlockedByThem ? "This user has blocked you" : "You blocked this user",
+        variant: "destructive",
+      });
+      void handleEndCall();
+    }
+  }, [isBlockedByEither, isBlockedByThem]);
 
   // Handle window resize
   useEffect(() => {
@@ -201,16 +221,13 @@ const DraggableVideoCallWindow = ({
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
 
-    // Don't start dragging when interacting with controls
     const target = e.target as HTMLElement | null;
     const interactive = target?.closest?.(
       'button, a, input, textarea, select, [role="button"], [data-no-drag]'
     );
     if (interactive) return;
 
-    // Only prevent default if we are actually starting a drag
     e.preventDefault();
-
     setIsDragging(true);
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -229,16 +246,16 @@ const DraggableVideoCallWindow = ({
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging || !dragRef.current) return;
-      
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - dragRef.current.startX;
       const deltaY = clientY - dragRef.current.startY;
-      
+
       const maxX = window.innerWidth - size.width;
       const maxY = window.innerHeight - size.height;
-      
+
       setPosition({
         x: Math.max(0, Math.min(maxX, dragRef.current.startPosX + deltaX)),
         y: Math.max(0, Math.min(maxY, dragRef.current.startPosY + deltaY))
@@ -265,15 +282,14 @@ const DraggableVideoCallWindow = ({
     };
   }, [isDragging, size]);
 
-  // Resize handlers
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
-    
+
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
+
     resizeRef.current = {
       startWidth: size.width,
       startHeight: size.height,
@@ -285,13 +301,13 @@ const DraggableVideoCallWindow = ({
   useEffect(() => {
     const handleResizeMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing || !resizeRef.current) return;
-      
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - resizeRef.current.startX;
       const deltaY = clientY - resizeRef.current.startY;
-      
+
       setSize({
         width: Math.max(280, Math.min(700, resizeRef.current.startWidth + deltaX)),
         height: Math.max(320, Math.min(700, resizeRef.current.startHeight + deltaY))
@@ -327,7 +343,6 @@ const DraggableVideoCallWindow = ({
   const handleEndCall = async () => {
     console.log('[VideoCall] handleEndCall triggered');
     try {
-      // Update session in database first
       await supabase
         .from('video_call_sessions')
         .update({
@@ -336,61 +351,81 @@ const DraggableVideoCallWindow = ({
           end_reason: 'user_ended'
         })
         .eq('call_id', callId);
-      
-      // Resume any chats that were paused for this video call
+
       await supabase
         .from('active_chat_sessions')
-        .update({ 
+        .update({
           status: 'active',
           end_reason: null
         })
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .eq('status', 'paused')
         .eq('end_reason', 'video_call_priority');
-      
-      console.log('[VideoCall] Database updated, calling endCall');
-      // End the P2P call
+
       await endCall();
-      console.log('[VideoCall] endCall completed');
     } catch (error) {
       console.error("[VideoCall] Error ending call:", error);
       toast.error("Call not ended", { description: "Unable to end the call properly. Please refresh if the call appears stuck." });
     }
-    // Always call onClose, even if there was an error
-    console.log('[VideoCall] Calling onClose');
     onClose();
   };
 
   const handleBlock = async () => {
+    if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("user_blocks")
         .insert({
           blocked_by: currentUserId,
-          blocked_user_id: remoteUserId
+          blocked_user_id: remoteUserId,
+          block_type: "permanent",
+          reason: "Blocked during video call",
         });
 
-      // Remove friendship if exists
+      if (error) throw error;
+
       await supabase
         .from("user_friends")
         .delete()
         .or(`and(user_id.eq.${currentUserId},friend_id.eq.${remoteUserId}),and(user_id.eq.${remoteUserId},friend_id.eq.${currentUserId})`);
 
+      await supabase
+        .from("active_chat_sessions")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          end_reason: "user_blocked"
+        })
+        .or(`and(man_user_id.eq.${currentUserId},woman_user_id.eq.${remoteUserId}),and(man_user_id.eq.${remoteUserId},woman_user_id.eq.${currentUserId})`)
+        .in("status", ["active", "pending", "paused", "billing_paused"]);
+
+      await supabase
+        .from('video_call_sessions')
+        .update({
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+          end_reason: 'user_blocked'
+        })
+        .or(`and(man_user_id.eq.${currentUserId},woman_user_id.eq.${remoteUserId}),and(man_user_id.eq.${remoteUserId},woman_user_id.eq.${currentUserId})`)
+        .in('status', ['ringing', 'active', 'connecting']);
+
       setIsBlocked(true);
       setIsFriend(false);
+      setIsPendingFriend(false);
       setShowBlockDialog(false);
-      
+
       toast({
         title: "User Blocked",
         description: `${remoteName} has been blocked`
       });
-      
-      handleEndCall();
-    } catch (error) {
+
+      await handleEndCall();
+    } catch (error: any) {
+      console.error("Error blocking user:", error);
       toast({
         title: "Error",
-        description: "Failed to block user",
+        description: error?.message?.includes('duplicate') ? 'User is already blocked' : 'Failed to block user',
         variant: "destructive"
       });
     } finally {
@@ -399,13 +434,16 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleUnblock = async () => {
+    if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("user_blocks")
         .delete()
         .eq("blocked_by", currentUserId)
         .eq("blocked_user_id", remoteUserId);
+
+      if (error) throw error;
 
       setIsBlocked(false);
       toast({
@@ -413,6 +451,7 @@ const DraggableVideoCallWindow = ({
         description: `${remoteName} has been unblocked`
       });
     } catch (error) {
+      console.error("Error unblocking user:", error);
       toast({
         title: "Error",
         description: "Failed to unblock user",
@@ -424,26 +463,28 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleAddFriend = async () => {
+    if (isActionLoading || isBlocked) return;
     setIsActionLoading(true);
     try {
-      await supabase
-        .from("user_friends")
-        .insert({
-          user_id: currentUserId,
-          friend_id: remoteUserId,
-          status: "pending",
-          created_by: currentUserId
-        });
+      const { error } = await supabase.rpc('send_friend_request', {
+        p_target_user_id: remoteUserId,
+      });
+
+      if (error) throw error;
 
       setIsPendingFriend(true);
       toast({
         title: "Friend Request Sent",
-        description: `Friend request sent to ${remoteName}`
+        description: `A friend request has been sent to ${remoteName}.`
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error sending friend request:", error);
+      const msg = error?.message?.includes('already')
+        ? 'A friend request already exists.'
+        : 'Failed to send friend request';
       toast({
         title: "Error",
-        description: "Failed to send friend request",
+        description: msg,
         variant: "destructive"
       });
     } finally {
@@ -452,12 +493,15 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleUnfriend = async () => {
+    if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("user_friends")
         .delete()
         .or(`and(user_id.eq.${currentUserId},friend_id.eq.${remoteUserId}),and(user_id.eq.${remoteUserId},friend_id.eq.${currentUserId})`);
+
+      if (error) throw error;
 
       setIsFriend(false);
       setIsPendingFriend(false);
@@ -467,6 +511,7 @@ const DraggableVideoCallWindow = ({
         description: `${remoteName} has been removed from your friends`
       });
     } catch (error) {
+      console.error("Error unfriending user:", error);
       toast({
         title: "Error",
         description: "Failed to unfriend user",
@@ -496,7 +541,6 @@ const DraggableVideoCallWindow = ({
     }
   };
 
-  // Determine if position is within container (for flex layout) or absolute
   const isInFlexContainer = initialPosition.x === 0 && initialPosition.y === 0;
 
   return (
