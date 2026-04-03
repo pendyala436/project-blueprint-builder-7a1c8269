@@ -1162,26 +1162,12 @@ serve(async (req) => {
           }
         }
 
-        // Update woman's availability
-        const { data: currentAvailability } = await supabase
-          .from("women_availability")
-          .select("current_chat_count")
-          .eq("user_id", woman_user_id)
-          .maybeSingle();
+        // NOTE: Woman's availability count is NOT updated here.
+        // It will be updated by the DB trigger when the session transitions from 'pending' to 'active'
+        // (i.e., when the woman accepts the chat).
 
-        if (currentAvailability) {
-          await supabase
-            .from("women_availability")
-            .update({
-              current_chat_count: currentAvailability.current_chat_count + 1,
-              last_assigned_at: new Date().toISOString()
-            })
-            .eq("user_id", woman_user_id);
-        }
-
-        // Update both users' status
+        // Update man's status only (woman's status stays unchanged until she accepts)
         await updateUserStatus(man_user_id);
-        await updateUserStatus(woman_user_id);
 
         console.log(`Chat started: ${chatId}`);
 
