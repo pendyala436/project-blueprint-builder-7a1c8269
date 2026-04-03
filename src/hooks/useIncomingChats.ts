@@ -251,6 +251,9 @@ export const useIncomingChats = (
           const session = payload.new as { id: string; status: string };
           if (session.status === "ended") {
             setIncomingChats(prev => prev.filter(c => c.sessionId !== session.id));
+          } else if (session.status === "pending" || session.status === "active") {
+            // Recycled sessions use UPDATE instead of INSERT — re-check for incoming
+            checkForNewChats();
           }
         }
       )
