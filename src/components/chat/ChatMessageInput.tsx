@@ -19,16 +19,7 @@ export function getNativeLabels(language?: string) {
   return labelCache.get(key) || DEFAULT_LABELS;
 }
 
-/**
- * Check if text is typed in Latin/ASCII characters (transliteration).
- * Returns true for "bagunnava", false for "బాగున్నావా" or mixed scripts.
- */
-function isLatinScript(text: string): boolean {
-  // Strip common punctuation/numbers, check if remaining chars are Latin
-  const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
-  if (!cleaned) return false;
-  return /^[a-zA-Z\u00C0-\u024F]+$/.test(cleaned);
-}
+// isLatinScript is now imported from translation-service (single source of truth)
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
