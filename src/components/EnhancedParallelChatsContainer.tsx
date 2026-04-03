@@ -97,7 +97,7 @@ const EnhancedParallelChatsContainer = ({
         .from("active_chat_sessions")
         .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
         .eq(column, currentUserId)
-        .in("status", ["active", "paused"])
+        .in("status", ["active", "paused", "billing_paused"])
         .order("created_at", { ascending: false })
         .limit(10); // Cap at 10 for performance
 
