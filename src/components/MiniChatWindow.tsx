@@ -399,11 +399,9 @@ const MiniChatWindow = ({
       }));
       setMessages(formattedMessages);
 
-      // Translate history messages in background using live Lingva translation
+      // Always translate history messages for native display + English subtitles
       const langToUse = currentUserLanguage || 'English';
-      if (langToUse && langToUse.toLowerCase() !== 'english') {
-        translateHistoryMessages(formattedMessages, langToUse);
-      }
+      translateHistoryMessages(formattedMessages, langToUse);
     }
   };
 
