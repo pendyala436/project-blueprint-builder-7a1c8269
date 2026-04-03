@@ -172,6 +172,8 @@ const MiniChatWindow = ({
     return () => { cancelled = true; };
   }, [currentUserLanguage, isNonEnglish]);
 
+  useEffect(() => {
+    const loadInitialData = async () => {
       try {
         const { data: pricing } = await supabase
           .from("chat_pricing")
