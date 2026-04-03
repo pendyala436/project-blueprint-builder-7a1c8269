@@ -601,10 +601,18 @@ export function usePrivateGroupCall({
         
         onParticipantLeave?.(key, 'left');
         
+        const remainingParticipants = Array.from(sessionRef.current?.participants.values() || []);
+        const nonHostCount = remainingParticipants.filter(p => !p.isOwner).length;
+        
+        // Notify host when the last participant leaves
+        if (isOwner && nonHostCount === 0 && remainingParticipants.length > 0) {
+          toast.info('Last participant left the group call. You are the only one remaining.');
+        }
+        
         setState(prev => ({
           ...prev,
-          participants: Array.from(sessionRef.current?.participants.values() || []),
-          viewerCount: sessionRef.current?.participants.size || 0,
+          participants: remainingParticipants,
+          viewerCount: remainingParticipants.length,
         }));
       })
       .on('broadcast', { event: 'stream-ended' }, ({ payload }) => {
