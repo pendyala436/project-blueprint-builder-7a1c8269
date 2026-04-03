@@ -5,6 +5,48 @@ import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2 } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
 
+// Native language labels for placeholder and send button
+const NATIVE_LABELS: Record<string, { placeholder: string; send: string; preview: string }> = {
+  telugu: { placeholder: 'మీ సందేశం టైప్ చేయండి...', send: 'పంపు', preview: 'ప్రివ్యూ' },
+  hindi: { placeholder: 'अपना संदेश टाइप करें...', send: 'भेजें', preview: 'पूर्वावलोकन' },
+  tamil: { placeholder: 'உங்கள் செய்தியை தட்டச்சு செய்யுங்கள்...', send: 'அனுப்பு', preview: 'முன்னோட்டம்' },
+  kannada: { placeholder: 'ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ...', send: 'ಕಳುಹಿಸು', preview: 'ಪೂರ್ವವೀಕ್ಷಣೆ' },
+  malayalam: { placeholder: 'നിങ്ങളുടെ സന്ദേശം ടൈപ്പ് ചെയ്യുക...', send: 'അയയ്ക്കുക', preview: 'പ്രിവ്യൂ' },
+  bengali: { placeholder: 'আপনার বার্তা টাইপ করুন...', send: 'পাঠান', preview: 'পূর্বরূপ' },
+  marathi: { placeholder: 'तुमचा संदेश टाइप करा...', send: 'पाठवा', preview: 'पूर्वावलोकन' },
+  gujarati: { placeholder: 'તમારો સંદેશ ટાઈપ કરો...', send: 'મોકલો', preview: 'પૂર્વાવલોકન' },
+  punjabi: { placeholder: 'ਆਪਣਾ ਸੁਨੇਹਾ ਟਾਈਪ ਕਰੋ...', send: 'ਭੇਜੋ', preview: 'ਪੂਰਵਦਰਸ਼ਨ' },
+  odia: { placeholder: 'ଆପଣଙ୍କ ସନ୍ଦେଶ ଟାଇପ୍ କରନ୍ତୁ...', send: 'ପଠାନ୍ତୁ', preview: 'ପୂର୍ବାବଲୋକନ' },
+  urdu: { placeholder: 'اپنا پیغام ٹائپ کریں...', send: 'بھیجیں', preview: 'پیش نظارہ' },
+  assamese: { placeholder: 'আপোনাৰ বাৰ্তা টাইপ কৰক...', send: 'পঠিয়াওক', preview: 'পূৰ্বদৰ্শন' },
+  arabic: { placeholder: 'اكتب رسالتك...', send: 'إرسال', preview: 'معاينة' },
+  spanish: { placeholder: 'Escribe tu mensaje...', send: 'Enviar', preview: 'Vista previa' },
+  french: { placeholder: 'Tapez votre message...', send: 'Envoyer', preview: 'Aperçu' },
+  portuguese: { placeholder: 'Digite sua mensagem...', send: 'Enviar', preview: 'Visualizar' },
+  russian: { placeholder: 'Введите сообщение...', send: 'Отправить', preview: 'Предпросмотр' },
+  japanese: { placeholder: 'メッセージを入力...', send: '送信', preview: 'プレビュー' },
+  korean: { placeholder: '메시지를 입력하세요...', send: '보내기', preview: '미리보기' },
+  chinese: { placeholder: '输入消息...', send: '发送', preview: '预览' },
+  german: { placeholder: 'Nachricht eingeben...', send: 'Senden', preview: 'Vorschau' },
+  italian: { placeholder: 'Scrivi il tuo messaggio...', send: 'Invia', preview: 'Anteprima' },
+  thai: { placeholder: 'พิมพ์ข้อความ...', send: 'ส่ง', preview: 'ดูตัวอย่าง' },
+  turkish: { placeholder: 'Mesajınızı yazın...', send: 'Gönder', preview: 'Önizleme' },
+  vietnamese: { placeholder: 'Nhập tin nhắn...', send: 'Gửi', preview: 'Xem trước' },
+  indonesian: { placeholder: 'Ketik pesan Anda...', send: 'Kirim', preview: 'Pratinjau' },
+  malay: { placeholder: 'Taip mesej anda...', send: 'Hantar', preview: 'Pratonton' },
+  persian: { placeholder: 'پیام خود را تایپ کنید...', send: 'ارسال', preview: 'پیش‌نمایش' },
+  swahili: { placeholder: 'Andika ujumbe wako...', send: 'Tuma', preview: 'Hakiki' },
+  nepali: { placeholder: 'तपाईंको सन्देश टाइप गर्नुहोस्...', send: 'पठाउनुहोस्', preview: 'पूर्वावलोकन' },
+  sinhala: { placeholder: 'ඔබගේ පණිවිඩය ටයිප් කරන්න...', send: 'යවන්න', preview: 'පෙරදසුන' },
+  english: { placeholder: 'Type a message...', send: 'Send', preview: 'Preview' },
+};
+
+export function getNativeLabels(language?: string) {
+  if (!language) return NATIVE_LABELS.english;
+  const key = language.toLowerCase().trim();
+  return NATIVE_LABELS[key] || NATIVE_LABELS.english;
+}
+
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
   onTyping?: (isTyping: boolean) => void;
@@ -21,12 +63,15 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   disabled = false,
   placeholder,
   className,
+  userLanguage,
   maxLength = 2000,
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const labels = getNativeLabels(userLanguage);
 
   // iOS keyboard height detection
   useEffect(() => {
@@ -42,7 +87,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    if (value.length > maxLength) return; // Enforce max length
+    if (value.length > maxLength) return;
     setMessage(value);
 
     if (onTyping) {
@@ -53,12 +98,11 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, [onTyping]);
 
   const handleSend = useCallback(async () => {
-    const text = message.trim().replace(/<[^>]*>/g, ""); // Sanitize HTML
+    const text = message.trim().replace(/<[^>]*>/g, "");
     if (!text || disabled || isSending) return;
 
-    // Rate limit check
     if (!chatRateLimiter.canProceed()) {
-      return; // Silently block rapid-fire sends
+      return;
     }
 
     setIsSending(true);
@@ -103,7 +147,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             value={message}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || 'Type a message...'}
+            placeholder={placeholder || labels.placeholder}
             disabled={disabled || isSending}
             dir="auto"
             spellCheck={true}
@@ -116,7 +160,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
               'focus-visible:ring-primary/50',
               'text-lg',
             )}
-            aria-label="Type a message"
+            aria-label={labels.placeholder}
           />
           <Button
             type="button"
@@ -138,7 +182,8 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             'bg-primary hover:bg-primary/90',
             'transition-transform active:scale-95',
           )}
-          aria-label="Send message"
+          aria-label={labels.send}
+          title={labels.send}
         >
           {isSending ? (
             <Loader2 className="h-5 w-5 animate-spin" />
