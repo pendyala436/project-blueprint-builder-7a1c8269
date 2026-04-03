@@ -581,6 +581,8 @@ const MiniChatWindow = ({
         description: "Failed to send message",
         variant: "destructive"
       });
+    } finally {
+      setIsSending(false); // CHT-03 FIX: always reset
     }
   };
 
