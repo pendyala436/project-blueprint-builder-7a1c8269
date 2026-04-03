@@ -225,6 +225,7 @@ const DashboardScreen = () => {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
+  const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
@@ -1765,12 +1766,22 @@ const DashboardScreen = () => {
               <Video className="h-4 w-4 text-primary" />
               Private Groups
             </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPrivateGroupsRefreshKey(prev => prev + 1)}
+              className="gap-1 h-7 text-xs px-2"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </Button>
           </div>
           <div className="p-2.5 rounded-lg bg-muted/50 text-[11px] sm:text-sm text-muted-foreground mb-3 border border-border/20">
             <p className="font-medium text-foreground mb-0.5 text-xs">💰 How to Join</p>
             <p>Join any live private group call at <span className="font-semibold text-primary">₹{pricing?.groupCallRatePerMinute || 4}/min</span>. Min 5 min balance required.</p>
           </div>
           <AvailableGroupsSection
+            key={privateGroupsRefreshKey}
             currentUserId={currentUserId}
             userName={userName || 'User'}
             userPhoto={userPhoto}
