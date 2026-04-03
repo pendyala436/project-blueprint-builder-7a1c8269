@@ -498,7 +498,7 @@ const DraggableMiniChatWindow = ({
 // --- Extracted sub-component for message rendering ---
 
 interface MessageBubbleProps {
-  msg: { id: string; senderId: string; message: string; translatedMessage?: string; isTranslated?: boolean; translationFailed?: boolean; sendFailed?: boolean; createdAt: string };
+  msg: { id: string; senderId: string; message: string; translatedMessage?: string; englishText?: string; isTranslated?: boolean; translationFailed?: boolean; sendFailed?: boolean; createdAt: string };
   currentUserId: string;
   currentUserName?: string;
   partnerName: string;
@@ -506,6 +506,7 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRetry }: MessageBubbleProps) => {
+  const isOwn = msg.senderId === currentUserId;
   const isVoice = msg.message.startsWith("[VOICE:");
   const isImage = msg.message.includes("[IMAGE:");
   const isVideo = msg.message.includes("[VIDEO:");
@@ -523,16 +524,27 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
     : isDocument ? extractUrl(msg.message, "DOCUMENT")
     : null;
 
+  // Display text: translated version if available, else original
+  const displayText = msg.translatedMessage || msg.message;
+  // English subtitle: show if different from display text
+  const showEnglishSubtitle = msg.englishText && msg.englishText.toLowerCase().trim() !== displayText.toLowerCase().trim();
+
   return (
-    <div className={cn("flex flex-col", msg.senderId === currentUserId ? "items-end" : "items-start")}>
-      <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
-        {msg.senderId === currentUserId ? (currentUserName || "You") : partnerName}
+    <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
+      {/* Sender name with distinct colors */}
+      <span className={cn(
+        "text-[9px] font-semibold mb-0.5 px-1",
+        isOwn ? "text-primary" : "text-emerald-600 dark:text-emerald-400"
+      )}>
+        {isOwn ? (currentUserName || "You") : partnerName}
       </span>
       <div 
         className={cn(
-          "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-          msg.senderId === currentUserId ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm",
-          msg.sendFailed && "bg-destructive/80 cursor-pointer"
+          "max-w-[85%] px-2.5 py-1.5 rounded-xl text-[11px] border shadow-sm",
+          isOwn 
+            ? "bg-primary/5 border-primary/20 rounded-br-sm" 
+            : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-sm",
+          msg.sendFailed && "bg-destructive/10 border-destructive/30 cursor-pointer"
         )}
         onClick={msg.sendFailed && onRetry ? () => onRetry(msg) : undefined}
       >
@@ -548,23 +560,30 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
           </a>
         ) : (
           <>
-            <p className="unicode-text" dir="auto">
-              {msg.senderId !== currentUserId && msg.translatedMessage ? msg.translatedMessage : msg.message}
+            {/* Primary text — native script / translated */}
+            <p className={cn(
+              "unicode-text leading-relaxed",
+              isOwn ? "text-primary dark:text-primary" : "text-emerald-800 dark:text-emerald-200"
+            )} dir="auto">
+              {displayText}
             </p>
-            {msg.senderId !== currentUserId && msg.isTranslated && msg.translatedMessage && (
-              <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">{msg.message}</p>
+            {/* English subtitle — always shown below every message */}
+            {showEnglishSubtitle && (
+              <p className="text-[9px] text-muted-foreground/70 italic mt-0.5" dir="ltr">
+                english: {msg.englishText!.toLowerCase()}
+              </p>
             )}
-            {/* CHT-H-04: Translation failed badge */}
-            {msg.senderId !== currentUserId && msg.translationFailed && (
-              <span className="text-[8px] text-amber-400 block mt-0.5">⚠ Translation unavailable</span>
+            {/* Translation failed badge */}
+            {msg.translationFailed && (
+              <span className="text-[8px] text-amber-500 block mt-0.5">⚠ Translation unavailable</span>
             )}
           </>
         )}
-        {/* CHT-C-02: Send failed indicator */}
+        {/* Send failed indicator */}
         {msg.sendFailed && (
-          <span className="text-[8px] block mt-0.5">⚠ Failed — tap to retry</span>
+          <span className="text-[8px] text-destructive block mt-0.5">⚠ Failed — tap to retry</span>
         )}
-        <span className="text-[8px] opacity-50 block mt-0.5">
+        <span className="text-[8px] text-muted-foreground/50 block mt-0.5">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
