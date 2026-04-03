@@ -134,7 +134,7 @@ interface ChatRequest {
 }
 
 // Helper to verify authenticated user and extract user ID from JWT
-async function verifyAuthAndGetUser(req: Request): Promise<{ isValid: boolean; error?: string; userId?: string }> {
+async function verifyAuthAndGetUser(req: Request, serviceClient?: any): Promise<{ isValid: boolean; error?: string; userId?: string }> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { isValid: false, error: 'Missing or invalid Authorization header' };
@@ -142,15 +142,13 @@ async function verifyAuthAndGetUser(req: Request): Promise<{ isValid: boolean; e
 
   const token = authHeader.replace('Bearer ', '');
   
-  // Create a client with the user's auth header for proper JWT validation
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } }
-  });
+  // Use service role client to validate the user's JWT - more reliable than creating a new client
+  const client = serviceClient || createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
   
-  // CRITICAL: Pass token explicitly for proper validation with verify_jwt=false
-  const { data: { user }, error } = await authClient.auth.getUser(token);
+  const { data: { user }, error } = await client.auth.getUser(token);
   if (error || !user) {
     console.log(`[AUTH] Token validation failed: ${error?.message || 'No user returned'}`);
     return { isValid: false, error: 'Invalid or expired token' };
