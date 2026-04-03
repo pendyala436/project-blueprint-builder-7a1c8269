@@ -134,9 +134,12 @@ export const useIncomingChats = (
           return;
         }
 
-        // Filter out already accepted or rejected sessions
+        // Filter out already accepted, rejected, or self-initiated sessions
         const pendingSessions = sessions.filter(
-          s => !acceptedChatsRef.current.has(s.id) && !rejectedChatsRef.current.has(s.id)
+          s => !acceptedChatsRef.current.has(s.id) && 
+               !rejectedChatsRef.current.has(s.id) &&
+               !selfInitiatedSessionIds.has(s.id) &&
+               !selfInitiatedChatIds.has(s.chat_id)
         );
         if (pendingSessions.length === 0) {
           isCheckingRef = false;
