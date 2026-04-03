@@ -2,11 +2,11 @@ import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Loader2 } from 'lucide-react';
+import { Send, Smile, Loader2, Languages } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
+import { translateText } from '@/lib/translation-service';
 
 // Native language labels for placeholder and send button
-// Placeholder shows native script + transliterated hint so users know they can type in any style
 const NATIVE_LABELS: Record<string, { placeholder: string; send: string; preview: string }> = {
   telugu: { placeholder: 'బాగున్నావా / bagunnava / how are you...', send: 'పంపు', preview: 'ప్రివ్యూ' },
   hindi: { placeholder: 'कैसे हो / kaise ho / how are you...', send: 'भेजें', preview: 'पूर्वावलोकन' },
@@ -48,6 +48,17 @@ export function getNativeLabels(language?: string) {
   return NATIVE_LABELS[key] || NATIVE_LABELS.english;
 }
 
+/**
+ * Check if text is typed in Latin/ASCII characters (transliteration).
+ * Returns true for "bagunnava", false for "బాగున్నావా" or mixed scripts.
+ */
+function isLatinScript(text: string): boolean {
+  // Strip common punctuation/numbers, check if remaining chars are Latin
+  const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
+  if (!cleaned) return false;
+  return /^[a-zA-Z\u00C0-\u024F]+$/.test(cleaned);
+}
+
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
   onTyping?: (isTyping: boolean) => void;
@@ -69,10 +80,15 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const previewTimeoutRef = useRef<NodeJS.Timeout>();
 
   const labels = getNativeLabels(userLanguage);
+  const langNorm = (userLanguage || 'english').toLowerCase().trim();
+  const isNonEnglish = langNorm !== 'english';
 
   // iOS keyboard height detection
   useEffect(() => {
@@ -86,6 +102,39 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     return () => viewport.removeEventListener("resize", handleResize);
   }, []);
 
+  // Debounced native script preview — converts transliteration to native script
+  // Only runs when user types Latin characters and their language is non-English
+  useEffect(() => {
+    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+
+    const trimmed = message.trim();
+    if (!trimmed || !isNonEnglish || !isLatinScript(trimmed)) {
+      setNativePreview(null);
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    previewTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await translateText(trimmed, 'English', userLanguage || 'English');
+        // Only show preview if it's different from the input (actual conversion happened)
+        if (result && result !== trimmed) {
+          setNativePreview(result);
+        } else {
+          setNativePreview(null);
+        }
+      } catch {
+        setNativePreview(null);
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    }, 600); // 600ms debounce
+
+    return () => {
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+    };
+  }, [message, isNonEnglish, userLanguage]);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length > maxLength) return;
@@ -96,7 +145,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [onTyping]);
+  }, [onTyping, maxLength]);
 
   const handleSend = useCallback(async () => {
     const text = message.trim().replace(/<[^>]*>/g, "");
@@ -109,6 +158,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     setIsSending(true);
     try {
       setMessage('');
+      setNativePreview(null);
       onTyping?.(false);
       textareaRef.current?.focus();
       await onSendMessage(text);
@@ -127,6 +177,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     };
   }, []);
 
@@ -141,6 +192,20 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
+      {/* Native script preview — shows transliteration conversion before send */}
+      {(nativePreview || isPreviewLoading) && message.trim() && (
+        <div className="px-4 py-1.5 border-b border-border/30 flex items-center gap-2">
+          <Languages className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+          {isPreviewLoading ? (
+            <span className="text-xs text-muted-foreground italic">Converting...</span>
+          ) : nativePreview ? (
+            <span className="text-sm unicode-text text-primary font-medium" dir="auto">
+              {nativePreview}
+            </span>
+          ) : null}
+        </div>
+      )}
+      
       <div className="p-3 pt-2 flex items-end gap-2">
         <div className="flex-1 relative">
           <Textarea
