@@ -526,7 +526,7 @@ const DraggableMiniChatWindow = ({
 // --- Extracted sub-component for message rendering ---
 
 interface MessageBubbleProps {
-  msg: { id: string; senderId: string; message: string; createdAt: string };
+  msg: { id: string; senderId: string; message: string; translatedMessage?: string; isTranslated?: boolean; createdAt: string };
   currentUserId: string;
   currentUserName?: string;
   partnerName: string;
