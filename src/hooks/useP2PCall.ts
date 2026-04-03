@@ -200,7 +200,7 @@ export const useP2PCall = ({
     }
   };
 
-  // Start call timer and billing when active
+  // Start call timer and billing when active — VID-H-01: use ref to avoid stale closure
   useEffect(() => {
     if (state.callStatus === 'active') {
       // Duration counter (every second)
@@ -216,12 +216,22 @@ export const useP2PCall = ({
         });
       }, 1000);
 
-      // Billing processing (every 60 seconds) - only after first minute
-      billingTimerRef.current = setInterval(() => {
+      // VID-H-01: Delay first billing tick to ensure media is actually connected
+      // Bill after 60s, then every 60s thereafter
+      const initialBillingDelay = setTimeout(() => {
         processBilling();
-      }, 60000); // Bill every 60 seconds
+        billingTimerRef.current = setInterval(() => {
+          processBilling();
+        }, 60000);
+      }, 60000);
 
       console.log('[P2P] Call timers started - billing starts after first minute');
+
+      return () => {
+        if (callTimerRef.current) clearInterval(callTimerRef.current);
+        if (billingTimerRef.current) clearInterval(billingTimerRef.current);
+        clearTimeout(initialBillingDelay);
+      };
     }
 
     return () => {

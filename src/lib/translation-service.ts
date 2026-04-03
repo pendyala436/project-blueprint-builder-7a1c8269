@@ -47,9 +47,15 @@ export async function translateText(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return text;
 
   try {
+    // CHT-H-04: Add 5-second timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: { text, sourceLang, targetLang },
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.warn('[Translation] Edge function error:', error.message);
@@ -57,8 +63,12 @@ export async function translateText(
     }
 
     return data?.translation || text;
-  } catch (err) {
-    console.warn('[Translation] Failed:', err);
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      console.warn('[Translation] Request timed out after 5s');
+    } else {
+      console.warn('[Translation] Failed:', err);
+    }
     return text; // English fallback
   }
 }
