@@ -359,13 +359,14 @@ const ProfileDetailScreen = () => {
         .maybeSingle();
 
       if (!existingSession) {
-        // Create new chat session
+        // Create new chat session with 'pending' status
+        // Woman must accept before it becomes 'active' (which triggers busy status)
         await supabase.from("active_chat_sessions").insert({
           chat_id: chatId,
           man_user_id: isMale ? currentUserId : profile.userId,
           woman_user_id: isMale ? profile.userId : currentUserId,
-          status: "active",
-          rate_per_minute: 2,
+          status: "pending",
+          rate_per_minute: pricing.ratePerMinute,
         });
       }
 
