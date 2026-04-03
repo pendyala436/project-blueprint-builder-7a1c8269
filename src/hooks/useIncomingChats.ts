@@ -251,6 +251,9 @@ export const useIncomingChats = (
           const session = payload.new as { id: string; status: string };
           if (session.status === "ended") {
             setIncomingChats(prev => prev.filter(c => c.sessionId !== session.id));
+          } else if (session.status === "pending" || session.status === "active") {
+            // Recycled sessions use UPDATE instead of INSERT — re-check for incoming
+            checkForNewChats();
           }
         }
       )
@@ -293,7 +296,7 @@ export const useIncomingChats = (
         .eq("id", sessionId);
     } catch (error) {
       console.error("Error rejecting chat:", error);
-      toast.error("Could not decline chat", { description: "Unable to decline this chat request. Please try again." });
+      toast("Could not decline chat. Please try again.");
     }
     
     setIncomingChats(prev => prev.filter(c => c.sessionId !== sessionId));
