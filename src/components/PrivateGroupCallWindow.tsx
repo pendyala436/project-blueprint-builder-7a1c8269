@@ -129,20 +129,6 @@ export function PrivateGroupCallWindow({
 
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
 
-  // Use ref to avoid stale closure in realtime listener
-  const participantsRef = useRef(participants);
-  participantsRef.current = participants;
-
-  const getParticipantName = useCallback((userId: string): string => {
-    if (userId === currentUserId) return userName;
-    if (userId === group.owner_id) {
-      const host = participantsRef.current.find(p => p.isOwner);
-      return host?.name || 'Host';
-    }
-    const participant = participantsRef.current.find(p => p.id === userId);
-    return participant?.name || 'Participant';
-  }, [currentUserId, group.owner_id, userName]);
-
   // Enhanced group call hook
   const {
     isConnecting,
@@ -189,6 +175,20 @@ export function PrivateGroupCallWindow({
       }
     },
   });
+
+  // Use ref to avoid stale closure in realtime listener
+  const participantsRef = useRef(participants);
+  participantsRef.current = participants;
+
+  const getParticipantName = useCallback((userId: string): string => {
+    if (userId === currentUserId) return userName;
+    if (userId === group.owner_id) {
+      const host = participantsRef.current.find(p => p.isOwner);
+      return host?.name || 'Host';
+    }
+    const participant = participantsRef.current.find(p => p.id === userId);
+    return participant?.name || 'Participant';
+  }, [currentUserId, group.owner_id, userName]);
 
   // Format elapsed time
   const formatTime = (seconds: number) => {
