@@ -220,11 +220,13 @@ const AppShell = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <ErrorBoundary>
-        <BrowserRouter>
-          <AppShell />
-        </BrowserRouter>
-      </ErrorBoundary>
+      <TranslationProvider>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <AppShell />
+          </BrowserRouter>
+        </ErrorBoundary>
+      </TranslationProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
