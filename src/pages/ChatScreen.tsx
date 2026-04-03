@@ -394,7 +394,9 @@ const ChatScreen = () => {
           const langToUse = currentUserLanguage || 'English';
           if (langToUse) {
             try {
-              const result = await translateForViewer(newMsg.message, langToUse);
+              // Pass sender's language for cross-language transliteration bridge
+              const senderLang = newMsg.sender_id === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+              const result = await translateForViewer(newMsg.message, langToUse, senderLang);
               translatedMessage = result.nativeText;
               englishText = result.englishText;
               isTranslated = translatedMessage !== newMsg.message;
@@ -547,7 +549,8 @@ const ChatScreen = () => {
       const batch = msgs.slice(i, i + batchSize);
       const translationPromises = batch.map(async (msg) => {
         try {
-          const result = await translateForViewer(msg.message, viewerLanguage);
+          const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+          const result = await translateForViewer(msg.message, viewerLanguage, msgSenderLang);
           return {
             id: msg.id,
             translatedMessage: result.nativeText,

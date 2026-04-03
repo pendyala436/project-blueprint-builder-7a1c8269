@@ -276,7 +276,7 @@ const DraggableMiniChatWindow = ({
 
     // Translate optimistic message for sender's own view (native script + English subtitle)
     import("@/lib/translation-service").then(({ translateForViewer, getEnglishTranslation }) => {
-      translateForViewer(inputText, currentUserLanguage || 'English').then(result => {
+      translateForViewer(inputText, currentUserLanguage || 'English', currentUserLanguage).then(result => {
         setMessages((prev) => prev.map((m) => 
           m.id === tempId ? { 
             ...m, 

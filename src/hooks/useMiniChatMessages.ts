@@ -55,10 +55,11 @@ const markMessagesAsReadWithRetry = async (
  */
 async function translateMessageForViewer(
   text: string,
-  viewerLanguage: string
+  viewerLanguage: string,
+  senderLanguage?: string
 ): Promise<{ displayText: string; englishText: string; isTranslated: boolean }> {
   try {
-    const result = await translateForViewer(text, viewerLanguage);
+    const result = await translateForViewer(text, viewerLanguage, senderLanguage);
     return {
       displayText: result.nativeText,
       englishText: result.englishText,
@@ -120,7 +121,9 @@ export const useMiniChatMessages = ({
         // Background-translate older messages for viewer (all languages, including English)
         olderMsgs.forEach(async (msg) => {
           try {
-            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English');
+            // Determine sender's language: if sender is current user, use currentUserLanguage; else partnerLanguage
+            const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English', msgSenderLang);
             setMessages(prev => prev.map(m => 
               m.id === msg.id ? { ...m, translatedMessage: result.displayText, englishText: result.englishText, isTranslated: result.isTranslated } : m
             ));
@@ -170,7 +173,8 @@ export const useMiniChatMessages = ({
         // Background-translate all loaded messages for the viewer
         msgs.forEach(async (msg) => {
           try {
-            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English');
+            const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English', msgSenderLang);
             setMessages(prev => prev.map(m => 
               m.id === msg.id 
                 ? { ...m, translatedMessage: result.displayText, englishText: result.englishText, isTranslated: result.isTranslated } 
@@ -203,7 +207,9 @@ export const useMiniChatMessages = ({
           let translationFailed = false;
 
           try {
-            const result = await translateMessageForViewer(m.message, currentUserLanguage || 'English');
+            // Determine sender language for cross-language transliteration bridge
+            const msgSenderLang = m.sender_id === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateMessageForViewer(m.message, currentUserLanguage || 'English', msgSenderLang);
             translatedMessage = result.displayText;
             englishText = result.englishText;
             isTranslated = result.isTranslated;
