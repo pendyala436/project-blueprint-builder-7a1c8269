@@ -289,7 +289,6 @@ export async function translateForViewer(
     }
   }
 }
-}
 
 /**
  * Translate a chat message for sender→receiver flow.
