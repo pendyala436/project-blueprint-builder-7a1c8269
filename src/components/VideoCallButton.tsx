@@ -35,6 +35,7 @@ const VideoCallButton = ({
 }: VideoCallButtonProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { pricing } = useChatPricing();
   const [isSearching, setIsSearching] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
