@@ -812,8 +812,8 @@ serve(async (req) => {
 
         const womenIds = womenProfiles.map(w => w.user_id);
 
-        // Get availability, video calls, and languages in parallel
-        const [{ data: availabilities }, { data: activeVideoCalls }, { data: userLanguages }] = await Promise.all([
+        // Get availability, video calls, pending sessions, and languages in parallel
+        const [{ data: availabilities }, { data: activeVideoCalls }, { data: pendingSessions }, { data: userLanguages }] = await Promise.all([
           supabase
             .from("women_availability")
             .select("user_id, current_chat_count, max_concurrent_chats, is_available")
@@ -823,11 +823,23 @@ serve(async (req) => {
             .select("woman_user_id")
             .in("woman_user_id", womenIds)
             .eq("status", "active"),
+          // Count pending sessions too — these slots are reserved
+          supabase
+            .from("active_chat_sessions")
+            .select("woman_user_id")
+            .in("woman_user_id", womenIds)
+            .eq("status", "pending"),
           supabase
             .from("user_languages")
             .select("user_id, language_name")
             .in("user_id", womenIds)
         ]);
+
+        // Count pending sessions per woman
+        const pendingCountMap = new Map<string, number>();
+        (pendingSessions || []).forEach((s: any) => {
+          pendingCountMap.set(s.woman_user_id, (pendingCountMap.get(s.woman_user_id) || 0) + 1);
+        });
 
         const usersInVideoCall = new Set((activeVideoCalls || []).map((v: any) => v.woman_user_id));
 
