@@ -65,14 +65,15 @@ const VideoCallButton = ({
     
     if (!isSuperUser) {
       // Minimum balance required to start video call (₹8/min * 2 min buffer)
-      const minBalance = 16;
+      const videoRate = pricing.videoRatePerMinute || 8;
+      const minBalance = videoRate * 2;
       
       if (walletBalance <= 0) {
         setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start video calls.");
         setShowRechargeDialog(true);
         return;
       } else if (walletBalance < minBalance) {
-        setRechargeMessage(`You need at least ₹${minBalance} to start a video call (₹8/minute). Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setRechargeMessage(`You need at least ₹${minBalance} to start a video call (₹${videoRate}/minute). Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
         setShowRechargeDialog(true);
         return;
       }
