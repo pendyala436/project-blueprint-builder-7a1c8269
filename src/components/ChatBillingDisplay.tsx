@@ -279,7 +279,7 @@ const ChatBillingDisplay = ({
       });
     } catch (error) {
       console.error("Error ending chat:", error);
-      toast.error("Chat not ended", { description: "Unable to close the chat session. Please refresh the page." });
+      toast({ title: "Chat not ended", description: "Unable to close the chat session. Please refresh the page.", variant: "destructive" });
     }
     
     if (heartbeatInterval.current) clearInterval(heartbeatInterval.current);
