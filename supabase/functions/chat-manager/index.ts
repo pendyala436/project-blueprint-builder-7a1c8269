@@ -1123,6 +1123,7 @@ serve(async (req) => {
           session = existingSession;
           console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
         } else {
+          // Try insert, handle duplicate key race condition gracefully
           const { data: newSession, error: sessionError } = await supabase
             .from("active_chat_sessions")
             .insert({
@@ -1135,8 +1136,26 @@ serve(async (req) => {
             .select()
             .single();
 
-          if (sessionError) throw sessionError;
-          session = newSession;
+          if (sessionError) {
+            // Race condition: another request already created the session
+            if (sessionError.code === '23505') {
+              console.log(`[START_CHAT] Race condition detected for chat ${chatId}, fetching existing session`);
+              const { data: raceSession } = await supabase
+                .from("active_chat_sessions")
+                .select("*")
+                .eq("chat_id", chatId)
+                .maybeSingle();
+              if (raceSession) {
+                session = raceSession;
+              } else {
+                throw sessionError;
+              }
+            } else {
+              throw sessionError;
+            }
+          } else {
+            session = newSession;
+          }
         }
 
         // Update woman's availability
