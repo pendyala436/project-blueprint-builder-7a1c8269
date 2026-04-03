@@ -1381,7 +1381,7 @@ const DashboardScreen = () => {
               <p className="text-[10px] text-muted-foreground">{t('matches', 'Matches')}</p>
             </Card>
             <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
-              <p className="text-lg font-bold text-foreground">{activeChatCount}/3</p>
+              <p className="text-lg font-bold text-foreground">{activeChatCount}/{MAX_PARALLEL_CHATS}</p>
               <p className="text-[10px] text-muted-foreground">{t('activeChats', 'Active')}</p>
             </Card>
           </div>
