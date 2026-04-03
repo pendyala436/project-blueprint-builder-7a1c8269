@@ -33,6 +33,26 @@ function isLatinScript(text: string): boolean {
 }
 
 /**
+ * Languages whose native script IS Latin. For these, translation output
+ * will also be Latin, so we must NOT apply the "still Latin → override with English" fallback.
+ */
+const LATIN_SCRIPT_LANGUAGES = new Set([
+  'english', 'french', 'german', 'spanish', 'portuguese', 'italian', 'dutch',
+  'polish', 'czech', 'slovak', 'hungarian', 'romanian', 'croatian', 'slovenian',
+  'finnish', 'swedish', 'norwegian', 'danish', 'icelandic', 'estonian', 'latvian',
+  'lithuanian', 'turkish', 'vietnamese', 'indonesian', 'malay', 'filipino',
+  'tagalog', 'swahili', 'afrikaans', 'catalan', 'basque', 'galician', 'albanian',
+  'bosnian', 'maltese', 'luxembourgish', 'welsh', 'irish', 'scottish gaelic',
+  'esperanto', 'latin', 'haitian creole', 'cebuano', 'javanese', 'sundanese',
+  'maori', 'samoan', 'hawaiian', 'corsican', 'frisian', 'yoruba', 'igbo',
+  'zulu', 'xhosa', 'sotho', 'shona', 'somali', 'hausa', 'kinyarwanda',
+]);
+
+function isLatinScriptLanguage(lang: string): boolean {
+  return LATIN_SCRIPT_LANGUAGES.has(lang.toLowerCase().trim());
+}
+
+/**
  * Translate a single text string via the embedded lingva scraper edge function.
  * Falls back to original text if translation fails.
  */
