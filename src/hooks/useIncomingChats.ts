@@ -135,11 +135,15 @@ export const useIncomingChats = (
         const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
         
         // OPTIMIZED: Single query with limit
+        // Women see 'pending' sessions (must accept first)
+        // Men see 'active' sessions (auto-opened when woman accepts)
+        const statusFilter = userGender === "female" ? ["pending", "active"] : ["active"];
+        
         const { data: sessions, error: sessionsError } = await supabase
           .from("active_chat_sessions")
-          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at`)
+          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
           .eq(column, currentUserId)
-          .eq("status", "active")
+          .in("status", statusFilter)
           .order("created_at", { ascending: false })
           .limit(10);
 
@@ -257,9 +261,20 @@ export const useIncomingChats = (
     };
   }, [currentUserId, userGender]);
 
-  const acceptChat = useCallback((sessionId: string) => {
+  const acceptChat = useCallback(async (sessionId: string) => {
     acceptedChatsRef.current.add(sessionId);
     setIncomingChats(prev => prev.filter(c => c.sessionId !== sessionId));
+    
+    // Transition pending → active so billing/availability triggers fire
+    try {
+      await supabase
+        .from("active_chat_sessions")
+        .update({ status: "active", started_at: new Date().toISOString() })
+        .eq("id", sessionId)
+        .in("status", ["pending", "active"]);
+    } catch (error) {
+      console.error("[useIncomingChats] Error activating session:", error);
+    }
   }, []);
 
   const rejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
