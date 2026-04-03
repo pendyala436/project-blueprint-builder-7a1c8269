@@ -20,24 +20,10 @@ const FREE_STUN_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.nextcloud.com:443' },
 ];
 
-// Free TURN relay servers (Open Relay Project — openrelay.metered.ca)
-const FREE_TURN_SERVERS: RTCIceServer[] = [
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-];
+// VID-C-03: Removed hardcoded public shared TURN credentials.
+// Self-hosted coturn TURN server MUST be configured via env vars.
+// Without TURN, calls behind symmetric NAT will fall back to STUN-only (may fail).
+const FREE_TURN_SERVERS: RTCIceServer[] = [];
 
 /**
  * Build ICE server list.
