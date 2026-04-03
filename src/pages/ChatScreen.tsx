@@ -435,6 +435,17 @@ const ChatScreen = () => {
     };
   }, [activeChatId, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
 
+  // Issue 2.2: Re-translate history when language loads late
+  useEffect(() => {
+    const langToUse = currentUserLanguage || 'English';
+    if (langToUse && messages.length > 0) {
+      const untranslated = messages.filter(m => !m.isTranslated && !m.translatedMessage);
+      if (untranslated.length > 0) {
+        translateHistoryMessages(messages, langToUse);
+      }
+    }
+  }, [currentUserLanguage]);
+
   /**
    * useEffect: Monitor Partner Online Status and Session
    * 
