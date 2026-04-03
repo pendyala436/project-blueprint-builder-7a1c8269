@@ -388,6 +388,7 @@ const MiniChatWindow = ({
   }, []);
 
 
+  const loadMessages = async () => {
     const { data } = await supabase
       .from("chat_messages")
       .select("*")
