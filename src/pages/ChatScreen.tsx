@@ -102,6 +102,8 @@ interface Message {
   id: string;                    // UUID of the message
   senderId: string;              // UUID of sender
   message: string;               // Original message text
+  translatedMessage?: string;    // Translated message for display
+  isTranslated?: boolean;        // Whether translation was applied
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
