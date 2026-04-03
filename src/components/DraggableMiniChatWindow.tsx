@@ -302,7 +302,7 @@ const DraggableMiniChatWindow = ({
           ));
         }).catch(() => {});
       });
-    }
+    });
 
     try {
       const { data: insertedMessage, error: insertError } = await supabase
