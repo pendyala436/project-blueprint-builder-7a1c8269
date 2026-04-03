@@ -6,6 +6,8 @@ interface Message {
   id: string;
   senderId: string;
   message: string;
+  translatedMessage?: string;
+  isTranslated?: boolean;
   createdAt: string;
 }
 
