@@ -813,7 +813,7 @@ const WomenDashboardScreen = () => {
       ]);
 
       const statusMap = new Map((statusesRes.data as any[] || []).map(s => [s.user_id, s.is_online]));
-      const profileMap = new Map((profilesRes.data as any[] || []).map(p => [p.user_id, p]));
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
       const matched: MatchedMan[] = matches
         .map(m => {

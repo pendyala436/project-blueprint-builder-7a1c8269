@@ -119,7 +119,7 @@ const EnhancedParallelChatsContainer = ({
           .maybeSingle(),
         (async () => {
           const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-          return { data: await fetchPublicProfiles(partnerIds), error: null };
+          return { data: await fetchPublicProfiles(partnerIds as string[]), error: null };
         })(),
         supabase
           .from("user_status")

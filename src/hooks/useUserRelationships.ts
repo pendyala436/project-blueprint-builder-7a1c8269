@@ -132,7 +132,7 @@ export const useUserRelationships = (userId: string | null) => {
         ]);
 
         profileMap = new Map(
-          (profilesResult.data as ProfileData[] || []).map(p => [p.user_id, p] as const)
+          (profilesData as ProfileData[] || []).map(p => [p.user_id, p] as const)
         );
         onlineMap = new Map(
           (statusResult.data as StatusData[] || []).map(s => [s.user_id, s.is_online] as const)
