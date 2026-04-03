@@ -444,9 +444,15 @@ const MiniChatWindow = ({
               // Fallback: show original (English fallback)
             }
           } else if (!isPartnerMessage) {
-            // For own messages, get English subtitle
+            // For own messages, translate to sender's native language + get English subtitle
+            const langToUseOwn = currentUserLanguage || 'English';
             try {
-              englishText = await getEnglishTranslation(newMsg.message, langToUse);
+              const result = await translateForViewer(newMsg.message, langToUseOwn);
+              if (result.nativeText !== newMsg.message) {
+                translatedMessage = result.nativeText;
+                isTranslated = true;
+              }
+              englishText = result.englishText;
             } catch {
               // ignore
             }
@@ -809,10 +815,10 @@ const MiniChatWindow = ({
                           ? "text-primary dark:text-primary"
                           : "text-emerald-800 dark:text-emerald-200"
                       )} dir="auto">
-                        {!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message}
+                        {msg.translatedMessage ? msg.translatedMessage : msg.message}
                       </p>
                       {/* English subtitle below every bubble */}
-                      {msg.englishText && msg.englishText.toLowerCase() !== (!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message).toLowerCase() && (
+                      {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message).toLowerCase() && (
                         <p className="text-[9px] text-muted-foreground/60 italic mt-0.5" dir="ltr">
                           english: {msg.englishText.toLowerCase()}
                         </p>
