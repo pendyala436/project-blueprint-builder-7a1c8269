@@ -553,6 +553,21 @@ const MiniChatWindow = ({
     };
     setMessages(prev => [...prev, optimisticMessage]);
 
+    // Translate optimistic message for sender's own view (native script + English subtitle)
+    const senderLang = currentUserLanguage || 'English';
+    if (senderLang.toLowerCase() !== 'english') {
+      translateForViewer(messageText, senderLang).then(result => {
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { 
+            ...m, 
+            translatedMessage: result.nativeText !== messageText ? result.nativeText : undefined,
+            englishText: result.englishText,
+            isTranslated: result.nativeText !== messageText 
+          } : m
+        ));
+      }).catch(() => { /* fallback: show original */ });
+    }
+
     try {
       const { error } = await supabase
         .from("chat_messages")

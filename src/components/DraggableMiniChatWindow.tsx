@@ -273,15 +273,32 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const messageTimestamp = new Date().toISOString();
 
     setNewMessage("");
     setNativePreview(null);
     billing.setLastActivityTime(Date.now());
 
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setMessages((prev) => [...prev, { id: tempId, senderId: currentUserId, message: inputText, createdAt: messageTimestamp }]);
     sendingRef.current = false;
+
+    // Translate optimistic message for sender's own view (native script + English subtitle)
+    const senderLang = (currentUserLanguage || 'English').toLowerCase().trim();
+    if (senderLang !== 'english') {
+      import("@/lib/translation-service").then(({ translateForViewer }) => {
+        translateForViewer(inputText, currentUserLanguage || 'English').then(result => {
+          setMessages((prev) => prev.map((m) => 
+            m.id === tempId ? { 
+              ...m, 
+              translatedMessage: result.nativeText !== inputText ? result.nativeText : undefined,
+              englishText: result.englishText,
+              isTranslated: result.nativeText !== inputText 
+            } : m
+          ));
+        }).catch(() => { /* fallback: show original */ });
+      });
+    }
 
     try {
       const { data: insertedMessage, error: insertError } = await supabase
