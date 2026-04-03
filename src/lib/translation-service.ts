@@ -171,9 +171,13 @@ export async function translateForViewer(
 /**
  * Translate a chat message for sender→receiver flow.
  * 
+ * Rules:
  * - Same language: both see native script + English subtitle
  * - Different language: receiver sees translated native + English subtitle
  * - All translations are LIVE (no hardcoded values)
+ * - If sender's language is unsupported: sender types in English,
+ *   message is still translated to receiver's language (if supported)
+ * - If receiver's language is also unsupported: both see English
  * - English is always the fallback language
  */
 export async function translateChatMessage(
@@ -185,17 +189,24 @@ export async function translateChatMessage(
     return { translated: message, englishText: message, isTranslated: false };
   }
 
+  const senderLang = (senderLanguage || 'english').toLowerCase().trim();
+  const receiverLang = (receiverLanguage || 'english').toLowerCase().trim();
+
   try {
+    // If sender's language is unsupported, they type in English.
+    // We still translate English → receiver's language if receiver's lang is supported.
+    // translateForViewer handles this via auto-detect → target.
     const result = await translateForViewer(message, receiverLanguage);
     const isTranslated = result.nativeText !== message;
 
+    // If receiver's language is also unsupported, nativeText will be English (fallback)
     return {
       translated: result.nativeText,
       englishText: result.englishText,
       isTranslated,
     };
   } catch {
-    // English fallback
+    // English fallback — if everything fails, show original (English)
     return { translated: message, englishText: message, isTranslated: false };
   }
 }
