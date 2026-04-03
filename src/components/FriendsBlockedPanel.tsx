@@ -207,9 +207,15 @@ export const FriendsBlockedPanel = ({
       });
 
       if (error) throw error;
+      
+      // Mark as self-initiated to prevent incoming chat popup
+      if (data?.session_id || data?.chat_id) {
+        const { markChatAsSelfInitiated } = await import("@/hooks/useIncomingChats");
+        markChatAsSelfInitiated(data.session_id, data.chat_id);
+      }
+      
       if (data?.success) {
         onClose();
-        // Brief delay so the panel closes first, then toast draws attention to the new chat window
         setTimeout(() => {
           toast({ title: "💬 Chat Started", description: `Your chat with ${friendName} is now open below` });
         }, 300);

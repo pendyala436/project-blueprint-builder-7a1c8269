@@ -696,6 +696,12 @@ const DashboardScreen = () => {
 
       if (error) throw error;
 
+      // Mark as self-initiated to prevent incoming chat popup
+      if (data?.session_id || data?.chat_id) {
+        const { markChatAsSelfInitiated } = await import("@/hooks/useIncomingChats");
+        markChatAsSelfInitiated(data.session_id, data.chat_id);
+      }
+
       if (!data.success) {
         // If woman is busy, try auto-reconnect
         if (data.message?.includes("capacity") || data.message?.includes("Maximum")) {
