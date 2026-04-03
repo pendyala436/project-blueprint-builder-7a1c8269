@@ -397,7 +397,7 @@ const ChatScreen = () => {
           const langToUse = currentUserLanguage || 'English';
           if (langToUse) {
             try {
-              const result = await translateForViewer(newMsg.message, currentUserLanguage);
+              const result = await translateForViewer(newMsg.message, langToUse);
               translatedMessage = result.nativeText;
               englishText = result.englishText;
               isTranslated = translatedMessage !== newMsg.message;
