@@ -160,23 +160,24 @@ export const LanguageGroupChat = ({
         .select("user_id")
         .eq("language_name", languageName);
 
-      const { data: profilesByLanguage } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("gender", "female")
-        .or(`primary_language.eq.${languageName},preferred_language.eq.${languageName}`);
+      const { fetchPublicProfiles: fetchProfiles } = await import("@/lib/profile-queries");
+      // Get female profiles matching language via RPC then filter
+      const allLanguageProfiles = await fetchProfiles(
+        (languageUsers?.map(u => u.user_id) || []) as string[]
+      );
+      const profilesByLanguage = allLanguageProfiles.filter(
+        p => p.gender === "female" && 
+        (p.primary_language === languageName || p.preferred_language === languageName)
+      );
 
       const userIds = [...new Set([
         ...(languageUsers?.map(u => u.user_id) || []),
-        ...(profilesByLanguage?.map(p => p.user_id) || [])
+        ...profilesByLanguage.map(p => p.user_id)
       ])];
 
       if (userIds.length > 0) {
-        const [profilesRes, statusRes] = await Promise.all([
-          supabase.from("profiles")
-            .select("user_id, full_name, photo_url")
-            .eq("gender", "female")
-            .in("user_id", userIds),
+        const [profilesData, statusRes] = await Promise.all([
+          fetchProfiles(userIds as string[]),
           supabase.from("user_status")
             .select("user_id, is_online")
             .in("user_id", userIds)
