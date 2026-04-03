@@ -66,6 +66,7 @@ const EnhancedParallelChatsContainer = ({
   const [focusedChatId, setFocusedChatId] = useState<string | null>(null);
   const acceptedSessionsRef = useRef<Set<string>>(new Set());
   const closedSessionsRef = useRef<Set<string>>(new Set());
+  const closedChatIdsRef = useRef<Set<string>>(new Set());
   const existingPartnersRef = useRef<Set<string>>(new Set());
   const nextZIndexRef = useRef(50);
   const isLoadingRef = useRef(false);
