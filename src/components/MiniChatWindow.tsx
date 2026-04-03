@@ -391,7 +391,8 @@ const MiniChatWindow = ({
           let englishText: string | undefined;
           let isTranslated = false;
 
-          if (isPartnerMessage && partnerLanguage && currentUserLanguage) {
+          const langToUse = currentUserLanguage || 'English';
+          if (isPartnerMessage && partnerLanguage) {
             try {
               const result = await translateChatMessage(
                 newMsg.message,
