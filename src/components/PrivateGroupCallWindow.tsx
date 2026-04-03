@@ -284,6 +284,7 @@ export function PrivateGroupCallWindow({
   }, [group.id, currentUserId, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName]);
 
   // Extension check — query DB instead of localStorage
+  // NOTE: getMonth() is 0-indexed; DB stores 1-indexed months
   useEffect(() => {
     const now = new Date();
     const checkExtension = async () => {
@@ -292,7 +293,7 @@ export function PrivateGroupCallWindow({
         .select('id')
         .eq('user_id', currentUserId)
         .eq('group_id', group.id)
-        .eq('extension_month', now.getMonth())
+        .eq('extension_month', now.getMonth() + 1) // 1-indexed for DB
         .eq('extension_year', now.getFullYear())
         .maybeSingle();
       if (data) {
