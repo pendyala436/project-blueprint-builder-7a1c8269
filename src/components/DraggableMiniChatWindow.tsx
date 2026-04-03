@@ -131,6 +131,39 @@ const DraggableMiniChatWindow = ({
     onClose,
   });
 
+  // --- Native preview for transliteration ---
+  const isLatinScript = (text: string): boolean => {
+    const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
+    if (!cleaned) return false;
+    return /^[a-zA-Z\u00C0-\u024F]+$/.test(cleaned);
+  };
+
+  useEffect(() => {
+    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+    const trimmed = newMessage.trim();
+    if (!trimmed || !isNonEnglish || !isLatinScript(trimmed)) {
+      setNativePreview(null);
+      setIsPreviewLoading(false);
+      return;
+    }
+    setIsPreviewLoading(true);
+    previewTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await translateText(trimmed, 'English', currentUserLanguage || 'English');
+        if (result && result !== trimmed) {
+          setNativePreview(result);
+        } else {
+          setNativePreview(null);
+        }
+      } catch {
+        setNativePreview(null);
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    }, 600);
+    return () => { if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current); };
+  }, [newMessage, isNonEnglish, currentUserLanguage]);
+
   // --- Lightweight effects that remain in the component ---
 
   // Check earning eligibility for women
