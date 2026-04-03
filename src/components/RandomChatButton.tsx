@@ -325,10 +325,7 @@ export const RandomChatButton = ({
       // Close dialog and navigate back to dashboard
       // Chat windows are handled via parallel chat containers on the dashboard
       setSearchDialogOpen(false);
-      toast({
-        title: "Chat Started!",
-        description: "Your chat session is now active on the dashboard.",
-      });
+      // Chat started silently
       navigate(userGender === "female" ? "/women-dashboard" : "/dashboard");
     } catch (error: any) {
       console.error("Error starting chat:", error);
