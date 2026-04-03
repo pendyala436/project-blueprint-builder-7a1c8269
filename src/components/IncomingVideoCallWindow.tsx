@@ -209,7 +209,7 @@ const IncomingVideoCallWindow = ({
 
       if (error) {
         console.error('Error declining call:', error);
-        toast.error('Could not decline call', { description: 'Unable to decline the call. Please try again.' });
+        toast({ title: 'Could not decline call', description: 'Unable to decline the call. Please try again.', variant: 'destructive' });
       }
 
       // Resume any chats that were paused for this call
@@ -231,7 +231,7 @@ const IncomingVideoCallWindow = ({
       onClose();
     } catch (error) {
       console.error('Error declining call:', error);
-      toast.error('Could not decline call', { description: 'Unable to decline the call. Please try again.' });
+      toast({ title: 'Could not decline call', description: 'Unable to decline the call. Please try again.', variant: 'destructive' });
       onClose();
     }
   };

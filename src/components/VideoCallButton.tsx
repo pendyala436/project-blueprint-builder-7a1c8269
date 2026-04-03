@@ -126,7 +126,7 @@ const VideoCallButton = ({
           man_user_id: currentUserId,
           woman_user_id: result.woman.user_id,
           status: 'ringing',
-          rate_per_minute: 8.00 // ₹8/min per spec
+          rate_per_minute: pricing.videoRatePerMinute || 8.00
         });
 
       if (sessionError) throw sessionError;

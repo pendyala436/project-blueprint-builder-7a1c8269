@@ -179,6 +179,7 @@ const DirectVideoCallButton = ({
 
         if (directError) {
           console.error("Error creating call session:", directError);
+          preStream?.getTracks().forEach(t => t.stop());
           toast({
             title: "Error",
             description: "Failed to start video call. Please try again.",
