@@ -1102,6 +1102,13 @@ serve(async (req) => {
         const sortedIds = [String(man_user_id), String(woman_user_id)].sort();
         const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
 
+        // Clean up any ended sessions with this chat_id (unique constraint)
+        await supabase
+          .from("active_chat_sessions")
+          .delete()
+          .eq("chat_id", chatId)
+          .neq("status", "active");
+
         // Check for existing active session with this chat ID
         const { data: existingSession } = await supabase
           .from("active_chat_sessions")
