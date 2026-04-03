@@ -1,5 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
-import { translateChatMessage, getEnglishTranslation, translateForViewer } from "@/lib/translation-service";
+import { translateChatMessage, getEnglishTranslation, translateForViewer, translateText, isLatinScript, isLatinScriptLanguage } from "@/lib/translation-service";
 import { moderateMessage } from '@/lib/content-moderation';
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
