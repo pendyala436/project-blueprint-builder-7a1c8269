@@ -164,7 +164,7 @@ const DraggableVideoCallWindow = ({
 
       const { data: friendData } = await supabase
         .from("user_friends")
-        .select("id, status, user_id")
+        .select("id, status")
         .or(`and(user_id.eq.${currentUserId},friend_id.eq.${remoteUserId}),and(user_id.eq.${remoteUserId},friend_id.eq.${currentUserId})`)
         .maybeSingle();
 
@@ -177,8 +177,16 @@ const DraggableVideoCallWindow = ({
       }
     } catch (error) {
       console.error("Error loading relationship:", error);
-      // Non-critical - relationship status defaults to none
     }
+  };
+
+  const swallowControlEvent = (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleControlPointerDown = (e: React.PointerEvent | React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
   };
 
   // Load relationship status
@@ -187,6 +195,18 @@ const DraggableVideoCallWindow = ({
       loadRelationshipStatus();
     }
   }, [currentUserId, remoteUserId]);
+
+  // Auto-close if blocked from either side
+  useEffect(() => {
+    if (isBlockedByEither) {
+      toast({
+        title: "Call Ended",
+        description: isBlockedByThem ? "This user has blocked you" : "You blocked this user",
+        variant: "destructive",
+      });
+      void handleEndCall();
+    }
+  }, [isBlockedByEither, isBlockedByThem]);
 
   // Handle window resize
   useEffect(() => {
@@ -201,16 +221,13 @@ const DraggableVideoCallWindow = ({
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (isMaximized) return;
 
-    // Don't start dragging when interacting with controls
     const target = e.target as HTMLElement | null;
     const interactive = target?.closest?.(
       'button, a, input, textarea, select, [role="button"], [data-no-drag]'
     );
     if (interactive) return;
 
-    // Only prevent default if we are actually starting a drag
     e.preventDefault();
-
     setIsDragging(true);
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -229,16 +246,16 @@ const DraggableVideoCallWindow = ({
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging || !dragRef.current) return;
-      
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - dragRef.current.startX;
       const deltaY = clientY - dragRef.current.startY;
-      
+
       const maxX = window.innerWidth - size.width;
       const maxY = window.innerHeight - size.height;
-      
+
       setPosition({
         x: Math.max(0, Math.min(maxX, dragRef.current.startPosX + deltaX)),
         y: Math.max(0, Math.min(maxY, dragRef.current.startPosY + deltaY))
@@ -265,15 +282,14 @@ const DraggableVideoCallWindow = ({
     };
   }, [isDragging, size]);
 
-  // Resize handlers
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
-    
+
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
+
     resizeRef.current = {
       startWidth: size.width,
       startHeight: size.height,
@@ -285,13 +301,13 @@ const DraggableVideoCallWindow = ({
   useEffect(() => {
     const handleResizeMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing || !resizeRef.current) return;
-      
+
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - resizeRef.current.startX;
       const deltaY = clientY - resizeRef.current.startY;
-      
+
       setSize({
         width: Math.max(280, Math.min(700, resizeRef.current.startWidth + deltaX)),
         height: Math.max(320, Math.min(700, resizeRef.current.startHeight + deltaY))
@@ -327,7 +343,6 @@ const DraggableVideoCallWindow = ({
   const handleEndCall = async () => {
     console.log('[VideoCall] handleEndCall triggered');
     try {
-      // Update session in database first
       await supabase
         .from('video_call_sessions')
         .update({
@@ -336,61 +351,81 @@ const DraggableVideoCallWindow = ({
           end_reason: 'user_ended'
         })
         .eq('call_id', callId);
-      
-      // Resume any chats that were paused for this video call
+
       await supabase
         .from('active_chat_sessions')
-        .update({ 
+        .update({
           status: 'active',
           end_reason: null
         })
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .eq('status', 'paused')
         .eq('end_reason', 'video_call_priority');
-      
-      console.log('[VideoCall] Database updated, calling endCall');
-      // End the P2P call
+
       await endCall();
-      console.log('[VideoCall] endCall completed');
     } catch (error) {
       console.error("[VideoCall] Error ending call:", error);
       toast.error("Call not ended", { description: "Unable to end the call properly. Please refresh if the call appears stuck." });
     }
-    // Always call onClose, even if there was an error
-    console.log('[VideoCall] Calling onClose');
     onClose();
   };
 
   const handleBlock = async () => {
+    if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("user_blocks")
         .insert({
           blocked_by: currentUserId,
-          blocked_user_id: remoteUserId
+          blocked_user_id: remoteUserId,
+          block_type: "permanent",
+          reason: "Blocked during video call",
         });
 
-      // Remove friendship if exists
+      if (error) throw error;
+
       await supabase
         .from("user_friends")
         .delete()
         .or(`and(user_id.eq.${currentUserId},friend_id.eq.${remoteUserId}),and(user_id.eq.${remoteUserId},friend_id.eq.${currentUserId})`);
 
+      await supabase
+        .from("active_chat_sessions")
+        .update({
+          status: "ended",
+          ended_at: new Date().toISOString(),
+          end_reason: "user_blocked"
+        })
+        .or(`and(man_user_id.eq.${currentUserId},woman_user_id.eq.${remoteUserId}),and(man_user_id.eq.${remoteUserId},woman_user_id.eq.${currentUserId})`)
+        .in("status", ["active", "pending", "paused", "billing_paused"]);
+
+      await supabase
+        .from('video_call_sessions')
+        .update({
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+          end_reason: 'user_blocked'
+        })
+        .or(`and(man_user_id.eq.${currentUserId},woman_user_id.eq.${remoteUserId}),and(man_user_id.eq.${remoteUserId},woman_user_id.eq.${currentUserId})`)
+        .in('status', ['ringing', 'active', 'connecting']);
+
       setIsBlocked(true);
       setIsFriend(false);
+      setIsPendingFriend(false);
       setShowBlockDialog(false);
-      
+
       toast({
         title: "User Blocked",
         description: `${remoteName} has been blocked`
       });
-      
-      handleEndCall();
-    } catch (error) {
+
+      await handleEndCall();
+    } catch (error: any) {
+      console.error("Error blocking user:", error);
       toast({
         title: "Error",
-        description: "Failed to block user",
+        description: error?.message?.includes('duplicate') ? 'User is already blocked' : 'Failed to block user',
         variant: "destructive"
       });
     } finally {
@@ -399,13 +434,16 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleUnblock = async () => {
+    if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("user_blocks")
         .delete()
         .eq("blocked_by", currentUserId)
         .eq("blocked_user_id", remoteUserId);
+
+      if (error) throw error;
 
       setIsBlocked(false);
       toast({
@@ -413,6 +451,7 @@ const DraggableVideoCallWindow = ({
         description: `${remoteName} has been unblocked`
       });
     } catch (error) {
+      console.error("Error unblocking user:", error);
       toast({
         title: "Error",
         description: "Failed to unblock user",
@@ -424,26 +463,28 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleAddFriend = async () => {
+    if (isActionLoading || isBlocked) return;
     setIsActionLoading(true);
     try {
-      await supabase
-        .from("user_friends")
-        .insert({
-          user_id: currentUserId,
-          friend_id: remoteUserId,
-          status: "pending",
-          created_by: currentUserId
-        });
+      const { error } = await supabase.rpc('send_friend_request', {
+        p_target_user_id: remoteUserId,
+      });
+
+      if (error) throw error;
 
       setIsPendingFriend(true);
       toast({
         title: "Friend Request Sent",
-        description: `Friend request sent to ${remoteName}`
+        description: `A friend request has been sent to ${remoteName}.`
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error sending friend request:", error);
+      const msg = error?.message?.includes('already')
+        ? 'A friend request already exists.'
+        : 'Failed to send friend request';
       toast({
         title: "Error",
-        description: "Failed to send friend request",
+        description: msg,
         variant: "destructive"
       });
     } finally {
@@ -452,12 +493,15 @@ const DraggableVideoCallWindow = ({
   };
 
   const handleUnfriend = async () => {
+    if (isActionLoading) return;
     setIsActionLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from("user_friends")
         .delete()
         .or(`and(user_id.eq.${currentUserId},friend_id.eq.${remoteUserId}),and(user_id.eq.${remoteUserId},friend_id.eq.${currentUserId})`);
+
+      if (error) throw error;
 
       setIsFriend(false);
       setIsPendingFriend(false);
@@ -467,6 +511,7 @@ const DraggableVideoCallWindow = ({
         description: `${remoteName} has been removed from your friends`
       });
     } catch (error) {
+      console.error("Error unfriending user:", error);
       toast({
         title: "Error",
         description: "Failed to unfriend user",
@@ -496,7 +541,6 @@ const DraggableVideoCallWindow = ({
     }
   };
 
-  // Determine if position is within container (for flex layout) or absolute
   const isInFlexContainer = initialPosition.x === 0 && initialPosition.y === 0;
 
   return (
@@ -556,12 +600,13 @@ const DraggableVideoCallWindow = ({
           <div
             className="flex items-center gap-1 shrink-0"
             data-no-drag
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
+            onPointerDown={handleControlPointerDown}
+            onMouseDown={handleControlPointerDown}
+            onTouchStart={handleControlPointerDown}
+            onClick={(e) => e.stopPropagation()}
           >
             {callStatus === 'active' && (
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs">
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs" data-no-drag>
                 <Clock className="w-3 h-3" />
                 <span className="font-mono">{formatDuration(callDuration)}</span>
                 <IndianRupee className="w-3 h-3 ml-1" />
@@ -573,11 +618,12 @@ const DraggableVideoCallWindow = ({
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
+              data-no-drag
+              onPointerDown={handleControlPointerDown}
+              onMouseDown={handleControlPointerDown}
+              onTouchStart={handleControlPointerDown}
               onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
+                swallowControlEvent(e);
                 if (isMaximized) {
                   setIsMaximized(false);
                 } else {
@@ -593,11 +639,12 @@ const DraggableVideoCallWindow = ({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
+                data-no-drag
+                onPointerDown={handleControlPointerDown}
+                onMouseDown={handleControlPointerDown}
+                onTouchStart={handleControlPointerDown}
                 onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
+                  swallowControlEvent(e);
                   setIsMaximized(!isMaximized);
                 }}
               >
@@ -609,12 +656,12 @@ const DraggableVideoCallWindow = ({
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
+              data-no-drag
+              onPointerDown={handleControlPointerDown}
+              onMouseDown={handleControlPointerDown}
+              onTouchStart={handleControlPointerDown}
               onClick={async (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                console.log('[VideoCall] Close button clicked');
+                swallowControlEvent(e);
                 await handleEndCall();
               }}
             >
@@ -623,12 +670,10 @@ const DraggableVideoCallWindow = ({
           </div>
         </div>
 
-        {/* Video Content - Collapsible */}
         {!isMinimized && (
           <div className="flex-1 flex flex-col overflow-hidden bg-black relative">
-            {/* Remote Video (Full area) */}
             {callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'idle' ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-white bg-gradient-to-br from-gray-900 to-gray-800">
+              <div className="flex-1 flex flex-col items-center justify-center text-white bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-none">
                 <Avatar className="w-20 h-20 mb-3">
                   <AvatarImage src={remotePhoto || undefined} />
                   <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-accent">
@@ -649,8 +694,7 @@ const DraggableVideoCallWindow = ({
                   playsInline
                   className="w-full h-full object-cover pointer-events-none select-none"
                 />
-                
-                {/* Local Video (Picture-in-picture) */}
+
                 <div className="pointer-events-none absolute bottom-20 right-2 z-10 w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
                   <video
                     ref={setLocalVideoEl}
@@ -668,10 +712,15 @@ const DraggableVideoCallWindow = ({
               </>
             )}
 
-            {/* Controls - Two rows */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
-              {/* Main controls row */}
-              <div className="relative z-20 flex items-center justify-center gap-2 mb-2">
+            <div
+              className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent"
+              data-no-drag
+              onPointerDown={handleControlPointerDown}
+              onMouseDown={handleControlPointerDown}
+              onTouchStart={handleControlPointerDown}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative z-20 flex items-center justify-center gap-2 mb-2" data-no-drag>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -681,12 +730,14 @@ const DraggableVideoCallWindow = ({
                         "rounded-full w-10 h-10",
                         !isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                       )}
+                      data-no-drag
+                      onPointerDown={handleControlPointerDown}
+                      onMouseDown={handleControlPointerDown}
+                      onTouchStart={handleControlPointerDown}
                       onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
+                        swallowControlEvent(e);
                         toggleAudio();
                       }}
-                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
                     </Button>
@@ -703,12 +754,14 @@ const DraggableVideoCallWindow = ({
                         "rounded-full w-10 h-10",
                         !isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                       )}
+                      data-no-drag
+                      onPointerDown={handleControlPointerDown}
+                      onMouseDown={handleControlPointerDown}
+                      onTouchStart={handleControlPointerDown}
                       onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
+                        swallowControlEvent(e);
                         toggleVideo();
                       }}
-                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
                     </Button>
@@ -716,18 +769,18 @@ const DraggableVideoCallWindow = ({
                   <TooltipContent>{isVideoEnabled ? 'Stop Video' : 'Start Video'}</TooltipContent>
                 </Tooltip>
 
-                {/* Stop/End Call Button */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="destructive"
                       size="sm"
                       className="rounded-full w-12 h-12"
-                      onPointerDown={(e) => e.stopPropagation()}
+                      data-no-drag
+                      onPointerDown={handleControlPointerDown}
+                      onMouseDown={handleControlPointerDown}
+                      onTouchStart={handleControlPointerDown}
                       onClick={async (e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        console.log('[VideoCall] End call button clicked');
+                        swallowControlEvent(e);
                         await handleEndCall();
                       }}
                     >
@@ -736,13 +789,9 @@ const DraggableVideoCallWindow = ({
                   </TooltipTrigger>
                   <TooltipContent>End Call</TooltipContent>
                 </Tooltip>
-
-
               </div>
 
-              {/* Secondary controls row */}
-              <div className="relative z-20 flex items-center justify-center gap-2">
-                {/* Friend/Unfriend Button */}
+              <div className="relative z-20 flex items-center justify-center gap-2" data-no-drag>
                 {isFriend ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -750,8 +799,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setShowUnfriendDialog(true); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          setShowUnfriendDialog(true);
+                        }}
                         disabled={isActionLoading}
                       >
                         <UserMinus className="w-4 h-4" />
@@ -780,8 +835,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); handleAddFriend(); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          void handleAddFriend();
+                        }}
                         disabled={isActionLoading || isBlocked}
                       >
                         <UserPlus className="w-4 h-4" />
@@ -791,7 +852,6 @@ const DraggableVideoCallWindow = ({
                   </Tooltip>
                 )}
 
-                {/* Block/Unblock Button */}
                 {isBlocked ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -799,8 +859,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); handleUnblock(); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          void handleUnblock();
+                        }}
                         disabled={isActionLoading}
                       >
                         <ShieldOff className="w-4 h-4" />
@@ -815,8 +881,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-destructive hover:bg-destructive/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setShowBlockDialog(true); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          setShowBlockDialog(true);
+                        }}
                         disabled={isActionLoading}
                       >
                         <Shield className="w-4 h-4" />
