@@ -157,6 +157,7 @@ export function PrivateGroupCallWindow({
     endStream,
     toggleVideo,
     toggleAudio,
+    enableParticipantMic,
     cleanup,
   } = usePrivateGroupCall({
     groupId: group.id,
