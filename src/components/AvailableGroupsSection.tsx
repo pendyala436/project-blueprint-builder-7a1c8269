@@ -52,7 +52,6 @@ const FLOWER_EMOJIS: Record<string, string> = {
 };
 
 const MIN_BALANCE_MINUTES = 5;
-const RATE_PER_MINUTE = 4; // ₹4/min
 
 export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: AvailableGroupsSectionProps) {
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
