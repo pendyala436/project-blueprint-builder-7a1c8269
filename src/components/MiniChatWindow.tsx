@@ -38,6 +38,7 @@ interface Message {
   senderId: string;
   message: string;
   translatedMessage?: string;
+  englishText?: string;
   isTranslated?: boolean;
   createdAt: string;
 }
