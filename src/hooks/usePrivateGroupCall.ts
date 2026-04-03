@@ -904,7 +904,7 @@ export function usePrivateGroupCall({
     }
   }, [isOwner]);
 
-  // Toggle audio
+  // Toggle audio (host can always toggle, participant only if host enabled their mic)
   const toggleAudio = useCallback((enabled: boolean) => {
     if (localStream.current) {
       localStream.current.getAudioTracks().forEach(track => {
@@ -912,6 +912,29 @@ export function usePrivateGroupCall({
       });
     }
   }, []);
+
+  // Host enables/disables a specific participant's mic
+  const enableParticipantMic = useCallback((participantId: string, enabled: boolean) => {
+    if (!isOwner || !channelRef.current) return;
+    
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'mic-control',
+      payload: { participantId, enabled },
+    });
+
+    // Update local state immediately for host
+    if (sessionRef.current) {
+      const participant = sessionRef.current.participants.get(participantId);
+      if (participant) {
+        participant.micEnabled = enabled;
+        setState(prev => ({
+          ...prev,
+          participants: Array.from(sessionRef.current?.participants.values() || []),
+        }));
+      }
+    }
+  }, [isOwner]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -929,6 +952,7 @@ export function usePrivateGroupCall({
     endStream,
     toggleVideo,
     toggleAudio,
+    enableParticipantMic,
     cleanup,
     maxParticipants: MAX_PARTICIPANTS,
     maxDuration: MAX_DURATION_MINUTES,
