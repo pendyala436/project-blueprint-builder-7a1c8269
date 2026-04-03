@@ -376,9 +376,29 @@ const MiniChatWindow = ({
           table: 'chat_messages',
           filter: `chat_id=eq.${chatId}`
         },
-        (payload: any) => {
+        async (payload: any) => {
           const newMsg = payload.new;
           const isPartnerMessage = newMsg.sender_id !== currentUserId;
+          
+          // Translate incoming partner messages
+          let translatedMessage: string | undefined;
+          let isTranslated = false;
+
+          if (isPartnerMessage && partnerLanguage && currentUserLanguage) {
+            try {
+              const result = await translateChatMessage(
+                newMsg.message,
+                partnerLanguage,
+                currentUserLanguage
+              );
+              if (result.isTranslated) {
+                translatedMessage = result.translated;
+                isTranslated = true;
+              }
+            } catch {
+              // Fallback: show original (English fallback)
+            }
+          }
           
           setMessages(prev => {
             const existingRealIndex = prev.findIndex(m => m.id === newMsg.id);
@@ -393,13 +413,11 @@ const MiniChatWindow = ({
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
+              translatedMessage,
+              isTranslated,
               createdAt: newMsg.created_at
             }];
           });
-
-          if (isPartnerMessage) {
-            setLastActivityTime(Date.now());
-          }
 
           if (isMinimized && isPartnerMessage) {
             setUnreadCount(prev => prev + 1);
