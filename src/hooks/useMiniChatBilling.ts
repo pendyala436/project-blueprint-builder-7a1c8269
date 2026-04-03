@@ -91,17 +91,22 @@ export const useMiniChatBilling = ({
     }
   }, [messages, currentUserId, billingStarted, startBilling]);
 
-  // Effect 2: Track last message times per party
+  // Effect 2: Track last message times per party AND reset activity timer
   useEffect(() => {
     if (messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
+      const now = Date.now();
       if (lastMsg.senderId === currentUserId) {
-        setLastUserMessageTime(Date.now());
+        setLastUserMessageTime(now);
       } else {
-        setLastPartnerMessageTime(Date.now());
+        setLastPartnerMessageTime(now);
+      }
+      // Reset activity timer on ANY new message to prevent premature timeout
+      if (billingStarted) {
+        setLastActivityTime(now);
       }
     }
-  }, [messages, currentUserId]);
+  }, [messages, currentUserId, billingStarted]);
 
   // Effect 3: Resume billing when both users reply after pause
   useEffect(() => {
