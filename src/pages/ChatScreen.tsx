@@ -9,7 +9,7 @@
  * - Date-grouped message display
  * - Online/offline status indicators
  * 
- * NOTE: Translation system is disabled. Messages are sent as plain text.
+ * NOTE: Multilingual translation via Lingva (Google Translate scraper) for all 130+ languages.
  * 
  * DATABASE TABLES USED:
  * - chat_messages: Stores all chat messages
