@@ -655,6 +655,29 @@ export function usePrivateGroupCall({
         if (payload.to === currentUserId) {
           await handleIceCandidate(payload.candidate, payload.from);
         }
+      })
+      .on('broadcast', { event: 'mic-control' }, ({ payload }) => {
+        // Host controls participant mic remotely
+        if (payload.participantId === currentUserId && !isOwner) {
+          const enabled = payload.enabled;
+          if (localStream.current) {
+            localStream.current.getAudioTracks().forEach(track => {
+              track.enabled = enabled;
+            });
+          }
+          toast.info(enabled ? 'Host enabled your microphone' : 'Host disabled your microphone');
+        }
+        // Update participant state for all clients
+        if (sessionRef.current) {
+          const participant = sessionRef.current.participants.get(payload.participantId);
+          if (participant) {
+            participant.micEnabled = payload.enabled;
+            setState(prev => ({
+              ...prev,
+              participants: Array.from(sessionRef.current?.participants.values() || []),
+            }));
+          }
+        }
       });
 
     channel.subscribe(async (status) => {
