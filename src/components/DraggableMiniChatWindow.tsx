@@ -149,22 +149,17 @@ const DraggableMiniChatWindow = ({
     const inputIsLatin = isLatinScriptCheck(trimmed);
     const userUsesLatin = isLatinScriptLanguage(langNorm);
 
-    // Non-Latin lang user typing in native script → no preview needed
-    if (!inputIsLatin && !userUsesLatin) {
-      setNativePreview(null);
-      setIsPreviewLoading(false);
-      return;
-    }
-
-    // Show preview for Latin input when user's language is non-English
+    // Show preview whenever user is non-English:
+    // - Latin input (English/transliteration) → translate to user's native
+    // - Non-Latin input → might be different script (e.g., Telugu user typing Hindi)
     setIsPreviewLoading(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
         const result = await translateText(trimmed, 'auto', currentUserLanguage || 'English');
         if (result && result !== trimmed) {
           setNativePreview(result);
-        } else if (!userUsesLatin) {
-          // For non-Latin target: fallback English → target
+        } else if (inputIsLatin && !userUsesLatin) {
+          // Latin input → non-Latin target: fallback English → target (transliteration bridge)
           const fallback = await translateText(trimmed, 'English', currentUserLanguage || 'English');
           if (fallback && fallback !== trimmed) {
             setNativePreview(fallback);

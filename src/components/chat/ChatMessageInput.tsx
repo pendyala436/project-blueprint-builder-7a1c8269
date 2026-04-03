@@ -123,24 +123,20 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     const inputIsLatin = isLatinScript(trimmed);
     const userUsesLatin = isLatinScriptLanguage(langNorm);
 
-    // Non-Latin lang user typing in native script → no preview needed
-    // Latin-script lang user typing in their own script → need preview only if it's a different language
-    if (!inputIsLatin && !userUsesLatin) {
-      // Already typing in native non-Latin script — no preview needed
-      setNativePreview(null);
-      return;
-    }
-
-    // Show preview: user typed Latin text and their language is non-English
+    // Show preview whenever user is non-English:
+    // - Latin input (English/transliteration) → translate to user's native
+    // - Non-Latin input for non-Latin user → might be different script (e.g., Telugu user typing Hindi)
+    //   In that case, auto→userLang will translate; if same script, result===input → no preview shown
     setIsPreviewLoading(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
-        // Auto-detect → user's language (handles English, transliteration, other Latin langs)
+        // Auto-detect → user's language (handles English, transliteration, other scripts, other Latin langs)
         const result = await translateText(trimmed, 'auto', userLanguage || 'English');
         if (result && result !== trimmed) {
           setNativePreview(result);
-        } else if (!userUsesLatin) {
-          // For non-Latin target: if auto-detect didn't convert, try English → target
+        } else if (inputIsLatin && !userUsesLatin) {
+          // For Latin input → non-Latin target: if auto-detect failed, try English → target
+          // This handles transliterations like "bagunnava" → బాగున్నావా
           const fallback = await translateText(trimmed, 'English', userLanguage || 'English');
           if (fallback && fallback !== trimmed) {
             setNativePreview(fallback);
