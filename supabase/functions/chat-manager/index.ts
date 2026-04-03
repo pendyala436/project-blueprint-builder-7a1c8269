@@ -1039,7 +1039,7 @@ serve(async (req) => {
           .from("active_chat_sessions")
           .select("*", { count: "exact", head: true })
           .eq("man_user_id", man_user_id)
-          .eq("status", "active");
+          .in("status", ["active", "pending"]);
 
         if ((manActiveChats || 0) >= MAX_PARALLEL_CHATS) {
           return new Response(
@@ -1048,12 +1048,12 @@ serve(async (req) => {
           );
         }
 
-        // Check woman's active chat count (max 3 parallel sessions)
+        // Check woman's active + pending chat count (max 3 parallel sessions)
         const { count: womanActiveChats } = await supabase
           .from("active_chat_sessions")
           .select("*", { count: "exact", head: true })
           .eq("woman_user_id", woman_user_id)
-          .eq("status", "active");
+          .in("status", ["active", "pending"]);
 
         if ((womanActiveChats || 0) >= MAX_PARALLEL_CHATS) {
           return new Response(
