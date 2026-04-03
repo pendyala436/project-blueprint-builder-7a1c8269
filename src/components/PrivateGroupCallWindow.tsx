@@ -245,16 +245,20 @@ export function PrivateGroupCallWindow({
 
         // Check if this is a gift broadcast message
         if (text.startsWith('__GIFT__::')) {
-          // Only show animation for OTHER users (sender already sees it locally)
+          const parts = text.split('::');
+          const emoji = parts[1] || '🎁';
+          const giftName = parts[2] || 'Gift';
+          const price = parseFloat(parts[3]) || 0;
+          const senderName = msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id);
+
+          // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
-            const parts = text.split('::');
-            const emoji = parts[1] || '🎁';
-            const giftName = parts[2] || 'Gift';
-            const price = parseFloat(parts[3]) || 0;
-            const senderName = getParticipantName(msg.sender_id);
             addAnimatedGift(senderName, { id: msg.id, emoji, name: giftName, price });
           }
-          return; // Don't show gift broadcasts as chat messages
+
+          // Also add a chat message so gift is visible in chat log for ALL users
+          addChatMessage(senderName, `🎁 sent ${emoji} ${giftName} (₹${price})`, msg.sender_id === currentUserId);
+          return;
         }
 
         if (msg.sender_id !== currentUserId) {
@@ -385,16 +389,14 @@ export function PrivateGroupCallWindow({
         setShowGiftDialog(false);
 
         // Broadcast gift to all participants via group_messages with a special prefix
-        supabase
+        const { error: msgErr } = await supabase
           .from('group_messages')
           .insert({
             group_id: group.id,
             sender_id: currentUserId,
             message: `__GIFT__::${gift.emoji}::${gift.name}::${gift.price}`,
-          })
-          .then(({ error: msgErr }) => {
-            if (msgErr) console.error('Failed to broadcast gift', msgErr);
           });
+        if (msgErr) console.error('Failed to broadcast gift message:', msgErr);
       } else {
         toast.error(result.error || 'Failed to send gift');
       }
