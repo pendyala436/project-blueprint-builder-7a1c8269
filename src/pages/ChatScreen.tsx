@@ -549,7 +549,8 @@ const ChatScreen = () => {
       const batch = msgs.slice(i, i + batchSize);
       const translationPromises = batch.map(async (msg) => {
         try {
-          const result = await translateForViewer(msg.message, viewerLanguage);
+          const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+          const result = await translateForViewer(msg.message, viewerLanguage, msgSenderLang);
           return {
             id: msg.id,
             translatedMessage: result.nativeText,
