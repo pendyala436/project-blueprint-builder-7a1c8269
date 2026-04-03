@@ -1702,9 +1702,9 @@ const ChatScreen = () => {
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
                             {/* English translation shown below every message bubble */}
-                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
-                                {englishSubtitle.toLowerCase()}
+                            {subtitleText && subtitleText.toLowerCase() !== displayText.toLowerCase() && (
+                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="auto">
+                                {subtitleText}
                               </p>
                             )}
                           </div>
