@@ -266,7 +266,7 @@ const EnhancedParallelChatsContainer = ({
           });
         } catch (invokeError) {
           console.error("Error calling chat-manager:", invokeError);
-        toast.error("Chat unavailable", { description: "Unable to open this chat. Please try again in a moment." });
+        toast({ title: "Chat unavailable", description: "Unable to open this chat. Please try again in a moment.", variant: "destructive" });
           // Fallback: directly update session
           await supabase
             .from("active_chat_sessions")
