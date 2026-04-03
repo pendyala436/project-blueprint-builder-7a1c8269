@@ -93,11 +93,17 @@ const EnhancedParallelChatsContainer = ({
       const column = userGender === "male" ? "man_user_id" : "woman_user_id";
       const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
       
+      // Men see pending sessions immediately (they initiate chats)
+      // Women only see active/paused (they must accept via IncomingChatPopup first)
+      const statusFilter = userGender === "male" 
+        ? ["active", "paused", "billing_paused", "pending"]
+        : ["active", "paused", "billing_paused"];
+      
       const { data: sessions, error: sessionsError } = await supabase
         .from("active_chat_sessions")
         .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
         .eq(column, currentUserId)
-        .in("status", ["active", "paused", "billing_paused"])
+        .in("status", statusFilter)
         .order("created_at", { ascending: false })
         .limit(10); // Cap at 10 for performance
 
