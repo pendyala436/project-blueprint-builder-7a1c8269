@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useChatPricing } from '@/hooks/useChatPricing';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
