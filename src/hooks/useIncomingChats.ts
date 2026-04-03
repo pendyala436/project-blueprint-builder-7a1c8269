@@ -135,11 +135,15 @@ export const useIncomingChats = (
         const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
         
         // OPTIMIZED: Single query with limit
+        // Women see 'pending' sessions (must accept first)
+        // Men see 'active' sessions (auto-opened when woman accepts)
+        const statusFilter = userGender === "female" ? ["pending", "active"] : ["active"];
+        
         const { data: sessions, error: sessionsError } = await supabase
           .from("active_chat_sessions")
           .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
           .eq(column, currentUserId)
-          .in("status", ["active", "pending"])
+          .in("status", statusFilter)
           .order("created_at", { ascending: false })
           .limit(10);
 
