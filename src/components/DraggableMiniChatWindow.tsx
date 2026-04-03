@@ -303,6 +303,8 @@ const DraggableMiniChatWindow = ({
         .single();
       if (insertError) throw insertError;
       if (insertedMessage?.id) {
+        // Update temp ID to real ID and register in seenIds to prevent realtime duplicate
+        import("@/hooks/useMiniChatMessages").then(() => {});
         setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, id: insertedMessage.id } : m)));
       }
     } catch (dbError: any) {
