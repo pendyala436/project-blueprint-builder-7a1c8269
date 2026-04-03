@@ -393,13 +393,26 @@ const ChatScreen = () => {
           let englishText: string | undefined;
           let isTranslated = false;
 
-          // Skip translation entirely when both users share the same language
+          // Check if both users share the same language
           const isSameLanguage = chatPartner && currentUserLanguage && 
             chatPartner.preferredLanguage.toLowerCase().trim() === currentUserLanguage.toLowerCase().trim();
 
-          if (!isSameLanguage) {
-            if (isFromPartner && chatPartner && currentUserLanguage) {
-              try {
+          if (isFromPartner && chatPartner && currentUserLanguage) {
+            try {
+              if (isSameLanguage) {
+                // Same language: translate to native script (handles English/transliterated input → native)
+                const result = await translateChatMessage(
+                  newMsg.message,
+                  'auto',  // auto-detect source (could be English, transliterated, or native)
+                  currentUserLanguage
+                );
+                if (result.isTranslated) {
+                  translatedMessage = result.translated;
+                  isTranslated = true;
+                }
+                // No English subtitle needed for same-language chats
+              } else {
+                // Different languages: translate to receiver's native language
                 const result = await translateChatMessage(
                   newMsg.message,
                   chatPartner.preferredLanguage,
@@ -410,16 +423,16 @@ const ChatScreen = () => {
                   isTranslated = true;
                 }
                 englishText = result.englishText;
-              } catch {
-                // Fallback: show original message (English fallback)
               }
-            } else if (!isFromPartner && currentUserLanguage) {
-              // For own messages, get English translation for subtitle
-              try {
-                englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
-              } catch {
-                // ignore
-              }
+            } catch {
+              // Fallback: show original message
+            }
+          } else if (!isFromPartner && currentUserLanguage && !isSameLanguage) {
+            // For own messages in cross-language chats, get English translation for subtitle
+            try {
+              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+            } catch {
+              // ignore
             }
           }
           
@@ -1624,10 +1637,13 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // Display translated message if available for received, otherwise original
+                // For received: show translated (native) text as primary, original underneath
+                // For sent: show original text as primary
                 const displayText = (!isMine && message.translatedMessage) ? message.translatedMessage : messageText;
-                // English subtitle shown below every bubble
-                const englishSubtitle = message.englishText;
+                // Show original text underneath if translation was applied
+                const subtitleText = (!isMine && message.translatedMessage && message.translatedMessage !== messageText) 
+                  ? messageText  // Show original under translated for received
+                  : message.englishText; // Show English subtitle for cross-language own messages
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
@@ -1686,9 +1702,9 @@ const ChatScreen = () => {
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
                             {/* English translation shown below every message bubble */}
-                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
-                                {englishSubtitle.toLowerCase()}
+                            {subtitleText && subtitleText.toLowerCase() !== displayText.toLowerCase() && (
+                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="auto">
+                                {subtitleText}
                               </p>
                             )}
                           </div>

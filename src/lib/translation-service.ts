@@ -100,28 +100,28 @@ export async function translateChatMessage(
   }
 
   try {
-    // Translate to receiver's language (if different from sender)
+    // Translate to receiver's native language
+    // 'auto' source means auto-detect (for same-language chats where user may type in English/transliteration)
     let translated = message;
     let isTranslated = false;
     
-    if (srcNorm !== tgtNorm) {
+    // Always attempt translation when source is 'auto' or different from target
+    if (srcNorm === 'auto' || srcNorm !== tgtNorm) {
       translated = await translateText(message, senderLanguage, receiverLanguage);
       isTranslated = translated !== message;
     }
     
-    // Always get English translation for subtitle
+    // Get English translation for subtitle (skip for 'auto' source in same-language chats)
     let englishText = message;
-    if (srcNorm !== 'english') {
+    if (srcNorm === 'auto') {
+      // For auto-detect, skip English subtitle (same-language chat)
+      englishText = '';
+    } else if (srcNorm !== 'english') {
       englishText = await translateText(message, senderLanguage, 'English');
-    }
-    // If sender is English, the original IS English
-    if (srcNorm === 'english') {
-      englishText = message;
     }
     
     return { translated, englishText, isTranslated };
   } catch {
-    // Fallback to English / original
     return { translated: message, englishText: message, isTranslated: false };
   }
 }
