@@ -103,8 +103,12 @@ export async function translateBatch(
     }
 
     return data?.translations || texts;
-  } catch (err) {
-    console.warn('[Translation] Batch failed:', err);
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      console.warn('[Translation] Batch request timed out after 5s');
+    } else {
+      console.warn('[Translation] Batch failed:', err);
+    }
     return texts;
   }
 }
