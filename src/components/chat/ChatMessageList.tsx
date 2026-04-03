@@ -15,6 +15,8 @@ export interface ChatMessage {
   timestamp: string;
   isRead?: boolean;
   isDelivered?: boolean;
+  englishText?: string;
+  translatedContent?: string;
 }
 
 interface ChatMessageListProps {
