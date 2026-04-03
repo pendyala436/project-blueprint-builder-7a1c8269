@@ -708,11 +708,16 @@ const ChatScreen = () => {
 
       // ============= FETCH MESSAGE HISTORY =============
       
+      // CHT-02 FIX: Limit to last 100 messages to avoid hitting Supabase 1000-row cap
       const { data: existingMessages } = await supabase
         .from("chat_messages")
         .select("*")
         .eq("chat_id", chatId.current)
-        .order("created_at", { ascending: true }); // Oldest first
+        .order("created_at", { ascending: false })
+        .limit(100);
+      
+      // Reverse to get chronological order
+      existingMessages?.reverse();
 
       // Transform database records to Message interface
       if (existingMessages) {
