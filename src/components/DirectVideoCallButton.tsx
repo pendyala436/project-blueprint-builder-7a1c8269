@@ -131,6 +131,7 @@ const DirectVideoCallButton = ({
         .limit(1);
 
       if (activeCalls && activeCalls.length > 0) {
+        preStream?.getTracks().forEach(t => t.stop());
         toast({
           title: "User Busy",
           description: `${targetName} is currently in another call.`,
