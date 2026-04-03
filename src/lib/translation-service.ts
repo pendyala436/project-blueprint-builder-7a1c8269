@@ -87,9 +87,15 @@ export async function translateBatch(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return texts;
 
   try {
+    // Issue 3.2: Add 5-second timeout to batch translation (matching translateText)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const { data, error } = await supabase.functions.invoke('translate-message', {
       body: { texts, sourceLang, targetLang },
     });
+
+    clearTimeout(timeoutId);
 
     if (error) {
       console.warn('[Translation] Batch error:', error.message);
