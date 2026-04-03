@@ -1110,14 +1110,14 @@ serve(async (req) => {
           .from("active_chat_sessions")
           .delete()
           .eq("chat_id", chatId)
-          .neq("status", "active");
+          .not("status", "in", '("active","pending")');
 
-        // Check for existing active session with this chat ID
+        // Check for existing active or pending session with this chat ID
         const { data: existingSession } = await supabase
           .from("active_chat_sessions")
           .select("*")
           .eq("chat_id", chatId)
-          .eq("status", "active")
+          .in("status", ["active", "pending"])
           .maybeSingle();
 
         let session;
