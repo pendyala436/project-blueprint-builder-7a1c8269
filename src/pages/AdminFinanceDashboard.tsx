@@ -154,7 +154,7 @@ const AdminFinanceDashboard = () => {
       }
 
       // Add recharge credits as revenue
-      ledgerTxns?.forEach((txn: any) => {
+      allLedgerTxns?.forEach((txn: any) => {
         if (txn.transaction_type === "recharge" && txn.credit > 0) {
           const date = format(new Date(txn.created_at), "yyyy-MM-dd");
           if (revenueByDay[date]) {
