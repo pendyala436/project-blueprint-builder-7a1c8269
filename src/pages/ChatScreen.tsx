@@ -1150,7 +1150,7 @@ const ChatScreen = () => {
     } catch (error) {
       console.error("Camera error:", error);
       const camErr = classifyError(error);
-      toast.error(camErr.title, { description: camErr.message });
+      toast({ title: camErr.title, description: camErr.message, variant: "destructive" });
       setIsCameraOpen(false);
     }
   };
