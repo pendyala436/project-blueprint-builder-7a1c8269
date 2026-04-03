@@ -128,7 +128,7 @@ export const LanguageGroupChat = ({
         const senderIds = [...new Set(messagesData.map(m => m.sender_id))];
         
         const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-        const profiles = await fetchPublicProfiles(senderIds);
+        const profiles = await fetchPublicProfiles(senderIds as string[]);
 
         const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
