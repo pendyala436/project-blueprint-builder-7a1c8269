@@ -311,7 +311,7 @@ export async function translateChatMessage(
   }
 
   try {
-    const result = await translateForViewer(message, receiverLanguage);
+    const result = await translateForViewer(message, receiverLanguage, senderLanguage);
     const isTranslated = result.nativeText !== message;
 
     return {
