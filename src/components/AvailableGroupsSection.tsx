@@ -61,6 +61,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
 
+  // GRP-H-01: Fix stale closure by using ref for activeGroupVideo
+  const activeGroupVideoRef = useRef(activeGroupVideo);
+  activeGroupVideoRef.current = activeGroupVideo;
+
   useEffect(() => {
     fetchGroups();
     fetchWalletBalance();
@@ -68,10 +72,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     const channel = supabase
       .channel('available-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, (payload) => {
-        // If a group we're watching goes offline, auto-close
+        // Use ref to avoid stale closure
         if (payload.eventType === 'UPDATE') {
           const updated = payload.new as PrivateGroup;
-          if (!updated.is_live && activeGroupVideo?.id === updated.id) {
+          if (!updated.is_live && activeGroupVideoRef.current?.id === updated.id) {
             toast.info('Host ended the live session');
             setActiveGroupVideo(null);
           }
@@ -86,7 +90,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, activeGroupVideo?.id]);
+  }, [currentUserId]); // GRP-H-01: Removed activeGroupVideo?.id from deps to prevent stale closure
 
   const fetchGroups = async () => {
     try {
