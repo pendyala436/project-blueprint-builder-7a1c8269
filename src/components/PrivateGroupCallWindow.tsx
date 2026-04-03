@@ -281,7 +281,7 @@ export function PrivateGroupCallWindow({
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addChatMessage, addAnimatedGift]);
+  }, [group.id, currentUserId, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName]);
 
   // Extension check — query DB instead of localStorage
   useEffect(() => {
