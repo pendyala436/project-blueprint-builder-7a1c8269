@@ -394,7 +394,8 @@ const ChatScreen = () => {
           let englishText: string | undefined;
           let isTranslated = false;
 
-          if (currentUserLanguage) {
+          const langToUse = currentUserLanguage || 'English';
+          if (langToUse) {
             try {
               const result = await translateForViewer(newMsg.message, currentUserLanguage);
               translatedMessage = result.nativeText;
