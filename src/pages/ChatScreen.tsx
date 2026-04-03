@@ -1667,7 +1667,12 @@ const ChatScreen = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
-                            
+                            {/* Show original text below translation for received messages */}
+                            {showOriginal && (
+                              <p className="text-xs mt-1 opacity-60 whitespace-pre-wrap break-words unicode-text" dir="auto">
+                                {messageText}
+                              </p>
+                            )}
                           </div>
                         )}
 
