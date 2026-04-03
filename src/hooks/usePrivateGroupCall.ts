@@ -569,6 +569,7 @@ export function usePrivateGroupCall({
           joinedAt: Date.now(),
           amountPaid: 0,
           balanceRemaining: presence?.balance || 0,
+          micEnabled: false, // Mic disabled by default, only host can enable
         };
 
         if (sessionRef.current) {
