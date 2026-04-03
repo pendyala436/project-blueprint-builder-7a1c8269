@@ -353,7 +353,41 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
 
-  const loadMessages = async () => {
+  // Translate history messages in background using live Lingva translation
+  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
+    const batchSize = 5;
+    for (let i = 0; i < msgs.length; i += batchSize) {
+      const batch = msgs.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (msg) => {
+          try {
+            const result = await translateForViewer(msg.message, viewerLanguage);
+            return {
+              id: msg.id,
+              translatedMessage: result.nativeText,
+              englishText: result.englishText,
+              isTranslated: result.nativeText !== msg.message,
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      setMessages(prev => prev.map(m => {
+        const translation = results
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .map(r => r.value)
+          .find(r => r && r.id === m.id);
+        if (translation) {
+          return { ...m, ...translation };
+        }
+        return m;
+      }));
+    }
+  }, []);
+
+
     const { data } = await supabase
       .from("chat_messages")
       .select("*")
