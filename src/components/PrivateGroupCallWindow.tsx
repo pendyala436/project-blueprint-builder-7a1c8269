@@ -245,16 +245,20 @@ export function PrivateGroupCallWindow({
 
         // Check if this is a gift broadcast message
         if (text.startsWith('__GIFT__::')) {
-          // Only show animation for OTHER users (sender already sees it locally)
+          const parts = text.split('::');
+          const emoji = parts[1] || '🎁';
+          const giftName = parts[2] || 'Gift';
+          const price = parseFloat(parts[3]) || 0;
+          const senderName = msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id);
+
+          // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
-            const parts = text.split('::');
-            const emoji = parts[1] || '🎁';
-            const giftName = parts[2] || 'Gift';
-            const price = parseFloat(parts[3]) || 0;
-            const senderName = getParticipantName(msg.sender_id);
             addAnimatedGift(senderName, { id: msg.id, emoji, name: giftName, price });
           }
-          return; // Don't show gift broadcasts as chat messages
+
+          // Also add a chat message so gift is visible in chat log for ALL users
+          addChatMessage(senderName, `🎁 sent ${emoji} ${giftName} (₹${price})`, msg.sender_id === currentUserId);
+          return;
         }
 
         if (msg.sender_id !== currentUserId) {
