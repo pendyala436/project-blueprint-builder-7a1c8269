@@ -562,11 +562,14 @@ const ChatScreen = () => {
         }
       });
 
-      const results = await Promise.all(translationPromises);
+      const results = await Promise.allSettled(translationPromises);
 
-      // Update messages state with translations
+      // Update messages state with translations (only fulfilled)
       setMessages(prev => prev.map(m => {
-        const translation = results.find(r => r && r.id === m.id);
+        const translation = results
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .map(r => r.value)
+          .find(r => r && r.id === m.id);
         if (translation) {
           return {
             ...m,
