@@ -248,6 +248,11 @@ const ChatScreen = () => {
   // Reactive state to trigger subscription re-run when chatId is set
   const [activeChatId, setActiveChatId] = useState<string>("");
   
+  // CHT-01 FIX: Ref to avoid stale closures in realtime subscription
+  const chatPartnerRef = useRef<ChatPartner | null>(null);
+  const currentUserLanguageRef = useRef<string>("");
+  const currentUserIdRef = useRef<string>("");
+  
   // Refs for file inputs and camera
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

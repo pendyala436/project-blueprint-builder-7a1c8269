@@ -494,6 +494,7 @@ const MiniChatWindow = ({
 
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
+    setIsSending(true); // CHT-03 FIX: prevent double-send
 
     const messageText = newMessage.trim();
     
