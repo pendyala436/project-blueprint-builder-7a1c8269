@@ -189,15 +189,18 @@ export async function translateBatch(
  */
 export async function translateForViewer(
   message: string,
-  viewerLanguage: string
+  viewerLanguage: string,
+  senderLanguage?: string
 ): Promise<{ nativeText: string; englishText: string }> {
   if (!message?.trim()) {
     return { nativeText: message, englishText: message };
   }
 
   const viewerLang = (viewerLanguage || 'english').toLowerCase().trim();
+  const senderLang = (senderLanguage || '').toLowerCase().trim();
   const inputIsLatin = isLatinScript(message);
   const viewerUsesLatin = isLatinScriptLanguage(viewerLang);
+  const senderUsesLatin = senderLang ? isLatinScriptLanguage(senderLang) : false;
 
   try {
     // Always get English translation for subtitle (runs in parallel)
@@ -219,18 +222,16 @@ export async function translateForViewer(
 
     // ── Case 3: Latin input → Non-Latin target (transliteration handling) ──
     // When input is Latin script AND viewer's language uses non-Latin script,
-    // Google auto-detect often fails for transliterated text (e.g., "bagunnava").
+    // Google auto-detect often fails for transliterated text.
     // Apply fallback strategies to get native script output.
     //
     // We do NOT apply these fallbacks when the viewer uses Latin script,
-    // because Latin→Latin translation already works correctly via auto-detect
-    // (e.g., French "bonjour" → German "hallo" — both Latin, both correct).
+    // because Latin→Latin translation already works correctly via auto-detect.
     if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
 
       if (isStillLatin) {
         // Strategy A: English bridge — use the English translation to re-translate
-        // e.g., "bagunnava" → (English: "how are you") → Telugu: బాగున్నావా
         const englishMeaning = englishResult || nativeText;
         if (englishMeaning && englishMeaning !== message) {
           const fromEnglish = await translateText(englishMeaning, 'English', viewerLanguage);
@@ -240,7 +241,6 @@ export async function translateForViewer(
         }
 
         // Strategy B: Treat original as English directly → viewerLang
-        // For cases where Strategy A's bridge didn't produce non-Latin output
         if (isLatinScript(nativeText)) {
           const directResult = await translateText(message, 'English', viewerLanguage);
           if (directResult && !isLatinScript(directResult)) {
@@ -248,14 +248,27 @@ export async function translateForViewer(
           }
         }
       }
+
+      // Strategy C: Sender Language Bridge (for cross-language transliteration)
+      // When sender language is known and different from viewer language,
+      // first convert Latin input to sender's native script, then translate to viewer's language.
+      // Example: Hindi user types "main theek hoon" → English→Hindi = "मैं ठीक हूँ" → Hindi→Telugu = "నేను బాగున్నాను"
+      if (senderLang && senderLang !== viewerLang && senderLang !== 'english' && !senderUsesLatin) {
+        // Check if current result looks like garbage transliteration (non-Latin but not meaningful)
+        // We apply this when: either result is still Latin, or result came from auto-detect which
+        // may have produced wrong transliteration (e.g., "మెయిన్ తీక్ హూన్ ఆప్" instead of "నేను బాగున్నాను")
+        const senderNative = await translateText(message, 'English', senderLanguage || '');
+        if (senderNative && !isLatinScript(senderNative) && senderNative !== message) {
+          // Now translate from sender's native script to viewer's language
+          const crossTranslated = await translateText(senderNative, senderLanguage || 'auto', viewerLanguage);
+          if (crossTranslated && crossTranslated !== senderNative) {
+            nativeText = crossTranslated;
+          }
+        }
+      }
     }
 
     // ── Fallback: unchanged Latin input for non-Latin viewer ──
-    // If translation returned the exact same text and we have an English meaning,
-    // show the English meaning as the native text (better than showing untranslated input).
-    // Only applies when:
-    //  - Input is Latin AND viewer expects non-Latin script
-    //  - Translation produced no change (auto-detect failed)
     if (nativeText === message && englishResult && englishResult !== message) {
       if (inputIsLatin && !viewerUsesLatin) {
         nativeText = englishResult;
@@ -275,6 +288,7 @@ export async function translateForViewer(
       return { nativeText: message, englishText: message };
     }
   }
+}
 }
 
 /**
