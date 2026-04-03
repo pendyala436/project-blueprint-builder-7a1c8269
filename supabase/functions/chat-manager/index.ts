@@ -168,7 +168,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // SECURITY: Verify caller is authenticated
-    const authResult = await verifyAuthAndGetUser(req);
+    const authResult = await verifyAuthAndGetUser(req, supabase);
     if (!authResult.isValid) {
       console.log(`[SECURITY] Unauthorized access to chat-manager: ${authResult.error}`);
       return new Response(
