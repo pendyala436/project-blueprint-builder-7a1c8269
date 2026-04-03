@@ -54,6 +54,8 @@ const FLOWER_EMOJIS: Record<string, string> = {
 const MIN_BALANCE_MINUTES = 5;
 
 export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: AvailableGroupsSectionProps) {
+  const { pricing } = useChatPricing();
+  const RATE_PER_MINUTE = pricing.groupCallRatePerMinute || 4;
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGroupVideo, setActiveGroupVideo] = useState<PrivateGroup | null>(null);
