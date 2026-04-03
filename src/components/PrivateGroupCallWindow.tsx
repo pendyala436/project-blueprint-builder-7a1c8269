@@ -631,16 +631,45 @@ export function PrivateGroupCallWindow({
             <ArrowUpDown className="h-4 w-4" />
           </Button>
 
-          <Button
-            variant={isAudioEnabled ? 'secondary' : 'destructive'}
-            size="sm"
-            onClick={handleToggleAudio}
-            disabled={isConnecting}
-            className="rounded-full h-10 w-10 p-0"
-            title={isOwner ? 'Toggle mic' : (isAudioEnabled ? 'Mute' : 'Unmute to speak')}
-          >
-            {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-          </Button>
+          {/* Mic button — only shown for host. Participants' mics are host-controlled */}
+          {isOwner && (
+            <Button
+              variant={isAudioEnabled ? 'secondary' : 'destructive'}
+              size="sm"
+              onClick={handleToggleAudio}
+              disabled={isConnecting}
+              className="rounded-full h-10 w-10 p-0"
+              title="Toggle your mic"
+            >
+              {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+            </Button>
+          )}
+
+          {/* Participant mic status indicator (read-only for participants) */}
+          {!isOwner && (
+            <div
+              className={cn(
+                "rounded-full h-10 w-10 p-0 flex items-center justify-center",
+                isAudioEnabled ? "bg-secondary" : "bg-destructive/20"
+              )}
+              title={isAudioEnabled ? "Mic enabled by host" : "Mic disabled by host"}
+            >
+              {isAudioEnabled ? <Mic className="h-4 w-4 text-foreground" /> : <MicOff className="h-4 w-4 text-destructive" />}
+            </div>
+          )}
+
+          {/* Participant list button — host only, to manage participant mics */}
+          {isOwner && isConnected && participants.length > 1 && (
+            <Button
+              variant={showParticipantList ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => setShowParticipantList(prev => !prev)}
+              className="rounded-full h-10 w-10 p-0"
+              title="Manage participant mics"
+            >
+              <Users className="h-4 w-4" />
+            </Button>
+          )}
 
           {isOwner && (
             <>
