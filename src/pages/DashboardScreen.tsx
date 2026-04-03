@@ -1422,12 +1422,14 @@ const DashboardScreen = () => {
             onInsufficientBalance={() => setRechargeDialogOpen(true)}
             className="text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
           />
-          <VideoCallMiniButton 
-            currentUserId={currentUserId}
-            userLanguage={userLanguage}
-            walletBalance={walletBalance}
-            onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-          />
+          {userCountry === "IN" && (
+            <VideoCallMiniButton 
+              currentUserId={currentUserId}
+              userLanguage={userLanguage}
+              walletBalance={walletBalance}
+              onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+            />
+          )}
           <Button
             variant="aurora"
             size="lg"
