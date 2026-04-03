@@ -195,7 +195,10 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       
       const totalVideo = videoCount || 0;
       const totalChats = chatCount || 0;
-      const newStatus = totalVideo > 0 ? 'busy' : totalChats >= 3 ? 'busy' : 'online';
+      // Note: availability thresholds should ideally come from app_settings,
+      // but for stop-live cleanup we use a safe default of 3
+      const maxChats = 3;
+      const newStatus = totalVideo > 0 ? 'busy' : totalChats >= maxChats ? 'busy' : 'online';
       
       await Promise.all([
         supabase.from('user_status')
@@ -203,7 +206,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
           .eq('user_id', currentUserId),
         supabase.from('women_availability')
           .update({ 
-            is_available: totalChats < 3 && totalVideo === 0,
+            is_available: totalChats < maxChats && totalVideo === 0,
             is_available_for_calls: totalVideo === 0,
           })
           .eq('user_id', currentUserId),

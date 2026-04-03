@@ -870,6 +870,7 @@ export function PrivateGroupCallWindow({
               >
                 <span className="text-3xl">{gift.emoji}</span>
                 <span className="text-xs font-medium text-foreground">{gift.name}</span>
+                <span className="text-[10px] text-muted-foreground font-semibold">₹{gift.price}</span>
               </button>
             ))}
             {gifts.length === 0 && (

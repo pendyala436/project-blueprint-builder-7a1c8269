@@ -878,14 +878,14 @@ export function usePrivateGroupCall({
     // Broadcast stream-ended BEFORE cleanup so channel is still available
     try {
       if (channelRef.current) {
-        // Fire-and-forget broadcast - don't let it block cleanup
-        channelRef.current.send({
+        // Send broadcast and wait long enough for participants to receive it
+        await channelRef.current.send({
           type: 'broadcast',
           event: 'stream-ended',
           payload: { refunded: processRefundsFlag },
         }).catch(err => console.warn('[PrivateGroupCall] Broadcast failed:', err));
-        // Brief delay to let broadcast propagate, but don't block
-        await new Promise(resolve => setTimeout(resolve, 150));
+        // Wait 500ms for broadcast propagation on slow connections
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (err) {
       console.warn('[PrivateGroupCall] Broadcast send failed (channel may be closed):', err);

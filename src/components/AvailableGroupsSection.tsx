@@ -124,12 +124,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   };
 
   const fetchWalletBalance = async () => {
-    const { data } = await supabase
-      .from('users_wallet')
-      .select('balance')
-      .eq('user_id', currentUserId)
-      .single();
-    if (data) setWalletBalance(data.balance);
+    try {
+      const { data } = await supabase
+        .from('users_wallet')
+        .select('balance')
+        .eq('user_id', currentUserId)
+        .single();
+      if (data) setWalletBalance(data.balance);
+    } catch (err) {
+      console.error('[AvailableGroups] fetchWalletBalance error:', err);
+    }
   };
 
   const handleJoinGroup = async (group: PrivateGroup) => {
