@@ -235,10 +235,17 @@ const DraggableMiniChatWindow = ({
       if (insertedMessage?.id) {
         setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, id: insertedMessage.id } : m)));
       }
-    } catch (dbError) {
+    } catch (dbError: any) {
       console.error("[sendMessage] DB insert error:", dbError);
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+      // CHT-C-02: Show retry option instead of silently removing message
+      setMessages((prev) => prev.map((m) => 
+        m.id === tempId ? { ...m, id: `failed-${tempId}`, sendFailed: true } : m
+      ));
+      toast({ 
+        title: "Message Not Sent", 
+        description: "Tap the failed message to retry sending.",
+        variant: "destructive" 
+      });
     }
   };
 

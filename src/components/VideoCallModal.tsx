@@ -272,6 +272,7 @@ const VideoCallModal = ({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 
