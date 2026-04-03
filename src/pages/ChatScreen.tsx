@@ -386,6 +386,27 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
+          // Translate incoming messages from partner
+          const isFromPartner = newMsg.sender_id !== currentUserId;
+          let translatedMessage: string | undefined;
+          let isTranslated = false;
+
+          if (isFromPartner && chatPartner && currentUserLanguage) {
+            try {
+              const result = await translateChatMessage(
+                newMsg.message,
+                chatPartner.preferredLanguage,
+                currentUserLanguage
+              );
+              if (result.isTranslated) {
+                translatedMessage = result.translated;
+                isTranslated = true;
+              }
+            } catch {
+              // Fallback: show original message (English fallback)
+            }
+          }
+          
           // Add message to state (with deduplication check)
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -393,6 +414,8 @@ const ChatScreen = () => {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
+              translatedMessage,
+              isTranslated,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
