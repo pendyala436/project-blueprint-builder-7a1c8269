@@ -117,27 +117,15 @@ export const useMiniChatMessages = ({
             };
           });
 
-        // Background-translate older messages for viewer
-        if (viewerLang !== 'english') {
-          olderMsgs.forEach(async (msg) => {
-            try {
-              const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English');
-              setMessages(prev => prev.map(m => 
-                m.id === msg.id ? { ...m, translatedMessage: result.displayText, englishText: result.englishText, isTranslated: result.isTranslated } : m
-              ));
-            } catch { /* fallback is already original text */ }
-          });
-        } else {
-          // English viewer — just get English text (it IS the message or auto-detected)
-          olderMsgs.forEach(async (msg) => {
-            try {
-              const eng = await getEnglishTranslation(msg.message, 'auto');
-              setMessages(prev => prev.map(m => 
-                m.id === msg.id ? { ...m, englishText: eng } : m
-              ));
-            } catch { /* fallback */ }
-          });
-        }
+        // Background-translate older messages for viewer (all languages, including English)
+        olderMsgs.forEach(async (msg) => {
+          try {
+            const result = await translateMessageForViewer(msg.message, currentUserLanguage || 'English');
+            setMessages(prev => prev.map(m => 
+              m.id === msg.id ? { ...m, translatedMessage: result.displayText, englishText: result.englishText, isTranslated: result.isTranslated } : m
+            ));
+          } catch { /* fallback is already original text */ }
+        });
 
         setMessages((prev) => [...olderMsgs, ...prev]);
         setHasOlderMessages(data.length >= 50);
