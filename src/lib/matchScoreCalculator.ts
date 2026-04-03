@@ -226,18 +226,15 @@ export async function getQuickMatchScore(
   otherUserId: string
 ): Promise<number> {
   try {
-    // Fetch both profiles
-    const [currentProfileResult, otherProfileResult] = await Promise.all([
+    // Fetch both profiles - current user via direct table (owner), other via secure RPC
+    const { fetchPublicProfile } = await import("@/lib/profile-queries");
+    const [currentProfileResult, otherProfile] = await Promise.all([
       supabase
         .from("profiles")
         .select("user_id, country, state, preferred_language, interests, education_level, occupation, religion, marital_status, smoking_habit, drinking_habit, dietary_preference, fitness_level, pet_preference, zodiac_sign, age, bio, photo_url")
         .eq("user_id", currentUserId)
         .maybeSingle(),
-      supabase
-        .from("profiles")
-        .select("user_id, country, state, preferred_language, interests, education_level, occupation, religion, marital_status, smoking_habit, drinking_habit, dietary_preference, fitness_level, pet_preference, zodiac_sign, age, bio, photo_url")
-        .eq("user_id", otherUserId)
-        .maybeSingle()
+      fetchPublicProfile(otherUserId)
     ]);
 
     const currentProfile = currentProfileResult.data;
