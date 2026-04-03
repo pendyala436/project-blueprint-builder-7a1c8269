@@ -113,6 +113,7 @@ const DirectVideoCallButton = ({
         .maybeSingle();
 
       if (!targetStatus?.is_online) {
+        preStream?.getTracks().forEach(t => t.stop());
         toast({
           title: "User Offline",
           description: `${targetName} is not online right now.`,
