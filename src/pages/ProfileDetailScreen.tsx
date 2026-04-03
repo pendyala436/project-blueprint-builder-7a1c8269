@@ -309,9 +309,27 @@ const ProfileDetailScreen = () => {
         .eq("user_id", currentUserId)
         .maybeSingle();
 
-      const currentUserGender = currentProfile?.gender?.toLowerCase();
-      const isMale = currentUserGender === "male";
-      const isFemale = currentUserGender === "female";
+      const localGender = currentProfile?.gender?.toLowerCase();
+      const isMale = localGender === "male";
+      const isFemale = localGender === "female";
+
+      // Check super user bypass
+      const userEmail = (await supabase.auth.getSession()).data.session?.user?.email || '';
+      const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
+
+      // Men must have sufficient wallet balance to start chat
+      if (isMale && !isSuperUser) {
+        const minBalance = pricing.ratePerMinute * 2;
+        if (walletBalance <= 0) {
+          setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
+          setShowRechargeDialog(true);
+          return;
+        } else if (walletBalance < minBalance) {
+          setRechargeMessage(`Insufficient balance (₹${walletBalance}). Minimum ₹${minBalance} required to start a chat.`);
+          setShowRechargeDialog(true);
+          return;
+        }
+      }
 
       // Women without golden badge cannot initiate chats
       if (isFemale) {
