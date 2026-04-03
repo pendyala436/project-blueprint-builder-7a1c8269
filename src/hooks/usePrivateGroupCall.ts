@@ -30,6 +30,7 @@ interface Participant {
   joinedAt: number;
   amountPaid: number;
   balanceRemaining: number;
+  micEnabled: boolean; // Whether host has enabled this participant's mic
 }
 
 interface PeerConnectionEntry {
@@ -568,6 +569,7 @@ export function usePrivateGroupCall({
           joinedAt: Date.now(),
           amountPaid: 0,
           balanceRemaining: presence?.balance || 0,
+          micEnabled: false, // Mic disabled by default, only host can enable
         };
 
         if (sessionRef.current) {
@@ -653,6 +655,29 @@ export function usePrivateGroupCall({
         if (payload.to === currentUserId) {
           await handleIceCandidate(payload.candidate, payload.from);
         }
+      })
+      .on('broadcast', { event: 'mic-control' }, ({ payload }) => {
+        // Host controls participant mic remotely
+        if (payload.participantId === currentUserId && !isOwner) {
+          const enabled = payload.enabled;
+          if (localStream.current) {
+            localStream.current.getAudioTracks().forEach(track => {
+              track.enabled = enabled;
+            });
+          }
+          toast.info(enabled ? 'Host enabled your microphone' : 'Host disabled your microphone');
+        }
+        // Update participant state for all clients
+        if (sessionRef.current) {
+          const participant = sessionRef.current.participants.get(payload.participantId);
+          if (participant) {
+            participant.micEnabled = payload.enabled;
+            setState(prev => ({
+              ...prev,
+              participants: Array.from(sessionRef.current?.participants.values() || []),
+            }));
+          }
+        }
       });
 
     channel.subscribe(async (status) => {
@@ -714,6 +739,7 @@ export function usePrivateGroupCall({
           joinedAt: Date.now(),
           amountPaid: 0,
           balanceRemaining: 0,
+          micEnabled: true, // Host mic always enabled
         }]]),
         totalEarnings: 0,
       };
@@ -878,7 +904,7 @@ export function usePrivateGroupCall({
     }
   }, [isOwner]);
 
-  // Toggle audio
+  // Toggle audio (host can always toggle, participant only if host enabled their mic)
   const toggleAudio = useCallback((enabled: boolean) => {
     if (localStream.current) {
       localStream.current.getAudioTracks().forEach(track => {
@@ -886,6 +912,29 @@ export function usePrivateGroupCall({
       });
     }
   }, []);
+
+  // Host enables/disables a specific participant's mic
+  const enableParticipantMic = useCallback((participantId: string, enabled: boolean) => {
+    if (!isOwner || !channelRef.current) return;
+    
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'mic-control',
+      payload: { participantId, enabled },
+    });
+
+    // Update local state immediately for host
+    if (sessionRef.current) {
+      const participant = sessionRef.current.participants.get(participantId);
+      if (participant) {
+        participant.micEnabled = enabled;
+        setState(prev => ({
+          ...prev,
+          participants: Array.from(sessionRef.current?.participants.values() || []),
+        }));
+      }
+    }
+  }, [isOwner]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -903,6 +952,7 @@ export function usePrivateGroupCall({
     endStream,
     toggleVideo,
     toggleAudio,
+    enableParticipantMic,
     cleanup,
     maxParticipants: MAX_PARTICIPANTS,
     maxDuration: MAX_DURATION_MINUTES,

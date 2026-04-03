@@ -114,7 +114,7 @@ export function PrivateGroupCallWindow({
 
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner); // Only host mic enabled by default
   const isStoppingRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
@@ -122,6 +122,7 @@ export function PrivateGroupCallWindow({
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false); // repurposed as scroll toggle
   const [isScrollEnabled, setIsScrollEnabled] = useState(true);
+  const [showParticipantList, setShowParticipantList] = useState(false);
 
   // Extension state
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
@@ -157,6 +158,7 @@ export function PrivateGroupCallWindow({
     endStream,
     toggleVideo,
     toggleAudio,
+    enableParticipantMic,
     cleanup,
   } = usePrivateGroupCall({
     groupId: group.id,
@@ -629,16 +631,45 @@ export function PrivateGroupCallWindow({
             <ArrowUpDown className="h-4 w-4" />
           </Button>
 
-          <Button
-            variant={isAudioEnabled ? 'secondary' : 'destructive'}
-            size="sm"
-            onClick={handleToggleAudio}
-            disabled={isConnecting}
-            className="rounded-full h-10 w-10 p-0"
-            title={isOwner ? 'Toggle mic' : (isAudioEnabled ? 'Mute' : 'Unmute to speak')}
-          >
-            {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-          </Button>
+          {/* Mic button — only shown for host. Participants' mics are host-controlled */}
+          {isOwner && (
+            <Button
+              variant={isAudioEnabled ? 'secondary' : 'destructive'}
+              size="sm"
+              onClick={handleToggleAudio}
+              disabled={isConnecting}
+              className="rounded-full h-10 w-10 p-0"
+              title="Toggle your mic"
+            >
+              {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+            </Button>
+          )}
+
+          {/* Participant mic status indicator (read-only for participants) */}
+          {!isOwner && (
+            <div
+              className={cn(
+                "rounded-full h-10 w-10 p-0 flex items-center justify-center",
+                isAudioEnabled ? "bg-secondary" : "bg-destructive/20"
+              )}
+              title={isAudioEnabled ? "Mic enabled by host" : "Mic disabled by host"}
+            >
+              {isAudioEnabled ? <Mic className="h-4 w-4 text-foreground" /> : <MicOff className="h-4 w-4 text-destructive" />}
+            </div>
+          )}
+
+          {/* Participant list button — host only, to manage participant mics */}
+          {isOwner && isConnected && participants.length > 1 && (
+            <Button
+              variant={showParticipantList ? 'default' : 'secondary'}
+              size="sm"
+              onClick={() => setShowParticipantList(prev => !prev)}
+              className="rounded-full h-10 w-10 p-0"
+              title="Manage participant mics"
+            >
+              <Users className="h-4 w-4" />
+            </Button>
+          )}
 
           {isOwner && (
             <>
@@ -677,6 +708,50 @@ export function PrivateGroupCallWindow({
             </Button>
           )}
         </div>
+
+        {/* Participant List Panel — Host can enable/disable participant mics */}
+        {isOwner && showParticipantList && (
+          <div className="mx-4 mb-2 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 p-3 max-h-48 overflow-y-auto">
+            <h4 className="text-white/80 text-xs font-semibold mb-2 flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Participants ({participants.filter(p => !p.isOwner).length})
+            </h4>
+            <div className="space-y-1.5">
+              {participants.filter(p => !p.isOwner).map(p => (
+                <div key={p.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
+                      <AvatarImage src={p.photo} />
+                      <AvatarFallback className="text-[9px] bg-primary/20 text-primary">
+                        {p.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-white/90 text-xs truncate">{p.name}</span>
+                  </div>
+                  <Button
+                    variant={p.micEnabled ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={cn(
+                      "h-7 w-7 p-0 rounded-full flex-shrink-0",
+                      p.micEnabled
+                        ? "bg-emerald-500/20 hover:bg-emerald-500/30"
+                        : "bg-white/10 hover:bg-white/20"
+                    )}
+                    onClick={() => enableParticipantMic(p.id, !p.micEnabled)}
+                    title={p.micEnabled ? `Mute ${p.name}` : `Unmute ${p.name}`}
+                  >
+                    {p.micEnabled
+                      ? <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                      : <MicOff className="h-3.5 w-3.5 text-white/50" />
+                    }
+                  </Button>
+                </div>
+              ))}
+              {participants.filter(p => !p.isOwner).length === 0 && (
+                <p className="text-white/40 text-xs text-center py-2">No participants yet</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Chat Input Bar — below media controls */}
         <div className="flex items-center gap-2 px-4 py-2">
