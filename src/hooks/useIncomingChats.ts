@@ -137,9 +137,9 @@ export const useIncomingChats = (
         // OPTIMIZED: Single query with limit
         const { data: sessions, error: sessionsError } = await supabase
           .from("active_chat_sessions")
-          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at`)
+          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
           .eq(column, currentUserId)
-          .eq("status", "active")
+          .in("status", ["active", "pending"])
           .order("created_at", { ascending: false })
           .limit(10);
 
