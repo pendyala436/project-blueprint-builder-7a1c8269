@@ -1497,10 +1497,14 @@ const DashboardScreen = () => {
                       <Card
                         key={woman.id}
                         className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/50 bg-primary/5"
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="relative">
+                      onClick={() => {
+                        if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
+                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
                             <Avatar className="w-10 h-10 border-2 border-background shadow-md">
                               <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
                               <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-sm">
@@ -1597,7 +1601,11 @@ const DashboardScreen = () => {
                       <Card
                         key={woman.id}
                         className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/30 bg-primary/5"
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        onClick={() => {
+                          if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
+                            handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                          }
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <div className="relative">
