@@ -190,7 +190,7 @@ const DraggableMiniChatWindow = ({
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
-        toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.loadFailed });
+        toast({ title: "Chat unavailable", description: ERROR_MESSAGES.chat.loadFailed, variant: "destructive" });
       }
     })();
   }, [currentUserId, userGender, isEarningEligible]);
