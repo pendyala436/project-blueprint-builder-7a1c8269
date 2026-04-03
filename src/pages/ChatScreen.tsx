@@ -1086,7 +1086,7 @@ const ChatScreen = () => {
       if (error) throw error;
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error("Message not sent", { description: ERROR_MESSAGES.chat.sendFailed });
+      toast({ title: "Message not sent", description: ERROR_MESSAGES.chat.sendFailed, variant: "destructive" });
     } finally {
       setIsSending(false);
     }
