@@ -162,25 +162,26 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
 
     try {
-      const { error } = await supabase
-        .from('group_memberships')
-        .upsert({
-          group_id: group.id,
-          user_id: currentUserId,
-          has_access: true,
-          gift_amount_paid: 0
-        }, { onConflict: 'group_id,user_id' });
+      // GRP-C-01: Use atomic join RPC to prevent race condition > 100 participants
+      const { data: joinResult, error: joinError } = await supabase.rpc('join_group_atomic', {
+        p_group_id: group.id,
+        p_user_id: currentUserId,
+        p_max_participants: MAX_PARTICIPANTS,
+      });
 
-      if (error) throw error;
-
-      await supabase
-        .from('private_groups')
-        .update({ participant_count: group.participant_count + 1 })
-        .eq('id', group.id);
+      if (joinError) throw joinError;
+      const result = joinResult as { success: boolean; error?: string; participant_count?: number };
+      if (!result.success) {
+        toast.error(result.error || 'Could not join group');
+        preStream.getTracks().forEach(t => t.stop());
+        setJoiningGroupId(null);
+        return;
+      }
 
       setActiveGroupStream(preStream);
       setActiveGroupVideo(group);
     } catch (error: any) {
+      preStream.getTracks().forEach(t => t.stop());
       toast.error('Could not join group', { description: classifyError(error, 'join the group').message });
     } finally {
       setJoiningGroupId(null);
