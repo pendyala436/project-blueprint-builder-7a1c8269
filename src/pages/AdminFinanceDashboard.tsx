@@ -95,16 +95,26 @@ const AdminFinanceDashboard = () => {
       const days = dateRange === "all" ? 3650 : parseInt(dateRange); // 10 years for "all time"
       const startDate = startOfDay(subDays(new Date(), days)).toISOString();
       const endDate = endOfDay(new Date()).toISOString();
-      // Load ledger transactions
-      const { data: ledgerTxns, error: ledgerError } = await supabase
-        .from("ledger_transactions")
-        .select("*")
-        .gte("created_at", startDate)
-        .lte("created_at", endDate)
-        .order("created_at", { ascending: false });
+      // Load ledger transactions — paginate to avoid 1000-row Supabase limit
+      let allLedgerTxns: LedgerTxn[] = [];
+      let ledgerPage = 0;
+      const BATCH_SIZE = 500;
+      while (true) {
+        const { data: batch, error: ledgerError } = await supabase
+          .from("ledger_transactions")
+          .select("*")
+          .gte("created_at", startDate)
+          .lte("created_at", endDate)
+          .order("created_at", { ascending: false })
+          .range(ledgerPage * BATCH_SIZE, (ledgerPage + 1) * BATCH_SIZE - 1);
 
-      if (ledgerError) throw ledgerError;
-      setWalletTransactions(ledgerTxns || []);
+        if (ledgerError) throw ledgerError;
+        if (!batch || batch.length === 0) break;
+        allLedgerTxns = allLedgerTxns.concat(batch as LedgerTxn[]);
+        if (batch.length < BATCH_SIZE) break;
+        ledgerPage++;
+      }
+      setWalletTransactions(allLedgerTxns);
 
       // Load gift transactions
       const { data: giftTxns, error: giftError } = await supabase
