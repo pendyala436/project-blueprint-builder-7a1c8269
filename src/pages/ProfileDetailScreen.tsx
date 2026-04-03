@@ -160,10 +160,14 @@ const ProfileDetailScreen = () => {
           .select("id")
           .eq("user_id", user.id)
           .eq("matched_user_id", targetUserId).maybeSingle(),
+        supabase.from("wallets")
+          .select("balance")
+          .eq("user_id", user.id).maybeSingle(),
       ]);
 
       const currentUserProfile = currentUserResult.data;
       const profileData = profileResult.data;
+      setWalletBalance(walletResult.data?.balance || 0);
 
       const gender = currentUserProfile?.gender?.toLowerCase() || "";
       setCurrentUserGender(gender);
