@@ -139,7 +139,7 @@ const ChatBillingDisplay = ({
       }
     } catch (error) {
       console.error("Error loading billing info:", error);
-      toast.error("Billing info unavailable", { description: "Unable to load billing details. Please refresh." });
+      toast({ title: "Billing info unavailable", description: "Unable to load billing details. Please refresh.", variant: "destructive" });
     } finally {
       loadInProgress.current = false;
     }
