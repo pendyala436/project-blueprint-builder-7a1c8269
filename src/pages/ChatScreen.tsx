@@ -743,7 +743,7 @@ const ChatScreen = () => {
 
     } catch (error) {
       console.error("Error initializing chat:", error);
-      toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.initFailed });
+      toast({ title: "Chat unavailable", description: ERROR_MESSAGES.chat.initFailed, variant: "destructive" });
     } finally {
       setIsLoading(false);
       initializingRef.current = false;
@@ -908,7 +908,7 @@ const ChatScreen = () => {
       });
     } catch (error: any) {
       console.error("Error blocking user:", error);
-      toast.error("Could not block user", { description: "Unable to block this user right now. Please try again." });
+      toast({ title: "Could not block user", description: "Unable to block this user right now. Please try again.", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
@@ -937,7 +937,7 @@ const ChatScreen = () => {
       });
     } catch (error: any) {
       console.error("Error unblocking user:", error);
-      toast.error("Could not unblock user", { description: "Unable to unblock this user right now. Please try again." });
+      toast({ title: "Could not unblock user", description: "Unable to unblock this user right now. Please try again.", variant: "destructive" });
     } finally {
       setActionLoading(false);
     }
@@ -1086,7 +1086,7 @@ const ChatScreen = () => {
       if (error) throw error;
     } catch (error) {
       console.error("Error sending message:", error);
-      toast.error("Message not sent", { description: ERROR_MESSAGES.chat.sendFailed });
+      toast({ title: "Message not sent", description: ERROR_MESSAGES.chat.sendFailed, variant: "destructive" });
     } finally {
       setIsSending(false);
     }
@@ -1150,7 +1150,7 @@ const ChatScreen = () => {
     } catch (error) {
       console.error("Camera error:", error);
       const camErr = classifyError(error);
-      toast.error(camErr.title, { description: camErr.message });
+      toast({ title: camErr.title, description: camErr.message, variant: "destructive" });
       setIsCameraOpen(false);
     }
   };
@@ -1219,7 +1219,7 @@ const ChatScreen = () => {
       return `chat-attachment://${storagePath}`;
     } catch (error) {
       console.error("Upload error:", error);
-        toast.error("Upload failed", { description: ERROR_MESSAGES.upload.failed });
+        toast({ title: "Upload failed", description: ERROR_MESSAGES.upload.failed, variant: "destructive" });
       return null;
     }
   };
@@ -1261,7 +1261,7 @@ const ChatScreen = () => {
       });
     } catch (error) {
       console.error("Error sending attachment:", error);
-      toast.error("Attachment not sent", { description: ERROR_MESSAGES.chat.attachmentFailed });
+      toast({ title: "Attachment not sent", description: ERROR_MESSAGES.chat.attachmentFailed, variant: "destructive" });
     } finally {
       setIsSending(false);
       setIsUploading(false);

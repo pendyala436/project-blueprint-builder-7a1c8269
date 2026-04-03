@@ -47,15 +47,16 @@ export async function translateText(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return text;
 
   try {
-    // CHT-H-04: Add 5-second timeout to prevent hanging requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // 5-second timeout using Promise.race (supabase.functions.invoke doesn't support AbortSignal)
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('TranslationTimeout')), 5000)
+    );
 
-    const { data, error } = await supabase.functions.invoke('translate-message', {
+    const invokePromise = supabase.functions.invoke('translate-message', {
       body: { text, sourceLang, targetLang },
     });
 
-    clearTimeout(timeoutId);
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
 
     if (error) {
       console.warn('[Translation] Edge function error:', error.message);
@@ -64,7 +65,7 @@ export async function translateText(
 
     return data?.translation || text;
   } catch (err: any) {
-    if (err?.name === 'AbortError') {
+    if (err?.message === 'TranslationTimeout') {
       console.warn('[Translation] Request timed out after 5s');
     } else {
       console.warn('[Translation] Failed:', err);
@@ -87,15 +88,16 @@ export async function translateBatch(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return texts;
 
   try {
-    // Issue 3.2: Add 5-second timeout to batch translation (matching translateText)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // 5-second timeout using Promise.race (supabase.functions.invoke doesn't support AbortSignal)
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('BatchTranslationTimeout')), 5000)
+    );
 
-    const { data, error } = await supabase.functions.invoke('translate-message', {
+    const invokePromise = supabase.functions.invoke('translate-message', {
       body: { texts, sourceLang, targetLang },
     });
 
-    clearTimeout(timeoutId);
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
 
     if (error) {
       console.warn('[Translation] Batch error:', error.message);
@@ -104,7 +106,7 @@ export async function translateBatch(
 
     return data?.translations || texts;
   } catch (err: any) {
-    if (err?.name === 'AbortError') {
+    if (err?.message === 'BatchTranslationTimeout') {
       console.warn('[Translation] Batch request timed out after 5s');
     } else {
       console.warn('[Translation] Batch failed:', err);

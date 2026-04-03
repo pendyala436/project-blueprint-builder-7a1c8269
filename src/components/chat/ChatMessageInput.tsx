@@ -6,46 +6,17 @@ import { Send, Smile, Loader2, Languages } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
 import { translateText } from '@/lib/translation-service';
 
-// Native language labels for placeholder and send button
-const NATIVE_LABELS: Record<string, { placeholder: string; send: string; preview: string }> = {
-  telugu: { placeholder: 'బాగున్నావా / bagunnava / how are you...', send: 'పంపు', preview: 'ప్రివ్యూ' },
-  hindi: { placeholder: 'कैसे हो / kaise ho / how are you...', send: 'भेजें', preview: 'पूर्वावलोकन' },
-  tamil: { placeholder: 'எப்படி இருக்கீங்க / eppadi irukkinga / how are you...', send: 'அனுப்பு', preview: 'முன்னோட்டம்' },
-  kannada: { placeholder: 'ಹೇಗಿದ್ದೀರಾ / hegiddira / how are you...', send: 'ಕಳುಹಿಸು', preview: 'ಪೂರ್ವವೀಕ್ಷಣೆ' },
-  malayalam: { placeholder: 'സുഖമാണോ / sukhamano / how are you...', send: 'അയയ്ക്കുക', preview: 'പ്രിവ്യൂ' },
-  bengali: { placeholder: 'কেমন আছো / kemon acho / how are you...', send: 'পাঠান', preview: 'পূর্বরূপ' },
-  marathi: { placeholder: 'कसे आहात / kase aahat / how are you...', send: 'पाठवा', preview: 'पूर्वावलोकन' },
-  gujarati: { placeholder: 'કેમ છો / kem cho / how are you...', send: 'મોકલો', preview: 'પૂર્વાવલોકન' },
-  punjabi: { placeholder: 'ਕਿਵੇਂ ਹੋ / kiven ho / how are you...', send: 'ਭੇਜੋ', preview: 'ਪੂਰਵਦਰਸ਼ਨ' },
-  odia: { placeholder: 'କେମିତି ଅଛ / kemiti acha / how are you...', send: 'ପଠାନ୍ତୁ', preview: 'ପୂର୍ବାବଲୋକନ' },
-  urdu: { placeholder: 'کیسے ہو / kaise ho / how are you...', send: 'بھیجیں', preview: 'پیش نظارہ' },
-  assamese: { placeholder: 'কেনে আছা / kene asa / how are you...', send: 'পঠিয়াওক', preview: 'পূৰ্বদৰ্শন' },
-  arabic: { placeholder: 'كيف حالك / kayf halak / how are you...', send: 'إرسال', preview: 'معاينة' },
-  spanish: { placeholder: '¿Cómo estás? / how are you...', send: 'Enviar', preview: 'Vista previa' },
-  french: { placeholder: 'Comment ça va? / how are you...', send: 'Envoyer', preview: 'Aperçu' },
-  portuguese: { placeholder: 'Como você está? / how are you...', send: 'Enviar', preview: 'Visualizar' },
-  russian: { placeholder: 'Как дела / kak dela / how are you...', send: 'Отправить', preview: 'Предпросмотр' },
-  japanese: { placeholder: 'お元気ですか / ogenki desuka / how are you...', send: '送信', preview: 'プレビュー' },
-  korean: { placeholder: '잘 지내요 / jal jinaeyo / how are you...', send: '보내기', preview: '미리보기' },
-  chinese: { placeholder: '你好吗 / ni hao ma / how are you...', send: '发送', preview: '预览' },
-  german: { placeholder: 'Wie geht es dir? / how are you...', send: 'Senden', preview: 'Vorschau' },
-  italian: { placeholder: 'Come stai? / how are you...', send: 'Invia', preview: 'Anteprima' },
-  thai: { placeholder: 'สบายดีไหม / sabai dee mai / how are you...', send: 'ส่ง', preview: 'ดูตัวอย่าง' },
-  turkish: { placeholder: 'Nasılsın? / how are you...', send: 'Gönder', preview: 'Önizleme' },
-  vietnamese: { placeholder: 'Bạn khỏe không? / how are you...', send: 'Gửi', preview: 'Xem trước' },
-  indonesian: { placeholder: 'Apa kabar? / how are you...', send: 'Kirim', preview: 'Pratinjau' },
-  malay: { placeholder: 'Apa khabar? / how are you...', send: 'Hantar', preview: 'Pratonton' },
-  persian: { placeholder: 'حالت چطوره / halet chetore / how are you...', send: 'ارسال', preview: 'پیش‌نمایش' },
-  swahili: { placeholder: 'Habari yako? / how are you...', send: 'Tuma', preview: 'Hakiki' },
-  nepali: { placeholder: 'कस्तो छ / kasto chha / how are you...', send: 'पठाउनुहोस्', preview: 'पूर्वावलोकन' },
-  sinhala: { placeholder: 'කොහොමද / kohomada / how are you...', send: 'යවන්න', preview: 'පෙරදසුන' },
-  english: { placeholder: 'Type a message...', send: 'Send', preview: 'Preview' },
-};
+// Dynamic labels — translated live via Lingva, no hardcoded values
+const DEFAULT_LABELS = { placeholder: 'Type a message...', send: 'Send', preview: 'Preview' };
+
+// Cache for translated labels to avoid re-fetching on every render
+const labelCache = new Map<string, { placeholder: string; send: string; preview: string }>();
 
 export function getNativeLabels(language?: string) {
-  if (!language) return NATIVE_LABELS.english;
+  if (!language) return DEFAULT_LABELS;
   const key = language.toLowerCase().trim();
-  return NATIVE_LABELS[key] || NATIVE_LABELS.english;
+  if (key === 'english') return DEFAULT_LABELS;
+  return labelCache.get(key) || DEFAULT_LABELS;
 }
 
 /**
@@ -82,13 +53,55 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const [isSending, setIsSending] = useState(false);
   const [nativePreview, setNativePreview] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [dynamicLabels, setDynamicLabels] = useState(DEFAULT_LABELS);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const previewTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const labels = getNativeLabels(userLanguage);
   const langNorm = (userLanguage || 'english').toLowerCase().trim();
   const isNonEnglish = langNorm !== 'english';
+
+  // Fetch translated UI labels via live Lingva translation (no hardcoding)
+  useEffect(() => {
+    if (!isNonEnglish || !userLanguage) {
+      setDynamicLabels(DEFAULT_LABELS);
+      return;
+    }
+
+    const cacheKey = langNorm;
+    if (labelCache.has(cacheKey)) {
+      setDynamicLabels(labelCache.get(cacheKey)!);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [placeholderResult, sendResult, previewResult] = await Promise.allSettled([
+          translateText('Type a message...', 'English', userLanguage),
+          translateText('Send', 'English', userLanguage),
+          translateText('Preview', 'English', userLanguage),
+        ]);
+
+        if (cancelled) return;
+
+        const translated = {
+          placeholder: placeholderResult.status === 'fulfilled' ? placeholderResult.value : DEFAULT_LABELS.placeholder,
+          send: sendResult.status === 'fulfilled' ? sendResult.value : DEFAULT_LABELS.send,
+          preview: previewResult.status === 'fulfilled' ? previewResult.value : DEFAULT_LABELS.preview,
+        };
+
+        labelCache.set(cacheKey, translated);
+        setDynamicLabels(translated);
+      } catch {
+        // Fallback to English
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [userLanguage, isNonEnglish, langNorm]);
+
+  const labels = dynamicLabels;
 
   // iOS keyboard height detection
   useEffect(() => {

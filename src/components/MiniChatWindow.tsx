@@ -1,5 +1,6 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
-import { translateChatMessage, getEnglishTranslation } from "@/lib/translation-service";
+import { translateChatMessage, getEnglishTranslation, translateForViewer } from "@/lib/translation-service";
+import { moderateMessage } from '@/lib/content-moderation';
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -352,6 +353,41 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
 
+  // Translate history messages in background using live Lingva translation
+  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
+    const batchSize = 5;
+    for (let i = 0; i < msgs.length; i += batchSize) {
+      const batch = msgs.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (msg) => {
+          try {
+            const result = await translateForViewer(msg.message, viewerLanguage);
+            return {
+              id: msg.id,
+              translatedMessage: result.nativeText,
+              englishText: result.englishText,
+              isTranslated: result.nativeText !== msg.message,
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      setMessages(prev => prev.map(m => {
+        const translation = results
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+          .map(r => r.value)
+          .find(r => r && r.id === m.id);
+        if (translation) {
+          return { ...m, ...translation };
+        }
+        return m;
+      }));
+    }
+  }, []);
+
+
   const loadMessages = async () => {
     const { data } = await supabase
       .from("chat_messages")
@@ -361,13 +397,19 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      const formattedMessages = data.map((m) => ({
+      const formattedMessages: Message[] = data.map((m) => ({
         id: m.id,
         senderId: m.sender_id,
         message: m.message,
         createdAt: m.created_at
       }));
       setMessages(formattedMessages);
+
+      // Translate history messages in background using live Lingva translation
+      const langToUse = currentUserLanguage || 'English';
+      if (langToUse && langToUse.toLowerCase() !== 'english') {
+        translateHistoryMessages(formattedMessages, langToUse);
+      }
     }
   };
 
@@ -485,7 +527,6 @@ const MiniChatWindow = ({
     }
 
     // Content moderation - block phone numbers, emails, social media
-    const { moderateMessage } = await import('@/lib/content-moderation');
     const moderationResult = moderateMessage(messageText);
     if (moderationResult.isBlocked) {
       toast({
