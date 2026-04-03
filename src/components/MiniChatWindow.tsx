@@ -407,7 +407,7 @@ const MiniChatWindow = ({
             } catch {
               // Fallback: show original (English fallback)
             }
-          } else if (!isPartnerMessage && currentUserLanguage) {
+          } else if (!isPartnerMessage) {
             // For own messages, get English subtitle
             try {
               englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
