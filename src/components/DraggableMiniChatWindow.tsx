@@ -535,13 +535,14 @@ const DraggableMiniChatWindow = ({
 // --- Extracted sub-component for message rendering ---
 
 interface MessageBubbleProps {
-  msg: { id: string; senderId: string; message: string; translatedMessage?: string; isTranslated?: boolean; createdAt: string };
+  msg: { id: string; senderId: string; message: string; translatedMessage?: string; isTranslated?: boolean; translationFailed?: boolean; sendFailed?: boolean; createdAt: string };
   currentUserId: string;
   currentUserName?: string;
   partnerName: string;
+  onRetry?: (msg: any) => void;
 }
 
-const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName }: MessageBubbleProps) => {
+const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRetry }: MessageBubbleProps) => {
   const isVoice = msg.message.startsWith("[VOICE:");
   const isImage = msg.message.includes("[IMAGE:");
   const isVideo = msg.message.includes("[VIDEO:");
@@ -564,10 +565,14 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName }: Mes
       <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
         {msg.senderId === currentUserId ? (currentUserName || "You") : partnerName}
       </span>
-      <div className={cn(
-        "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-        msg.senderId === currentUserId ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
-      )}>
+      <div 
+        className={cn(
+          "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
+          msg.senderId === currentUserId ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm",
+          msg.sendFailed && "bg-destructive/80 cursor-pointer"
+        )}
+        onClick={msg.sendFailed && onRetry ? () => onRetry(msg) : undefined}
+      >
         {isVoice && fileUrl ? (
           <div className="flex items-center gap-2"><Mic className="h-3 w-3" /><audio src={fileUrl} controls className="h-6 max-w-[150px]" /></div>
         ) : isImage && fileUrl ? (
@@ -586,7 +591,15 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName }: Mes
             {msg.senderId !== currentUserId && msg.isTranslated && msg.translatedMessage && (
               <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">{msg.message}</p>
             )}
+            {/* CHT-H-04: Translation failed badge */}
+            {msg.senderId !== currentUserId && msg.translationFailed && (
+              <span className="text-[8px] text-amber-400 block mt-0.5">⚠ Translation unavailable</span>
+            )}
           </>
+        )}
+        {/* CHT-C-02: Send failed indicator */}
+        {msg.sendFailed && (
+          <span className="text-[8px] block mt-0.5">⚠ Failed — tap to retry</span>
         )}
         <span className="text-[8px] opacity-50 block mt-0.5">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
