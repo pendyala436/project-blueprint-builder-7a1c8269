@@ -167,7 +167,7 @@ const EnhancedParallelChatsContainer = ({
         const partnerId = session[partnerColumn as keyof typeof session] as string;
         
         // Skip sessions that the user explicitly closed in this browser session
-        if (closedSessionsRef.current.has(session.id)) continue;
+        if (closedSessionsRef.current.has(session.id) || closedChatIdsRef.current.has(session.chat_id)) continue;
         
         // For MEN: Show chat window immediately (they initiate chats, or Golden Badge women do)
         // For WOMEN: Only show if they have accepted (sent a message or clicked accept)
