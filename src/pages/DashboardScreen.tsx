@@ -1039,17 +1039,21 @@ const DashboardScreen = () => {
   };
 
   const fetchNotifications = async (userId: string) => {
-    const { data, count } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact" })
-      .eq("user_id", userId)
-      .eq("is_read", false)
-      .order("created_at", { ascending: false })
-      .limit(5);
+    try {
+      const { data, count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact" })
+        .eq("user_id", userId)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false })
+        .limit(5);
 
-    // Display notifications as-is (no translation)
-    setNotifications(data || []);
-    setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
+      // Display notifications as-is (no translation)
+      setNotifications(data || []);
+      setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
+    } catch (error) {
+      console.error('[Dashboard] fetchNotifications error:', error);
+    }
   };
 
   const markNotificationRead = async (notificationId: string) => {
