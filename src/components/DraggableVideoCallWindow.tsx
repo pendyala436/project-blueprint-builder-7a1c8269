@@ -600,12 +600,13 @@ const DraggableVideoCallWindow = ({
           <div
             className="flex items-center gap-1 shrink-0"
             data-no-drag
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
+            onPointerDown={handleControlPointerDown}
+            onMouseDown={handleControlPointerDown}
+            onTouchStart={handleControlPointerDown}
+            onClick={(e) => e.stopPropagation()}
           >
             {callStatus === 'active' && (
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs">
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs" data-no-drag>
                 <Clock className="w-3 h-3" />
                 <span className="font-mono">{formatDuration(callDuration)}</span>
                 <IndianRupee className="w-3 h-3 ml-1" />
@@ -617,11 +618,12 @@ const DraggableVideoCallWindow = ({
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
+              data-no-drag
+              onPointerDown={handleControlPointerDown}
+              onMouseDown={handleControlPointerDown}
+              onTouchStart={handleControlPointerDown}
               onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
+                swallowControlEvent(e);
                 if (isMaximized) {
                   setIsMaximized(false);
                 } else {
@@ -637,11 +639,12 @@ const DraggableVideoCallWindow = ({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
+                data-no-drag
+                onPointerDown={handleControlPointerDown}
+                onMouseDown={handleControlPointerDown}
+                onTouchStart={handleControlPointerDown}
                 onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
+                  swallowControlEvent(e);
                   setIsMaximized(!isMaximized);
                 }}
               >
@@ -653,12 +656,12 @@ const DraggableVideoCallWindow = ({
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
+              data-no-drag
+              onPointerDown={handleControlPointerDown}
+              onMouseDown={handleControlPointerDown}
+              onTouchStart={handleControlPointerDown}
               onClick={async (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                console.log('[VideoCall] Close button clicked');
+                swallowControlEvent(e);
                 await handleEndCall();
               }}
             >
@@ -667,12 +670,10 @@ const DraggableVideoCallWindow = ({
           </div>
         </div>
 
-        {/* Video Content - Collapsible */}
         {!isMinimized && (
           <div className="flex-1 flex flex-col overflow-hidden bg-black relative">
-            {/* Remote Video (Full area) */}
             {callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'idle' ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-white bg-gradient-to-br from-gray-900 to-gray-800">
+              <div className="flex-1 flex flex-col items-center justify-center text-white bg-gradient-to-br from-gray-900 to-gray-800 pointer-events-none">
                 <Avatar className="w-20 h-20 mb-3">
                   <AvatarImage src={remotePhoto || undefined} />
                   <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-accent">
@@ -693,8 +694,7 @@ const DraggableVideoCallWindow = ({
                   playsInline
                   className="w-full h-full object-cover pointer-events-none select-none"
                 />
-                
-                {/* Local Video (Picture-in-picture) */}
+
                 <div className="pointer-events-none absolute bottom-20 right-2 z-10 w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
                   <video
                     ref={setLocalVideoEl}
@@ -712,10 +712,15 @@ const DraggableVideoCallWindow = ({
               </>
             )}
 
-            {/* Controls - Two rows */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
-              {/* Main controls row */}
-              <div className="relative z-20 flex items-center justify-center gap-2 mb-2">
+            <div
+              className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent"
+              data-no-drag
+              onPointerDown={handleControlPointerDown}
+              onMouseDown={handleControlPointerDown}
+              onTouchStart={handleControlPointerDown}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative z-20 flex items-center justify-center gap-2 mb-2" data-no-drag>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -725,12 +730,14 @@ const DraggableVideoCallWindow = ({
                         "rounded-full w-10 h-10",
                         !isAudioEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                       )}
+                      data-no-drag
+                      onPointerDown={handleControlPointerDown}
+                      onMouseDown={handleControlPointerDown}
+                      onTouchStart={handleControlPointerDown}
                       onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
+                        swallowControlEvent(e);
                         toggleAudio();
                       }}
-                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       {isAudioEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
                     </Button>
@@ -747,12 +754,14 @@ const DraggableVideoCallWindow = ({
                         "rounded-full w-10 h-10",
                         !isVideoEnabled ? 'bg-destructive border-destructive text-destructive-foreground' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
                       )}
+                      data-no-drag
+                      onPointerDown={handleControlPointerDown}
+                      onMouseDown={handleControlPointerDown}
+                      onTouchStart={handleControlPointerDown}
                       onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
+                        swallowControlEvent(e);
                         toggleVideo();
                       }}
-                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
                     </Button>
@@ -760,18 +769,18 @@ const DraggableVideoCallWindow = ({
                   <TooltipContent>{isVideoEnabled ? 'Stop Video' : 'Start Video'}</TooltipContent>
                 </Tooltip>
 
-                {/* Stop/End Call Button */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="destructive"
                       size="sm"
                       className="rounded-full w-12 h-12"
-                      onPointerDown={(e) => e.stopPropagation()}
+                      data-no-drag
+                      onPointerDown={handleControlPointerDown}
+                      onMouseDown={handleControlPointerDown}
+                      onTouchStart={handleControlPointerDown}
                       onClick={async (e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        console.log('[VideoCall] End call button clicked');
+                        swallowControlEvent(e);
                         await handleEndCall();
                       }}
                     >
@@ -780,13 +789,9 @@ const DraggableVideoCallWindow = ({
                   </TooltipTrigger>
                   <TooltipContent>End Call</TooltipContent>
                 </Tooltip>
-
-
               </div>
 
-              {/* Secondary controls row */}
-              <div className="relative z-20 flex items-center justify-center gap-2">
-                {/* Friend/Unfriend Button */}
+              <div className="relative z-20 flex items-center justify-center gap-2" data-no-drag>
                 {isFriend ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -794,8 +799,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setShowUnfriendDialog(true); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          setShowUnfriendDialog(true);
+                        }}
                         disabled={isActionLoading}
                       >
                         <UserMinus className="w-4 h-4" />
@@ -824,8 +835,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); handleAddFriend(); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          void handleAddFriend();
+                        }}
                         disabled={isActionLoading || isBlocked}
                       >
                         <UserPlus className="w-4 h-4" />
@@ -835,7 +852,6 @@ const DraggableVideoCallWindow = ({
                   </Tooltip>
                 )}
 
-                {/* Block/Unblock Button */}
                 {isBlocked ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -843,8 +859,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); handleUnblock(); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          void handleUnblock();
+                        }}
                         disabled={isActionLoading}
                       >
                         <ShieldOff className="w-4 h-4" />
@@ -859,8 +881,14 @@ const DraggableVideoCallWindow = ({
                         variant="outline"
                         size="sm"
                         className="rounded-full w-9 h-9 bg-white/10 border-white/20 text-destructive hover:bg-destructive/20"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); setShowBlockDialog(true); }}
+                        data-no-drag
+                        onPointerDown={handleControlPointerDown}
+                        onMouseDown={handleControlPointerDown}
+                        onTouchStart={handleControlPointerDown}
+                        onClick={(e) => {
+                          swallowControlEvent(e);
+                          setShowBlockDialog(true);
+                        }}
                         disabled={isActionLoading}
                       >
                         <Shield className="w-4 h-4" />
