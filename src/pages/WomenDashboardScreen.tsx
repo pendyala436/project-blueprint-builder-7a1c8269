@@ -1345,23 +1345,6 @@ const WomenDashboardScreen = () => {
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Switch
-                      checked={isOnline}
-                      onCheckedChange={(checked) => {
-                        toggleOnlineStatus(checked);
-                        toast({
-                          title: checked ? t('youAreOnline', 'You are now online') : t('youAreOffline', 'You are now offline'),
-                          description: checked ? t('usersCanSeeYou', 'Other users can see you') : t('usersCannotSeeYou', 'You are hidden from other users'),
-                        });
-                      }}
-                      className="data-[state=checked]:bg-primary"
-                    />
-                    <Power className={`w-4 h-4 shrink-0 ${isOnline ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                      {isOnline ? t('online', 'Online') : t('offline', 'Offline')}
-                    </span>
-                  </div>
                   <Badge className={cn("text-[10px] sm:text-xs text-primary-foreground flex items-center gap-1", getStatusColor())}>
                     <span className={cn("w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse", 
                       activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"

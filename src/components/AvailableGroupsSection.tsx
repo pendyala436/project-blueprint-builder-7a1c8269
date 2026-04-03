@@ -190,7 +190,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
   };
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
     if (activeGroupVideo) {
       // GRP-H-02: Stop local audio stream tracks before leaving
       if (activeGroupStream) {
@@ -198,19 +198,28 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         setActiveGroupStream(null);
       }
 
-      // Atomic decrement
-      supabase
-        .from('private_groups')
-        .update({ participant_count: Math.max(0, activeGroupVideo.participant_count - 1) })
-        .eq('id', activeGroupVideo.id)
-        .then(() => fetchGroups());
+      const groupId = activeGroupVideo.id;
 
-      // Deactivate membership instead of deleting (GRP-C-02 consistency)
-      supabase
-        .from('group_memberships')
-        .update({ has_access: false })
-        .eq('group_id', activeGroupVideo.id)
-        .eq('user_id', currentUserId);
+      // Use atomic RPC to leave group safely (decrement + deactivate membership)
+      try {
+        const { error } = await supabase.rpc('leave_group_atomic', {
+          p_group_id: groupId,
+          p_user_id: currentUserId,
+        });
+        if (error) {
+          // Fallback: manual update if RPC not available
+          console.warn('[AvailableGroups] leave_group_atomic RPC failed, using fallback:', error);
+          await supabase
+            .from('group_memberships')
+            .update({ has_access: false })
+            .eq('group_id', groupId)
+            .eq('user_id', currentUserId);
+        }
+      } catch (e) {
+        console.error('[AvailableGroups] Leave group error:', e);
+      }
+      
+      fetchGroups();
     }
     setActiveGroupVideo(null);
   };
