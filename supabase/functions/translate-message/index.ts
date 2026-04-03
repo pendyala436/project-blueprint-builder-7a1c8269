@@ -88,6 +88,14 @@ NAME_TO_CODE["chinese (traditional)"] = "zh_HANT";
 NAME_TO_CODE["kurdish"] = "ku";
 NAME_TO_CODE["haitian"] = "ht";
 NAME_TO_CODE["scots"] = "gd";
+NAME_TO_CODE["tulu"] = "kn";
+NAME_TO_CODE["rajasthani"] = "hi";
+NAME_TO_CODE["marwari"] = "hi";
+NAME_TO_CODE["chhattisgarhi"] = "hi";
+NAME_TO_CODE["magahi"] = "hi";
+NAME_TO_CODE["awadhi"] = "hi";
+NAME_TO_CODE["haryanvi"] = "hi";
+NAME_TO_CODE["bundelkhandi"] = "hi";
 
 // Random User-Agent pool
 const USER_AGENTS = [
