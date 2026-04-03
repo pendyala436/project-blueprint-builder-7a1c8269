@@ -215,6 +215,13 @@ const EnhancedParallelChatsContainer = ({
   // Debounced version for real-time updates - prevents overwhelming database
   const debouncedLoadChats = useDebounce(loadActiveChats, 300);
 
+  // Listen for force-reload events from dashboard chat initiation
+  useEffect(() => {
+    const handler = () => loadActiveChats(true);
+    window.addEventListener('force-reload-chats', handler);
+    return () => window.removeEventListener('force-reload-chats', handler);
+  }, [loadActiveChats]);
+
   // Subscribe to chat changes - OPTIMIZED with user-specific filters
   useEffect(() => {
     if (!currentUserId) return;
