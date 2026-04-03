@@ -249,7 +249,9 @@ export function PrivateGroupCallWindow({
           const emoji = parts[1] || '🎁';
           const giftName = parts[2] || 'Gift';
           const price = parseFloat(parts[3]) || 0;
-          const senderName = msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id);
+          // Use the sender's real name embedded in the message (parts[4]),
+          // falling back to participant lookup, then generic fallback
+          const senderName = parts[4] || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id));
 
           // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
