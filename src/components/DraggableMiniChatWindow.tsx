@@ -12,8 +12,9 @@ import { cn } from "@/lib/utils";
 import {
   Send, X, Maximize2, Minimize2, Clock, IndianRupee, Loader2,
   ChevronDown, ChevronUp, TrendingUp, Wallet, AlertTriangle,
-  Move, Paperclip, Image, Video, FileText, Mic, MoreHorizontal
+  Move, Paperclip, Image, Video, FileText, Mic, MoreHorizontal, Languages
 } from "lucide-react";
+import { translateText } from "@/lib/translation-service";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -75,11 +76,17 @@ const DraggableMiniChatWindow = ({
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEarningEligible, setIsEarningEligible] = useState(false);
+  const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const sessionStartedRef = useRef(false);
   const sendingRef = useRef(false);
+  const previewTimeoutRef = useRef<NodeJS.Timeout>();
   const MAX_MESSAGE_LENGTH = 10000;
+
+  const langNorm = (currentUserLanguage || 'english').toLowerCase().trim();
+  const isNonEnglish = langNorm !== 'english';
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
@@ -123,6 +130,39 @@ const DraggableMiniChatWindow = ({
     isPartnerOnline,
     onClose,
   });
+
+  // --- Native preview for transliteration ---
+  const isLatinScript = (text: string): boolean => {
+    const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
+    if (!cleaned) return false;
+    return /^[a-zA-Z\u00C0-\u024F]+$/.test(cleaned);
+  };
+
+  useEffect(() => {
+    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+    const trimmed = newMessage.trim();
+    if (!trimmed || !isNonEnglish || !isLatinScript(trimmed)) {
+      setNativePreview(null);
+      setIsPreviewLoading(false);
+      return;
+    }
+    setIsPreviewLoading(true);
+    previewTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await translateText(trimmed, 'English', currentUserLanguage || 'English');
+        if (result && result !== trimmed) {
+          setNativePreview(result);
+        } else {
+          setNativePreview(null);
+        }
+      } catch {
+        setNativePreview(null);
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    }, 600);
+    return () => { if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current); };
+  }, [newMessage, isNonEnglish, currentUserLanguage]);
 
   // --- Lightweight effects that remain in the component ---
 
@@ -214,6 +254,7 @@ const DraggableMiniChatWindow = ({
     const messageTimestamp = new Date().toISOString();
 
     setNewMessage("");
+    setNativePreview(null);
     billing.setLastActivityTime(Date.now());
 
     setMessages((prev) => [...prev, { id: tempId, senderId: currentUserId, message: inputText, createdAt: messageTimestamp }]);
@@ -443,38 +484,51 @@ const DraggableMiniChatWindow = ({
           </ScrollArea>
 
           {/* Input area */}
-          <div className="p-2 border-t">
-            <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => {
-              const fileType = fileInputRef.current?.dataset.fileType as "image" | "video" | "document";
-              handleFileUpload(e, fileType);
-            }} />
-            <div className="flex items-center gap-1">
-              <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={isUploading}>
-                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-40 p-1 z-[100] bg-popover border shadow-lg" side="top" align="start">
-                  <div className="flex flex-col gap-0.5">
-                    <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("image/*", "image")}>
-                      <Image className="h-4 w-4 mr-2 text-blue-500" />Photo
-                    </Button>
-                    <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("video/*", "video")}>
-                      <Video className="h-4 w-4 mr-2 text-purple-500" />Video
-                    </Button>
-                    <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput(".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar", "document")}>
-                      <FileText className="h-4 w-4 mr-2 text-orange-500" />Document
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <div className="flex-1">
-                <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyPress} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full" disabled={isUploading} />
+          <div className="border-t">
+            {/* Native script preview */}
+            {(nativePreview || isPreviewLoading) && newMessage.trim() && (
+              <div className="px-2 py-1 border-b border-border/30 flex items-center gap-1.5 bg-muted/30">
+                <Languages className="h-3 w-3 text-primary flex-shrink-0" />
+                {isPreviewLoading ? (
+                  <span className="text-[10px] text-muted-foreground italic">Converting...</span>
+                ) : nativePreview ? (
+                  <span className="text-[11px] unicode-text text-primary font-medium" dir="auto">{nativePreview}</span>
+                ) : null}
               </div>
-              <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
-                <Send className="h-3.5 w-3.5" />
-              </Button>
+            )}
+            <div className="p-2">
+              <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => {
+                const fileType = fileInputRef.current?.dataset.fileType as "image" | "video" | "document";
+                handleFileUpload(e, fileType);
+              }} />
+              <div className="flex items-center gap-1">
+                <Popover open={isAttachOpen} onOpenChange={setIsAttachOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={isUploading}>
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-40 p-1 z-[100] bg-popover border shadow-lg" side="top" align="start">
+                    <div className="flex flex-col gap-0.5">
+                      <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("image/*", "image")}>
+                        <Image className="h-4 w-4 mr-2 text-blue-500" />Photo
+                      </Button>
+                      <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput("video/*", "video")}>
+                        <Video className="h-4 w-4 mr-2 text-purple-500" />Video
+                      </Button>
+                      <Button variant="ghost" size="sm" className="justify-start h-8 text-xs" onClick={() => triggerFileInput(".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar", "document")}>
+                        <FileText className="h-4 w-4 mr-2 text-orange-500" />Document
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex-1">
+                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyPress} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
+                </div>
+                <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -498,7 +552,7 @@ const DraggableMiniChatWindow = ({
 // --- Extracted sub-component for message rendering ---
 
 interface MessageBubbleProps {
-  msg: { id: string; senderId: string; message: string; translatedMessage?: string; isTranslated?: boolean; translationFailed?: boolean; sendFailed?: boolean; createdAt: string };
+  msg: { id: string; senderId: string; message: string; translatedMessage?: string; englishText?: string; isTranslated?: boolean; translationFailed?: boolean; sendFailed?: boolean; createdAt: string };
   currentUserId: string;
   currentUserName?: string;
   partnerName: string;
@@ -506,6 +560,7 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRetry }: MessageBubbleProps) => {
+  const isOwn = msg.senderId === currentUserId;
   const isVoice = msg.message.startsWith("[VOICE:");
   const isImage = msg.message.includes("[IMAGE:");
   const isVideo = msg.message.includes("[VIDEO:");
@@ -523,16 +578,27 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
     : isDocument ? extractUrl(msg.message, "DOCUMENT")
     : null;
 
+  // Display text: translated version if available, else original
+  const displayText = msg.translatedMessage || msg.message;
+  // English subtitle: show if different from display text
+  const showEnglishSubtitle = msg.englishText && msg.englishText.toLowerCase().trim() !== displayText.toLowerCase().trim();
+
   return (
-    <div className={cn("flex flex-col", msg.senderId === currentUserId ? "items-end" : "items-start")}>
-      <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
-        {msg.senderId === currentUserId ? (currentUserName || "You") : partnerName}
+    <div className={cn("flex flex-col", isOwn ? "items-end" : "items-start")}>
+      {/* Sender name with distinct colors */}
+      <span className={cn(
+        "text-[9px] font-semibold mb-0.5 px-1",
+        isOwn ? "text-primary" : "text-emerald-600 dark:text-emerald-400"
+      )}>
+        {isOwn ? (currentUserName || "You") : partnerName}
       </span>
       <div 
         className={cn(
-          "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
-          msg.senderId === currentUserId ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm",
-          msg.sendFailed && "bg-destructive/80 cursor-pointer"
+          "max-w-[85%] px-2.5 py-1.5 rounded-xl text-[11px] border shadow-sm",
+          isOwn 
+            ? "bg-primary/5 border-primary/20 rounded-br-sm" 
+            : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-sm",
+          msg.sendFailed && "bg-destructive/10 border-destructive/30 cursor-pointer"
         )}
         onClick={msg.sendFailed && onRetry ? () => onRetry(msg) : undefined}
       >
@@ -548,23 +614,30 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
           </a>
         ) : (
           <>
-            <p className="unicode-text" dir="auto">
-              {msg.senderId !== currentUserId && msg.translatedMessage ? msg.translatedMessage : msg.message}
+            {/* Primary text — native script / translated */}
+            <p className={cn(
+              "unicode-text leading-relaxed",
+              isOwn ? "text-primary dark:text-primary" : "text-emerald-800 dark:text-emerald-200"
+            )} dir="auto">
+              {displayText}
             </p>
-            {msg.senderId !== currentUserId && msg.isTranslated && msg.translatedMessage && (
-              <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">{msg.message}</p>
+            {/* English subtitle — always shown below every message */}
+            {showEnglishSubtitle && (
+              <p className="text-[9px] text-muted-foreground/70 italic mt-0.5" dir="ltr">
+                english: {msg.englishText!.toLowerCase()}
+              </p>
             )}
-            {/* CHT-H-04: Translation failed badge */}
-            {msg.senderId !== currentUserId && msg.translationFailed && (
-              <span className="text-[8px] text-amber-400 block mt-0.5">⚠ Translation unavailable</span>
+            {/* Translation failed badge */}
+            {msg.translationFailed && (
+              <span className="text-[8px] text-amber-500 block mt-0.5">⚠ Translation unavailable</span>
             )}
           </>
         )}
-        {/* CHT-C-02: Send failed indicator */}
+        {/* Send failed indicator */}
         {msg.sendFailed && (
-          <span className="text-[8px] block mt-0.5">⚠ Failed — tap to retry</span>
+          <span className="text-[8px] text-destructive block mt-0.5">⚠ Failed — tap to retry</span>
         )}
-        <span className="text-[8px] opacity-50 block mt-0.5">
+        <span className="text-[8px] text-muted-foreground/50 block mt-0.5">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
