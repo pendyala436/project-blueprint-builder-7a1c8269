@@ -577,7 +577,7 @@ const MiniChatWindow = ({
       });
     } catch (error) {
       console.error("Error closing chat via chat-manager:", error);
-      toast.error("Chat not closed", { description: "Unable to close this chat session properly." });
+      toast({ title: "Chat not closed", description: "Unable to close this chat session properly.", variant: "destructive" });
       // Fallback: directly update session
       try {
         await supabase
