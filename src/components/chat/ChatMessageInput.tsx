@@ -53,13 +53,55 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const [isSending, setIsSending] = useState(false);
   const [nativePreview, setNativePreview] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [dynamicLabels, setDynamicLabels] = useState(DEFAULT_LABELS);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const previewTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const labels = getNativeLabels(userLanguage);
   const langNorm = (userLanguage || 'english').toLowerCase().trim();
   const isNonEnglish = langNorm !== 'english';
+
+  // Fetch translated UI labels via live Lingva translation (no hardcoding)
+  useEffect(() => {
+    if (!isNonEnglish || !userLanguage) {
+      setDynamicLabels(DEFAULT_LABELS);
+      return;
+    }
+
+    const cacheKey = langNorm;
+    if (labelCache.has(cacheKey)) {
+      setDynamicLabels(labelCache.get(cacheKey)!);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [placeholderResult, sendResult, previewResult] = await Promise.allSettled([
+          translateText('Type a message...', 'English', userLanguage),
+          translateText('Send', 'English', userLanguage),
+          translateText('Preview', 'English', userLanguage),
+        ]);
+
+        if (cancelled) return;
+
+        const translated = {
+          placeholder: placeholderResult.status === 'fulfilled' ? placeholderResult.value : DEFAULT_LABELS.placeholder,
+          send: sendResult.status === 'fulfilled' ? sendResult.value : DEFAULT_LABELS.send,
+          preview: previewResult.status === 'fulfilled' ? previewResult.value : DEFAULT_LABELS.preview,
+        };
+
+        labelCache.set(cacheKey, translated);
+        setDynamicLabels(translated);
+      } catch {
+        // Fallback to English
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [userLanguage, isNonEnglish, langNorm]);
+
+  const labels = dynamicLabels;
 
   // iOS keyboard height detection
   useEffect(() => {
