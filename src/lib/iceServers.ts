@@ -20,24 +20,10 @@ const FREE_STUN_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.nextcloud.com:443' },
 ];
 
-// Free TURN relay servers (Open Relay Project — openrelay.metered.ca)
-const FREE_TURN_SERVERS: RTCIceServer[] = [
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-];
+// VID-C-03: Removed hardcoded public shared TURN credentials.
+// Self-hosted coturn TURN server MUST be configured via env vars.
+// Without TURN, calls behind symmetric NAT will fall back to STUN-only (may fail).
+const FREE_TURN_SERVERS: RTCIceServer[] = [];
 
 /**
  * Build ICE server list.
@@ -65,9 +51,9 @@ function buildIceServers(): RTCIceServer[] {
       { urls: `turns:${turnHost}:443?transport=tcp`, username: turnUser, credential: turnCred }
     );
   } else {
-    // Fallback: free Open Relay TURN (no SLA, shared public credentials)
-    console.warn('[ICE] No self-hosted TURN configured — using public relay fallback');
-    servers.push(...FREE_TURN_SERVERS);
+    // VID-C-03: No fallback to public shared credentials.
+    // TURN is required for users behind symmetric NAT. Deploy coturn and set env vars.
+    console.warn('[ICE] ⚠️ No TURN server configured! Set VITE_TURN_URL, VITE_TURN_USERNAME, VITE_TURN_CREDENTIAL. Calls behind symmetric NAT will fail.');
   }
 
   return servers;

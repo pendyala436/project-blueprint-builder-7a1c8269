@@ -9,6 +9,7 @@ interface Message {
   translatedMessage?: string;
   isTranslated?: boolean;
   createdAt: string;
+  sendFailed?: boolean; // CHT-C-02: Track failed sends for retry UI
 }
 
 interface UseMiniChatMessagesOptions {

@@ -1,10 +1,20 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
 import { useChatPricing } from "@/hooks/useChatPricing";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -107,13 +117,47 @@ const VideoCallModal = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // VID-H-04: Confirmation dialog for active calls to prevent accidental dismiss
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
   const handleEndCall = async () => {
     await endCall();
     onClose();
   };
 
+  // VID-H-04: Only allow dismiss without confirmation during non-active states
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      // If call is active, show confirmation instead of ending immediately
+      if (callStatus === 'active') {
+        setShowEndConfirm(true);
+        return;
+      }
+      // Non-active states (ringing, connecting, idle) can dismiss freely
+      handleEndCall();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={() => handleEndCall()}>
+    <>
+    <AlertDialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>End Active Call?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Call duration: {formatDuration(callDuration)} — Estimated cost: ₹{totalCost}.
+            Are you sure you want to end this call?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Continue Call</AlertDialogCancel>
+          <AlertDialogAction onClick={handleEndCall} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            End Call
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 overflow-hidden bg-black">
         <div className="relative w-full h-full flex flex-col">
           {/* Remote Video (Full screen) */}
@@ -228,6 +272,7 @@ const VideoCallModal = ({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 };
 

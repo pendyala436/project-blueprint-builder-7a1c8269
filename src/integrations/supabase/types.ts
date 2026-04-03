@@ -3322,6 +3322,14 @@ export type Database = {
         | { Args: { user_id_param: string }; Returns: boolean }
       is_protected_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
+      join_group_atomic: {
+        Args: {
+          p_group_id: string
+          p_max_participants?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       ledger_bill_group_call: {
         Args: {
           p_charge_per_man?: number
@@ -3437,6 +3445,7 @@ export type Database = {
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
+      stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
       unblock_user: { Args: { p_target_user_id: string }; Returns: Json }

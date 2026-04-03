@@ -200,7 +200,7 @@ export const useP2PCall = ({
     }
   };
 
-  // Start call timer and billing when active
+  // Start call timer and billing when active — VID-H-01: use ref to avoid stale closure
   useEffect(() => {
     if (state.callStatus === 'active') {
       // Duration counter (every second)
@@ -216,12 +216,22 @@ export const useP2PCall = ({
         });
       }, 1000);
 
-      // Billing processing (every 60 seconds) - only after first minute
-      billingTimerRef.current = setInterval(() => {
+      // VID-H-01: Delay first billing tick to ensure media is actually connected
+      // Bill after 60s, then every 60s thereafter
+      const initialBillingDelay = setTimeout(() => {
         processBilling();
-      }, 60000); // Bill every 60 seconds
+        billingTimerRef.current = setInterval(() => {
+          processBilling();
+        }, 60000);
+      }, 60000);
 
       console.log('[P2P] Call timers started - billing starts after first minute');
+
+      return () => {
+        if (callTimerRef.current) clearInterval(callTimerRef.current);
+        if (billingTimerRef.current) clearInterval(billingTimerRef.current);
+        clearTimeout(initialBillingDelay);
+      };
     }
 
     return () => {
@@ -806,9 +816,16 @@ export const useP2PCall = ({
     }
   }, [initLocalMedia, setupSignaling, createPeerConnection, currentUserId, toast]);
 
-  // End call and cleanup
+  // End call and cleanup — VID-H-02: idempotency guard prevents double-update
   const endCall = useCallback(async () => {
+    // VID-H-02: Local idempotency guard — prevent duplicate endCall invocations
+    if (state.callStatus === 'ended') {
+      console.log('[P2P] endCall already called, skipping');
+      return;
+    }
+    
     console.log('[P2P] Ending call...');
+    setState(prev => ({ ...prev, callStatus: 'ended' }));
     
     stopOfferRetry();
 
@@ -818,14 +835,15 @@ export const useP2PCall = ({
     // Use ref for latest duration to avoid stale closure
     const durationMinutes = callDurationRef.current / 60;
 
-    // Update database - only if not already ended (prevent double-update)
+    // Update database - VID-H-02: WHERE status != 'ended' prevents overwriting ended_at
     const { data: currentSession } = await supabase
       .from('video_call_sessions')
       .select('id, status, total_minutes')
       .eq('call_id', callId)
-      .single();
+      .neq('status', 'ended')  // VID-H-02: Only fetch if not already ended
+      .maybeSingle();
 
-    if (currentSession && currentSession.status !== 'ended') {
+    if (currentSession) {
       // FINAL BILLING: Bill remaining partial minute since last billing interval
       const billedMinutes = currentSession.total_minutes || 0;
       const remainingMinutes = durationMinutes - billedMinutes;
@@ -850,6 +868,7 @@ export const useP2PCall = ({
         .eq('call_id', callId)
         .single();
 
+      // VID-H-02: status != 'ended' guard ensures this is a no-op if already ended
       await supabase
         .from('video_call_sessions')
         .update({
@@ -859,7 +878,8 @@ export const useP2PCall = ({
           total_minutes: updatedSession?.total_minutes ?? durationMinutes,
           total_earned: updatedSession?.total_earned ?? 0,
         })
-        .eq('call_id', callId);
+        .eq('call_id', callId)
+        .neq('status', 'ended');  // VID-H-02: prevent overwriting if already ended
     }
 
     // Sync status for both users
