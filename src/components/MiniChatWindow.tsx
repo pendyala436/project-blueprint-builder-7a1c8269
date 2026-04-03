@@ -882,10 +882,21 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
+          {/* CHT-06 FIX: Native preview */}
+          {(nativePreview || isPreviewLoading) && newMessage.trim() && (
+            <div className="px-2 py-0.5 border-t border-border/30 flex items-center gap-1">
+              {isPreviewLoading ? (
+                <span className="text-[9px] text-muted-foreground italic">Converting...</span>
+              ) : nativePreview ? (
+                <span className="text-[10px] text-primary font-medium unicode-text" dir="auto">{nativePreview}</span>
+              ) : null}
+            </div>
+          )}
+
           <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
               <Input
-                placeholder="Type a message..."
+                placeholder={translatedPlaceholder}
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);
@@ -902,7 +913,7 @@ const MiniChatWindow = ({
                 size="icon"
                 className="h-7 w-7"
                 onClick={sendMessage}
-                disabled={!newMessage.trim()}
+                disabled={!newMessage.trim() || isSending}
               >
                 <Send className="h-3 w-3" />
               </Button>
