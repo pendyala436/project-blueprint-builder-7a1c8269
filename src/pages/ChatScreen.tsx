@@ -1717,10 +1717,10 @@ const ChatScreen = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
-                            {/* English translation shown below every message bubble */}
-                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                            {/* English translation shown below EVERY message bubble (per spec) */}
+                            {englishSubtitle && (
                               <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
-                                {englishSubtitle.toLowerCase()}
+                                english: {englishSubtitle.toLowerCase()}
                               </p>
                             )}
                           </div>
