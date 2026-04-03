@@ -33,6 +33,26 @@ function isLatinScript(text: string): boolean {
 }
 
 /**
+ * Languages whose native script IS Latin. For these, translation output
+ * will also be Latin, so we must NOT apply the "still Latin → override with English" fallback.
+ */
+const LATIN_SCRIPT_LANGUAGES = new Set([
+  'english', 'french', 'german', 'spanish', 'portuguese', 'italian', 'dutch',
+  'polish', 'czech', 'slovak', 'hungarian', 'romanian', 'croatian', 'slovenian',
+  'finnish', 'swedish', 'norwegian', 'danish', 'icelandic', 'estonian', 'latvian',
+  'lithuanian', 'turkish', 'vietnamese', 'indonesian', 'malay', 'filipino',
+  'tagalog', 'swahili', 'afrikaans', 'catalan', 'basque', 'galician', 'albanian',
+  'bosnian', 'maltese', 'luxembourgish', 'welsh', 'irish', 'scottish gaelic',
+  'esperanto', 'latin', 'haitian creole', 'cebuano', 'javanese', 'sundanese',
+  'maori', 'samoan', 'hawaiian', 'corsican', 'frisian', 'yoruba', 'igbo',
+  'zulu', 'xhosa', 'sotho', 'shona', 'somali', 'hausa', 'kinyarwanda',
+]);
+
+function isLatinScriptLanguage(lang: string): boolean {
+  return LATIN_SCRIPT_LANGUAGES.has(lang.toLowerCase().trim());
+}
+
+/**
  * Translate a single text string via the embedded lingva scraper edge function.
  * Falls back to original text if translation fails.
  */
@@ -168,13 +188,15 @@ export async function translateForViewer(
 
     nativeText = autoResult;
 
-    // For Latin script input: auto-detect often fails for transliterated text
-    // Try multiple fallback strategies
-    if (inputIsLatin) {
+    // For Latin script input targeting a NON-Latin-script language:
+    // auto-detect often fails for transliterated text (e.g., "bagunnava" for Telugu).
+    // Skip these fallbacks for Latin-script target languages (French, German, etc.)
+    // because their correct output IS Latin script.
+    const viewerUsesLatin = isLatinScriptLanguage(viewerLang);
+
+    if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
 
-      // If auto-detect returned Latin text (didn't convert to native script),
-      // try English → viewerLang to get native script
       if (isStillLatin) {
         // Strategy A: Use the English translation as bridge → viewerLang
         const englishMeaning = englishResult || nativeText;
@@ -194,11 +216,11 @@ export async function translateForViewer(
       }
     }
 
-    // If still unchanged or same as input, use English as fallback display
+    // If translation returned same text as input and we have an English meaning:
+    // - For Latin-script viewers: keep nativeText as-is (already correct Latin translation)
+    // - For non-Latin viewers with Latin input: show English meaning as fallback
     if (nativeText === message && englishResult && englishResult !== message) {
-      // For non-Latin input that wasn't translated, keep it as-is (it's already native script)
-      // For Latin input that couldn't be converted, show English meaning
-      if (inputIsLatin) {
+      if (inputIsLatin && !viewerUsesLatin) {
         nativeText = englishResult;
       }
     }
