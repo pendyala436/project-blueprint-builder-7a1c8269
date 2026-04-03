@@ -362,13 +362,19 @@ const MiniChatWindow = ({
       .limit(50);
 
     if (data) {
-      const formattedMessages = data.map((m) => ({
+      const formattedMessages: Message[] = data.map((m) => ({
         id: m.id,
         senderId: m.sender_id,
         message: m.message,
         createdAt: m.created_at
       }));
       setMessages(formattedMessages);
+
+      // Translate history messages in background using live Lingva translation
+      const langToUse = currentUserLanguage || 'English';
+      if (langToUse && langToUse.toLowerCase() !== 'english') {
+        translateHistoryMessages(formattedMessages, langToUse);
+      }
     }
   };
 
