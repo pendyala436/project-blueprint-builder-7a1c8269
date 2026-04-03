@@ -26,8 +26,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-// App logo component
 import MeowLogo from "@/components/MeowLogo";
+import { translateChatMessage } from "@/lib/translation-service";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
