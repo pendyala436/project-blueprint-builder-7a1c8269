@@ -122,6 +122,28 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
 
     try {
+      // GRP-C-03: Enforce gift amount requirement for host path
+      // Hosts with access_type 'gift' must have paid the minimum gift amount
+      if (group.access_type === 'gift' && group.min_gift_amount > 0) {
+        const { data: existingMembership } = await supabase
+          .from('group_memberships')
+          .select('gift_amount_paid')
+          .eq('group_id', group.id)
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+
+        // Owner is exempt from gift requirement
+        if (group.owner_id !== currentUserId) {
+          const paid = existingMembership?.gift_amount_paid ?? 0;
+          if (paid < group.min_gift_amount) {
+            toast.error(`Gift requirement not met. Minimum: ₹${group.min_gift_amount}`);
+            preStream.getTracks().forEach(t => t.stop());
+            setGoingLive(null);
+            return;
+          }
+        }
+      }
+
       await supabase.from('group_memberships').upsert({
         group_id: group.id,
         user_id: currentUserId,
@@ -149,23 +171,19 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
         : g
     ));
 
+    // GRP-H-02: Stop local media stream
+    if (activeGroupStream) {
+      activeGroupStream.getTracks().forEach(t => t.stop());
+      setActiveGroupStream(null);
+    }
+
     try {
-      // Update DB to mark group as not live
-      const { error } = await supabase
-        .from('private_groups')
-        .update({
-          is_live: false,
-          stream_id: null,
-          current_host_id: null,
-          current_host_name: null,
-          participant_count: 0,
-        })
-        .eq('id', group.id);
+      // GRP-C-02: Use safe stop-live RPC that deactivates memberships instead of deleting
+      const { data: stopResult, error: stopError } = await supabase.rpc('stop_live_safe', {
+        p_group_id: group.id,
+      });
 
-      if (error) throw error;
-
-      // Clean up memberships
-      await supabase.from('group_memberships').delete().eq('group_id', group.id);
+      if (stopError) throw stopError;
 
       // Restore host availability
       const [{ count: chatCount }, { count: videoCount }] = await Promise.all([

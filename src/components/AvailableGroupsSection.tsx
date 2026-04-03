@@ -1,5 +1,5 @@
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +61,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
 
+  // GRP-H-01: Fix stale closure by using ref for activeGroupVideo
+  const activeGroupVideoRef = useRef(activeGroupVideo);
+  activeGroupVideoRef.current = activeGroupVideo;
+
   useEffect(() => {
     fetchGroups();
     fetchWalletBalance();
@@ -68,10 +72,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     const channel = supabase
       .channel('available-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, (payload) => {
-        // If a group we're watching goes offline, auto-close
+        // Use ref to avoid stale closure
         if (payload.eventType === 'UPDATE') {
           const updated = payload.new as PrivateGroup;
-          if (!updated.is_live && activeGroupVideo?.id === updated.id) {
+          if (!updated.is_live && activeGroupVideoRef.current?.id === updated.id) {
             toast.info('Host ended the live session');
             setActiveGroupVideo(null);
           }
@@ -86,7 +90,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, activeGroupVideo?.id]);
+  }, [currentUserId]); // GRP-H-01: Removed activeGroupVideo?.id from deps to prevent stale closure
 
   const fetchGroups = async () => {
     try {
@@ -158,25 +162,26 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
 
     try {
-      const { error } = await supabase
-        .from('group_memberships')
-        .upsert({
-          group_id: group.id,
-          user_id: currentUserId,
-          has_access: true,
-          gift_amount_paid: 0
-        }, { onConflict: 'group_id,user_id' });
+      // GRP-C-01: Use atomic join RPC to prevent race condition > 100 participants
+      const { data: joinResult, error: joinError } = await supabase.rpc('join_group_atomic', {
+        p_group_id: group.id,
+        p_user_id: currentUserId,
+        p_max_participants: MAX_PARTICIPANTS,
+      });
 
-      if (error) throw error;
-
-      await supabase
-        .from('private_groups')
-        .update({ participant_count: group.participant_count + 1 })
-        .eq('id', group.id);
+      if (joinError) throw joinError;
+      const result = joinResult as { success: boolean; error?: string; participant_count?: number };
+      if (!result.success) {
+        toast.error(result.error || 'Could not join group');
+        preStream.getTracks().forEach(t => t.stop());
+        setJoiningGroupId(null);
+        return;
+      }
 
       setActiveGroupStream(preStream);
       setActiveGroupVideo(group);
     } catch (error: any) {
+      preStream.getTracks().forEach(t => t.stop());
       toast.error('Could not join group', { description: classifyError(error, 'join the group').message });
     } finally {
       setJoiningGroupId(null);
@@ -185,17 +190,23 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const handleLeaveGroup = () => {
     if (activeGroupVideo) {
-      // Decrement participant count
+      // GRP-H-02: Stop local audio stream tracks before leaving
+      if (activeGroupStream) {
+        activeGroupStream.getTracks().forEach(t => t.stop());
+        setActiveGroupStream(null);
+      }
+
+      // Atomic decrement
       supabase
         .from('private_groups')
         .update({ participant_count: Math.max(0, activeGroupVideo.participant_count - 1) })
         .eq('id', activeGroupVideo.id)
         .then(() => fetchGroups());
 
-      // Remove membership
+      // Deactivate membership instead of deleting (GRP-C-02 consistency)
       supabase
         .from('group_memberships')
-        .delete()
+        .update({ has_access: false })
         .eq('group_id', activeGroupVideo.id)
         .eq('user_id', currentUserId);
     }

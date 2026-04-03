@@ -2118,6 +2118,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_tracking: {
+        Row: {
+          function_name: string
+          id: string
+          request_at: string
+          user_id: string
+        }
+        Insert: {
+          function_name: string
+          id?: string
+          request_at?: string
+          user_id: string
+        }
+        Update: {
+          function_name?: string
+          id?: string
+          request_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_alerts: {
         Row: {
           alert_type: string
@@ -3199,6 +3220,15 @@ export type Database = {
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
       cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
       check_men_free_minutes: { Args: { p_user_id: string }; Returns: Json }
+      check_rate_limit: {
+        Args: {
+          p_function_name: string
+          p_max_requests?: number
+          p_user_id: string
+          p_window_seconds?: number
+        }
+        Returns: boolean
+      }
       check_session_balance:
         | { Args: { p_session_id: string; p_user_id: string }; Returns: Json }
         | {
