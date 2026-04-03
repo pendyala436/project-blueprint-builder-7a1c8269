@@ -82,7 +82,11 @@ export async function translateBatch(
  * Full chat translation for a message.
  * 
  * Handles all 3 input types (native, transliteration, English) for all 130+ languages.
- * Uses sourceLang='auto' so Google auto-detects transliteration/native/English input.
+ * 
+ * Strategy:
+ *  - Uses 'auto' first to let Google detect native script input
+ *  - If result is unchanged (transliteration not detected), falls back to en → target
+ *    which handles Latin-alphabet transliteration (e.g., "bagunnava" → "బాగున్నావా")
  * 
  * Returns:
  *  - nativeText: message in the viewer's native language
@@ -104,17 +108,32 @@ export async function translateForViewer(
   try {
     // Run both translations in parallel for speed
     const [nativeResult, englishResult] = await Promise.all([
-      // 1. Translate to viewer's native language (auto-detect input)
+      // 1. Translate to viewer's native language
       viewerLang === 'english'
-        ? Promise.resolve(message) // If viewer speaks English, just use auto→en
+        ? translateText(message, 'auto', 'English')
         : translateText(message, 'auto', viewerLanguage),
       // 2. Always get English translation for subtitle
       translateText(message, 'auto', 'English'),
     ]);
 
+    let finalNative = nativeResult;
+
+    // If auto-detect returned the text unchanged AND viewer isn't English,
+    // try en → target (handles Latin transliteration like "bagunnava" → "బాగున్నావా")
+    if (viewerLang !== 'english' && finalNative === message) {
+      finalNative = await translateText(message, 'English', viewerLanguage);
+    }
+
+    // Similarly for English: if auto returned unchanged, it might already be English
+    let finalEnglish = englishResult;
+    if (finalEnglish === message && viewerLang !== 'english') {
+      // The text might be transliteration — try getting English via auto→en
+      // (already done above, so if still same, it IS English or untranslatable)
+    }
+
     return {
-      nativeText: nativeResult,
-      englishText: englishResult,
+      nativeText: finalNative,
+      englishText: finalEnglish,
     };
   } catch {
     return { nativeText: message, englishText: message };
