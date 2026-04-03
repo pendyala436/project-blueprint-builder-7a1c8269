@@ -261,6 +261,12 @@ export function PrivateGroupCallWindow({
           return;
         }
 
+        // Check if this is a quick emoji reaction (single emoji from QUICK_EMOJIS)
+        if (msg.sender_id !== currentUserId && QUICK_EMOJIS.includes(text)) {
+          addFloatingReaction(text);
+          return; // Don't duplicate as chat message
+        }
+
         if (msg.sender_id !== currentUserId) {
           const name = getParticipantName(msg.sender_id);
           addChatMessage(name, text, false);
