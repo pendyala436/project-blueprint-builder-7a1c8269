@@ -1,13 +1,19 @@
 /**
- * Translation Service — calls translate-message Edge Function
- * Embeds lingva-scraper logic (Google Translate scraping) with DB caching.
- * English is used as pivot language for all non-direct pairs.
- * Supports all 130+ languages from Google Translate / Lingva.
+ * Translation Service — Embedded Lingva-Scraper via Edge Function
  * 
- * Handles 3 input types:
- *  1. Native script (e.g., బాగున్నావా)
- *  2. Transliteration in Latin (e.g., bagunnava) — auto-detected by Google
- *  3. Pure English (e.g., how are you)
+ * NO hardcoded translations. All translations are LIVE via Google Translate scraping.
+ * Uses English as pivot language for non-direct translation pairs.
+ * 
+ * Supported translation flows:
+ *  1. Native → Native (e.g., తెలుగు → हिंदी) — via English pivot
+ *  2. Native → Latin (e.g., తెలుగు → telugu transliteration) — direct
+ *  3. Latin → Native (e.g., "bagunnava" → బాగున్నావా) — via en→target
+ *  4. Native → English (e.g., తెలుగు → English) — direct
+ *  5. English → Native (e.g., English → తెలుగు) — direct
+ *  6. Latin → Latin (e.g., "bonjour" → "hello") — direct translation
+ *  7. English fallback if any translation fails
+ * 
+ * Supports all 130+ Google Translate languages.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +24,16 @@ export interface TranslationResult {
 }
 
 /**
- * Translate a single text string.
+ * Detect if text is written in Latin/ASCII script (transliteration or English).
+ */
+function isLatinScript(text: string): boolean {
+  const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
+  if (!cleaned) return false;
+  return /^[a-zA-Z\u00C0-\u024F\u1E00-\u1EFF]+$/.test(cleaned);
+}
+
+/**
+ * Translate a single text string via the embedded lingva scraper edge function.
  * Falls back to original text if translation fails.
  */
 export async function translateText(
@@ -38,13 +53,13 @@ export async function translateText(
 
     if (error) {
       console.warn('[Translation] Edge function error:', error.message);
-      return text;
+      return text; // English fallback — return original
     }
 
     return data?.translation || text;
   } catch (err) {
     console.warn('[Translation] Failed:', err);
-    return text;
+    return text; // English fallback
   }
 }
 
@@ -79,21 +94,26 @@ export async function translateBatch(
 }
 
 /**
- * Full chat translation for a message.
+ * Smart translation for a viewer — handles ALL input types live.
  * 
- * Handles all 3 input types (native, transliteration, English) for all 130+ languages.
+ * Strategy based on input detection:
  * 
- * Strategy:
- *  - Uses 'auto' first to let Google detect native script input
- *  - If result is unchanged (transliteration not detected), falls back to en → target
- *    which handles Latin-alphabet transliteration (e.g., "bagunnava" → "బాగున్నావా")
+ * 1. Native script input (e.g., బాగున్నావా):
+ *    - auto → viewerLang (Google detects source)
+ *    - auto → English (for subtitle)
+ * 
+ * 2. Latin script input (e.g., "bagunnava" or "hello"):
+ *    - For non-English viewer:
+ *      a) First try auto → viewerLang (Google may detect transliteration)
+ *      b) If unchanged, try English → viewerLang (treats as English/transliteration)
+ *    - For English viewer: auto → English
+ * 
+ * 3. Latin to Latin (e.g., French "bonjour" → English "hello"):
+ *    - Direct translation via auto-detect
  * 
  * Returns:
  *  - nativeText: message in the viewer's native language
- *  - englishText: English translation (always shown below every bubble)
- * 
- * @param message - The raw input text (any format)
- * @param viewerLanguage - The language of the person VIEWING this message
+ *  - englishText: English translation (always shown as subtitle)
  */
 export async function translateForViewer(
   message: string,
@@ -104,50 +124,57 @@ export async function translateForViewer(
   }
 
   const viewerLang = (viewerLanguage || 'english').toLowerCase().trim();
+  const inputIsLatin = isLatinScript(message);
 
   try {
-    // Run both translations in parallel for speed
-    const [nativeResult, englishResult] = await Promise.all([
-      // 1. Translate to viewer's native language
-      viewerLang === 'english'
-        ? translateText(message, 'auto', 'English')
-        : translateText(message, 'auto', viewerLanguage),
-      // 2. Always get English translation for subtitle
-      translateText(message, 'auto', 'English'),
-    ]);
+    // Always get English translation for subtitle (parallel)
+    const englishPromise = translateText(message, 'auto', 'English');
 
-    let finalNative = nativeResult;
+    let nativeText: string;
 
-    // If auto-detect returned the text unchanged AND viewer isn't English,
-    // try en → target (handles Latin transliteration like "bagunnava" → "బాగున్నావా")
-    if (viewerLang !== 'english' && finalNative === message) {
-      finalNative = await translateText(message, 'English', viewerLanguage);
+    if (viewerLang === 'english') {
+      // Viewer speaks English — just get English translation
+      nativeText = await englishPromise;
+      return { nativeText, englishText: nativeText };
     }
 
-    // If translation still returned same text for non-English viewer,
-    // the language may be unsupported — fall back to English display
-    let finalEnglish = englishResult;
+    // Non-English viewer
+    // Step 1: Try auto-detect → viewer's language
+    const [autoResult, englishResult] = await Promise.all([
+      translateText(message, 'auto', viewerLanguage),
+      englishPromise,
+    ]);
+
+    nativeText = autoResult;
+
+    // Step 2: If input is Latin script and auto-detect didn't convert it,
+    // try English → viewerLang (handles transliteration like "bagunnava" → "బాగున్నావా")
+    if (inputIsLatin && nativeText === message) {
+      nativeText = await translateText(message, 'English', viewerLanguage);
+    }
+
+    // Step 3: If still unchanged, the language may be unsupported — use English as fallback
+    if (nativeText === message) {
+      nativeText = englishResult || message;
+    }
 
     return {
-      nativeText: finalNative,
-      englishText: finalEnglish,
+      nativeText,
+      englishText: englishResult || message,
     };
   } catch {
-    // On any failure, fall back to English (unsupported language fallback)
+    // On any failure, English fallback
     return { nativeText: message, englishText: message };
   }
 }
 
 /**
- * Translate a chat message for the complete sender+receiver flow.
+ * Translate a chat message for sender→receiver flow.
  * 
- * Per spec:
- * - Sender sees: their own message in their native script + English below
- * - Receiver sees: message in receiver's native language + English below
- * - Same language: both see same native script + English below
- * - Different language: receiver sees translated text + English below
- * 
- * This function translates for a specific viewer.
+ * - Same language: both see native script + English subtitle
+ * - Different language: receiver sees translated native + English subtitle
+ * - All translations are LIVE (no hardcoded values)
+ * - English is always the fallback language
  */
 export async function translateChatMessage(
   message: string,
@@ -161,19 +188,21 @@ export async function translateChatMessage(
   try {
     const result = await translateForViewer(message, receiverLanguage);
     const isTranslated = result.nativeText !== message;
-    
+
     return {
       translated: result.nativeText,
       englishText: result.englishText,
       isTranslated,
     };
   } catch {
+    // English fallback
     return { translated: message, englishText: message, isTranslated: false };
   }
 }
 
 /**
  * Get English translation of a message (for subtitle display).
+ * Live translation — no hardcoded values.
  */
 export async function getEnglishTranslation(
   message: string,
@@ -181,11 +210,18 @@ export async function getEnglishTranslation(
 ): Promise<string> {
   if (!message?.trim()) return message;
   const srcNorm = (sourceLang || 'english').toLowerCase().trim();
-  if (srcNorm === 'english') return message;
+  if (srcNorm === 'english') {
+    // If source is English, check if it's actually in another script
+    if (!isLatinScript(message)) {
+      // Non-Latin input marked as English — auto-detect instead
+      return await translateText(message, 'auto', 'English');
+    }
+    return message;
+  }
 
   try {
     return await translateText(message, 'auto', 'English');
   } catch {
-    return message;
+    return message; // English fallback
   }
 }
