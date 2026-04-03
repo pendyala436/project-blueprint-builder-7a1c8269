@@ -284,19 +284,23 @@ const DraggableMiniChatWindow = ({
     sendingRef.current = false;
 
     // Translate optimistic message for sender's own view (native script + English subtitle)
-    const senderLang = (currentUserLanguage || 'English').toLowerCase().trim();
-    if (senderLang !== 'english') {
-      import("@/lib/translation-service").then(({ translateForViewer }) => {
-        translateForViewer(inputText, currentUserLanguage || 'English').then(result => {
+    import("@/lib/translation-service").then(({ translateForViewer, getEnglishTranslation }) => {
+      translateForViewer(inputText, currentUserLanguage || 'English').then(result => {
+        setMessages((prev) => prev.map((m) => 
+          m.id === tempId ? { 
+            ...m, 
+            translatedMessage: result.nativeText !== inputText ? result.nativeText : undefined,
+            englishText: result.englishText,
+            isTranslated: result.nativeText !== inputText 
+          } : m
+        ));
+      }).catch(() => {
+        // Fallback: still get English subtitle
+        getEnglishTranslation(inputText, 'auto').then(eng => {
           setMessages((prev) => prev.map((m) => 
-            m.id === tempId ? { 
-              ...m, 
-              translatedMessage: result.nativeText !== inputText ? result.nativeText : undefined,
-              englishText: result.englishText,
-              isTranslated: result.nativeText !== inputText 
-            } : m
+            m.id === tempId ? { ...m, englishText: eng } : m
           ));
-        }).catch(() => { /* fallback: show original */ });
+        }).catch(() => {});
       });
     }
 
