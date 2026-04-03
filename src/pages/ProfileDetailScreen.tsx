@@ -144,9 +144,7 @@ const ProfileDetailScreen = () => {
         supabase.from("profiles")
           .select("gender, has_golden_badge, golden_badge_expires_at")
           .eq("user_id", user.id).maybeSingle(),
-        supabase.from("profiles")
-          .select("*")
-          .eq("user_id", targetUserId).maybeSingle(),
+        fetchPublicProfile(targetUserId).then(data => ({ data, error: null })),
         supabase.from("user_languages")
           .select("language_name")
           .eq("user_id", targetUserId),

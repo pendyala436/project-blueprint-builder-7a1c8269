@@ -646,12 +646,9 @@ const ChatScreen = () => {
 
       // ============= FETCH PARTNER PROFILE =============
       
-      // First try profiles table
-      let { data: partnerProfile } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, photo_url, preferred_language, primary_language")
-        .eq("user_id", partnerId)
-        .maybeSingle();
+      // Use secure RPC for partner profile (excludes sensitive fields)
+      const { fetchPublicProfile } = await import("@/lib/profile-queries");
+      let partnerProfile = await fetchPublicProfile(partnerId);
 
       // Note: Only real authenticated users from database - no sample/mock data fallbacks
       

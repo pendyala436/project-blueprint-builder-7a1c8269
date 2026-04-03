@@ -119,12 +119,9 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
               return;
             }
             
-            // Fetch caller info from profiles
-            const { data: callerProfile } = await supabase
-              .from('profiles')
-              .select('full_name, photo_url')
-              .eq('user_id', callerId)
-              .single();
+            // Fetch caller info via secure RPC (excludes sensitive fields)
+            const { fetchPublicProfile } = await import("@/lib/profile-queries");
+            const callerProfile = await fetchPublicProfile(callerId);
 
             let callerName = callerProfile?.full_name || 'Someone';
             let callerPhoto = callerProfile?.photo_url || null;
