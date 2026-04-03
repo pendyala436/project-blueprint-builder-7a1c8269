@@ -189,7 +189,7 @@ export const LanguageGroupChat = ({
           userId: p.user_id,
           fullName: p.full_name || "Unknown",
           photoUrl: p.photo_url,
-          isOnline: statusMap.get(p.user_id) || false
+          isOnline: (statusMap.get(p.user_id) as boolean) || false
         })));
       }
     } catch (error) {
