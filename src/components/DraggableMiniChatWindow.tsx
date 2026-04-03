@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronUp, TrendingUp, Wallet, AlertTriangle,
   Move, Paperclip, Image, Video, FileText, Mic, MoreHorizontal, Languages
 } from "lucide-react";
-import { translateText } from "@/lib/translation-service";
+import { translateText, isLatinScript as isLatinScriptCheck, isLatinScriptLanguage } from "@/lib/translation-service";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -132,51 +132,47 @@ const DraggableMiniChatWindow = ({
   });
 
   // --- Native preview for all input types ---
-  // Latin input (transliteration) → show native script preview
-  // English input → show native translation preview
-  // Native script input → no preview needed (already in native)
-  const isLatinScript = (text: string): boolean => {
-    const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
-    if (!cleaned) return false;
-    return /^[a-zA-Z\u00C0-\u024F]+$/.test(cleaned);
-  };
-
+  // Works for ALL language combinations:
+  // - Non-Latin lang user typing Latin (transliteration/English) → shows native script
+  // - Latin-script lang user typing English → shows their language (e.g., French)
+  // - Native script input → no preview needed
   useEffect(() => {
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     const trimmed = newMessage.trim();
 
-    // No preview needed if: empty, English user, or native script (already in native)
     if (!trimmed || !isNonEnglish) {
       setNativePreview(null);
       setIsPreviewLoading(false);
       return;
     }
 
-    const inputIsLatin = isLatinScript(trimmed);
+    const inputIsLatin = isLatinScriptCheck(trimmed);
+    const userUsesLatin = isLatinScriptLanguage(langNorm);
 
-    // Native script input → user already typed in native, no preview needed
-    if (!inputIsLatin) {
+    // Non-Latin lang user typing in native script → no preview needed
+    if (!inputIsLatin && !userUsesLatin) {
       setNativePreview(null);
       setIsPreviewLoading(false);
       return;
     }
 
-    // Latin/English input → translate to user's native language for preview
+    // Show preview for Latin input when user's language is non-English
     setIsPreviewLoading(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
-        // Use auto-detect → user's language (handles both English and transliteration)
         const result = await translateText(trimmed, 'auto', currentUserLanguage || 'English');
         if (result && result !== trimmed) {
           setNativePreview(result);
-        } else {
-          // If auto-detect didn't convert, try English → target explicitly
+        } else if (!userUsesLatin) {
+          // For non-Latin target: fallback English → target
           const fallback = await translateText(trimmed, 'English', currentUserLanguage || 'English');
           if (fallback && fallback !== trimmed) {
             setNativePreview(fallback);
           } else {
             setNativePreview(null);
           }
+        } else {
+          setNativePreview(null);
         }
       } catch {
         setNativePreview(null);
@@ -185,7 +181,7 @@ const DraggableMiniChatWindow = ({
       }
     }, 600);
     return () => { if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current); };
-  }, [newMessage, isNonEnglish, currentUserLanguage]);
+  }, [newMessage, isNonEnglish, currentUserLanguage, langNorm]);
 
   // --- Lightweight effects that remain in the component ---
 

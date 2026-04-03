@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Send, Smile, Loader2, Languages } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
-import { translateText } from '@/lib/translation-service';
+import { translateText, isLatinScript, isLatinScriptLanguage } from '@/lib/translation-service';
 
 // Dynamic labels — translated live via Lingva, no hardcoded values
 const DEFAULT_LABELS = { placeholder: 'Type a message...', send: 'Send', preview: 'Preview' };
@@ -19,16 +19,7 @@ export function getNativeLabels(language?: string) {
   return labelCache.get(key) || DEFAULT_LABELS;
 }
 
-/**
- * Check if text is typed in Latin/ASCII characters (transliteration).
- * Returns true for "bagunnava", false for "బాగున్నావా" or mixed scripts.
- */
-function isLatinScript(text: string): boolean {
-  // Strip common punctuation/numbers, check if remaining chars are Latin
-  const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_]/g, '');
-  if (!cleaned) return false;
-  return /^[a-zA-Z\u00C0-\u024F]+$/.test(cleaned);
-}
+// isLatinScript is now imported from translation-service (single source of truth)
 
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
@@ -115,10 +106,11 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     return () => viewport.removeEventListener("resize", handleResize);
   }, []);
 
-  // Debounced native script preview — converts Latin/English to native script
-  // Latin input (transliteration like "bagunnava") → native script (బాగున్నావా)
-  // English input ("How are you?") → native translation (నువ్వు ఎలా ఉన్నావు)
-  // Native script input → no preview needed (already in native)
+  // Debounced native preview — converts input to user's native language
+  // Works for ALL language types:
+  // - Non-Latin lang user typing Latin (transliteration/English) → shows native script
+  // - Latin-script lang user typing English → shows their language (e.g., French)
+  // - Native script input → no preview needed (already native)
   useEffect(() => {
     if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
 
@@ -129,29 +121,34 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     }
 
     const inputIsLatin = isLatinScript(trimmed);
+    const userUsesLatin = isLatinScriptLanguage(langNorm);
 
-    // Native script input → already in native, no preview needed
-    if (!inputIsLatin) {
+    // Non-Latin lang user typing in native script → no preview needed
+    // Latin-script lang user typing in their own script → need preview only if it's a different language
+    if (!inputIsLatin && !userUsesLatin) {
+      // Already typing in native non-Latin script — no preview needed
       setNativePreview(null);
       return;
     }
 
-    // Latin/English input → translate to user's native language
+    // Show preview: user typed Latin text and their language is non-English
     setIsPreviewLoading(true);
     previewTimeoutRef.current = setTimeout(async () => {
       try {
-        // Auto-detect handles both English and transliteration
+        // Auto-detect → user's language (handles English, transliteration, other Latin langs)
         const result = await translateText(trimmed, 'auto', userLanguage || 'English');
         if (result && result !== trimmed) {
           setNativePreview(result);
-        } else {
-          // Fallback: treat as English → target
+        } else if (!userUsesLatin) {
+          // For non-Latin target: if auto-detect didn't convert, try English → target
           const fallback = await translateText(trimmed, 'English', userLanguage || 'English');
           if (fallback && fallback !== trimmed) {
             setNativePreview(fallback);
           } else {
             setNativePreview(null);
           }
+        } else {
+          setNativePreview(null);
         }
       } catch {
         setNativePreview(null);
@@ -163,7 +160,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     return () => {
       if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     };
-  }, [message, isNonEnglish, userLanguage]);
+  }, [message, isNonEnglish, userLanguage, langNorm]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
