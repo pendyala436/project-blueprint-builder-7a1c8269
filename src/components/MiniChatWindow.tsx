@@ -428,10 +428,8 @@ const MiniChatWindow = ({
           const langToUse = currentUserLanguage || 'English';
           try {
             const result = await translateForViewer(newMsg.message, langToUse);
-            if (result.nativeText !== newMsg.message) {
-              translatedMessage = result.nativeText;
-              isTranslated = true;
-            }
+            translatedMessage = result.nativeText;
+            isTranslated = result.nativeText !== newMsg.message;
             englishText = result.englishText;
           } catch {
             // Fallback: try to at least get English subtitle
