@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useChatPricing } from '@/hooks/useChatPricing';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -51,9 +52,10 @@ const FLOWER_EMOJIS: Record<string, string> = {
 };
 
 const MIN_BALANCE_MINUTES = 5;
-const RATE_PER_MINUTE = 4; // ₹4/min
 
 export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: AvailableGroupsSectionProps) {
+  const { pricing } = useChatPricing();
+  const RATE_PER_MINUTE = pricing.groupCallRatePerMinute || 4;
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGroupVideo, setActiveGroupVideo] = useState<PrivateGroup | null>(null);
@@ -188,7 +190,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     }
   };
 
-  const handleLeaveGroup = () => {
+  const handleLeaveGroup = async () => {
     if (activeGroupVideo) {
       // GRP-H-02: Stop local audio stream tracks before leaving
       if (activeGroupStream) {
@@ -196,19 +198,28 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         setActiveGroupStream(null);
       }
 
-      // Atomic decrement
-      supabase
-        .from('private_groups')
-        .update({ participant_count: Math.max(0, activeGroupVideo.participant_count - 1) })
-        .eq('id', activeGroupVideo.id)
-        .then(() => fetchGroups());
+      const groupId = activeGroupVideo.id;
 
-      // Deactivate membership instead of deleting (GRP-C-02 consistency)
-      supabase
-        .from('group_memberships')
-        .update({ has_access: false })
-        .eq('group_id', activeGroupVideo.id)
-        .eq('user_id', currentUserId);
+      // Use atomic RPC to leave group safely (decrement + deactivate membership)
+      try {
+        const { error } = await supabase.rpc('leave_group_atomic', {
+          p_group_id: groupId,
+          p_user_id: currentUserId,
+        });
+        if (error) {
+          // Fallback: manual update if RPC not available
+          console.warn('[AvailableGroups] leave_group_atomic RPC failed, using fallback:', error);
+          await supabase
+            .from('group_memberships')
+            .update({ has_access: false })
+            .eq('group_id', groupId)
+            .eq('user_id', currentUserId);
+        }
+      } catch (e) {
+        console.error('[AvailableGroups] Leave group error:', e);
+      }
+      
+      fetchGroups();
     }
     setActiveGroupVideo(null);
   };

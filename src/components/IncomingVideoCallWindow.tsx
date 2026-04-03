@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { cn } from "@/lib/utils";
+import { useChatPricing } from "@/hooks/useChatPricing";
 
 // Audio context for ringtone
 let ringCtx: AudioContext | null = null;
@@ -57,6 +58,7 @@ const IncomingVideoCallWindow = ({
   onClose
 }: IncomingVideoCallWindowProps) => {
   const { toast } = useToast();
+  const { pricing } = useChatPricing();
   const [isAnswered, setIsAnswered] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -248,7 +250,8 @@ const IncomingVideoCallWindow = ({
         currentUserId={currentUserId}
         onClose={onClose}
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
-          zIndex={130}
+        zIndex={130}
+        ratePerMinute={pricing.videoRatePerMinute}
       />
     );
   }
