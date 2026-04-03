@@ -102,7 +102,7 @@ const DraggableMiniChatWindow = ({
   // Both hooks read from the same position state so this is consistent.
 
   const { messages, setMessages, unreadCount, setUnreadCount, messagesEndRef } =
-    useMiniChatMessages({ chatId, currentUserId, isMinimized });
+    useMiniChatMessages({ chatId, currentUserId, isMinimized, currentUserLanguage, partnerLanguage });
 
   const billing = useMiniChatBilling({
     chatId,
