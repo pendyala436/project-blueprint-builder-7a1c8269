@@ -332,23 +332,25 @@ Deno.serve(async (req) => {
     }
 
     // ─── Batch translation ───
-    const results: string[] = [];
-    for (const t of texts.slice(0, 20)) {
-      try {
-        const cached = await checkCache(supabaseClient, srcCode, tgtCode, t);
-        if (cached) {
-          results.push(cached);
-          continue;
-        }
-
-        const translation = await translateWithPivot(t, srcCode, tgtCode);
-        if (translation !== t) {
-          cacheResult(supabaseClient, srcCode, tgtCode, t, translation);
-        }
-        results.push(translation);
-      } catch {
-        results.push(t); // English fallback — return original
-      }
+    // CHT-09 FIX: Parallel batch translation with concurrency limit of 5
+    const batchTexts = texts.slice(0, 20);
+    const CONCURRENCY = 5;
+    const results: string[] = new Array(batchTexts.length);
+    
+    for (let i = 0; i < batchTexts.length; i += CONCURRENCY) {
+      const chunk = batchTexts.slice(i, i + CONCURRENCY);
+      const chunkResults = await Promise.allSettled(
+        chunk.map(async (t: string) => {
+          const cached = await checkCache(supabaseClient, srcCode, tgtCode, t);
+          if (cached) return cached;
+          const translation = await translateWithPivot(t, srcCode, tgtCode);
+          if (translation !== t) cacheResult(supabaseClient, srcCode, tgtCode, t, translation);
+          return translation;
+        })
+      );
+      chunkResults.forEach((r, idx) => {
+        results[i + idx] = r.status === 'fulfilled' ? r.value : batchTexts[i + idx];
+      });
     }
 
     return new Response(
