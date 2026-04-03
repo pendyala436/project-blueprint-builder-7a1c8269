@@ -46,17 +46,24 @@ export function isLatinScript(text: string): boolean {
  * This covers all major Latin-script languages supported by Google Translate.
  */
 const LATIN_SCRIPT_LANGUAGES = new Set([
-  // Western European
-  'english', 'french', 'german', 'spanish', 'portuguese', 'italian', 'dutch',
-  'catalan', 'galician', 'basque', 'corsican', 'maltese', 'luxembourgish',
-  // Nordic / Scandinavian
+  // Top 6 Major Romance (Latin-descended)
+  'spanish', 'portuguese', 'french', 'italian', 'romanian', 'catalan',
+  // Ibero-Romance
+  'galician', 'asturian', 'aragonese', 'ladino',
+  // Gallo-Romance
+  'occitan', 'walloon',
+  // Rhaeto-Romance
+  'romansh', 'friulian',
+  // Italo-Dalmatian / Southern Romance
+  'sardinian', 'sicilian', 'neapolitan', 'corsican',
+  // Eastern Romance
+  'aromanian',
+  // Other European Latin-script (non-Romance but Latin script)
+  'english', 'german', 'dutch', 'luxembourgish',
   'finnish', 'swedish', 'norwegian', 'danish', 'icelandic',
-  // Baltic
   'estonian', 'latvian', 'lithuanian',
-  // Central / Eastern European (Latin-script)
-  'polish', 'czech', 'slovak', 'hungarian', 'romanian', 'croatian', 'slovenian',
-  'bosnian', 'albanian',
-  // Celtic
+  'polish', 'czech', 'slovak', 'hungarian', 'croatian', 'slovenian',
+  'bosnian', 'albanian', 'maltese', 'basque',
   'welsh', 'irish', 'scottish gaelic', 'scots gaelic',
 ]);
 
