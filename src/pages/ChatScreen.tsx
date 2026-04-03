@@ -743,7 +743,7 @@ const ChatScreen = () => {
 
     } catch (error) {
       console.error("Error initializing chat:", error);
-      toast.error("Chat unavailable", { description: ERROR_MESSAGES.chat.initFailed });
+      toast({ title: "Chat unavailable", description: ERROR_MESSAGES.chat.initFailed, variant: "destructive" });
     } finally {
       setIsLoading(false);
       initializingRef.current = false;
