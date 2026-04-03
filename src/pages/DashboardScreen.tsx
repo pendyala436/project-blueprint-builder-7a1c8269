@@ -1413,7 +1413,7 @@ const DashboardScreen = () => {
         </div>
 
         {/* Quick Connect: Random Chat, Video Call & Private Groups */}
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 animate-fade-in" style={{ animationDelay: "0.03s" }}>
+        <div className={`grid ${userCountry === "IN" ? "grid-cols-3" : "grid-cols-2"} gap-1.5 sm:gap-2 animate-fade-in`} style={{ animationDelay: "0.03s" }}>
           <RandomChatButton 
             userGender="male"
             userLanguage={userLanguage}
@@ -1422,12 +1422,14 @@ const DashboardScreen = () => {
             onInsufficientBalance={() => setRechargeDialogOpen(true)}
             className="text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
           />
-          <VideoCallMiniButton 
-            currentUserId={currentUserId}
-            userLanguage={userLanguage}
-            walletBalance={walletBalance}
-            onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-          />
+          {userCountry === "IN" && (
+            <VideoCallMiniButton 
+              currentUserId={currentUserId}
+              userLanguage={userLanguage}
+              walletBalance={walletBalance}
+              onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+            />
+          )}
           <Button
             variant="aurora"
             size="lg"
@@ -1546,7 +1548,7 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3 h-3" />
                             </Button>
-                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && (
+                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
                               <DirectVideoCallButton
                                 currentUserId={currentUserId}
                                 targetUserId={woman.user_id}
@@ -1656,7 +1658,7 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3 h-3" />
                             </Button>
-                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && (
+                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
                               <DirectVideoCallButton
                                 currentUserId={currentUserId}
                                 targetUserId={woman.user_id}
