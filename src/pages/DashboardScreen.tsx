@@ -1765,6 +1765,21 @@ const DashboardScreen = () => {
               <Video className="h-4 w-4 text-primary" />
               Private Groups
             </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const section = document.getElementById('private-groups-section');
+                if (section) {
+                  const refreshBtn = section.querySelector<HTMLButtonElement>('button[class*="ghost"]');
+                  refreshBtn?.click();
+                }
+              }}
+              className="gap-1 h-7 text-xs px-2"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </Button>
           </div>
           <div className="p-2.5 rounded-lg bg-muted/50 text-[11px] sm:text-sm text-muted-foreground mb-3 border border-border/20">
             <p className="font-medium text-foreground mb-0.5 text-xs">💰 How to Join</p>
