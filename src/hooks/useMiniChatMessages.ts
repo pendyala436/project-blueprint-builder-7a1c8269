@@ -59,14 +59,36 @@ export const useMiniChatMessages = ({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
-        (payload) => {
+        async (payload) => {
           const m = payload.new as any;
           const isSentByMe = m.sender_id === currentUserId;
+
+          // Translate incoming partner messages
+          let translatedMessage: string | undefined;
+          let isTranslated = false;
+
+          if (!isSentByMe && partnerLanguage && currentUserLanguage) {
+            try {
+              const result = await translateChatMessage(
+                m.message,
+                partnerLanguage,
+                currentUserLanguage
+              );
+              if (result.isTranslated) {
+                translatedMessage = result.translated;
+                isTranslated = true;
+              }
+            } catch {
+              // Fallback: show original (English fallback)
+            }
+          }
 
           const newMsg: Message = {
             id: m.id,
             senderId: m.sender_id,
             message: m.message,
+            translatedMessage,
+            isTranslated,
             createdAt: m.created_at,
           };
 
