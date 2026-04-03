@@ -1,5 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
-import { translateChatMessage } from "@/lib/translation-service";
+import { translateChatMessage, getEnglishTranslation } from "@/lib/translation-service";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
