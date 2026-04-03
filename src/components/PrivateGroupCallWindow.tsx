@@ -114,7 +114,7 @@ export function PrivateGroupCallWindow({
 
   // UI state
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(isOwner); // Only host mic enabled by default
   const isStoppingRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGiftDialog, setShowGiftDialog] = useState(false);
@@ -122,6 +122,7 @@ export function PrivateGroupCallWindow({
   const [showEmojiBar, setShowEmojiBar] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false); // repurposed as scroll toggle
   const [isScrollEnabled, setIsScrollEnabled] = useState(true);
+  const [showParticipantList, setShowParticipantList] = useState(false);
 
   // Extension state
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
