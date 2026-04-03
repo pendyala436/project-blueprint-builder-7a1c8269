@@ -251,15 +251,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
             )}
             aria-label={labels.placeholder}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute end-2 bottom-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-            aria-label="Add emoji"
-          >
-            <Smile className="h-5 w-5" />
-          </Button>
+          {/* CHT-08 FIX: Removed non-functional emoji button */}
         </div>
 
         <Button

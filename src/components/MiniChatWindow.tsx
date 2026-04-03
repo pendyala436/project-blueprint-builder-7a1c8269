@@ -1,5 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
-import { translateChatMessage, getEnglishTranslation, translateForViewer } from "@/lib/translation-service";
+import { translateChatMessage, getEnglishTranslation, translateForViewer, translateText, isLatinScript, isLatinScriptLanguage } from "@/lib/translation-service";
 import { moderateMessage } from '@/lib/content-moderation';
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -94,12 +94,17 @@ const MiniChatWindow = ({
   const [earningRate, setEarningRate] = useState(2);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  // CHT-06 FIX: Native preview state for MiniChatWindow
+  const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
   
@@ -126,6 +131,46 @@ const MiniChatWindow = ({
       handleClose();
     }
   }, [isBlocked]);
+
+  // CHT-06 FIX: Debounced native preview for MiniChatWindow
+  const langNorm = (currentUserLanguage || 'english').toLowerCase().trim();
+  const isNonEnglish = langNorm !== 'english';
+
+  useEffect(() => {
+    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+    const trimmed = newMessage.trim();
+    if (!trimmed || !isNonEnglish) {
+      setNativePreview(null);
+      setIsPreviewLoading(false);
+      return;
+    }
+    setIsPreviewLoading(true);
+    previewTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await translateText(trimmed, 'auto', currentUserLanguage || 'English');
+        if (result && result !== trimmed) {
+          setNativePreview(result);
+        } else if (isLatinScript(trimmed) && !isLatinScriptLanguage(langNorm)) {
+          const fallback = await translateText(trimmed, 'English', currentUserLanguage || 'English');
+          setNativePreview(fallback && fallback !== trimmed ? fallback : null);
+        } else {
+          setNativePreview(null);
+        }
+      } catch { setNativePreview(null); }
+      finally { setIsPreviewLoading(false); }
+    }, 600);
+    return () => { if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current); };
+  }, [newMessage, isNonEnglish, currentUserLanguage, langNorm]);
+
+  // CHT-07 FIX: Translate placeholder dynamically
+  useEffect(() => {
+    if (!isNonEnglish) { setTranslatedPlaceholder("Type a message..."); return; }
+    let cancelled = false;
+    translateText('Type a message...', 'English', currentUserLanguage).then(result => {
+      if (!cancelled && result) setTranslatedPlaceholder(result);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentUserLanguage, isNonEnglish]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -494,6 +539,7 @@ const MiniChatWindow = ({
 
   const sendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
+    setIsSending(true); // CHT-03 FIX: prevent double-send
 
     const messageText = newMessage.trim();
     
@@ -580,6 +626,8 @@ const MiniChatWindow = ({
         description: "Failed to send message",
         variant: "destructive"
       });
+    } finally {
+      setIsSending(false); // CHT-03 FIX: always reset
     }
   };
 
@@ -834,10 +882,21 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
+          {/* CHT-06 FIX: Native preview */}
+          {(nativePreview || isPreviewLoading) && newMessage.trim() && (
+            <div className="px-2 py-0.5 border-t border-border/30 flex items-center gap-1">
+              {isPreviewLoading ? (
+                <span className="text-[9px] text-muted-foreground italic">Converting...</span>
+              ) : nativePreview ? (
+                <span className="text-[10px] text-primary font-medium unicode-text" dir="auto">{nativePreview}</span>
+              ) : null}
+            </div>
+          )}
+
           <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
               <Input
-                placeholder="Type a message..."
+                placeholder={translatedPlaceholder}
                 value={newMessage}
                 onChange={(e) => {
                   setNewMessage(e.target.value);
@@ -854,7 +913,7 @@ const MiniChatWindow = ({
                 size="icon"
                 className="h-7 w-7"
                 onClick={sendMessage}
-                disabled={!newMessage.trim()}
+                disabled={!newMessage.trim() || isSending}
               >
                 <Send className="h-3 w-3" />
               </Button>

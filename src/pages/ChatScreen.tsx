@@ -248,6 +248,11 @@ const ChatScreen = () => {
   // Reactive state to trigger subscription re-run when chatId is set
   const [activeChatId, setActiveChatId] = useState<string>("");
   
+  // CHT-01 FIX: Ref to avoid stale closures in realtime subscription
+  const chatPartnerRef = useRef<ChatPartner | null>(null);
+  const currentUserLanguageRef = useRef<string>("");
+  const currentUserIdRef = useRef<string>("");
+  
   // Refs for file inputs and camera
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -264,6 +269,11 @@ const ChatScreen = () => {
       }
     };
   }, []);
+  
+  // CHT-01 FIX: Keep refs in sync with state
+  useEffect(() => { chatPartnerRef.current = chatPartner; }, [chatPartner]);
+  useEffect(() => { currentUserLanguageRef.current = currentUserLanguage; }, [currentUserLanguage]);
+  useEffect(() => { currentUserIdRef.current = currentUserId; }, [currentUserId]);
   
   // ============= ACTIVITY STATUS TRACKING =============
   
@@ -385,17 +395,18 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // Translate for current viewer: auto-detect input → viewer's native + English
-          // Works for ALL scenarios: same language, different language, transliteration, native, English
+          // CHT-01 FIX: Use refs to avoid stale closures
+          const langToUse = currentUserLanguageRef.current || 'English';
+          const userId = currentUserIdRef.current;
+          const partner = chatPartnerRef.current;
+          
           let translatedMessage: string | undefined;
           let englishText: string | undefined;
           let isTranslated = false;
 
-          const langToUse = currentUserLanguage || 'English';
           if (langToUse) {
             try {
-              // Pass sender's language for cross-language transliteration bridge
-              const senderLang = newMsg.sender_id === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+              const senderLang = newMsg.sender_id === userId ? currentUserLanguageRef.current : partner?.preferredLanguage;
               const result = await translateForViewer(newMsg.message, langToUse, senderLang);
               translatedMessage = result.nativeText;
               englishText = result.englishText;
@@ -421,7 +432,7 @@ const ChatScreen = () => {
           });
 
           // Mark received messages as read automatically
-          if (newMsg.sender_id !== currentUserId) {
+          if (newMsg.sender_id !== userId) {
             markAsRead(newMsg.id);
           }
         }
@@ -432,7 +443,7 @@ const ChatScreen = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeChatId, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
+  }, [activeChatId]); // CHT-01 FIX: Only depend on activeChatId, use refs for everything else
 
   // Issue 2.2: Re-translate history when language loads late
   useEffect(() => {
@@ -543,13 +554,15 @@ const ChatScreen = () => {
    * Uses auto-detect so transliteration, native script, and English all work.
    */
   const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
-    // Process in batches of 5 to avoid overwhelming the edge function
     const batchSize = 5;
     for (let i = 0; i < msgs.length; i += batchSize) {
       const batch = msgs.slice(i, i + batchSize);
       const translationPromises = batch.map(async (msg) => {
         try {
-          const msgSenderLang = msg.senderId === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+          // CHT-05 FIX: Use refs for current values
+          const msgSenderLang = msg.senderId === currentUserIdRef.current 
+            ? currentUserLanguageRef.current 
+            : chatPartnerRef.current?.preferredLanguage;
           const result = await translateForViewer(msg.message, viewerLanguage, msgSenderLang);
           return {
             id: msg.id,
@@ -564,7 +577,6 @@ const ChatScreen = () => {
 
       const results = await Promise.allSettled(translationPromises);
 
-      // Update messages state with translations (only fulfilled)
       setMessages(prev => prev.map(m => {
         const translation = results
           .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
@@ -581,7 +593,7 @@ const ChatScreen = () => {
         return m;
       }));
     }
-  }, []);
+  }, []); // Stable — uses refs internally
 
   /**
    * initializeChat Function
@@ -696,11 +708,16 @@ const ChatScreen = () => {
 
       // ============= FETCH MESSAGE HISTORY =============
       
+      // CHT-02 FIX: Limit to last 100 messages to avoid hitting Supabase 1000-row cap
       const { data: existingMessages } = await supabase
         .from("chat_messages")
         .select("*")
         .eq("chat_id", chatId.current)
-        .order("created_at", { ascending: true }); // Oldest first
+        .order("created_at", { ascending: false })
+        .limit(100);
+      
+      // Reverse to get chronological order
+      existingMessages?.reverse();
 
       // Transform database records to Message interface
       if (existingMessages) {
@@ -1518,8 +1535,8 @@ const ChatScreen = () => {
                 View Profile
               </DropdownMenuItem>
               
-              {/* Stop Chat - Only for MEN (men control chat start/stop) */}
-              {currentUserGender === "male" && (
+              {/* CHT-11 FIX: Stop Chat - Available for both genders */}
+              {(
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
