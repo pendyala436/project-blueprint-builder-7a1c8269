@@ -72,7 +72,7 @@ export const useMiniChatBilling = ({
         console.error("Heartbeat error:", error);
       }
     }, 62000); // 62s to compensate for JS timer drift
-  }, [chatId, sessionId, currentUserId, userGender, ratePerMinute, toast]);
+  }, [chatId, sessionId, currentUserId, userGender, ratePerMinute]);
 
   const stopBillingTimers = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
