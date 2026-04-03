@@ -20,7 +20,6 @@ interface UseIncomingChatsResult {
   clearChat: (sessionId: string) => void;
 }
 
-// Create audio context for sounds
 let buzzAudioContext: AudioContext | null = null;
 let buzzIntervalId: NodeJS.Timeout | null = null;
 
@@ -29,19 +28,14 @@ const playBuzzSound = () => {
     if (!buzzAudioContext) {
       buzzAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-
     const oscillator = buzzAudioContext.createOscillator();
     const gainNode = buzzAudioContext.createGain();
-
     oscillator.connect(gainNode);
     gainNode.connect(buzzAudioContext.destination);
-
-    oscillator.frequency.value = 440; // A4 note
+    oscillator.frequency.value = 440;
     oscillator.type = "sine";
-    
     gainNode.gain.setValueAtTime(0.3, buzzAudioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, buzzAudioContext.currentTime + 0.3);
-
     oscillator.start(buzzAudioContext.currentTime);
     oscillator.stop(buzzAudioContext.currentTime + 0.3);
   } catch (error) {
@@ -49,39 +43,12 @@ const playBuzzSound = () => {
   }
 };
 
-// Small notification sound for men (single beep, not looping)
-const playSmallNotificationSound = () => {
-  try {
-    if (!buzzAudioContext) {
-      buzzAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-
-    const oscillator = buzzAudioContext.createOscillator();
-    const gainNode = buzzAudioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(buzzAudioContext.destination);
-
-    oscillator.frequency.value = 520; // Higher pitch for notification
-    oscillator.type = "sine";
-    
-    gainNode.gain.setValueAtTime(0.15, buzzAudioContext.currentTime); // Quieter
-    gainNode.gain.exponentialRampToValueAtTime(0.01, buzzAudioContext.currentTime + 0.15);
-
-    oscillator.start(buzzAudioContext.currentTime);
-    oscillator.stop(buzzAudioContext.currentTime + 0.15);
-  } catch (error) {
-    console.error("Error playing notification sound:", error);
-  }
-};
-
 const startBuzzLoop = () => {
   if (buzzIntervalId) return;
-  
   playBuzzSound();
   buzzIntervalId = setInterval(() => {
     playBuzzSound();
-  }, 2000); // Buzz every 2 seconds
+  }, 2000);
 };
 
 const stopBuzzLoop = () => {
@@ -97,75 +64,68 @@ export const useIncomingChats = (
 ): UseIncomingChatsResult => {
   const [incomingChats, setIncomingChats] = useState<IncomingChat[]>([]);
   const acceptedChatsRef = useRef<Set<string>>(new Set());
-  const previousCountRef = useRef<number>(0);
+  const rejectedChatsRef = useRef<Set<string>>(new Set());
 
-  // Start/stop buzz sound based on incoming chats - for BOTH men and women
+  // Start/stop buzz sound based on incoming chats
   useEffect(() => {
     if (incomingChats.length > 0) {
-      // Both genders get continuous buzz until they accept/reject
       startBuzzLoop();
     } else {
       stopBuzzLoop();
     }
-
-    return () => {
-      stopBuzzLoop();
-    };
+    return () => { stopBuzzLoop(); };
   }, [incomingChats.length]);
 
-  // Subscribe to new incoming chat sessions - OPTIMIZED for lakhs of users
   useEffect(() => {
     if (!currentUserId) return;
 
     let isCheckingRef = false;
     let lastCheckTime = 0;
-    const MIN_CHECK_INTERVAL = 500; // Throttle to max 2 checks per second
+    const MIN_CHECK_INTERVAL = 500;
 
     const checkForNewChats = async () => {
-      // Prevent concurrent checks and throttle
       const now = Date.now();
       if (isCheckingRef || now - lastCheckTime < MIN_CHECK_INTERVAL) return;
       isCheckingRef = true;
       lastCheckTime = now;
 
       try {
-        console.log(`[useIncomingChats] Checking for new chats for ${userGender} user: ${currentUserId}`);
-        
         const column = userGender === "male" ? "man_user_id" : "woman_user_id";
         const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
         
-        // OPTIMIZED: Single query with limit
         // Women see 'pending' sessions (must accept first)
-        // Men see 'active' sessions (auto-opened when woman accepts)
-        const statusFilter = userGender === "female" ? ["pending", "active"] : ["active"];
-        
+        // Men see 'pending' sessions too (for Golden Badge women initiating)
+        // BUT we filter out sessions where the current user sent the initial message
         const { data: sessions, error: sessionsError } = await supabase
           .from("active_chat_sessions")
           .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, started_at, updated_at, status`)
           .eq(column, currentUserId)
-          .in("status", statusFilter)
+          .eq("status", "pending")
           .order("created_at", { ascending: false })
           .limit(10);
 
         if (sessionsError || !sessions || sessions.length === 0) {
+          // Clear incoming chats if no pending sessions exist
+          setIncomingChats(prev => {
+            if (prev.length === 0) return prev;
+            // Only clear chats whose sessions are no longer pending
+            return prev.filter(c => acceptedChatsRef.current.has(c.sessionId));
+          });
           isCheckingRef = false;
           return;
         }
 
-        // Filter out already accepted sessions first
-        const pendingSessions = sessions.filter(s => !acceptedChatsRef.current.has(s.id));
+        // Filter out already accepted or rejected sessions
+        const pendingSessions = sessions.filter(
+          s => !acceptedChatsRef.current.has(s.id) && !rejectedChatsRef.current.has(s.id)
+        );
         if (pendingSessions.length === 0) {
           isCheckingRef = false;
           return;
         }
 
-        // BATCH: Get message counts for all pending sessions at once
-        // CRITICAL: Only check messages sent AFTER the session was started/recycled
-        // Recycled sessions reuse the same chat_id, so old messages from previous
-        // conversations must not prevent the Accept/Reject popup from showing
+        // Check messages sent AFTER the session was started/recycled
         const chatIds = pendingSessions.map(s => s.chat_id);
-        
-        // Build a map of chat_id -> session start time for filtering
         const sessionStartTimes = new Map(
           pendingSessions.map(s => [
             s.chat_id, 
@@ -184,20 +144,21 @@ export const useIncomingChats = (
           (userMessages || [])
             .filter(m => {
               const sessionStart = sessionStartTimes.get(m.chat_id);
-              if (!sessionStart) return true; // fallback: count it
+              if (!sessionStart) return true;
               return new Date(m.created_at) >= new Date(sessionStart as string);
             })
             .map(m => m.chat_id)
         );
 
-        // Filter sessions where user hasn't sent any message in THIS session
+        // Filter sessions where the current user hasn't sent a message in THIS session
+        // This means someone else initiated it, so we should show accept/reject
         const incomingSessions = pendingSessions.filter(s => !chatsWithRecentMessages.has(s.chat_id));
         if (incomingSessions.length === 0) {
           isCheckingRef = false;
           return;
         }
 
-        // BATCH: Get all partner profiles at once
+        // Get all partner profiles
         const partnerIds = incomingSessions.map(s => s[partnerColumn as keyof typeof s] as string);
         const { data: profiles } = await supabase
           .from("profiles")
@@ -206,13 +167,12 @@ export const useIncomingChats = (
 
         const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
-        // Build incoming chats
         const newIncomingChats: IncomingChat[] = [];
         for (const session of incomingSessions) {
           const partnerId = session[partnerColumn as keyof typeof session] as string;
           const profile = profileMap.get(partnerId);
 
-          const newChat: IncomingChat = {
+          newIncomingChats.push({
             sessionId: session.id,
             chatId: session.chat_id,
             partnerId,
@@ -221,30 +181,26 @@ export const useIncomingChats = (
             partnerLanguage: profile?.primary_language || "English",
             ratePerMinute: session.rate_per_minute || 2,
             startedAt: session.created_at
-          };
-
-          newIncomingChats.push(newChat);
+          });
         }
 
         if (newIncomingChats.length > 0) {
           setIncomingChats(prev => {
             const existingIds = new Set(prev.map(c => c.sessionId));
             const uniqueNew = newIncomingChats.filter(c => !existingIds.has(c.sessionId));
+            if (uniqueNew.length === 0) return prev;
             return [...prev, ...uniqueNew];
           });
         }
       } catch (error) {
         console.error("[useIncomingChats] Error checking chats:", error);
-      // Background polling - non-critical
       } finally {
         isCheckingRef = false;
       }
     };
 
-    // Check immediately
     checkForNewChats();
 
-    // User-scoped channel for efficient message routing at scale
     const channelName = `incoming-${currentUserId}`;
     const column = userGender === "male" ? "man_user_id" : "woman_user_id";
 
@@ -272,8 +228,7 @@ export const useIncomingChats = (
           const session = payload.new as { id: string; status: string };
           if (session.status === "ended") {
             setIncomingChats(prev => prev.filter(c => c.sessionId !== session.id));
-          } else if (session.status === "pending" || session.status === "active") {
-            // Recycled sessions use UPDATE instead of INSERT — re-check for incoming
+          } else if (session.status === "pending") {
             checkForNewChats();
           }
         }
@@ -289,7 +244,6 @@ export const useIncomingChats = (
     acceptedChatsRef.current.add(sessionId);
     setIncomingChats(prev => prev.filter(c => c.sessionId !== sessionId));
     
-    // Transition pending → active so billing/availability triggers fire
     try {
       await supabase
         .from("active_chat_sessions")
@@ -302,6 +256,7 @@ export const useIncomingChats = (
   }, []);
 
   const rejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
+    rejectedChatsRef.current.add(sessionId);
     const endReason = reason === 'auto_timeout'
       ? 'auto_timeout'
       : userGender === "male" ? "man_rejected" : "woman_rejected";
