@@ -522,13 +522,15 @@ const DraggableVideoCallWindow = ({
         {/* Header - Draggable */}
         <div
           className={cn(
-            "flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border cursor-grab shrink-0",
+            "flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border shrink-0",
             isDragging && "cursor-grabbing"
           )}
-          onMouseDown={handleDragStart}
-          onTouchStart={handleDragStart}
         >
-          <div className="flex items-center gap-2 overflow-hidden">
+          <div
+            className="flex items-center gap-2 overflow-hidden cursor-grab"
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+          >
             <Move className="w-4 h-4 text-muted-foreground shrink-0" />
             <div className="relative">
               <Avatar className="w-8 h-8">
@@ -548,8 +550,12 @@ const DraggableVideoCallWindow = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Call duration and cost */}
+          <div
+            className="flex items-center gap-1 shrink-0"
+            data-no-drag
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          >
             {callStatus === 'active' && (
               <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs">
                 <Clock className="w-3 h-3" />
@@ -559,11 +565,12 @@ const DraggableVideoCallWindow = ({
               </div>
             )}
 
-            {/* Minimize/Restore button */}
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -577,12 +584,13 @@ const DraggableVideoCallWindow = ({
               {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </Button>
 
-            {/* Maximize/Normal screen button */}
             {!isMinimized && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -593,11 +601,12 @@ const DraggableVideoCallWindow = ({
               </Button>
             )}
 
-            {/* Close/End Call button */}
             <Button
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               onClick={async (e) => {
                 e.stopPropagation();
                 e.preventDefault();
