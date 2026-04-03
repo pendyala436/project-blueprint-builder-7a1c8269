@@ -23,6 +23,8 @@ export const useMiniChatMessages = ({
   chatId,
   currentUserId,
   isMinimized,
+  currentUserLanguage,
+  partnerLanguage,
 }: UseMiniChatMessagesOptions) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
