@@ -248,7 +248,7 @@ const IncomingVideoCallWindow = ({
         currentUserId={currentUserId}
         onClose={onClose}
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
-        zIndex={70}
+          zIndex={130}
       />
     );
   }

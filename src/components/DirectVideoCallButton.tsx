@@ -252,7 +252,7 @@ const DirectVideoCallButton = ({
           currentUserId={currentUserId}
           onClose={handleEndCall}
           initialPosition={{ x: window.innerWidth - 400, y: 80 }}
-          zIndex={70}
+          zIndex={130}
           ratePerMinute={pricing.videoRatePerMinute}
           preAcquiredStream={activeCall.stream}
         />

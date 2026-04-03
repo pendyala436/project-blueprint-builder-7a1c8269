@@ -77,6 +77,7 @@ const DraggableVideoCallWindow = ({
 }: DraggableVideoCallWindowProps) => {
   const { toast } = useToast();
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+  const effectiveZIndex = Math.max(zIndex, 120);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMaximized, setIsMaximized] = useState(isMobileDevice);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
@@ -506,23 +507,25 @@ const DraggableVideoCallWindow = ({
           "bg-background/95 backdrop-blur-sm border border-border shadow-2xl overflow-hidden flex flex-col select-none",
           isDragging && "cursor-grabbing opacity-90",
           isResizing && "opacity-90",
-          isMaximized && "!fixed !inset-0 !w-full !h-full !rounded-none z-[100]"
+          isMaximized && "!fixed !inset-0 !w-full !h-full !rounded-none"
         )}
-        style={isMaximized ? undefined : {
-          width: size.width,
-          height: isMinimized ? 52 : size.height,
-          position: isInFlexContainer ? 'relative' : 'fixed',
-          left: isInFlexContainer ? undefined : position.x,
-          top: isInFlexContainer ? undefined : position.y,
-          zIndex,
-          transition: isDragging || isResizing ? 'none' : 'height 0.2s ease-out'
-        }}
+        style={isMaximized
+          ? { zIndex: effectiveZIndex }
+          : {
+              width: size.width,
+              height: isMinimized ? 52 : size.height,
+              position: isInFlexContainer ? 'relative' : 'fixed',
+              left: isInFlexContainer ? undefined : position.x,
+              top: isInFlexContainer ? undefined : position.y,
+              zIndex: effectiveZIndex,
+              transition: isDragging || isResizing ? 'none' : 'height 0.2s ease-out'
+            }}
         onClick={onFocus}
       >
         {/* Header - Draggable */}
         <div
           className={cn(
-            "flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border shrink-0",
+            "relative z-20 flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-border shrink-0",
             isDragging && "cursor-grabbing"
           )}
         >
@@ -553,6 +556,7 @@ const DraggableVideoCallWindow = ({
           <div
             className="flex items-center gap-1 shrink-0"
             data-no-drag
+            onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           >
@@ -643,17 +647,17 @@ const DraggableVideoCallWindow = ({
                   ref={setRemoteVideoEl}
                   autoPlay
                   playsInline
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover pointer-events-none select-none"
                 />
                 
                 {/* Local Video (Picture-in-picture) */}
-                <div className="absolute bottom-20 right-2 w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
+                <div className="pointer-events-none absolute bottom-20 right-2 z-10 w-24 h-18 sm:w-28 sm:h-20 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
                   <video
                     ref={setLocalVideoEl}
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover pointer-events-none select-none"
                   />
                   {!isVideoEnabled && (
                     <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
@@ -665,9 +669,9 @@ const DraggableVideoCallWindow = ({
             )}
 
             {/* Controls - Two rows */}
-            <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto p-2 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
               {/* Main controls row */}
-              <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="relative z-20 flex items-center justify-center gap-2 mb-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -737,7 +741,7 @@ const DraggableVideoCallWindow = ({
               </div>
 
               {/* Secondary controls row */}
-              <div className="flex items-center justify-center gap-2">
+              <div className="relative z-20 flex items-center justify-center gap-2">
                 {/* Friend/Unfriend Button */}
                 {isFriend ? (
                   <Tooltip>
@@ -829,7 +833,7 @@ const DraggableVideoCallWindow = ({
         {/* Resize handle */}
         {!isMinimized && !isMaximized && (
           <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize touch-none"
+            className="absolute bottom-0 right-0 z-30 w-4 h-4 cursor-se-resize touch-none"
             onMouseDown={handleResizeStart}
             onTouchStart={handleResizeStart}
           >
