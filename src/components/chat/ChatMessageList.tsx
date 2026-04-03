@@ -71,27 +71,35 @@ const MessageBubble = memo(({
       )}
 
       <div className={cn('flex flex-col', isOwn ? 'items-end' : 'items-start')}>
-        {/* Sender name for received messages */}
-        {!isOwn && (
-          <span className="text-xs text-muted-foreground mb-1 px-1">
-            {message.senderName}
-            {message.senderLanguage && (
-              <span className="text-muted-foreground/60 ms-1">• {message.senderLanguage}</span>
-            )}
-          </span>
-        )}
+        {/* Sender/Receiver name — always shown with distinct colors */}
+        <span className={cn(
+          'text-xs font-semibold mb-1 px-1',
+          isOwn
+            ? 'text-primary'           /* Sender: theme primary (blue/pink etc.) */
+            : 'text-emerald-600 dark:text-emerald-400' /* Receiver: green */
+        )}>
+          {message.senderName}
+          {message.senderLanguage && (
+            <span className="text-muted-foreground/60 font-normal ms-1">• {message.senderLanguage}</span>
+          )}
+        </span>
 
-        {/* Message bubble */}
+        {/* Message bubble — white/light background with colored text */}
         <div
           className={cn(
-            'rounded-2xl px-4 py-2.5 unicode-text',
+            'rounded-2xl px-4 py-2.5 unicode-text shadow-sm border',
             isOwn
-              ? 'bg-primary text-primary-foreground rounded-br-md chat-message-sent'
-              : 'bg-muted text-foreground rounded-bl-md chat-message-received'
+              ? 'bg-primary/5 border-primary/20 rounded-br-md'
+              : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md'
           )}
           dir="auto"
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <p className={cn(
+            'text-sm leading-relaxed whitespace-pre-wrap break-words',
+            isOwn
+              ? 'text-primary dark:text-primary'
+              : 'text-emerald-800 dark:text-emerald-200'
+          )}>
             {message.content}
           </p>
         </div>
