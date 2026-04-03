@@ -430,12 +430,12 @@ async function distributeWomanForCall(supabase: any, data: any, authenticatedUse
     );
   }
 
-  // Step 2: Get women who are generally available and online
-  // NOTE: Do NOT hard-block on is_available_for_calls because that flag can be stale.
+  // Step 2: Get women who are online — for video calls, don't filter by is_available
+  // (which reflects chat capacity). Instead, get all online women and let Step 3's
+  // live-session IDLE check determine true availability for calls.
   const { data: availableWomen, error } = await supabase
     .from('women_availability')
     .select('user_id, current_call_count, current_chat_count, max_concurrent_calls, is_available, is_available_for_calls')
-    .eq('is_available', true)
     .in('user_id', onlineUserIds); // MUST be online
 
   if (error) {
