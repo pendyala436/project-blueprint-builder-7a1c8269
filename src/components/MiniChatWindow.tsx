@@ -108,7 +108,12 @@ const MiniChatWindow = ({
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
+  const blockMountedRef = useRef(false);
   useEffect(() => {
+    if (!blockMountedRef.current) {
+      blockMountedRef.current = true;
+      return;
+    }
     if (isBlocked) {
       toast({
         title: "Chat Ended",
