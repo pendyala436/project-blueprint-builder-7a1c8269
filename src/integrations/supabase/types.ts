@@ -3156,165 +3156,7 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          account_status: string | null
-          age: number | null
-          ai_approved: boolean | null
-          approval_status: string | null
-          avg_response_time_seconds: number | null
-          bio: string | null
-          body_type: string | null
-          city: string | null
-          country: string | null
-          created_at: string | null
-          dietary_preference: string | null
-          drinking_habit: string | null
-          earning_badge_type: string | null
-          education_level: string | null
-          fitness_level: string | null
-          full_name: string | null
-          gender: string | null
-          golden_badge_expires_at: string | null
-          has_children: boolean | null
-          has_golden_badge: boolean | null
-          height_cm: number | null
-          id: string | null
-          interests: string[] | null
-          is_earning_eligible: boolean | null
-          is_indian: boolean | null
-          is_premium: boolean | null
-          is_verified: boolean | null
-          language: string | null
-          last_active_at: string | null
-          life_goals: string[] | null
-          marital_status: string | null
-          monthly_chat_minutes: number | null
-          occupation: string | null
-          performance_score: number | null
-          personality_type: string | null
-          pet_preference: string | null
-          photo_url: string | null
-          preferred_language: string | null
-          primary_language: string | null
-          profile_completeness: number | null
-          promoted_from_free: boolean | null
-          religion: string | null
-          smoking_habit: string | null
-          state: string | null
-          total_chats_count: number | null
-          travel_frequency: string | null
-          updated_at: string | null
-          user_id: string | null
-          verification_status: boolean | null
-          zodiac_sign: string | null
-        }
-        Insert: {
-          account_status?: string | null
-          age?: number | null
-          ai_approved?: boolean | null
-          approval_status?: string | null
-          avg_response_time_seconds?: number | null
-          bio?: string | null
-          body_type?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          dietary_preference?: string | null
-          drinking_habit?: string | null
-          earning_badge_type?: string | null
-          education_level?: string | null
-          fitness_level?: string | null
-          full_name?: string | null
-          gender?: string | null
-          golden_badge_expires_at?: string | null
-          has_children?: boolean | null
-          has_golden_badge?: boolean | null
-          height_cm?: number | null
-          id?: string | null
-          interests?: string[] | null
-          is_earning_eligible?: boolean | null
-          is_indian?: boolean | null
-          is_premium?: boolean | null
-          is_verified?: boolean | null
-          language?: string | null
-          last_active_at?: string | null
-          life_goals?: string[] | null
-          marital_status?: string | null
-          monthly_chat_minutes?: number | null
-          occupation?: string | null
-          performance_score?: number | null
-          personality_type?: string | null
-          pet_preference?: string | null
-          photo_url?: string | null
-          preferred_language?: string | null
-          primary_language?: string | null
-          profile_completeness?: number | null
-          promoted_from_free?: boolean | null
-          religion?: string | null
-          smoking_habit?: string | null
-          state?: string | null
-          total_chats_count?: number | null
-          travel_frequency?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          verification_status?: boolean | null
-          zodiac_sign?: string | null
-        }
-        Update: {
-          account_status?: string | null
-          age?: number | null
-          ai_approved?: boolean | null
-          approval_status?: string | null
-          avg_response_time_seconds?: number | null
-          bio?: string | null
-          body_type?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string | null
-          dietary_preference?: string | null
-          drinking_habit?: string | null
-          earning_badge_type?: string | null
-          education_level?: string | null
-          fitness_level?: string | null
-          full_name?: string | null
-          gender?: string | null
-          golden_badge_expires_at?: string | null
-          has_children?: boolean | null
-          has_golden_badge?: boolean | null
-          height_cm?: number | null
-          id?: string | null
-          interests?: string[] | null
-          is_earning_eligible?: boolean | null
-          is_indian?: boolean | null
-          is_premium?: boolean | null
-          is_verified?: boolean | null
-          language?: string | null
-          last_active_at?: string | null
-          life_goals?: string[] | null
-          marital_status?: string | null
-          monthly_chat_minutes?: number | null
-          occupation?: string | null
-          performance_score?: number | null
-          personality_type?: string | null
-          pet_preference?: string | null
-          photo_url?: string | null
-          preferred_language?: string | null
-          primary_language?: string | null
-          profile_completeness?: number | null
-          promoted_from_free?: boolean | null
-          religion?: string | null
-          smoking_habit?: string | null
-          state?: string | null
-          total_chats_count?: number | null
-          travel_frequency?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-          verification_status?: boolean | null
-          zodiac_sign?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       accept_friend_request: { Args: { p_request_id: string }; Returns: Json }
@@ -3507,6 +3349,52 @@ export type Database = {
           state: string
           user_id: string
           wallet_balance: number
+        }[]
+      }
+      get_public_profiles: {
+        Args: { user_ids?: string[] }
+        Returns: {
+          account_status: string
+          age: number
+          ai_approved: boolean
+          approval_status: string
+          avg_response_time_seconds: number
+          bio: string
+          body_type: string
+          city: string
+          country: string
+          created_at: string
+          earning_badge_type: string
+          education_level: string
+          full_name: string
+          gender: string
+          golden_badge_expires_at: string
+          has_golden_badge: boolean
+          height_cm: number
+          id: string
+          interests: string[]
+          is_earning_eligible: boolean
+          is_indian: boolean
+          is_premium: boolean
+          is_verified: boolean
+          language: string
+          last_active_at: string
+          life_goals: string[]
+          marital_status: string
+          monthly_chat_minutes: number
+          occupation: string
+          performance_score: number
+          photo_url: string
+          preferred_language: string
+          primary_language: string
+          profile_completeness: number
+          promoted_from_free: boolean
+          religion: string
+          state: string
+          total_chats_count: number
+          updated_at: string
+          user_id: string
+          verification_status: boolean
         }[]
       }
       get_top_earner_today: {
