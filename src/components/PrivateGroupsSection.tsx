@@ -122,6 +122,28 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
 
     try {
+      // GRP-C-03: Enforce gift amount requirement for host path
+      // Hosts with access_type 'gift' must have paid the minimum gift amount
+      if (group.access_type === 'gift' && group.min_gift_amount > 0) {
+        const { data: existingMembership } = await supabase
+          .from('group_memberships')
+          .select('gift_amount_paid')
+          .eq('group_id', group.id)
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+
+        // Owner is exempt from gift requirement
+        if (group.owner_id !== currentUserId) {
+          const paid = existingMembership?.gift_amount_paid ?? 0;
+          if (paid < group.min_gift_amount) {
+            toast.error(`Gift requirement not met. Minimum: ₹${group.min_gift_amount}`);
+            preStream.getTracks().forEach(t => t.stop());
+            setGoingLive(null);
+            return;
+          }
+        }
+      }
+
       await supabase.from('group_memberships').upsert({
         group_id: group.id,
         user_id: currentUserId,
