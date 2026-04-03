@@ -129,16 +129,6 @@ export function PrivateGroupCallWindow({
 
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
 
-  const getParticipantName = (userId: string): string => {
-    if (userId === currentUserId) return userName;
-    if (userId === group.owner_id) {
-      const host = participants.find(p => p.isOwner);
-      return host?.name || 'Host';
-    }
-    const participant = participants.find(p => p.id === userId);
-    return participant?.name || 'Participant';
-  };
-
   // Enhanced group call hook
   const {
     isConnecting,
@@ -185,6 +175,20 @@ export function PrivateGroupCallWindow({
       }
     },
   });
+
+  // Use ref to avoid stale closure in realtime listener
+  const participantsRef = useRef(participants);
+  participantsRef.current = participants;
+
+  const getParticipantName = useCallback((userId: string): string => {
+    if (userId === currentUserId) return userName;
+    if (userId === group.owner_id) {
+      const host = participantsRef.current.find(p => p.isOwner);
+      return host?.name || 'Host';
+    }
+    const participant = participantsRef.current.find(p => p.id === userId);
+    return participant?.name || 'Participant';
+  }, [currentUserId, group.owner_id, userName]);
 
   // Format elapsed time
   const formatTime = (seconds: number) => {
@@ -277,9 +281,10 @@ export function PrivateGroupCallWindow({
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addChatMessage, addAnimatedGift]);
+  }, [group.id, currentUserId, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName]);
 
   // Extension check — query DB instead of localStorage
+  // NOTE: getMonth() is 0-indexed; DB stores 1-indexed months
   useEffect(() => {
     const now = new Date();
     const checkExtension = async () => {
@@ -288,7 +293,7 @@ export function PrivateGroupCallWindow({
         .select('id')
         .eq('user_id', currentUserId)
         .eq('group_id', group.id)
-        .eq('extension_month', now.getMonth())
+        .eq('extension_month', now.getMonth() + 1) // 1-indexed for DB
         .eq('extension_year', now.getFullYear())
         .maybeSingle();
       if (data) {
@@ -865,6 +870,7 @@ export function PrivateGroupCallWindow({
               >
                 <span className="text-3xl">{gift.emoji}</span>
                 <span className="text-xs font-medium text-foreground">{gift.name}</span>
+                <span className="text-[10px] text-muted-foreground font-semibold">₹{gift.price}</span>
               </button>
             ))}
             {gifts.length === 0 && (
