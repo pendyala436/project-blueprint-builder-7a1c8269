@@ -570,7 +570,14 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName }: Mes
             <FileText className="h-3 w-3" /><span>View Document</span>
           </a>
         ) : (
-          <p className="unicode-text" dir="auto">{msg.message}</p>
+          <>
+            <p className="unicode-text" dir="auto">
+              {msg.senderId !== currentUserId && msg.translatedMessage ? msg.translatedMessage : msg.message}
+            </p>
+            {msg.senderId !== currentUserId && msg.isTranslated && msg.translatedMessage && (
+              <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">{msg.message}</p>
+            )}
+          </>
         )}
         <span className="text-[8px] opacity-50 block mt-0.5">
           {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
