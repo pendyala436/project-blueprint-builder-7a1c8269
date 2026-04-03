@@ -718,6 +718,27 @@ const ProfileDetailScreen = () => {
           </div>
         </Card>
       </main>
+
+      {/* Recharge Required Dialog */}
+      <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-destructive" />
+              Recharge Required
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {rechargeMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/wallet')}>
+              Recharge Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
