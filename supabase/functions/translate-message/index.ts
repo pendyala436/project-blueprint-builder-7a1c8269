@@ -1,11 +1,13 @@
 /**
  * translate-message Edge Function
  * 
- * Embeds lingva-scraper logic directly — scrapes Google Translate's mobile page.
+ * Embedded lingva-scraper — scrapes Google Translate's mobile page directly.
  * No external API, no Lingva instance, no API key required.
  * Uses English as pivot language for non-direct translation pairs.
  * Caches results in translation_cache table.
+ * English fallback for all unsupported languages.
  * 
+ * Supports ALL 130+ Google Translate languages.
  * Based on: https://github.com/thedaviddelta/lingva-scraper (MIT License)
  */
 
@@ -18,7 +20,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-// ─── Google Translate supported languages (from lingva-scraper) ───
+// ─── All Google Translate supported languages ───
 const GOOGLE_LANGUAGES: Record<string, string> = {
   "auto": "Detect", "af": "Afrikaans", "sq": "Albanian", "am": "Amharic",
   "ar": "Arabic", "hy": "Armenian", "as": "Assamese", "ay": "Aymara",
@@ -62,13 +64,32 @@ const REQUEST_MAPPINGS: Record<string, string> = {
   "zh": "zh-CN", "zh_HANT": "zh-TW",
 };
 
-// Language name → code (for user-friendly input)
+// Language name → code (case-insensitive)
 const NAME_TO_CODE: Record<string, string> = {};
 for (const [code, name] of Object.entries(GOOGLE_LANGUAGES)) {
   NAME_TO_CODE[name.toLowerCase()] = code;
 }
+// Common aliases
+NAME_TO_CODE["bangla"] = "bn";
+NAME_TO_CODE["mandarin"] = "zh";
+NAME_TO_CODE["cantonese"] = "zh_HANT";
+NAME_TO_CODE["odia"] = "or";
+NAME_TO_CODE["oriya"] = "or";
+NAME_TO_CODE["manipuri"] = "mni-Mtei";
+NAME_TO_CODE["meiteilon"] = "mni-Mtei";
+NAME_TO_CODE["filipino"] = "tl";
+NAME_TO_CODE["tagalog"] = "tl";
+NAME_TO_CODE["hebrew"] = "iw";
+NAME_TO_CODE["javanese"] = "jw";
+NAME_TO_CODE["myanmar"] = "my";
+NAME_TO_CODE["burmese"] = "my";
+NAME_TO_CODE["chinese (simplified)"] = "zh";
+NAME_TO_CODE["chinese (traditional)"] = "zh_HANT";
+NAME_TO_CODE["kurdish"] = "ku";
+NAME_TO_CODE["haitian"] = "ht";
+NAME_TO_CODE["scots"] = "gd";
 
-// Random User-Agent pool to avoid blocks
+// Random User-Agent pool
 const USER_AGENTS = [
   "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
@@ -88,15 +109,23 @@ function mapToGoogleCode(code: string): string {
 function resolveLanguageCode(lang: string): string {
   if (!lang) return 'en';
   const lower = lang.toLowerCase().trim();
+  if (lower === 'auto') return 'auto';
   // Already a valid code
-  if (GOOGLE_LANGUAGES[lower] || lower === 'auto') return lower;
+  if (GOOGLE_LANGUAGES[lower]) return lower;
   // Check name→code map
-  return NAME_TO_CODE[lower] || lower;
+  if (NAME_TO_CODE[lower]) return NAME_TO_CODE[lower];
+  // Try partial match (e.g., "odia (oriya)" → "or")
+  for (const [name, code] of Object.entries(NAME_TO_CODE)) {
+    if (lower.includes(name) || name.includes(lower)) return code;
+  }
+  // Default to English if language not found
+  console.warn(`[translate] Unknown language "${lang}", falling back to English`);
+  return 'en';
 }
 
 /**
- * Core translation: scrapes Google Translate mobile page directly.
- * Exactly how lingva-scraper works internally.
+ * Core: Scrape Google Translate mobile page directly (lingva-scraper approach).
+ * No API key needed. Supports all 130+ languages.
  */
 async function scrapeGoogleTranslate(
   text: string,
@@ -148,8 +177,11 @@ async function scrapeGoogleTranslate(
 
 /**
  * Translate using English as pivot language.
- * If source or target is English, translate directly.
- * Otherwise: source → English → target
+ * 
+ * Rules:
+ * - source or target is English or auto → direct translation
+ * - Latin-to-Latin scripts → direct translation (Google handles well)
+ * - Otherwise: source → English → target (pivot)
  */
 async function translateWithPivot(
   text: string,
@@ -159,15 +191,59 @@ async function translateWithPivot(
   // Direct translation if one side is English or source is auto
   if (sourceLang === 'en' || targetLang === 'en' || sourceLang === 'auto') {
     const result = await scrapeGoogleTranslate(text, sourceLang, targetLang);
-    return result || text;
+    return result || text; // English fallback
   }
 
   // Pivot through English: source → en → target
   const toEnglish = await scrapeGoogleTranslate(text, sourceLang, 'en');
-  if (!toEnglish) return text;
+  if (!toEnglish) return text; // English fallback
 
   const toTarget = await scrapeGoogleTranslate(toEnglish, 'en', targetLang);
-  return toTarget || toEnglish;
+  return toTarget || toEnglish; // If target fails, return English (fallback)
+}
+
+/**
+ * Check DB cache for a translation
+ */
+async function checkCache(
+  supabase: ReturnType<typeof createClient>,
+  srcCode: string,
+  tgtCode: string,
+  text: string
+): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('translation_cache')
+      .select('translated_text')
+      .eq('source_lang', srcCode)
+      .eq('target_lang', tgtCode)
+      .eq('source_text', text)
+      .maybeSingle();
+    return data?.translated_text || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cache translation result (fire-and-forget)
+ */
+function cacheResult(
+  supabase: ReturnType<typeof createClient>,
+  srcCode: string,
+  tgtCode: string,
+  sourceText: string,
+  translatedText: string
+) {
+  supabase
+    .from('translation_cache')
+    .upsert({
+      source_lang: srcCode,
+      target_lang: tgtCode,
+      source_text: sourceText,
+      translated_text: translatedText,
+    }, { onConflict: 'source_lang,target_lang,source_text' })
+    .then(() => {});
 }
 
 Deno.serve(async (req) => {
@@ -209,51 +285,29 @@ Deno.serve(async (req) => {
     }
 
     // Init Supabase for cache
-    const supabase = createClient(
+    const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     // ─── Single text translation ───
     if (text) {
-      // Check cache
-      const { data: cached } = await supabase
-        .from('translation_cache')
-        .select('translated_text')
-        .eq('source_lang', srcCode)
-        .eq('target_lang', tgtCode)
-        .eq('source_text', text)
-        .maybeSingle();
-
+      // Check cache first
+      const cached = await checkCache(supabaseClient, srcCode, tgtCode, text);
       if (cached) {
-        // Bump hit count in background
-        supabase
-          .from('translation_cache')
-          .update({ hit_count: 1 })
-          .eq('source_lang', srcCode)
-          .eq('target_lang', tgtCode)
-          .eq('source_text', text)
-          .then(() => {});
-
         return new Response(
-          JSON.stringify({ translation: cached.translated_text, cached: true }),
+          JSON.stringify({ translation: cached, cached: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Translate via Google (direct scraping)
+      // Live translation via embedded Google scraper
       const translation = await translateWithPivot(text, srcCode, tgtCode);
 
       // Cache result (fire-and-forget)
-      supabase
-        .from('translation_cache')
-        .upsert({
-          source_lang: srcCode,
-          target_lang: tgtCode,
-          source_text: text,
-          translated_text: translation,
-        }, { onConflict: 'source_lang,target_lang,source_text' })
-        .then(() => {});
+      if (translation !== text) {
+        cacheResult(supabaseClient, srcCode, tgtCode, text, translation);
+      }
 
       return new Response(
         JSON.stringify({ translation, cached: false }),
@@ -265,36 +319,19 @@ Deno.serve(async (req) => {
     const results: string[] = [];
     for (const t of texts.slice(0, 20)) {
       try {
-        // Check cache
-        const { data: cached } = await supabase
-          .from('translation_cache')
-          .select('translated_text')
-          .eq('source_lang', srcCode)
-          .eq('target_lang', tgtCode)
-          .eq('source_text', t)
-          .maybeSingle();
-
+        const cached = await checkCache(supabaseClient, srcCode, tgtCode, t);
         if (cached) {
-          results.push(cached.translated_text);
+          results.push(cached);
           continue;
         }
 
         const translation = await translateWithPivot(t, srcCode, tgtCode);
-
-        // Cache
-        supabase
-          .from('translation_cache')
-          .upsert({
-            source_lang: srcCode,
-            target_lang: tgtCode,
-            source_text: t,
-            translated_text: translation,
-          }, { onConflict: 'source_lang,target_lang,source_text' })
-          .then(() => {});
-
+        if (translation !== t) {
+          cacheResult(supabaseClient, srcCode, tgtCode, t, translation);
+        }
         results.push(translation);
       } catch {
-        results.push(t);
+        results.push(t); // English fallback — return original
       }
     }
 
