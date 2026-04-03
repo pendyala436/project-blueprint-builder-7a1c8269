@@ -102,8 +102,14 @@ const MessageBubble = memo(({
               ? 'text-primary dark:text-primary'
               : 'text-emerald-800 dark:text-emerald-200'
           )}>
-            {message.content}
+            {message.translatedContent || message.content}
           </p>
+          {/* English translation below every message — helps users who can speak but not read native script */}
+          {message.englishText && message.englishText.toLowerCase() !== (message.translatedContent || message.content).toLowerCase() && (
+            <p className="text-[10px] text-muted-foreground/70 italic mt-1" dir="ltr">
+              english: {message.englishText.toLowerCase()}
+            </p>
+          )}
         </div>
 
         {/* Timestamp and status */}
