@@ -762,28 +762,39 @@ const MiniChatWindow = ({
                       isOwn ? "items-end" : "items-start"
                     )}
                   >
-                    <span className="text-[9px] text-muted-foreground mb-0.5 px-1">
+                    {/* Sender/Receiver name with distinct colors */}
+                    <span className={cn(
+                      "text-[9px] font-semibold mb-0.5 px-1",
+                      isOwn
+                        ? "text-primary"
+                        : "text-emerald-600 dark:text-emerald-400"
+                    )}>
                       {senderName}
-                      {senderLang && <span className="opacity-60"> • {senderLang}</span>}
+                      {senderLang && <span className="text-muted-foreground/60 font-normal"> • {senderLang}</span>}
                     </span>
                     <div
                       className={cn(
-                        "max-w-[85%] px-2 py-1 rounded-xl text-[11px]",
+                        "max-w-[85%] px-2 py-1 rounded-xl text-[11px] shadow-sm border",
                         isOwn
-                          ? "bg-primary text-primary-foreground rounded-br-sm"
-                          : "bg-muted rounded-bl-sm"
+                          ? "bg-primary/5 border-primary/20 rounded-br-sm"
+                          : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-sm"
                       )}
                     >
-                      <p className="unicode-text" dir="auto">
+                      <p className={cn(
+                        "unicode-text",
+                        isOwn
+                          ? "text-primary dark:text-primary"
+                          : "text-emerald-800 dark:text-emerald-200"
+                      )} dir="auto">
                         {!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message}
                       </p>
-                      {/* English translation shown below every bubble */}
+                      {/* English subtitle below every bubble */}
                       {msg.englishText && msg.englishText.toLowerCase() !== (!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message).toLowerCase() && (
-                        <p className="text-[9px] opacity-50 italic mt-0.5" dir="ltr">
-                          {msg.englishText.toLowerCase()}
+                        <p className="text-[9px] text-muted-foreground/60 italic mt-0.5" dir="ltr">
+                          english: {msg.englishText.toLowerCase()}
                         </p>
                       )}
-                      <span className="text-[8px] opacity-50 block mt-0.5">
+                      <span className="text-[8px] text-muted-foreground/50 block mt-0.5">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
