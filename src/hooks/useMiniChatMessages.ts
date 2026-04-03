@@ -207,7 +207,9 @@ export const useMiniChatMessages = ({
           let translationFailed = false;
 
           try {
-            const result = await translateMessageForViewer(m.message, currentUserLanguage || 'English');
+            // Determine sender language for cross-language transliteration bridge
+            const msgSenderLang = m.sender_id === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateMessageForViewer(m.message, currentUserLanguage || 'English', msgSenderLang);
             translatedMessage = result.displayText;
             englishText = result.englishText;
             isTranslated = result.isTranslated;
