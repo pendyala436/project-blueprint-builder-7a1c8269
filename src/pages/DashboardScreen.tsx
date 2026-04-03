@@ -561,8 +561,8 @@ const DashboardScreen = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       
-      const profileTimeout = new Promise<{ data: null, error: Error }>((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      const profileTimeout = new Promise<{ data: null, error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
       );
       
       let mainProfile: { gender?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null } | null = null;
