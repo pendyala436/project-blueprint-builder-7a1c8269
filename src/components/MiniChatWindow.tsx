@@ -164,12 +164,6 @@ const MiniChatWindow = ({
 
         if (!sessionStartedRef.current) {
           sessionStartedRef.current = true;
-          toast({
-            title: "Chat Started",
-            description: userGender === "male" 
-              ? `You're being charged ₹${pricing?.rate_per_minute || ratePerMinute}/min`
-              : `You'll earn ₹${pricing?.women_earning_rate || earningRate}/min`,
-          });
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
