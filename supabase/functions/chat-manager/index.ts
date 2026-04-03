@@ -1119,29 +1119,50 @@ serve(async (req) => {
         const sortedIds = [String(man_user_id), String(woman_user_id)].sort();
         const chatId = `${sortedIds[0]}_${sortedIds[1]}`;
 
-        // Clean up any ended sessions with this chat_id (unique constraint)
-        await supabase
-          .from("active_chat_sessions")
-          .delete()
-          .eq("chat_id", chatId)
-          .not("status", "in", '("active","pending")');
-
-        // Check for existing active or pending session with this chat ID
+        // Check for ANY existing session with this chat_id
         const { data: existingSession } = await supabase
           .from("active_chat_sessions")
           .select("*")
           .eq("chat_id", chatId)
-          .in("status", ["active", "pending"])
           .maybeSingle();
 
         let session;
         if (existingSession) {
-          // Reuse existing active session
-          session = existingSession;
-          console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
+          if (existingSession.status === "active" || existingSession.status === "pending") {
+            // Reuse existing active/pending session
+            session = existingSession;
+            console.log(`[START_CHAT] Reusing existing session ${existingSession.id} for chat ${chatId}`);
+          } else {
+            // Session exists but is ended/inactive — recycle it by updating in-place
+            // This avoids FK constraint violations from women_earnings references
+            const { data: recycledSession, error: recycleError } = await supabase
+              .from("active_chat_sessions")
+              .update({
+                man_user_id,
+                woman_user_id,
+                rate_per_minute: ratePerMinute,
+                status: "pending",
+                started_at: new Date().toISOString(),
+                ended_at: null,
+                end_reason: null,
+                total_minutes: 0,
+                total_earned: 0,
+                last_activity_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingSession.id)
+              .select()
+              .single();
+
+            if (recycleError) {
+              console.error(`[START_CHAT] Failed to recycle session ${existingSession.id}:`, recycleError);
+              throw recycleError;
+            }
+            session = recycledSession;
+            console.log(`[START_CHAT] Recycled ended session ${existingSession.id} for chat ${chatId}`);
+          }
         } else {
-          // Create session as 'pending' - woman must accept before it becomes 'active'
-          // This prevents the woman from going busy before she accepts
+          // No existing session — create new
           const { data: newSession, error: sessionError } = await supabase
             .from("active_chat_sessions")
             .insert({
@@ -1155,9 +1176,9 @@ serve(async (req) => {
             .single();
 
           if (sessionError) {
-            // Race condition: another request already created the session
             if (sessionError.code === '23505') {
-              console.log(`[START_CHAT] Race condition detected for chat ${chatId}, fetching existing session`);
+              // Race condition: fetch whatever exists now
+              console.log(`[START_CHAT] Race condition for chat ${chatId}, fetching existing`);
               const { data: raceSession } = await supabase
                 .from("active_chat_sessions")
                 .select("*")
