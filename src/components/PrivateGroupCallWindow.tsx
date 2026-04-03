@@ -241,15 +241,31 @@ export function PrivateGroupCallWindow({
         filter: `group_id=eq.${group.id}`
       }, (payload) => {
         const msg = payload.new as any;
+        const text: string = msg.message || '';
+
+        // Check if this is a gift broadcast message
+        if (text.startsWith('__GIFT__::')) {
+          // Only show animation for OTHER users (sender already sees it locally)
+          if (msg.sender_id !== currentUserId) {
+            const parts = text.split('::');
+            const emoji = parts[1] || '🎁';
+            const giftName = parts[2] || 'Gift';
+            const price = parseFloat(parts[3]) || 0;
+            const senderName = getParticipantName(msg.sender_id);
+            addAnimatedGift(senderName, { id: msg.id, emoji, name: giftName, price });
+          }
+          return; // Don't show gift broadcasts as chat messages
+        }
+
         if (msg.sender_id !== currentUserId) {
           const name = getParticipantName(msg.sender_id);
-          addChatMessage(name, msg.message || '', false);
+          addChatMessage(name, text, false);
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addChatMessage]);
+  }, [group.id, currentUserId, addChatMessage, addAnimatedGift]);
 
   // Extension check — query DB instead of localStorage
   useEffect(() => {
