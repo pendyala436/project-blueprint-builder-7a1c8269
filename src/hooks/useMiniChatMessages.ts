@@ -15,6 +15,8 @@ interface UseMiniChatMessagesOptions {
   chatId: string;
   currentUserId: string;
   isMinimized: boolean;
+  currentUserLanguage?: string;
+  partnerLanguage?: string;
 }
 
 export const useMiniChatMessages = ({
