@@ -383,6 +383,7 @@ const MiniChatWindow = ({
           
           // Translate incoming partner messages
           let translatedMessage: string | undefined;
+          let englishText: string | undefined;
           let isTranslated = false;
 
           if (isPartnerMessage && partnerLanguage && currentUserLanguage) {
@@ -396,8 +397,16 @@ const MiniChatWindow = ({
                 translatedMessage = result.translated;
                 isTranslated = true;
               }
+              englishText = result.englishText;
             } catch {
               // Fallback: show original (English fallback)
+            }
+          } else if (!isPartnerMessage && currentUserLanguage) {
+            // For own messages, get English subtitle
+            try {
+              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+            } catch {
+              // ignore
             }
           }
           
@@ -415,6 +424,7 @@ const MiniChatWindow = ({
               senderId: newMsg.sender_id,
               message: newMsg.message,
               translatedMessage,
+              englishText,
               isTranslated,
               createdAt: newMsg.created_at
             }];
