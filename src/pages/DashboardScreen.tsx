@@ -1768,13 +1768,7 @@ const DashboardScreen = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                const section = document.getElementById('private-groups-section');
-                if (section) {
-                  const refreshBtn = section.querySelector<HTMLButtonElement>('button[class*="ghost"]');
-                  refreshBtn?.click();
-                }
-              }}
+              onClick={() => setPrivateGroupsRefreshKey(prev => prev + 1)}
               className="gap-1 h-7 text-xs px-2"
             >
               <RefreshCw className="w-3.5 h-3.5" />
