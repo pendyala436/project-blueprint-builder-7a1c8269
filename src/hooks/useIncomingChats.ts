@@ -257,9 +257,20 @@ export const useIncomingChats = (
     };
   }, [currentUserId, userGender]);
 
-  const acceptChat = useCallback((sessionId: string) => {
+  const acceptChat = useCallback(async (sessionId: string) => {
     acceptedChatsRef.current.add(sessionId);
     setIncomingChats(prev => prev.filter(c => c.sessionId !== sessionId));
+    
+    // Transition pending → active so billing/availability triggers fire
+    try {
+      await supabase
+        .from("active_chat_sessions")
+        .update({ status: "active", started_at: new Date().toISOString() })
+        .eq("id", sessionId)
+        .in("status", ["pending", "active"]);
+    } catch (error) {
+      console.error("[useIncomingChats] Error activating session:", error);
+    }
   }, []);
 
   const rejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
