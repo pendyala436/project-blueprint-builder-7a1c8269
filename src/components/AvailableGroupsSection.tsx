@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -89,12 +90,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchGroups = async () => {
     try {
+      // Fetch ALL active groups (both live and not live) so men can see status
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
-        .eq('is_live', true)
-        .not('current_host_id', 'is', null)
+        .order('is_live', { ascending: false }) // live groups first
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -210,12 +211,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="font-medium">No private groups live</p>
-          <p className="text-sm">Check back later when a host goes live!</p>
+          <p className="font-medium">No private groups available</p>
+          <p className="text-sm">Check back later when groups are created!</p>
         </CardContent>
       </Card>
     );
   }
+
+  const liveCount = groups.filter(g => g.is_live && g.current_host_id).length;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
@@ -232,7 +235,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Badge variant="outline" className="text-xs">
-            {groups.length} Live
+            {liveCount} Live / {groups.length} Total
           </Badge>
         </div>
       </div>
@@ -246,15 +249,22 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => {
+          const isLive = group.is_live && !!group.current_host_id;
           const isFull = group.participant_count >= MAX_PARTICIPANTS;
           const isJoining = joiningGroupId === group.id;
 
           return (
-            <Card key={group.id} className="relative overflow-hidden border-destructive/30">
-              <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
-                <Radio className="h-3 w-3 animate-pulse" />
-                LIVE
-              </Badge>
+            <Card key={group.id} className={cn("relative overflow-hidden", isLive ? "border-destructive/30" : "border-muted opacity-75")}>
+              {isLive ? (
+                <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
+                  <Radio className="h-3 w-3 animate-pulse" />
+                  LIVE
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="absolute top-2 right-2 gap-1 z-10 text-muted-foreground">
+                  OFFLINE
+                </Badge>
+              )}
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">{FLOWER_EMOJIS[group.name] || '🌸'}</div>
@@ -267,6 +277,13 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Show host offline message for non-live groups */}
+                {!isLive && (
+                  <div className="p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
+                    ⚠️ Host has not logged in or gone live yet. You can join once the host starts the session.
+                  </div>
+                )}
+
                 {group.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
                 )}
@@ -283,14 +300,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleJoinGroup(group)}
-                  disabled={!hasEnoughBalance || isFull || isJoining}
+                  disabled={!isLive || !hasEnoughBalance || isFull || isJoining}
                 >
                   {isJoining ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Video className="h-4 w-4" />
                   )}
-                  {isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
+                  {!isLive ? 'Host Offline' : isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
                 </Button>
               </CardContent>
             </Card>
