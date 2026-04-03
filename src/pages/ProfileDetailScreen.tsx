@@ -137,7 +137,8 @@ const ProfileDetailScreen = () => {
         languagesResult,
         photosResult,
         statusResult,
-        matchResult
+        matchResult,
+        walletResult
       ] = await Promise.all([
         supabase.from("profiles")
           .select("gender, has_golden_badge, golden_badge_expires_at")
