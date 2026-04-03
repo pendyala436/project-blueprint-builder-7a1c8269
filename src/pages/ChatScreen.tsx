@@ -1618,9 +1618,10 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // Display translated message if available, otherwise original
+                // Display translated message if available for received, otherwise original
                 const displayText = (!isMine && message.translatedMessage) ? message.translatedMessage : messageText;
-                const showOriginal = !isMine && message.isTranslated && message.translatedMessage;
+                // English subtitle shown below every bubble
+                const englishSubtitle = message.englishText;
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
