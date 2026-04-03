@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000;
 const BILLING_WARNING_MS = 2 * 60 * 1000;
@@ -29,7 +28,6 @@ export const useMiniChatBilling = ({
   messages,
   onClose,
 }: UseMiniChatBillingOptions) => {
-  const { toast } = useToast();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [billingStarted, setBillingStarted] = useState(false);
   const [isBillingPaused, setIsBillingPaused] = useState(false);
@@ -68,20 +66,13 @@ export const useMiniChatBilling = ({
 
           if (wallet) {
             setWalletBalance(wallet.balance);
-            if (wallet.balance < ratePerMinute) {
-              toast({
-                title: "Low Balance",
-                description: "Please recharge to continue chatting",
-                variant: "destructive",
-              });
-            }
           }
         }
       } catch (error) {
         console.error("Heartbeat error:", error);
       }
     }, 62000); // 62s to compensate for JS timer drift
-  }, [chatId, sessionId, currentUserId, userGender, ratePerMinute, toast]);
+  }, [chatId, sessionId, currentUserId, userGender, ratePerMinute]);
 
   const stopBillingTimers = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -122,13 +113,9 @@ export const useMiniChatBilling = ({
         setIsBillingPaused(false);
         setLastActivityTime(Date.now());
         startBilling();
-        toast({
-          title: "Billing Resumed",
-          description: "Both users are active again. Charging/earning resumed.",
-        });
       }
     }
-  }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime, startBilling, toast]);
+  }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime, startBilling]);
 
   // Effect 4: Inactivity warning, billing pause, and logout timeout
   useEffect(() => {
@@ -149,18 +136,10 @@ export const useMiniChatBilling = ({
       setInactiveWarning(null);
       stopBillingTimers();
       setIsBillingPaused(true);
-      toast({
-        title: "Billing Paused",
-        description: "No activity for 3 minutes. Charging/earning stopped. Chat remains open.",
-      });
     }, BILLING_PAUSE_TIMEOUT_MS);
 
     if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     logoutTimeoutRef.current = setTimeout(async () => {
-      toast({
-        title: "Chat Ended",
-        description: "No activity for 15 minutes. This chat has been closed.",
-      });
       try {
         await supabase
           .from("active_chat_sessions")
@@ -177,7 +156,7 @@ export const useMiniChatBilling = ({
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
       if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     };
-  }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused, stopBillingTimers, toast]);
+  }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused, stopBillingTimers]);
 
   // Cleanup all timers on unmount
   useEffect(() => {

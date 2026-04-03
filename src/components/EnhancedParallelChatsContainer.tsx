@@ -92,13 +92,11 @@ const EnhancedParallelChatsContainer = ({
       
       // Men see pending sessions immediately (they initiate chats)
       // Women only see active/paused (they must accept via IncomingChatPopup first)
-      const statusFilter = userGender === "male" 
-        ? ["active", "paused", "billing_paused", "pending"]
-        : ["active", "paused", "billing_paused"];
+      const statusFilter = ["active", "paused", "billing_paused", "pending"];
       
       const { data: sessions, error: sessionsError } = await supabase
         .from("active_chat_sessions")
-        .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
+        .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, started_at, updated_at, status`)
         .eq(column, currentUserId)
         .in("status", statusFilter)
         .order("created_at", { ascending: false })
@@ -130,7 +128,7 @@ const EnhancedParallelChatsContainer = ({
         userGender === "female" 
           ? supabase
               .from("chat_messages")
-              .select("chat_id")
+              .select("chat_id, created_at")
               .in("chat_id", sessions.map(s => s.chat_id))
               .eq("sender_id", currentUserId)
               .limit(100)
@@ -145,7 +143,21 @@ const EnhancedParallelChatsContainer = ({
       const ratePerMinute = pricing?.rate_per_minute || 2;
       const earningRatePerMinute = pricing?.women_earning_rate || 2;
 
-      const chatsWithUserMessages = new Set(messages.map(m => m.chat_id));
+      const sessionStartTimes = new Map(
+        sessions.map(s => [
+          s.chat_id,
+          (s as any).started_at || (s as any).updated_at || s.created_at,
+        ])
+      );
+      const chatsWithUserMessages = new Set(
+        messages
+          .filter((m: any) => {
+            const sessionStart = sessionStartTimes.get(m.chat_id);
+            if (!sessionStart) return true;
+            return new Date(m.created_at) >= new Date(sessionStart as string);
+          })
+          .map((m: any) => m.chat_id)
+      );
       const profileMap = new Map((profiles as any[]).map(p => [p.user_id, p]));
       const statusMap = new Map((statuses as any[]).map(s => [s.user_id, s.is_online as boolean]));
 

@@ -347,32 +347,35 @@ const ProfileDetailScreen = () => {
         }
       }
 
-      // Create chat ID - sorted UUIDs joined with underscore (consistent across codebase)
-      const chatId = [currentUserId, profile.userId].sort().join("_");
-
-      // Check if there's already an active session
-      const { data: existingSession } = await supabase
-        .from("active_chat_sessions")
-        .select("id")
-        .eq("chat_id", chatId)
-        .in("status", ["active", "pending", "paused", "billing_paused"])
-        .maybeSingle();
-
-      if (!existingSession) {
-        // Create new chat session with 'pending' status
-        // Woman must accept before it becomes 'active' (which triggers busy status)
-        await supabase.from("active_chat_sessions").insert({
-          chat_id: chatId,
+      const { data, error } = await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "start_chat",
           man_user_id: isMale ? currentUserId : profile.userId,
           woman_user_id: isMale ? profile.userId : currentUserId,
-          status: "pending",
-          rate_per_minute: pricing.ratePerMinute,
+          golden_badge_override: isFemale,
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.message || "Failed to start chat");
+      }
+
+      if (data.chat_id) {
+        await supabase.from("chat_messages").insert({
+          chat_id: data.chat_id,
+          sender_id: currentUserId,
+          receiver_id: profile.userId,
+          message: "👋 Hi!"
         });
       }
 
       // Navigate back to dashboard
       const dashboardRoute = isMale ? "/dashboard" : "/women-dashboard";
       navigate(dashboardRoute);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('force-reload-chats'));
+      }, 300);
       
       toast({
         title: t('chatStarted', 'Chat Started'),

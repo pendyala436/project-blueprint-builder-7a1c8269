@@ -1021,6 +1021,10 @@ const WomenDashboardScreen = () => {
         });
       }
 
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('force-reload-chats'));
+      }, 300);
+
       toast({
         title: t('chatStarted', 'Chat Started!'),
         description: t('chatInitiated', 'Chat session started successfully'),

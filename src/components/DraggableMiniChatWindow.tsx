@@ -181,12 +181,6 @@ const DraggableMiniChatWindow = ({
 
         if (!sessionStartedRef.current) {
           sessionStartedRef.current = true;
-          const desc = userGender === "male"
-            ? "Billing has started for this chat."
-            : isEarningEligible
-              ? "You're now earning from this chat!"
-              : "Enjoy chatting! (Free chat - no earnings)";
-          toast({ title: "Chat Started", description: desc });
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -359,14 +353,6 @@ const DraggableMiniChatWindow = ({
       )}
       onClick={onFocus}
     >
-      {/* Inactivity Warning */}
-      {billing.inactiveWarning && (
-        <div className="flex items-center gap-1 px-2 py-0.5 bg-destructive/10 text-destructive text-[9px]">
-          <AlertTriangle className="h-2.5 w-2.5" />
-          <span>{billing.inactiveWarning}</span>
-        </div>
-      )}
-
       {/* Header */}
       <div
         className={cn(
@@ -388,45 +374,12 @@ const DraggableMiniChatWindow = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-xs font-medium truncate">{partnerName}</p>
-              {userGender === "male" && billing.walletBalance > 0 && (
-                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5">
-                  <Wallet className="h-2 w-2" />₹{billing.walletBalance.toFixed(0)}
-                </Badge>
-              )}
-              {userGender === "female" && isEarningEligible && billing.todayEarnings > 0 && (
-                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-green-500/30 text-green-600">
-                  <TrendingUp className="h-2 w-2" />₹{billing.todayEarnings.toFixed(0)}
-                </Badge>
-              )}
-              {userGender === "female" && !isEarningEligible && (
-                <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-muted text-muted-foreground">Free</Badge>
-              )}
             </div>
             {billing.billingStarted && (
-              <div className="flex items-center gap-1 text-[10px]">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Clock className="h-2 w-2 text-muted-foreground" />
                 <span className="text-muted-foreground">{formatTime(billing.elapsedSeconds)}</span>
-                {userGender === "male" ? (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <IndianRupee className="h-2 w-2 text-destructive" />
-                    <span className="text-destructive">₹{billing.estimatedCost.toFixed(1)}</span>
-                  </>
-                ) : isEarningEligible ? (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <TrendingUp className="h-2 w-2 text-green-500" />
-                    <span className="text-green-500">+₹{billing.estimatedEarning.toFixed(1)}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground text-[9px]">(Free chat)</span>
-                )}
               </div>
-            )}
-            {!billing.billingStarted && (
-              <p className="text-[10px] text-muted-foreground">
-                {userGender === "male" ? "Both reply to start" : isEarningEligible ? "Reply to start earning" : "Free chat - Reply to start"}
-              </p>
             )}
           </div>
           {unreadCount > 0 && isMinimized && (
@@ -480,7 +433,7 @@ const DraggableMiniChatWindow = ({
                 </button>
               )}
               {messages.length === 0 && (
-                <p className="text-center text-[10px] text-muted-foreground py-4">Say hi to start! Billing begins when both reply.</p>
+                <p className="text-center text-[10px] text-muted-foreground py-4">Say hi to start chatting.</p>
               )}
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} msg={msg} currentUserId={currentUserId} currentUserName={currentUserName} partnerName={partnerName} />
