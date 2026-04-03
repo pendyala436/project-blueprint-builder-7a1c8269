@@ -363,9 +363,22 @@ export function PrivateGroupCallWindow({
       const result = data as { success: boolean; error?: string };
 
       if (result.success) {
+        // Show gift locally for sender immediately
         addAnimatedGift(userName, gift);
         toast.success(`${gift.emoji} Gift sent!`);
         setShowGiftDialog(false);
+
+        // Broadcast gift to all participants via group_messages with a special prefix
+        supabase
+          .from('group_messages')
+          .insert({
+            group_id: group.id,
+            sender_id: currentUserId,
+            message: `__GIFT__::${gift.emoji}::${gift.name}::${gift.price}`,
+          })
+          .then(({ error: msgErr }) => {
+            if (msgErr) console.error('Failed to broadcast gift', msgErr);
+          });
       } else {
         toast.error(result.error || 'Failed to send gift');
       }
