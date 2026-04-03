@@ -387,39 +387,20 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // Translate incoming messages from partner
-          const isFromPartner = newMsg.sender_id !== currentUserId;
+          // Translate for current viewer: auto-detect input → viewer's native + English
+          // Works for ALL scenarios: same language, different language, transliteration, native, English
           let translatedMessage: string | undefined;
           let englishText: string | undefined;
           let isTranslated = false;
 
-          // Skip translation entirely when both users share the same language
-          const isSameLanguage = chatPartner && currentUserLanguage && 
-            chatPartner.preferredLanguage.toLowerCase().trim() === currentUserLanguage.toLowerCase().trim();
-
-          if (!isSameLanguage) {
-            if (isFromPartner && chatPartner && currentUserLanguage) {
-              try {
-                const result = await translateChatMessage(
-                  newMsg.message,
-                  chatPartner.preferredLanguage,
-                  currentUserLanguage
-                );
-                if (result.isTranslated) {
-                  translatedMessage = result.translated;
-                  isTranslated = true;
-                }
-                englishText = result.englishText;
-              } catch {
-                // Fallback: show original message (English fallback)
-              }
-            } else if (!isFromPartner && currentUserLanguage) {
-              // For own messages, get English translation for subtitle
-              try {
-                englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
-              } catch {
-                // ignore
-              }
+          if (currentUserLanguage) {
+            try {
+              const result = await translateForViewer(newMsg.message, currentUserLanguage);
+              translatedMessage = result.nativeText;
+              englishText = result.englishText;
+              isTranslated = translatedMessage !== newMsg.message;
+            } catch {
+              // Fallback: show original message
             }
           }
           
