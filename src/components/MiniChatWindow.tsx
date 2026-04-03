@@ -555,18 +555,23 @@ const MiniChatWindow = ({
 
     // Translate optimistic message for sender's own view (native script + English subtitle)
     const senderLang = currentUserLanguage || 'English';
-    if (senderLang.toLowerCase() !== 'english') {
-      translateForViewer(messageText, senderLang).then(result => {
+    translateForViewer(messageText, senderLang).then(result => {
+      setMessages(prev => prev.map(m => 
+        m.id === tempId ? { 
+          ...m, 
+          translatedMessage: result.nativeText !== messageText ? result.nativeText : undefined,
+          englishText: result.englishText,
+          isTranslated: result.nativeText !== messageText 
+        } : m
+      ));
+    }).catch(() => {
+      // For English speakers or on failure, still get English translation for subtitle
+      getEnglishTranslation(messageText, 'auto').then(eng => {
         setMessages(prev => prev.map(m => 
-          m.id === tempId ? { 
-            ...m, 
-            translatedMessage: result.nativeText !== messageText ? result.nativeText : undefined,
-            englishText: result.englishText,
-            isTranslated: result.nativeText !== messageText 
-          } : m
+          m.id === tempId ? { ...m, englishText: eng } : m
         ));
       }).catch(() => { /* fallback: show original */ });
-    }
+    });
 
     try {
       const { error } = await supabase
