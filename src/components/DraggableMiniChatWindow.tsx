@@ -289,7 +289,7 @@ const DraggableMiniChatWindow = ({
         setMessages((prev) => prev.map((m) => 
           m.id === tempId ? { 
             ...m, 
-            translatedMessage: result.nativeText !== inputText ? result.nativeText : undefined,
+            translatedMessage: result.nativeText,
             englishText: result.englishText,
             isTranslated: result.nativeText !== inputText 
           } : m
