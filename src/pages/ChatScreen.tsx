@@ -9,7 +9,7 @@
  * - Date-grouped message display
  * - Online/offline status indicators
  * 
- * NOTE: Translation system is disabled. Messages are sent as plain text.
+ * NOTE: Multilingual translation via Lingva (Google Translate scraper) for all 130+ languages.
  * 
  * DATABASE TABLES USED:
  * - chat_messages: Stores all chat messages
@@ -1019,7 +1019,7 @@ const ChatScreen = () => {
    * handleSendMessage Function
    * 
    * Sends a new message to the chat partner.
-   * Messages are sent as plain text — no translation.
+   * Messages are sent as plain text; translation happens via realtime subscription.
    */
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || !chatPartner || isSending) return;
@@ -1606,7 +1606,7 @@ const ChatScreen = () => {
         </div>
       )}
 
-      {/* Translation info bar removed - auto-translate disabled */}
+      {/* Translation happens automatically via realtime subscription */}
 
       {/* ============= BILLING/EARNINGS BAR ============= */}
       {chatPartner && (
@@ -1717,10 +1717,10 @@ const ChatScreen = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
-                            {/* English translation shown below every message bubble */}
-                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                            {/* English translation shown below EVERY message bubble (per spec) */}
+                            {englishSubtitle && (
                               <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
-                                {englishSubtitle.toLowerCase()}
+                                english: {englishSubtitle.toLowerCase()}
                               </p>
                             )}
                           </div>

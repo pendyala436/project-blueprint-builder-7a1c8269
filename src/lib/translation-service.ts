@@ -124,18 +124,16 @@ export async function translateForViewer(
       finalNative = await translateText(message, 'English', viewerLanguage);
     }
 
-    // Similarly for English: if auto returned unchanged, it might already be English
+    // If translation still returned same text for non-English viewer,
+    // the language may be unsupported — fall back to English display
     let finalEnglish = englishResult;
-    if (finalEnglish === message && viewerLang !== 'english') {
-      // The text might be transliteration — try getting English via auto→en
-      // (already done above, so if still same, it IS English or untranslatable)
-    }
 
     return {
       nativeText: finalNative,
       englishText: finalEnglish,
     };
   } catch {
+    // On any failure, fall back to English (unsupported language fallback)
     return { nativeText: message, englishText: message };
   }
 }
