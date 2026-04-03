@@ -113,6 +113,7 @@ const DirectVideoCallButton = ({
         .maybeSingle();
 
       if (!targetStatus?.is_online) {
+        preStream?.getTracks().forEach(t => t.stop());
         toast({
           title: "User Offline",
           description: `${targetName} is not online right now.`,
@@ -130,6 +131,7 @@ const DirectVideoCallButton = ({
         .limit(1);
 
       if (activeCalls && activeCalls.length > 0) {
+        preStream?.getTracks().forEach(t => t.stop());
         toast({
           title: "User Busy",
           description: `${targetName} is currently in another call.`,
@@ -177,6 +179,7 @@ const DirectVideoCallButton = ({
 
         if (directError) {
           console.error("Error creating call session:", directError);
+          preStream?.getTracks().forEach(t => t.stop());
           toast({
             title: "Error",
             description: "Failed to start video call. Please try again.",

@@ -1544,7 +1544,7 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3 h-3" />
                             </Button>
-                            {userCountry === "IN" && woman.country?.toLowerCase().includes('india') && (
+                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && (
                               <DirectVideoCallButton
                                 currentUserId={currentUserId}
                                 targetUserId={woman.user_id}
@@ -1650,6 +1650,17 @@ const DashboardScreen = () => {
                             >
                               <Eye className="w-3 h-3" />
                             </Button>
+                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && (
+                              <DirectVideoCallButton
+                                currentUserId={currentUserId}
+                                targetUserId={woman.user_id}
+                                targetName={woman.full_name || "User"}
+                                targetPhoto={woman.photo_url}
+                                walletBalance={walletBalance}
+                                onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                                iconOnly={true}
+                              />
+                            )}
                             <Button
                               variant="aurora"
                               size="sm"

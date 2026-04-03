@@ -1184,7 +1184,7 @@ const WomenDashboardScreen = () => {
                     Chat
                   </Button>
                   {/* Video call: Golden Badge + Indian woman + Indian man + same language */}
-                  {user.isSameLanguage && isIndianWoman && user.country?.toLowerCase().includes('india') && (
+                  {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                     <DirectVideoCallButton
                       currentUserId={currentUserId}
                       targetUserId={user.userId}

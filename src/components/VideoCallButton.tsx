@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useChatPricing } from "@/hooks/useChatPricing";
 import { supportsWebRTC } from "@/lib/capabilities";
 import VideoCallModal from "./VideoCallModal";
 import {
@@ -35,6 +36,7 @@ const VideoCallButton = ({
 }: VideoCallButtonProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { pricing } = useChatPricing();
   const [isSearching, setIsSearching] = useState(false);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
@@ -65,14 +67,15 @@ const VideoCallButton = ({
     
     if (!isSuperUser) {
       // Minimum balance required to start video call (₹8/min * 2 min buffer)
-      const minBalance = 16;
+      const videoRate = pricing.videoRatePerMinute || 8;
+      const minBalance = videoRate * 2;
       
       if (walletBalance <= 0) {
         setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start video calls.");
         setShowRechargeDialog(true);
         return;
       } else if (walletBalance < minBalance) {
-        setRechargeMessage(`You need at least ₹${minBalance} to start a video call (₹8/minute). Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
+        setRechargeMessage(`You need at least ₹${minBalance} to start a video call (₹${videoRate}/minute). Your current balance is ₹${walletBalance}. Please recharge your wallet.`);
         setShowRechargeDialog(true);
         return;
       }
@@ -125,7 +128,7 @@ const VideoCallButton = ({
           man_user_id: currentUserId,
           woman_user_id: result.woman.user_id,
           status: 'ringing',
-          rate_per_minute: 8.00 // ₹8/min per spec
+          rate_per_minute: pricing.videoRatePerMinute || 8.00
         });
 
       if (sessionError) throw sessionError;
