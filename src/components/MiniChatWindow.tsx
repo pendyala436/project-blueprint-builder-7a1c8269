@@ -1,5 +1,5 @@
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
-import { translateChatMessage } from "@/lib/translation-service";
+import { translateChatMessage, getEnglishTranslation } from "@/lib/translation-service";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ interface Message {
   senderId: string;
   message: string;
   translatedMessage?: string;
+  englishText?: string;
   isTranslated?: boolean;
   createdAt: string;
 }
@@ -382,6 +383,7 @@ const MiniChatWindow = ({
           
           // Translate incoming partner messages
           let translatedMessage: string | undefined;
+          let englishText: string | undefined;
           let isTranslated = false;
 
           if (isPartnerMessage && partnerLanguage && currentUserLanguage) {
@@ -395,8 +397,16 @@ const MiniChatWindow = ({
                 translatedMessage = result.translated;
                 isTranslated = true;
               }
+              englishText = result.englishText;
             } catch {
               // Fallback: show original (English fallback)
+            }
+          } else if (!isPartnerMessage && currentUserLanguage) {
+            // For own messages, get English subtitle
+            try {
+              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+            } catch {
+              // ignore
             }
           }
           
@@ -414,6 +424,7 @@ const MiniChatWindow = ({
               senderId: newMsg.sender_id,
               message: newMsg.message,
               translatedMessage,
+              englishText,
               isTranslated,
               createdAt: newMsg.created_at
             }];
@@ -766,9 +777,10 @@ const MiniChatWindow = ({
                       <p className="unicode-text" dir="auto">
                         {!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message}
                       </p>
-                      {!isOwn && msg.isTranslated && msg.translatedMessage && (
-                        <p className="unicode-text text-[9px] opacity-50 mt-0.5" dir="auto">
-                          {msg.message}
+                      {/* English translation shown below every bubble */}
+                      {msg.englishText && msg.englishText.toLowerCase() !== (!isOwn && msg.translatedMessage ? msg.translatedMessage : msg.message).toLowerCase() && (
+                        <p className="text-[9px] opacity-50 italic mt-0.5" dir="ltr">
+                          {msg.englishText.toLowerCase()}
                         </p>
                       )}
                       <span className="text-[8px] opacity-50 block mt-0.5">

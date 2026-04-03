@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
-import { translateChatMessage } from "@/lib/translation-service";
+import { translateChatMessage, getEnglishTranslation } from "@/lib/translation-service";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
@@ -103,6 +103,7 @@ interface Message {
   senderId: string;              // UUID of sender
   message: string;               // Original message text
   translatedMessage?: string;    // Translated message for display
+  englishText?: string;          // English translation shown below every bubble
   isTranslated?: boolean;        // Whether translation was applied
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
@@ -389,6 +390,7 @@ const ChatScreen = () => {
           // Translate incoming messages from partner
           const isFromPartner = newMsg.sender_id !== currentUserId;
           let translatedMessage: string | undefined;
+          let englishText: string | undefined;
           let isTranslated = false;
 
           if (isFromPartner && chatPartner && currentUserLanguage) {
@@ -402,8 +404,16 @@ const ChatScreen = () => {
                 translatedMessage = result.translated;
                 isTranslated = true;
               }
+              englishText = result.englishText;
             } catch {
               // Fallback: show original message (English fallback)
+            }
+          } else if (!isFromPartner && currentUserLanguage) {
+            // For own messages, get English translation for subtitle
+            try {
+              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+            } catch {
+              // ignore
             }
           }
           
@@ -415,6 +425,7 @@ const ChatScreen = () => {
               senderId: newMsg.sender_id,
               message: newMsg.message,
               translatedMessage,
+              englishText,
               isTranslated,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
@@ -1607,9 +1618,10 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // Display translated message if available, otherwise original
+                // Display translated message if available for received, otherwise original
                 const displayText = (!isMine && message.translatedMessage) ? message.translatedMessage : messageText;
-                const showOriginal = !isMine && message.isTranslated && message.translatedMessage;
+                // English subtitle shown below every bubble
+                const englishSubtitle = message.englishText;
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
@@ -1667,10 +1679,10 @@ const ChatScreen = () => {
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
-                            {/* Show original text below translation for received messages */}
-                            {showOriginal && (
-                              <p className="text-xs mt-1 opacity-60 whitespace-pre-wrap break-words unicode-text" dir="auto">
-                                {messageText}
+                            {/* English translation shown below every message bubble */}
+                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
+                                {englishSubtitle.toLowerCase()}
                               </p>
                             )}
                           </div>
