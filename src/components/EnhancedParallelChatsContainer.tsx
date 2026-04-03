@@ -289,6 +289,8 @@ const EnhancedParallelChatsContainer = ({
         }
       }
       
+      // Track closed session to prevent it from reopening via realtime reload
+      if (sessionId) closedSessionsRef.current.add(sessionId);
       acceptedSessionsRef.current.delete(sessionId || "");
       setActiveChats(prev => prev.filter(c => c.chatId !== chatId));
       
