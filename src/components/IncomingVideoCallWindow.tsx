@@ -58,6 +58,7 @@ const IncomingVideoCallWindow = ({
   onClose
 }: IncomingVideoCallWindowProps) => {
   const { toast } = useToast();
+  const { pricing } = useChatPricing();
   const [isAnswered, setIsAnswered] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
