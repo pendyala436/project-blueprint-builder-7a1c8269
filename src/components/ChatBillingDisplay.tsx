@@ -175,10 +175,7 @@ const ChatBillingDisplay = ({
         startTimer();
         startMessageCheck(data.chat_id);
         
-        toast({
-          title: "Chat Started",
-          description: `You're being charged ₹${data.rate_per_minute}/min`,
-        });
+        // Session started silently - no pricing toast
       } else {
         if (data.message === "Insufficient balance") {
           setShowRechargeDialog(true);
