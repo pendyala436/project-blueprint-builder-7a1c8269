@@ -709,6 +709,50 @@ export function PrivateGroupCallWindow({
           )}
         </div>
 
+        {/* Participant List Panel — Host can enable/disable participant mics */}
+        {isOwner && showParticipantList && (
+          <div className="mx-4 mb-2 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 p-3 max-h-48 overflow-y-auto">
+            <h4 className="text-white/80 text-xs font-semibold mb-2 flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Participants ({participants.filter(p => !p.isOwner).length})
+            </h4>
+            <div className="space-y-1.5">
+              {participants.filter(p => !p.isOwner).map(p => (
+                <div key={p.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
+                      <AvatarImage src={p.photo} />
+                      <AvatarFallback className="text-[9px] bg-primary/20 text-primary">
+                        {p.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-white/90 text-xs truncate">{p.name}</span>
+                  </div>
+                  <Button
+                    variant={p.micEnabled ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={cn(
+                      "h-7 w-7 p-0 rounded-full flex-shrink-0",
+                      p.micEnabled
+                        ? "bg-emerald-500/20 hover:bg-emerald-500/30"
+                        : "bg-white/10 hover:bg-white/20"
+                    )}
+                    onClick={() => enableParticipantMic(p.id, !p.micEnabled)}
+                    title={p.micEnabled ? `Mute ${p.name}` : `Unmute ${p.name}`}
+                  >
+                    {p.micEnabled
+                      ? <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                      : <MicOff className="h-3.5 w-3.5 text-white/50" />
+                    }
+                  </Button>
+                </div>
+              ))}
+              {participants.filter(p => !p.isOwner).length === 0 && (
+                <p className="text-white/40 text-xs text-center py-2">No participants yet</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Chat Input Bar — below media controls */}
         <div className="flex items-center gap-2 px-4 py-2">
           <div className="flex-1 flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-full px-4 py-2 border border-white/10">
