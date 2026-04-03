@@ -1606,7 +1606,7 @@ const ChatScreen = () => {
         </div>
       )}
 
-      {/* Translation info bar removed - auto-translate disabled */}
+      {/* Translation happens automatically via realtime subscription */}
 
       {/* ============= BILLING/EARNINGS BAR ============= */}
       {chatPartner && (
