@@ -103,6 +103,7 @@ interface Message {
   senderId: string;              // UUID of sender
   message: string;               // Original message text
   translatedMessage?: string;    // Translated message for display
+  englishText?: string;          // English translation shown below every bubble
   isTranslated?: boolean;        // Whether translation was applied
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
