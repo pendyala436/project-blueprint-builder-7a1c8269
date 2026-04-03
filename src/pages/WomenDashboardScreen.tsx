@@ -524,7 +524,8 @@ const WomenDashboardScreen = () => {
     return "bg-online";
   };
 
-  const MAX_PARALLEL_CHATS = 3;
+  const { settings: womenSettings } = useAppSettings();
+  const MAX_PARALLEL_CHATS = womenSettings?.maxParallelChats || 3;
   const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async () => {
