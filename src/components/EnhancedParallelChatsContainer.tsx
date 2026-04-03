@@ -66,6 +66,7 @@ const EnhancedParallelChatsContainer = ({
   const [focusedChatId, setFocusedChatId] = useState<string | null>(null);
   const acceptedSessionsRef = useRef<Set<string>>(new Set());
   const closedSessionsRef = useRef<Set<string>>(new Set());
+  const closedChatIdsRef = useRef<Set<string>>(new Set());
   const existingPartnersRef = useRef<Set<string>>(new Set());
   const nextZIndexRef = useRef(50);
   const isLoadingRef = useRef(false);
@@ -166,7 +167,7 @@ const EnhancedParallelChatsContainer = ({
         const partnerId = session[partnerColumn as keyof typeof session] as string;
         
         // Skip sessions that the user explicitly closed in this browser session
-        if (closedSessionsRef.current.has(session.id)) continue;
+        if (closedSessionsRef.current.has(session.id) || closedChatIdsRef.current.has(session.chat_id)) continue;
         
         // For MEN: Show chat window immediately (they initiate chats, or Golden Badge women do)
         // For WOMEN: Only show if they have accepted (sent a message or clicked accept)
@@ -256,6 +257,13 @@ const EnhancedParallelChatsContainer = ({
 
   // Handle closing a chat - defined first so it can be used by handleAcceptChat
   const handleCloseChat = useCallback(async (chatId: string, sessionId?: string, silent = false) => {
+    // CRITICAL: Track closed session/chatId IMMEDIATELY before any async work
+    // to prevent realtime subscription from reopening the window during the edge function call
+    if (sessionId) closedSessionsRef.current.add(sessionId);
+    closedChatIdsRef.current.add(chatId);
+    acceptedSessionsRef.current.delete(sessionId || "");
+    setActiveChats(prev => prev.filter(c => c.chatId !== chatId));
+
     try {
       if (sessionId) {
         // Find the chat to get partner ID
@@ -276,7 +284,7 @@ const EnhancedParallelChatsContainer = ({
           });
         } catch (invokeError) {
           console.error("Error calling chat-manager:", invokeError);
-        toast({ title: "Chat unavailable", description: "Unable to open this chat. Please try again in a moment.", variant: "destructive" });
+          toast({ title: "Chat unavailable", description: "Unable to close this chat properly. Please try again.", variant: "destructive" });
           // Fallback: directly update session
           await supabase
             .from("active_chat_sessions")
@@ -289,10 +297,11 @@ const EnhancedParallelChatsContainer = ({
         }
       }
       
-      // Track closed session to prevent it from reopening via realtime reload
-      if (sessionId) closedSessionsRef.current.add(sessionId);
-      acceptedSessionsRef.current.delete(sessionId || "");
-      setActiveChats(prev => prev.filter(c => c.chatId !== chatId));
+      // Clear chatId from closed set after session is confirmed ended in DB
+      // so future new chats with the same partner can work
+      setTimeout(() => {
+        closedChatIdsRef.current.delete(chatId);
+      }, 5000);
       
       if (!silent) {
         loadActiveChats();
