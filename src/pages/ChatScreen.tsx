@@ -395,17 +395,18 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // Translate for current viewer: auto-detect input → viewer's native + English
-          // Works for ALL scenarios: same language, different language, transliteration, native, English
+          // CHT-01 FIX: Use refs to avoid stale closures
+          const langToUse = currentUserLanguageRef.current || 'English';
+          const userId = currentUserIdRef.current;
+          const partner = chatPartnerRef.current;
+          
           let translatedMessage: string | undefined;
           let englishText: string | undefined;
           let isTranslated = false;
 
-          const langToUse = currentUserLanguage || 'English';
           if (langToUse) {
             try {
-              // Pass sender's language for cross-language transliteration bridge
-              const senderLang = newMsg.sender_id === currentUserId ? currentUserLanguage : chatPartner?.preferredLanguage;
+              const senderLang = newMsg.sender_id === userId ? currentUserLanguageRef.current : partner?.preferredLanguage;
               const result = await translateForViewer(newMsg.message, langToUse, senderLang);
               translatedMessage = result.nativeText;
               englishText = result.englishText;
@@ -431,7 +432,7 @@ const ChatScreen = () => {
           });
 
           // Mark received messages as read automatically
-          if (newMsg.sender_id !== currentUserId) {
+          if (newMsg.sender_id !== userId) {
             markAsRead(newMsg.id);
           }
         }
@@ -442,7 +443,7 @@ const ChatScreen = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeChatId, currentUserId, chatPartner, currentUserLanguage]); // Dependencies
+  }, [activeChatId]); // CHT-01 FIX: Only depend on activeChatId, use refs for everything else
 
   // Issue 2.2: Re-translate history when language loads late
   useEffect(() => {
