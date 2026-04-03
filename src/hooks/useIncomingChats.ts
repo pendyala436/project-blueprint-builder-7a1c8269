@@ -185,7 +185,7 @@ export const useIncomingChats = (
             .filter(m => {
               const sessionStart = sessionStartTimes.get(m.chat_id);
               if (!sessionStart) return true; // fallback: count it
-              return new Date(m.created_at) >= new Date(sessionStart);
+              return new Date(m.created_at) >= new Date(sessionStart as string);
             })
             .map(m => m.chat_id)
         );
