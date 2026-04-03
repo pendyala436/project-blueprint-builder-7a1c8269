@@ -58,24 +58,6 @@ const LATIN_SCRIPT_LANGUAGES = new Set([
   'bosnian', 'albanian',
   // Celtic
   'welsh', 'irish', 'scottish gaelic', 'scots gaelic',
-  // Turkic (Latin-script)
-  'turkish', 'azerbaijani', 'turkmen', 'uzbek',
-  // Southeast Asian (Latin-script)
-  'vietnamese', 'indonesian', 'malay', 'filipino', 'tagalog',
-  'cebuano', 'javanese', 'sundanese',
-  // African (Latin-script)
-  'swahili', 'afrikaans', 'yoruba', 'igbo', 'zulu', 'xhosa',
-  'sotho', 'sesotho', 'shona', 'somali', 'hausa', 'kinyarwanda',
-  'luganda', 'tsonga', 'twi', 'ewe', 'bambara', 'lingala', 'sepedi',
-  'krio', 'oromo',
-  // Pacific
-  'maori', 'samoan', 'hawaiian',
-  // Constructed / Other Latin-script
-  'esperanto', 'latin', 'haitian creole', 'frisian',
-  // Central Asian (Latin-script)
-  'kyrgyz', // uses both Cyrillic and Latin
-  // Americas
-  'quechua', 'guarani', 'aymara',
 ]);
 
 export function isLatinScriptLanguage(lang: string): boolean {
