@@ -374,12 +374,27 @@ const EnhancedParallelChatsContainer = ({
 
   const displayedChats = activeChats.slice(0, maxParallelChats);
 
-  // Filter incoming chats - exclude those for existing partners
-  const pendingIncomingChats = incomingChats.filter(
-    ic => !acceptedSessionsRef.current.has(ic.sessionId) &&
-          !activeChats.some(ac => ac.id === ic.sessionId) &&
-          !existingPartnersRef.current.has(ic.partnerId)
-  );
+  // For men: auto-accept incoming chats (no popup needed)
+  // For women: show accept/reject popup
+  useEffect(() => {
+    if (userGender === "male" && incomingChats.length > 0) {
+      for (const incoming of incomingChats) {
+        if (!acceptedSessionsRef.current.has(incoming.sessionId) &&
+            !activeChats.some(ac => ac.id === incoming.sessionId) &&
+            !existingPartnersRef.current.has(incoming.partnerId)) {
+          handleAcceptChat(incoming.sessionId);
+        }
+      }
+    }
+  }, [incomingChats, userGender, handleAcceptChat, activeChats]);
+
+  const pendingIncomingChats = userGender === "female" 
+    ? incomingChats.filter(
+        ic => !acceptedSessionsRef.current.has(ic.sessionId) &&
+              !activeChats.some(ac => ac.id === ic.sessionId) &&
+              !existingPartnersRef.current.has(ic.partnerId)
+      )
+    : []; // Men never see the popup — chats auto-accept
 
   return (
     <>
