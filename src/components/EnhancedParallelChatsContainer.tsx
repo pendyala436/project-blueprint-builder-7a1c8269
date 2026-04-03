@@ -287,7 +287,7 @@ const EnhancedParallelChatsContainer = ({
       }
     } catch (error) {
       console.error("Error closing chat:", error);
-      toast.error("Chat not closed", { description: "Unable to close this chat. Please refresh and try again." });
+      toast({ title: "Chat not closed", description: "Unable to close this chat. Please refresh and try again.", variant: "destructive" });
     }
   }, [userGender, currentUserId, loadActiveChats, activeChats]);
 
