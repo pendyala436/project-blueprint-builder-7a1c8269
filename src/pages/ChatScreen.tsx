@@ -1535,8 +1535,8 @@ const ChatScreen = () => {
                 View Profile
               </DropdownMenuItem>
               
-              {/* Stop Chat - Only for MEN (men control chat start/stop) */}
-              {currentUserGender === "male" && (
+              {/* CHT-11 FIX: Stop Chat - Available for both genders */}
+              {(
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
