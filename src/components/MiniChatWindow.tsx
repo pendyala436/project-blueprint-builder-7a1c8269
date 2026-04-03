@@ -541,7 +541,7 @@ const MiniChatWindow = ({
       setMessages(prev => prev.map(m => 
         m.id === tempId ? { 
           ...m, 
-          translatedMessage: result.nativeText !== messageText ? result.nativeText : undefined,
+          translatedMessage: result.nativeText,
           englishText: result.englishText,
           isTranslated: result.nativeText !== messageText 
         } : m
