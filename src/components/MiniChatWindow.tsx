@@ -164,12 +164,6 @@ const MiniChatWindow = ({
 
         if (!sessionStartedRef.current) {
           sessionStartedRef.current = true;
-          toast({
-            title: "Chat Started",
-            description: userGender === "male" 
-              ? `You're being charged ₹${pricing?.rate_per_minute || ratePerMinute}/min`
-              : `You'll earn ₹${pricing?.women_earning_rate || earningRate}/min`,
-          });
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -695,25 +689,7 @@ const MiniChatWindow = ({
               <div className="flex items-center gap-1 text-[10px]">
                 <Clock className="h-2 w-2 text-muted-foreground" />
                 <span className="text-muted-foreground">{formatTime(elapsedSeconds)}</span>
-                {userGender === "male" ? (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <IndianRupee className="h-2 w-2 text-destructive" />
-                    <span className="text-destructive">₹{estimatedCost.toFixed(1)}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-muted-foreground">•</span>
-                    <TrendingUp className="h-2 w-2 text-green-500" />
-                    <span className="text-green-500">+₹{estimatedEarning.toFixed(1)}</span>
-                  </>
-                )}
               </div>
-            )}
-            {!billingStarted && (
-              <p className="text-[10px] text-muted-foreground">
-                {userGender === "male" ? `₹${ratePerMinute}/min - Both must reply to start billing` : "Both must reply to start earning"}
-              </p>
             )}
           </div>
           {unreadCount > 0 && isMinimized && (
