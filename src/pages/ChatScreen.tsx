@@ -393,13 +393,26 @@ const ChatScreen = () => {
           let englishText: string | undefined;
           let isTranslated = false;
 
-          // Skip translation entirely when both users share the same language
+          // Check if both users share the same language
           const isSameLanguage = chatPartner && currentUserLanguage && 
             chatPartner.preferredLanguage.toLowerCase().trim() === currentUserLanguage.toLowerCase().trim();
 
-          if (!isSameLanguage) {
-            if (isFromPartner && chatPartner && currentUserLanguage) {
-              try {
+          if (isFromPartner && chatPartner && currentUserLanguage) {
+            try {
+              if (isSameLanguage) {
+                // Same language: translate to native script (handles English/transliterated input → native)
+                const result = await translateChatMessage(
+                  newMsg.message,
+                  'auto',  // auto-detect source (could be English, transliterated, or native)
+                  currentUserLanguage
+                );
+                if (result.isTranslated) {
+                  translatedMessage = result.translated;
+                  isTranslated = true;
+                }
+                // No English subtitle needed for same-language chats
+              } else {
+                // Different languages: translate to receiver's native language
                 const result = await translateChatMessage(
                   newMsg.message,
                   chatPartner.preferredLanguage,
@@ -410,16 +423,16 @@ const ChatScreen = () => {
                   isTranslated = true;
                 }
                 englishText = result.englishText;
-              } catch {
-                // Fallback: show original message (English fallback)
               }
-            } else if (!isFromPartner && currentUserLanguage) {
-              // For own messages, get English translation for subtitle
-              try {
-                englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
-              } catch {
-                // ignore
-              }
+            } catch {
+              // Fallback: show original message
+            }
+          } else if (!isFromPartner && currentUserLanguage && !isSameLanguage) {
+            // For own messages in cross-language chats, get English translation for subtitle
+            try {
+              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
+            } catch {
+              // ignore
             }
           }
           
