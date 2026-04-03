@@ -355,7 +355,7 @@ const ProfileDetailScreen = () => {
         .from("active_chat_sessions")
         .select("id")
         .eq("chat_id", chatId)
-        .eq("status", "active")
+        .in("status", ["active", "pending", "paused", "billing_paused"])
         .maybeSingle();
 
       if (!existingSession) {
