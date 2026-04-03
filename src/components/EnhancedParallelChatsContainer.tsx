@@ -34,7 +34,6 @@ interface EnhancedParallelChatsContainerProps {
   currentUserName?: string;
 }
 
-// Calculate initial positions for windows
 const getInitialPosition = (index: number): { x: number; y: number } => {
   const baseX = 20;
   const baseY = 20;
@@ -42,7 +41,6 @@ const getInitialPosition = (index: number): { x: number; y: number } => {
   return { x: baseX + (index * offset), y: baseY + (index * offset) };
 };
 
-// Debounce helper for high-frequency updates
 const useDebounce = (callback: () => void, delay: number) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const callbackRef = useRef(callback);
@@ -71,27 +69,24 @@ const EnhancedParallelChatsContainer = ({
   const nextZIndexRef = useRef(50);
   const isLoadingRef = useRef(false);
   const lastLoadTimeRef = useRef(0);
+  // Store previous positions/zIndex to avoid activeChats dependency in loadActiveChats
+  const chatPositionsRef = useRef<Map<string, { position: { x: number; y: number }; zIndex: number }>>(new Map());
   
-  
-  // Get user's parallel chat settings
   const { maxParallelChats, setMaxParallelChats, isLoading: settingsLoading } = 
     useParallelChatSettings(currentUserId);
 
-  // Get incoming chat notifications
   const { incomingChats, acceptChat, rejectChat } = useIncomingChats(currentUserId, userGender);
 
-  // Load active chats - OPTIMIZED for high concurrency
+  // Load active chats - NO dependency on activeChats (uses ref for positions)
   const loadActiveChats = useCallback(async (force = false) => {
     if (!currentUserId || isLoadingRef.current) return;
     
-    // Throttle: minimum 500ms between loads for lakhs of users (bypass with force)
     const now = Date.now();
     if (!force && now - lastLoadTimeRef.current < 500) return;
     lastLoadTimeRef.current = now;
     isLoadingRef.current = true;
 
     try {
-      // Get active sessions based on user gender - SINGLE OPTIMIZED QUERY
       const column = userGender === "male" ? "man_user_id" : "woman_user_id";
       const partnerColumn = userGender === "male" ? "woman_user_id" : "man_user_id";
       
@@ -107,7 +102,7 @@ const EnhancedParallelChatsContainer = ({
         .eq(column, currentUserId)
         .in("status", statusFilter)
         .order("created_at", { ascending: false })
-        .limit(10); // Cap at 10 for performance
+        .limit(10);
 
       if (sessionsError || !sessions || sessions.length === 0) {
         setActiveChats([]);
@@ -116,28 +111,22 @@ const EnhancedParallelChatsContainer = ({
         return;
       }
 
-      // Get partner IDs efficiently
       const partnerIds = [...new Set(sessions.map(s => s[partnerColumn as keyof typeof s] as string))];
 
-      // PARALLEL BATCH QUERIES - critical for lakhs of users
       const [pricingResult, profilesResult, statusesResult, messagesResult] = await Promise.all([
-        // Pricing - cached query
         supabase
           .from("chat_pricing")
           .select("rate_per_minute, women_earning_rate")
           .eq("is_active", true)
           .maybeSingle(),
-        // Partner profiles - batch fetch
         supabase
           .from("profiles")
           .select("user_id, full_name, photo_url, primary_language")
           .in("user_id", partnerIds),
-        // Online statuses - batch fetch
         supabase
           .from("user_status")
           .select("user_id, is_online")
           .in("user_id", partnerIds),
-        // User messages check - only for women (to determine accepted chats)
         userGender === "female" 
           ? supabase
               .from("chat_messages")
@@ -160,7 +149,6 @@ const EnhancedParallelChatsContainer = ({
       const profileMap = new Map((profiles as any[]).map(p => [p.user_id, p]));
       const statusMap = new Map((statuses as any[]).map(s => [s.user_id, s.is_online as boolean]));
 
-      // CRITICAL: Strictly ONE window per partner - use Map to deduplicate
       const partnerToSession = new Map<string, typeof sessions[0]>();
       
       for (const session of sessions) {
@@ -177,7 +165,6 @@ const EnhancedParallelChatsContainer = ({
         
         if (!isAccepted) continue;
         
-        // Keep only the most recent session per partner
         const existing = partnerToSession.get(partnerId);
         if (!existing || new Date(session.created_at) > new Date(existing.created_at)) {
           partnerToSession.set(partnerId, session);
@@ -186,10 +173,10 @@ const EnhancedParallelChatsContainer = ({
       
       existingPartnersRef.current = new Set(partnerToSession.keys());
       
-      // Build chat objects with positions
       const chats: ActiveChat[] = Array.from(partnerToSession.entries()).map(([partnerId, session], index) => {
         const profile = profileMap.get(partnerId);
-        const existingChat = activeChats.find(c => c.partnerId === partnerId);
+        // Use ref for position persistence instead of activeChats state
+        const savedLayout = chatPositionsRef.current.get(partnerId);
         
         return {
           id: session.id,
@@ -202,10 +189,15 @@ const EnhancedParallelChatsContainer = ({
           ratePerMinute: session.rate_per_minute || ratePerMinute,
           earningRatePerMinute,
           startedAt: session.created_at,
-          position: existingChat?.position || getInitialPosition(index),
-          zIndex: existingChat?.zIndex || nextZIndexRef.current++
+          position: savedLayout?.position || getInitialPosition(index),
+          zIndex: savedLayout?.zIndex || nextZIndexRef.current++
         };
       });
+
+      // Save positions to ref for next load
+      for (const chat of chats) {
+        chatPositionsRef.current.set(chat.partnerId, { position: chat.position, zIndex: chat.zIndex });
+      }
 
       setActiveChats(chats);
     } catch (error) {
@@ -214,25 +206,21 @@ const EnhancedParallelChatsContainer = ({
     } finally {
       isLoadingRef.current = false;
     }
-  }, [currentUserId, userGender, activeChats]);
+  }, [currentUserId, userGender]); // NO activeChats dependency - prevents infinite loops
 
-  // Debounced version for real-time updates - prevents overwhelming database
   const debouncedLoadChats = useDebounce(loadActiveChats, 300);
 
-  // Listen for force-reload events from dashboard chat initiation
   useEffect(() => {
     const handler = () => loadActiveChats(true);
     window.addEventListener('force-reload-chats', handler);
     return () => window.removeEventListener('force-reload-chats', handler);
   }, [loadActiveChats]);
 
-  // Subscribe to chat changes - OPTIMIZED with user-specific filters
   useEffect(() => {
     if (!currentUserId) return;
     
     loadActiveChats();
 
-    // Static channel name — must NOT include Date.now() or other dynamic values
     const channelName = `chats-${currentUserId}`;
     const column = userGender === "male" ? "man_user_id" : "woman_user_id";
 
@@ -255,24 +243,25 @@ const EnhancedParallelChatsContainer = ({
     };
   }, [currentUserId, userGender, loadActiveChats, debouncedLoadChats]);
 
-  // Handle closing a chat - defined first so it can be used by handleAcceptChat
+  // Handle closing a chat
   const handleCloseChat = useCallback(async (chatId: string, sessionId?: string, silent = false) => {
     // CRITICAL: Track closed session/chatId IMMEDIATELY before any async work
-    // to prevent realtime subscription from reopening the window during the edge function call
     if (sessionId) closedSessionsRef.current.add(sessionId);
     closedChatIdsRef.current.add(chatId);
     acceptedSessionsRef.current.delete(sessionId || "");
-    setActiveChats(prev => prev.filter(c => c.chatId !== chatId));
+    
+    // Also remove from positions ref
+    setActiveChats(prev => {
+      const chat = prev.find(c => c.chatId === chatId);
+      if (chat) {
+        chatPositionsRef.current.delete(chat.partnerId);
+        existingPartnersRef.current.delete(chat.partnerId);
+      }
+      return prev.filter(c => c.chatId !== chatId);
+    });
 
     try {
       if (sessionId) {
-        // Find the chat to get partner ID
-        const chat = activeChats.find(c => c.id === sessionId);
-        if (chat) {
-          existingPartnersRef.current.delete(chat.partnerId);
-        }
-        
-        // Call chat-manager for proper final billing and cleanup
         try {
           await supabase.functions.invoke("chat-manager", {
             body: {
@@ -284,7 +273,6 @@ const EnhancedParallelChatsContainer = ({
           });
         } catch (invokeError) {
           console.error("Error calling chat-manager:", invokeError);
-          toast({ title: "Chat unavailable", description: "Unable to close this chat properly. Please try again.", variant: "destructive" });
           // Fallback: directly update session
           await supabase
             .from("active_chat_sessions")
@@ -297,11 +285,11 @@ const EnhancedParallelChatsContainer = ({
         }
       }
       
-      // Clear chatId from closed set after session is confirmed ended in DB
-      // so future new chats with the same partner can work
+      // Keep chatId in closed set for 30 seconds to prevent realtime reopening
       setTimeout(() => {
         closedChatIdsRef.current.delete(chatId);
-      }, 5000);
+        if (sessionId) closedSessionsRef.current.delete(sessionId);
+      }, 30000);
       
       if (!silent) {
         loadActiveChats();
@@ -310,15 +298,13 @@ const EnhancedParallelChatsContainer = ({
       console.error("Error closing chat:", error);
       toast({ title: "Chat not closed", description: "Unable to close this chat. Please refresh and try again.", variant: "destructive" });
     }
-  }, [userGender, currentUserId, loadActiveChats, activeChats]);
+  }, [userGender, currentUserId, loadActiveChats]);
 
-  // Handle accepting incoming chat - check for duplicate partner
+  // Handle accepting incoming chat
   const handleAcceptChat = useCallback((sessionId: string) => {
-    // Find the incoming chat to get partner ID
     const incomingChat = incomingChats.find(ic => ic.sessionId === sessionId);
     
     if (incomingChat) {
-      // CRITICAL: Check if we already have a chat with this partner
       if (existingPartnersRef.current.has(incomingChat.partnerId)) {
         toast({
           title: "Chat Already Active",
@@ -333,60 +319,59 @@ const EnhancedParallelChatsContainer = ({
     acceptedSessionsRef.current.add(sessionId);
     acceptChat(sessionId);
     
-    // PARALLEL CHAT LIMIT: Allow up to maxParallelChats (user preference, max 3)
-    // If at limit, auto-close oldest to make room for new
-    console.log(`[ParallelChats] Accepting chat. Active: ${activeChats.length}, Max: ${maxParallelChats}`);
+    // Check parallel chat limit
+    const currentCount = existingPartnersRef.current.size;
+    console.log(`[ParallelChats] Accepting chat. Active: ${currentCount}, Max: ${maxParallelChats}`);
     
-    if (activeChats.length >= maxParallelChats) {
-      // Find oldest chat to close (last in array since sorted by created_at desc)
-      const oldestChat = activeChats[activeChats.length - 1];
-      if (oldestChat) {
-        handleCloseChat(oldestChat.chatId, oldestChat.id, true);
-        toast({
-          title: "Chat Limit Reached",
-          description: `Closed oldest chat to accept new one (max ${maxParallelChats} parallel chats)`,
-        });
-      }
+    if (currentCount >= maxParallelChats) {
+      // Find oldest chat to close - get from current state
+      setActiveChats(prev => {
+        if (prev.length >= maxParallelChats) {
+          const oldestChat = prev[prev.length - 1];
+          if (oldestChat) {
+            handleCloseChat(oldestChat.chatId, oldestChat.id, true);
+            toast({
+              title: "Chat Limit Reached",
+              description: `Closed oldest chat to accept new one (max ${maxParallelChats} parallel chats)`,
+            });
+          }
+        }
+        return prev;
+      });
     }
     
-    // Force reload to bypass throttle - critical for accept flow
+    // Force reload to bypass throttle
     loadActiveChats(true);
-  }, [acceptChat, activeChats, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat, userGender]);
+  }, [acceptChat, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat]);
 
-  // Handle rejecting incoming chat - trigger fallback search
   const handleRejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
     await rejectChat(sessionId, reason);
-    
-    // For men: the system will automatically try to find another match
-    // This is handled by the chat-manager edge function
   }, [rejectChat]);
 
-  // Handle focusing a chat window (bring to front)
   const handleFocusChat = useCallback((chatId: string) => {
     setFocusedChatId(chatId);
-    setActiveChats(prev => prev.map(chat => 
-      chat.chatId === chatId 
-        ? { ...chat, zIndex: nextZIndexRef.current++ }
-        : chat
-    ));
+    setActiveChats(prev => prev.map(chat => {
+      if (chat.chatId === chatId) {
+        const newZIndex = nextZIndexRef.current++;
+        chatPositionsRef.current.set(chat.partnerId, { position: chat.position, zIndex: newZIndex });
+        return { ...chat, zIndex: newZIndex };
+      }
+      return chat;
+    }));
   }, []);
 
-  // Limit displayed chats to max setting
   const displayedChats = activeChats.slice(0, maxParallelChats);
 
   // Filter incoming chats - exclude those for existing partners
   const pendingIncomingChats = incomingChats.filter(
     ic => !acceptedSessionsRef.current.has(ic.sessionId) &&
           !activeChats.some(ac => ac.id === ic.sessionId) &&
-          !existingPartnersRef.current.has(ic.partnerId) // Don't show popup if already chatting
+          !existingPartnersRef.current.has(ic.partnerId)
   );
-
-  // Debug logging
-  console.log(`[EnhancedParallelChats] User: ${userGender}, Active: ${activeChats.length}, Incoming: ${incomingChats.length}, Pending Popups: ${pendingIncomingChats.length}`);
 
   return (
     <>
-      {/* Settings button - fixed position */}
+      {/* Settings button */}
       <div className="fixed bottom-4 left-4 z-[100] flex items-center gap-2">
         {displayedChats.length > 0 && (
           <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full text-xs font-medium backdrop-blur-sm">
@@ -418,8 +403,7 @@ const EnhancedParallelChatsContainer = ({
         </Popover>
       </div>
 
-      {/* Incoming chat popups - for BOTH genders (accept/reject) */}
-      {/* Women: receive from men. Men: receive from Golden Badge women */}
+      {/* Incoming chat popups */}
       <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
         {pendingIncomingChats.map((incoming) => (
           <IncomingChatPopup
@@ -439,7 +423,7 @@ const EnhancedParallelChatsContainer = ({
         ))}
       </div>
 
-      {/* Active chat windows - responsive side by side layout for all devices */}
+      {/* Active chat windows */}
       <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">
         {displayedChats.map((chat) => (
           <DraggableMiniChatWindow
