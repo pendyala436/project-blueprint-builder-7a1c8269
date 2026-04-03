@@ -210,12 +210,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="font-medium">No private groups live</p>
-          <p className="text-sm">Check back later when a host goes live!</p>
+          <p className="font-medium">No private groups available</p>
+          <p className="text-sm">Check back later when groups are created!</p>
         </CardContent>
       </Card>
     );
   }
+
+  const liveCount = groups.filter(g => g.is_live && g.current_host_id).length;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
