@@ -344,6 +344,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
           currentUserId={currentUserId}
           userName={userName}
           userPhoto={userPhoto}
+          preAcquiredStream={activeGroupStream}
           onClose={handleLeaveGroup}
           isOwner={false}
         />
