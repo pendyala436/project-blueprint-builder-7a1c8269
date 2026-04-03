@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
-import { translateChatMessage, getEnglishTranslation } from "@/lib/translation-service";
+import { translateForViewer } from "@/lib/translation-service";
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
@@ -387,52 +387,20 @@ const ChatScreen = () => {
           // Extract new message from payload
           const newMsg = payload.new;
           
-          // Translate incoming messages from partner
-          const isFromPartner = newMsg.sender_id !== currentUserId;
+          // Translate for current viewer: auto-detect input → viewer's native + English
+          // Works for ALL scenarios: same language, different language, transliteration, native, English
           let translatedMessage: string | undefined;
           let englishText: string | undefined;
           let isTranslated = false;
 
-          // Check if both users share the same language
-          const isSameLanguage = chatPartner && currentUserLanguage && 
-            chatPartner.preferredLanguage.toLowerCase().trim() === currentUserLanguage.toLowerCase().trim();
-
-          if (isFromPartner && chatPartner && currentUserLanguage) {
+          if (currentUserLanguage) {
             try {
-              if (isSameLanguage) {
-                // Same language: translate to native script (handles English/transliterated input → native)
-                const result = await translateChatMessage(
-                  newMsg.message,
-                  'auto',  // auto-detect source (could be English, transliterated, or native)
-                  currentUserLanguage
-                );
-                if (result.isTranslated) {
-                  translatedMessage = result.translated;
-                  isTranslated = true;
-                }
-                // No English subtitle needed for same-language chats
-              } else {
-                // Different languages: translate to receiver's native language
-                const result = await translateChatMessage(
-                  newMsg.message,
-                  chatPartner.preferredLanguage,
-                  currentUserLanguage
-                );
-                if (result.isTranslated) {
-                  translatedMessage = result.translated;
-                  isTranslated = true;
-                }
-                englishText = result.englishText;
-              }
+              const result = await translateForViewer(newMsg.message, currentUserLanguage);
+              translatedMessage = result.nativeText;
+              englishText = result.englishText;
+              isTranslated = translatedMessage !== newMsg.message;
             } catch {
               // Fallback: show original message
-            }
-          } else if (!isFromPartner && currentUserLanguage && !isSameLanguage) {
-            // For own messages in cross-language chats, get English translation for subtitle
-            try {
-              englishText = await getEnglishTranslation(newMsg.message, currentUserLanguage);
-            } catch {
-              // ignore
             }
           }
           
@@ -554,6 +522,50 @@ const ChatScreen = () => {
       supabase.removeChannel(sessionChannel);
     };
   }, [chatPartner?.userId, currentUserId, currentUserGender, isSessionActive, handleAutoReconnect, toast]);
+
+  /**
+   * translateHistoryMessages
+   * 
+   * Translates all loaded history messages for the current viewer.
+   * Runs in background — updates messages as translations arrive.
+   * Uses auto-detect so transliteration, native script, and English all work.
+   */
+  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
+    // Process in batches of 5 to avoid overwhelming the edge function
+    const batchSize = 5;
+    for (let i = 0; i < msgs.length; i += batchSize) {
+      const batch = msgs.slice(i, i + batchSize);
+      const translationPromises = batch.map(async (msg) => {
+        try {
+          const result = await translateForViewer(msg.message, viewerLanguage);
+          return {
+            id: msg.id,
+            translatedMessage: result.nativeText,
+            englishText: result.englishText,
+            isTranslated: result.nativeText !== msg.message,
+          };
+        } catch {
+          return null;
+        }
+      });
+
+      const results = await Promise.all(translationPromises);
+
+      // Update messages state with translations
+      setMessages(prev => prev.map(m => {
+        const translation = results.find(r => r && r.id === m.id);
+        if (translation) {
+          return {
+            ...m,
+            translatedMessage: translation.translatedMessage,
+            englishText: translation.englishText,
+            isTranslated: translation.isTranslated,
+          };
+        }
+        return m;
+      }));
+    }
+  }, []);
 
   /**
    * initializeChat Function
@@ -679,13 +691,19 @@ const ChatScreen = () => {
 
       // Transform database records to Message interface
       if (existingMessages) {
-        setMessages(existingMessages.map(msg => ({
+        const loadedMessages: Message[] = existingMessages.map(msg => ({
           id: msg.id,
           senderId: msg.sender_id,
           message: msg.message,
           isRead: msg.is_read || false,
           createdAt: msg.created_at,
-        })));
+        }));
+        setMessages(loadedMessages);
+
+        // Translate all history messages for current viewer (in background)
+        if (motherTongue) {
+          translateHistoryMessages(loadedMessages, motherTongue);
+        }
 
         // ============= MARK UNREAD MESSAGES AS READ =============
         
@@ -1637,13 +1655,11 @@ const ChatScreen = () => {
                 // Extract attachment from message
                 const { text: messageText, attachmentUrl, voiceUrl } = extractAttachment(message.message);
                 
-                // For received: show translated (native) text as primary, original underneath
-                // For sent: show original text as primary
-                const displayText = (!isMine && message.translatedMessage) ? message.translatedMessage : messageText;
-                // Show original text underneath if translation was applied
-                const subtitleText = (!isMine && message.translatedMessage && message.translatedMessage !== messageText) 
-                  ? messageText  // Show original under translated for received
-                  : message.englishText; // Show English subtitle for cross-language own messages
+                // Display: translated native text if available, otherwise original
+                // Per spec: both sender AND receiver see native script of their own language
+                const displayText = message.translatedMessage || messageText;
+                // English subtitle shown below EVERY bubble (per spec)
+                const englishSubtitle = message.englishText;
                 
                 // Skip empty voice message placeholders (the actual voice URL comes in the next message)
                 if (message.message === '🎤 Voice message') {
@@ -1702,9 +1718,9 @@ const ChatScreen = () => {
                           >
                             <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
                             {/* English translation shown below every message bubble */}
-                            {subtitleText && subtitleText.toLowerCase() !== displayText.toLowerCase() && (
-                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="auto">
-                                {subtitleText}
+                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
+                                {englishSubtitle.toLowerCase()}
                               </p>
                             )}
                           </div>
