@@ -146,20 +146,25 @@ const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
   const [canUp, setCanUp] = useState(false);
   const [canDown, setCanDown] = useState(false);
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     const el = listScrollRef.current;
     if (!el) return;
     setCanUp(el.scrollTop > 10);
     setCanDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
-  };
+  }, []);
 
   useEffect(() => {
     const el = listScrollRef.current;
     if (!el) return;
     checkScroll();
     el.addEventListener('scroll', checkScroll, { passive: true });
-    return () => el.removeEventListener('scroll', checkScroll);
-  }, []);
+    const observer = new ResizeObserver(() => checkScroll());
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      observer.disconnect();
+    };
+  }, [checkScroll]);
 
   return (
     <div className="relative">
@@ -517,24 +522,23 @@ const DashboardScreen = () => {
       .from("active_chat_sessions")
       .select("*", { count: "exact", head: true })
       .eq("man_user_id", currentUserId)
-      .eq("status", "active");
+      .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
   };
 
   const getStatusText = () => {
-    if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
+    if (activeChatCount >= MAX_PARALLEL_CHATS) return t('busy', 'Busy') + `(${MAX_PARALLEL_CHATS})`;
     return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    // Green = online/available, Red = at max capacity (3 chats)
-    if (activeChatCount >= 3) return "bg-destructive";
+    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount >= 3) return "bg-destructive";
+    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
 
@@ -562,8 +566,8 @@ const DashboardScreen = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       
-      const profileTimeout = new Promise<{ data: null, error: Error }>((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      const profileTimeout = new Promise<{ data: null, error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
       );
       
       let mainProfile: { gender?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null } | null = null;
@@ -923,16 +927,6 @@ const DashboardScreen = () => {
       return;
     }
 
-    // Check chat limit
-    if (activeChatCount >= 3) {
-      toast({
-        title: t('maxChatsReached', 'Max Chats Reached'),
-        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
-        variant: "destructive",
-      });
-      return;
-    }
-
     // Guard: check parallel chat limit before connecting
     if (!canStartNewChat) {
       toast({
@@ -1050,17 +1044,21 @@ const DashboardScreen = () => {
   };
 
   const fetchNotifications = async (userId: string) => {
-    const { data, count } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact" })
-      .eq("user_id", userId)
-      .eq("is_read", false)
-      .order("created_at", { ascending: false })
-      .limit(5);
+    try {
+      const { data, count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact" })
+        .eq("user_id", userId)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false })
+        .limit(5);
 
-    // Display notifications as-is (no translation)
-    setNotifications(data || []);
-    setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
+      // Display notifications as-is (no translation)
+      setNotifications(data || []);
+      setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
+    } catch (error) {
+      console.error('[Dashboard] fetchNotifications error:', error);
+    }
   };
 
   const markNotificationRead = async (notificationId: string) => {
@@ -1392,7 +1390,7 @@ const DashboardScreen = () => {
               <p className="text-[10px] text-muted-foreground">{t('matches', 'Matches')}</p>
             </Card>
             <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
-              <p className="text-lg font-bold text-foreground">{activeChatCount}/3</p>
+              <p className="text-lg font-bold text-foreground">{activeChatCount}/{MAX_PARALLEL_CHATS}</p>
               <p className="text-[10px] text-muted-foreground">{t('activeChats', 'Active')}</p>
             </Card>
           </div>

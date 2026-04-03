@@ -251,108 +251,43 @@ const AdminDashboard = () => {
 
   const loadStats = useCallback(async () => {
     try {
-      // Get total users
-      const { count: totalUsers, error: usersError } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
+      const today = new Date().toISOString().split("T")[0];
 
-      if (usersError) {
-        console.warn('[AdminDashboard] Error fetching total users:', usersError);
-      }
+      // Run all independent queries in parallel
+      const [
+        totalUsersRes,
+        onlineUsersRes,
+        activeChatsRes,
+        totalChatsRes,
+        pendingApprovalsRes,
+        policyAlertsRes,
+        earningsRes,
+      ] = await Promise.allSettled([
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("user_status").select("*", { count: "exact", head: true }).eq("is_online", true),
+        supabase.from("active_chat_sessions").select("*", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("chat_messages").select("*", { count: "exact", head: true }),
+        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending").ilike("gender", "female"),
+        supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("ledger_transactions").select("credit").eq("transaction_type", "recharge").gte("created_at", `${today}T00:00:00`),
+      ]);
 
-      // Get online users - with error handling for user_status table
-      let onlineUsers = 0;
-      try {
-        const { count: onlineCount, error: onlineError } = await supabase
-          .from("user_status")
-          .select("*", { count: "exact", head: true })
-          .eq("is_online", true);
+      const getCount = (res: PromiseSettledResult<any>) => 
+        res.status === 'fulfilled' && !res.value.error ? (res.value.count || 0) : 0;
 
-        if (onlineError) {
-          console.warn('[AdminDashboard] Error fetching online users:', onlineError);
-        } else {
-          onlineUsers = onlineCount || 0;
-        }
-      } catch (err) {
-        console.warn('[AdminDashboard] user_status query failed:', err);
-      }
-
-      // Get active chats
-      const { count: activeChats, error: chatsError } = await supabase
-        .from("active_chat_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "active");
-
-      if (chatsError) {
-        console.warn('[AdminDashboard] Error fetching active chats:', chatsError);
-      }
-
-      // Get total chat messages (all-time)
-      let totalChats = 0;
-      try {
-        const { count: msgCount, error: msgError } = await supabase
-          .from("chat_messages")
-          .select("*", { count: "exact", head: true });
-        if (!msgError) totalChats = msgCount || 0;
-      } catch (e) {
-        console.warn('[AdminDashboard] chat_messages count failed:', e);
-      }
-
-      // Get pending approvals (case-insensitive match)
-      const { count: pendingApprovals, error: approvalsError } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("approval_status", "pending")
-        .ilike("gender", "female");
-
-      if (approvalsError) {
-        console.warn('[AdminDashboard] Error fetching pending approvals:', approvalsError);
-      }
-
-      // Get policy alerts - with error handling for missing table
-      let policyAlerts = 0;
-      try {
-        const { count: alertsCount, error: alertsError } = await supabase
-          .from("policy_violation_alerts")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending");
-
-        if (alertsError) {
-          console.warn('[AdminDashboard] Error fetching policy alerts:', alertsError);
-        } else {
-          policyAlerts = alertsCount || 0;
-        }
-      } catch (err) {
-        console.warn('[AdminDashboard] policy_violation_alerts query failed:', err);
-      }
-
-      // Get today's earnings - with error handling for wallet_transactions
       let todayEarnings = 0;
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const { data: todayTransactions, error: earningsError } = await supabase
-          .from("ledger_transactions")
-          .select("credit")
-          .eq("transaction_type", "recharge")
-          .gte("created_at", `${today}T00:00:00`);
-
-        if (earningsError) {
-          console.warn('[AdminDashboard] Error fetching earnings:', earningsError);
-        } else {
-          todayEarnings = todayTransactions?.reduce((acc, t) => acc + Number(t.credit), 0) || 0;
-        }
-      } catch (err) {
-        console.warn('[AdminDashboard] ledger_transactions query failed:', err);
+      if (earningsRes.status === 'fulfilled' && !earningsRes.value.error) {
+        todayEarnings = earningsRes.value.data?.reduce((acc: number, t: any) => acc + Number(t.credit), 0) || 0;
       }
 
       setStats({
-        totalUsers: totalUsers || 0,
-        onlineUsers: onlineUsers,
-        totalChats: totalChats,
-        activeChats: activeChats || 0,
+        totalUsers: getCount(totalUsersRes),
+        onlineUsers: getCount(onlineUsersRes),
+        totalChats: getCount(totalChatsRes),
+        activeChats: getCount(activeChatsRes),
         todayEarnings,
-        pendingApprovals: pendingApprovals || 0,
-        policyAlerts: policyAlerts
+        pendingApprovals: getCount(pendingApprovalsRes),
+        policyAlerts: getCount(policyAlertsRes),
       });
     } catch (error) {
       console.error("[AdminDashboard] Error loading stats:", error);

@@ -509,19 +509,18 @@ const WomenDashboardScreen = () => {
       .from("active_chat_sessions")
       .select("*", { count: "exact", head: true })
       .eq("woman_user_id", currentUserId)
-      .eq("status", "active");
+      .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
   };
 
   const getStatusText = () => {
-    if (activeChatCount >= 3) return t('busy', 'Busy') + "(3)";
+    if (activeChatCount >= MAX_PARALLEL_CHATS) return t('busy', 'Busy') + `(${MAX_PARALLEL_CHATS})`;
     return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    // Green = Online/Available, Red = Full (3 chats)
-    if (activeChatCount >= 3) return "bg-destructive";
+    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
 

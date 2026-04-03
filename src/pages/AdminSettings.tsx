@@ -81,6 +81,7 @@ const LANGUAGE_OPTIONS = languages.map(lang => ({
 
 const AdminSettings = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<AdminSetting[]>([]);
