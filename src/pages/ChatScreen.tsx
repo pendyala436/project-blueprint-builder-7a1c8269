@@ -1694,6 +1694,15 @@ const ChatScreen = () => {
 
                       {/* Message bubble and translations */}
                       <div className={`space-y-1`}>
+                        {/* Sender/Receiver name with distinct colors */}
+                        <span className={`text-[10px] font-semibold px-1 block ${
+                          isMine
+                            ? "text-primary text-right"
+                            : "text-emerald-600 dark:text-emerald-400 text-left"
+                        }`}>
+                          {isMine ? "You" : chatPartner?.fullName}
+                        </span>
+
                         {/* Voice message player */}
                         {voiceUrl && (
                           <VoiceMessagePlayer 
@@ -1707,19 +1716,23 @@ const ChatScreen = () => {
                           <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
                         )}
                         
-                        {/* Primary message bubble - Native language (large) */}
+                        {/* Primary message bubble — light background with colored text */}
                         {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
                           <div
-                            className={`px-4 py-2.5 rounded-2xl ${
+                            className={`px-4 py-2.5 rounded-2xl shadow-sm border ${
                               isMine 
-                                ? "bg-primary text-primary-foreground rounded-br-md" 
-                                : "bg-muted text-foreground rounded-bl-md"
+                                ? "bg-primary/5 border-primary/20 rounded-br-md" 
+                                : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap break-words unicode-text" dir="auto">{displayText}</p>
-                            {/* English translation shown below EVERY message bubble (per spec) */}
-                            {englishSubtitle && (
-                              <p className="text-xs mt-1 opacity-50 italic whitespace-pre-wrap break-words" dir="ltr">
+                            <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${
+                              isMine
+                                ? "text-primary dark:text-primary"
+                                : "text-emerald-800 dark:text-emerald-200"
+                            }`} dir="auto">{displayText}</p>
+                            {/* English translation below EVERY message — helps people who speak but can't read native script */}
+                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                              <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">
                                 english: {englishSubtitle.toLowerCase()}
                               </p>
                             )}
