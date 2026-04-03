@@ -63,6 +63,7 @@ import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 
