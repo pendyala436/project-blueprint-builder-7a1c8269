@@ -4,14 +4,18 @@
  * NO hardcoded translations. All translations are LIVE via Google Translate scraping.
  * Uses English as pivot language for non-direct translation pairs.
  * 
- * Supported translation flows:
+ * Supported translation flows (ALL combinations):
  *  1. Native → Native (e.g., తెలుగు → हिंदी) — via English pivot
- *  2. Native → Latin (e.g., తెలుగు → telugu transliteration) — direct
- *  3. Latin → Native (e.g., "bagunnava" → బాగున్నావా) — via en→target
- *  4. Native → English (e.g., తెలుగు → English) — direct
- *  5. English → Native (e.g., English → తెలుగు) — direct
- *  6. Latin → Latin (e.g., "bonjour" → "hello") — direct translation
- *  7. English fallback if any translation fails
+ *  2. Native → Latin-script lang (e.g., తెలుగు → French) — direct
+ *  3. Latin-script lang → Native (e.g., French → తెలుగు) — direct
+ *  4. Latin → Native (transliteration, e.g., "bagunnava" → బాగున్నావా) — via en→target
+ *  5. Native → English (e.g., తెలుగు → English) — direct
+ *  6. English → Native (e.g., English → తెలుగు) — direct
+ *  7. Latin → Latin (e.g., French "bonjour" → German "hallo") — direct
+ *  8. English → Latin-script lang (e.g., English → French) — direct
+ *  9. Latin-script lang → English (e.g., French → English) — direct
+ * 10. Same-language self-translation (sender preview) — auto→same lang
+ * 11. English fallback if any translation fails
  * 
  * Supports all 130+ Google Translate languages.
  */
@@ -25,30 +29,56 @@ export interface TranslationResult {
 
 /**
  * Detect if text is written in Latin/ASCII script (transliteration or English).
+ * Covers basic Latin, extended Latin (accents for French, German, Hungarian, Polish, etc.).
  */
-function isLatinScript(text: string): boolean {
+export function isLatinScript(text: string): boolean {
   const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
   if (!cleaned) return false;
   return /^[a-zA-Z\u00C0-\u024F\u0250-\u02AF\u1E00-\u1EFF\u0100-\u017F]+$/.test(cleaned);
 }
 
 /**
- * Languages whose native script IS Latin. For these, translation output
- * will also be Latin, so we must NOT apply the "still Latin → override with English" fallback.
+ * Languages whose native script IS Latin. For these languages:
+ * - Translation output will also be in Latin script
+ * - We must NOT apply the "still Latin → override with English" fallback
+ * - Preview should work based on content change, not script change
+ * 
+ * This covers all major Latin-script languages supported by Google Translate.
  */
 const LATIN_SCRIPT_LANGUAGES = new Set([
+  // Western European
   'english', 'french', 'german', 'spanish', 'portuguese', 'italian', 'dutch',
+  'catalan', 'galician', 'basque', 'corsican', 'maltese', 'luxembourgish',
+  // Nordic / Scandinavian
+  'finnish', 'swedish', 'norwegian', 'danish', 'icelandic',
+  // Baltic
+  'estonian', 'latvian', 'lithuanian',
+  // Central / Eastern European (Latin-script)
   'polish', 'czech', 'slovak', 'hungarian', 'romanian', 'croatian', 'slovenian',
-  'finnish', 'swedish', 'norwegian', 'danish', 'icelandic', 'estonian', 'latvian',
-  'lithuanian', 'turkish', 'vietnamese', 'indonesian', 'malay', 'filipino',
-  'tagalog', 'swahili', 'afrikaans', 'catalan', 'basque', 'galician', 'albanian',
-  'bosnian', 'maltese', 'luxembourgish', 'welsh', 'irish', 'scottish gaelic',
-  'esperanto', 'latin', 'haitian creole', 'cebuano', 'javanese', 'sundanese',
-  'maori', 'samoan', 'hawaiian', 'corsican', 'frisian', 'yoruba', 'igbo',
-  'zulu', 'xhosa', 'sotho', 'shona', 'somali', 'hausa', 'kinyarwanda',
+  'bosnian', 'albanian',
+  // Celtic
+  'welsh', 'irish', 'scottish gaelic', 'scots gaelic',
+  // Turkic (Latin-script)
+  'turkish', 'azerbaijani', 'turkmen', 'uzbek',
+  // Southeast Asian (Latin-script)
+  'vietnamese', 'indonesian', 'malay', 'filipino', 'tagalog',
+  'cebuano', 'javanese', 'sundanese',
+  // African (Latin-script)
+  'swahili', 'afrikaans', 'yoruba', 'igbo', 'zulu', 'xhosa',
+  'sotho', 'sesotho', 'shona', 'somali', 'hausa', 'kinyarwanda',
+  'luganda', 'tsonga', 'twi', 'ewe', 'bambara', 'lingala', 'sepedi',
+  'krio', 'oromo',
+  // Pacific
+  'maori', 'samoan', 'hawaiian',
+  // Constructed / Other Latin-script
+  'esperanto', 'latin', 'haitian creole', 'frisian',
+  // Central Asian (Latin-script)
+  'kyrgyz', // uses both Cyrillic and Latin
+  // Americas
+  'quechua', 'guarani', 'aymara',
 ]);
 
-function isLatinScriptLanguage(lang: string): boolean {
+export function isLatinScriptLanguage(lang: string): boolean {
   return LATIN_SCRIPT_LANGUAGES.has(lang.toLowerCase().trim());
 }
 
@@ -67,7 +97,6 @@ export async function translateText(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return text;
 
   try {
-    // 5-second timeout using Promise.race (supabase.functions.invoke doesn't support AbortSignal)
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('TranslationTimeout')), 5000)
     );
@@ -80,7 +109,7 @@ export async function translateText(
 
     if (error) {
       console.warn('[Translation] Edge function error:', error.message);
-      return text; // English fallback — return original
+      return text;
     }
 
     return data?.translation || text;
@@ -90,7 +119,7 @@ export async function translateText(
     } else {
       console.warn('[Translation] Failed:', err);
     }
-    return text; // English fallback
+    return text;
   }
 }
 
@@ -108,7 +137,6 @@ export async function translateBatch(
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return texts;
 
   try {
-    // 5-second timeout using Promise.race (supabase.functions.invoke doesn't support AbortSignal)
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('BatchTranslationTimeout')), 5000)
     );
@@ -136,25 +164,27 @@ export async function translateBatch(
 }
 
 /**
- * Smart translation for a viewer — handles ALL input types live.
+ * Smart translation for a viewer — handles ALL input types and language combinations.
  * 
- * Strategy based on input detection:
- * 
- * 1. Native script input (e.g., బాగున్నావా):
- *    - auto → viewerLang (Google detects source)
- *    - auto → English (for subtitle)
- * 
- * 2. Latin script input (e.g., "bagunnava" or "hello"):
- *    - For non-English viewer:
- *      a) First try auto → viewerLang (Google may detect transliteration)
- *      b) If unchanged, try English → viewerLang (treats as English/transliteration)
- *    - For English viewer: auto → English
- * 
- * 3. Latin to Latin (e.g., French "bonjour" → English "hello"):
- *    - Direct translation via auto-detect
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ COMBINATION MATRIX (all supported):                                  │
+ * │                                                                      │
+ * │ Input Script    Viewer Language    Strategy                          │
+ * │ ─────────────   ──────────────    ────────────────────────────────── │
+ * │ Native (తెలుగు)  Non-Latin (Hindi)  auto→viewerLang (Google detects) │
+ * │ Native (తెలుగు)  Latin (French)     auto→viewerLang (direct)         │
+ * │ Native (తెలుగు)  English            auto→English                     │
+ * │ Latin (French)   Non-Latin (Telugu)  auto→viewerLang (direct)        │
+ * │ Latin (French)   Latin (German)      auto→viewerLang (direct)        │
+ * │ Latin (French)   English             auto→English                    │
+ * │ English          Non-Latin (Telugu)  auto→viewerLang                 │
+ * │ English          Latin (French)      auto→viewerLang                 │
+ * │ Translit (Latin) Non-Latin (Telugu)  auto→viewerLang + fallbacks     │
+ * │ Same language    Same language       auto→viewerLang (self-preview)  │
+ * └──────────────────────────────────────────────────────────────────────┘
  * 
  * Returns:
- *  - nativeText: message in the viewer's native language
+ *  - nativeText: message in the viewer's native language (Latin or non-Latin)
  *  - englishText: English translation (always shown as subtitle)
  */
 export async function translateForViewer(
@@ -167,38 +197,40 @@ export async function translateForViewer(
 
   const viewerLang = (viewerLanguage || 'english').toLowerCase().trim();
   const inputIsLatin = isLatinScript(message);
+  const viewerUsesLatin = isLatinScriptLanguage(viewerLang);
 
   try {
-    // Always get English translation for subtitle (parallel with native translation)
+    // Always get English translation for subtitle (runs in parallel)
     const englishPromise = translateText(message, 'auto', 'English');
 
-    let nativeText: string;
-
+    // ── Case 1: Viewer speaks English ──
     if (viewerLang === 'english') {
-      // Viewer speaks English — just get English translation
-      nativeText = await englishPromise;
-      return { nativeText: nativeText || message, englishText: nativeText || message };
+      const englishText = await englishPromise;
+      return { nativeText: englishText || message, englishText: englishText || message };
     }
 
-    // Non-English viewer — run auto→viewerLang and auto→English in parallel
+    // ── Case 2: Non-English viewer — run auto→viewerLang and auto→English in parallel ──
     const [autoResult, englishResult] = await Promise.all([
       translateText(message, 'auto', viewerLanguage),
       englishPromise,
     ]);
 
-    nativeText = autoResult;
+    let nativeText = autoResult;
 
-    // For Latin script input targeting a NON-Latin-script language:
-    // auto-detect often fails for transliterated text (e.g., "bagunnava" for Telugu).
-    // Skip these fallbacks for Latin-script target languages (French, German, etc.)
-    // because their correct output IS Latin script.
-    const viewerUsesLatin = isLatinScriptLanguage(viewerLang);
-
+    // ── Case 3: Latin input → Non-Latin target (transliteration handling) ──
+    // When input is Latin script AND viewer's language uses non-Latin script,
+    // Google auto-detect often fails for transliterated text (e.g., "bagunnava").
+    // Apply fallback strategies to get native script output.
+    //
+    // We do NOT apply these fallbacks when the viewer uses Latin script,
+    // because Latin→Latin translation already works correctly via auto-detect
+    // (e.g., French "bonjour" → German "hallo" — both Latin, both correct).
     if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
 
       if (isStillLatin) {
-        // Strategy A: Use the English translation as bridge → viewerLang
+        // Strategy A: English bridge — use the English translation to re-translate
+        // e.g., "bagunnava" → (English: "how are you") → Telugu: బాగున్నావా
         const englishMeaning = englishResult || nativeText;
         if (englishMeaning && englishMeaning !== message) {
           const fromEnglish = await translateText(englishMeaning, 'English', viewerLanguage);
@@ -206,7 +238,9 @@ export async function translateForViewer(
             nativeText = fromEnglish;
           }
         }
-        // Strategy B: Direct English → viewerLang with original text
+
+        // Strategy B: Treat original as English directly → viewerLang
+        // For cases where Strategy A's bridge didn't produce non-Latin output
         if (isLatinScript(nativeText)) {
           const directResult = await translateText(message, 'English', viewerLanguage);
           if (directResult && !isLatinScript(directResult)) {
@@ -216,9 +250,12 @@ export async function translateForViewer(
       }
     }
 
-    // If translation returned same text as input and we have an English meaning:
-    // - For Latin-script viewers: keep nativeText as-is (already correct Latin translation)
-    // - For non-Latin viewers with Latin input: show English meaning as fallback
+    // ── Fallback: unchanged Latin input for non-Latin viewer ──
+    // If translation returned the exact same text and we have an English meaning,
+    // show the English meaning as the native text (better than showing untranslated input).
+    // Only applies when:
+    //  - Input is Latin AND viewer expects non-Latin script
+    //  - Translation produced no change (auto-detect failed)
     if (nativeText === message && englishResult && englishResult !== message) {
       if (inputIsLatin && !viewerUsesLatin) {
         nativeText = englishResult;
@@ -246,10 +283,9 @@ export async function translateForViewer(
  * Rules:
  * - Same language: both see native script + English subtitle
  * - Different language: receiver sees translated native + English subtitle
+ * - Latin↔Latin: French user → German receiver → proper German translation
+ * - Latin↔Native: French user → Telugu receiver → proper Telugu translation
  * - All translations are LIVE (no hardcoded values)
- * - If sender's language is unsupported: sender types in English,
- *   message is still translated to receiver's language (if supported)
- * - If receiver's language is also unsupported: both see English
  * - English is always the fallback language
  */
 export async function translateChatMessage(
@@ -261,24 +297,16 @@ export async function translateChatMessage(
     return { translated: message, englishText: message, isTranslated: false };
   }
 
-  const senderLang = (senderLanguage || 'english').toLowerCase().trim();
-  const receiverLang = (receiverLanguage || 'english').toLowerCase().trim();
-
   try {
-    // If sender's language is unsupported, they type in English.
-    // We still translate English → receiver's language if receiver's lang is supported.
-    // translateForViewer handles this via auto-detect → target.
     const result = await translateForViewer(message, receiverLanguage);
     const isTranslated = result.nativeText !== message;
 
-    // If receiver's language is also unsupported, nativeText will be English (fallback)
     return {
       translated: result.nativeText,
       englishText: result.englishText,
       isTranslated,
     };
   } catch {
-    // English fallback — if everything fails, show original (English)
     return { translated: message, englishText: message, isTranslated: false };
   }
 }
@@ -296,7 +324,6 @@ export async function getEnglishTranslation(
   if (srcNorm === 'english') {
     // If source is English, check if it's actually in another script
     if (!isLatinScript(message)) {
-      // Non-Latin input marked as English — auto-detect instead
       return await translateText(message, 'auto', 'English');
     }
     return message;
@@ -305,6 +332,6 @@ export async function getEnglishTranslation(
   try {
     return await translateText(message, 'auto', 'English');
   } catch {
-    return message; // English fallback
+    return message;
   }
 }
