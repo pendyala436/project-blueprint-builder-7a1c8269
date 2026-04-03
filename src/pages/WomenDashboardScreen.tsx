@@ -1198,7 +1198,7 @@ const WomenDashboardScreen = () => {
                 </>
               )}
               {/* Show disabled video call hint for women without golden badge */}
-              {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && user.country?.toLowerCase().includes('india') && (
+              {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                 <Button
                   size="sm"
                   variant="outline"
