@@ -260,6 +260,11 @@ export const useMiniChatMessages = ({
     }
   }, [isMinimized]);
 
+  // Allow external code to register message IDs (prevents realtime duplicates for optimistic sends)
+  const addSeenId = useCallback((id: string) => {
+    seenIdsRef.current.add(id);
+  }, []);
+
   return {
     messages,
     setMessages,
@@ -269,5 +274,6 @@ export const useMiniChatMessages = ({
     hasOlderMessages,
     isLoadingOlder,
     loadOlderMessages,
+    addSeenId,
   };
 };
