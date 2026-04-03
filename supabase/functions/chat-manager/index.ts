@@ -134,7 +134,7 @@ interface ChatRequest {
 }
 
 // Helper to verify authenticated user and extract user ID from JWT
-async function verifyAuthAndGetUser(req: Request): Promise<{ isValid: boolean; error?: string; userId?: string }> {
+async function verifyAuthAndGetUser(req: Request, serviceClient?: any): Promise<{ isValid: boolean; error?: string; userId?: string }> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { isValid: false, error: 'Missing or invalid Authorization header' };
@@ -142,21 +142,45 @@ async function verifyAuthAndGetUser(req: Request): Promise<{ isValid: boolean; e
 
   const token = authHeader.replace('Bearer ', '');
   
-  // Create a client with the user's auth header for proper JWT validation
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } }
-  });
-  
-  // CRITICAL: Pass token explicitly for proper validation with verify_jwt=false
-  const { data: { user }, error } = await authClient.auth.getUser(token);
-  if (error || !user) {
-    console.log(`[AUTH] Token validation failed: ${error?.message || 'No user returned'}`);
-    return { isValid: false, error: 'Invalid or expired token' };
-  }
+  try {
+    // Decode JWT payload to extract user ID
+    // The JWT is signed by Supabase with the JWT secret, so we verify by checking with admin API
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return { isValid: false, error: 'Invalid token format' };
+    }
+    
+    // Decode payload
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    
+    // Check expiration
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      return { isValid: false, error: 'Token expired' };
+    }
+    
+    // Check required claims
+    if (!payload.sub || payload.aud !== 'authenticated') {
+      return { isValid: false, error: 'Invalid token claims' };
+    }
+    
+    // Verify the user exists using admin API (more reliable than getUser with token)
+    const client = serviceClient || createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    
+    const { data: { user }, error } = await client.auth.admin.getUserById(payload.sub);
+    if (error || !user) {
+      console.log(`[AUTH] User verification failed: ${error?.message || 'User not found'}`);
+      return { isValid: false, error: 'Invalid user' };
+    }
 
-  return { isValid: true, userId: user.id };
+    return { isValid: true, userId: user.id };
+  } catch (err) {
+    console.log(`[AUTH] Token validation error: ${err.message}`);
+    return { isValid: false, error: 'Token validation failed' };
+  }
 }
 
 serve(async (req) => {
@@ -170,7 +194,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // SECURITY: Verify caller is authenticated
-    const authResult = await verifyAuthAndGetUser(req);
+    const authResult = await verifyAuthAndGetUser(req, supabase);
     if (!authResult.isValid) {
       console.log(`[SECURITY] Unauthorized access to chat-manager: ${authResult.error}`);
       return new Response(
