@@ -859,11 +859,13 @@ serve(async (req) => {
         for (const woman of womenProfiles) {
           const avail = availabilityMap.get(woman.user_id);
           const maxChats = avail?.max_concurrent_chats || 3;
-          const currentChats = avail?.current_chat_count || 0;
+          const activeChats = avail?.current_chat_count || 0;
+          const pendingChats = pendingCountMap.get(woman.user_id) || 0;
+          const totalSlotsTaken = activeChats + pendingChats; // active + pending = reserved slots
           const isAvailable = avail?.is_available !== false;
           
-          // Check if woman has capacity and is not in a video call
-          if (currentChats >= maxChats || !isAvailable || usersInVideoCall.has(woman.user_id)) {
+          // Check if woman has capacity (including pending) and is not in a video call
+          if (totalSlotsTaken >= maxChats || !isAvailable || usersInVideoCall.has(woman.user_id)) {
             continue;
           }
 
