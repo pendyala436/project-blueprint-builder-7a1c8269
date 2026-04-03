@@ -273,7 +273,6 @@ const DraggableMiniChatWindow = ({
       return;
     }
 
-    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const messageTimestamp = new Date().toISOString();
 
     setNewMessage("");
