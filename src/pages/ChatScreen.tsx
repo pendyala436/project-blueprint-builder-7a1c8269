@@ -524,6 +524,50 @@ const ChatScreen = () => {
   }, [chatPartner?.userId, currentUserId, currentUserGender, isSessionActive, handleAutoReconnect, toast]);
 
   /**
+   * translateHistoryMessages
+   * 
+   * Translates all loaded history messages for the current viewer.
+   * Runs in background — updates messages as translations arrive.
+   * Uses auto-detect so transliteration, native script, and English all work.
+   */
+  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
+    // Process in batches of 5 to avoid overwhelming the edge function
+    const batchSize = 5;
+    for (let i = 0; i < msgs.length; i += batchSize) {
+      const batch = msgs.slice(i, i + batchSize);
+      const translationPromises = batch.map(async (msg) => {
+        try {
+          const result = await translateForViewer(msg.message, viewerLanguage);
+          return {
+            id: msg.id,
+            translatedMessage: result.nativeText,
+            englishText: result.englishText,
+            isTranslated: result.nativeText !== msg.message,
+          };
+        } catch {
+          return null;
+        }
+      });
+
+      const results = await Promise.all(translationPromises);
+
+      // Update messages state with translations
+      setMessages(prev => prev.map(m => {
+        const translation = results.find(r => r && r.id === m.id);
+        if (translation) {
+          return {
+            ...m,
+            translatedMessage: translation.translatedMessage,
+            englishText: translation.englishText,
+            isTranslated: translation.isTranslated,
+          };
+        }
+        return m;
+      }));
+    }
+  }, []);
+
+  /**
    * initializeChat Function
    * 
    * Sets up the chat session:
