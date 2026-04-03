@@ -55,10 +55,11 @@ const markMessagesAsReadWithRetry = async (
  */
 async function translateMessageForViewer(
   text: string,
-  viewerLanguage: string
+  viewerLanguage: string,
+  senderLanguage?: string
 ): Promise<{ displayText: string; englishText: string; isTranslated: boolean }> {
   try {
-    const result = await translateForViewer(text, viewerLanguage);
+    const result = await translateForViewer(text, viewerLanguage, senderLanguage);
     return {
       displayText: result.nativeText,
       englishText: result.englishText,
