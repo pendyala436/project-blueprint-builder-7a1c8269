@@ -385,16 +385,14 @@ export function PrivateGroupCallWindow({
         setShowGiftDialog(false);
 
         // Broadcast gift to all participants via group_messages with a special prefix
-        supabase
+        const { error: msgErr } = await supabase
           .from('group_messages')
           .insert({
             group_id: group.id,
             sender_id: currentUserId,
             message: `__GIFT__::${gift.emoji}::${gift.name}::${gift.price}`,
-          })
-          .then(({ error: msgErr }) => {
-            if (msgErr) console.error('Failed to broadcast gift', msgErr);
           });
+        if (msgErr) console.error('Failed to broadcast gift message:', msgErr);
       } else {
         toast.error(result.error || 'Failed to send gift');
       }
