@@ -1000,6 +1000,12 @@ const WomenDashboardScreen = () => {
       });
 
       if (error) throw error;
+
+      // Mark as self-initiated to prevent incoming chat popup
+      if (data?.session_id || data?.chat_id) {
+        const { markChatAsSelfInitiated } = await import("@/hooks/useIncomingChats");
+        markChatAsSelfInitiated(data.session_id, data.chat_id);
+      }
       if (!data.success) {
         toast({
           title: t('cannotStartChat', 'Cannot Start Chat'),
