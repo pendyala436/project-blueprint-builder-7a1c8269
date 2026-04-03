@@ -184,7 +184,7 @@ const AdminFinanceDashboard = () => {
 
       // Calculate transaction type distribution
       const typeCount: Record<string, number> = {};
-      ledgerTxns?.forEach((txn: any) => {
+      allLedgerTxns?.forEach((txn: any) => {
         const type = txn.transaction_type || "other";
         typeCount[type] = (typeCount[type] || 0) + 1;
       });
