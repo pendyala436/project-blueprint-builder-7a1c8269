@@ -141,7 +141,7 @@ export const useIncomingChats = (
         
         const { data: sessions, error: sessionsError } = await supabase
           .from("active_chat_sessions")
-          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, status`)
+          .select(`id, chat_id, ${partnerColumn}, rate_per_minute, created_at, started_at, updated_at, status`)
           .eq(column, currentUserId)
           .in("status", statusFilter)
           .order("created_at", { ascending: false })
@@ -160,17 +160,38 @@ export const useIncomingChats = (
         }
 
         // BATCH: Get message counts for all pending sessions at once
+        // CRITICAL: Only check messages sent AFTER the session was started/recycled
+        // Recycled sessions reuse the same chat_id, so old messages from previous
+        // conversations must not prevent the Accept/Reject popup from showing
         const chatIds = pendingSessions.map(s => s.chat_id);
+        
+        // Build a map of chat_id -> session start time for filtering
+        const sessionStartTimes = new Map(
+          pendingSessions.map(s => [
+            s.chat_id, 
+            (s as any).started_at || (s as any).updated_at || s.created_at
+          ])
+        );
+
         const { data: userMessages } = await supabase
           .from("chat_messages")
-          .select("chat_id")
+          .select("chat_id, created_at")
           .in("chat_id", chatIds)
           .eq("sender_id", currentUserId);
 
-        const chatsWithMessages = new Set(userMessages?.map(m => m.chat_id) || []);
+        // Only count messages sent AFTER the current session started
+        const chatsWithRecentMessages = new Set(
+          (userMessages || [])
+            .filter(m => {
+              const sessionStart = sessionStartTimes.get(m.chat_id);
+              if (!sessionStart) return true; // fallback: count it
+              return new Date(m.created_at) >= new Date(sessionStart as string);
+            })
+            .map(m => m.chat_id)
+        );
 
-        // Filter sessions where user hasn't sent any message
-        const incomingSessions = pendingSessions.filter(s => !chatsWithMessages.has(s.chat_id));
+        // Filter sessions where user hasn't sent any message in THIS session
+        const incomingSessions = pendingSessions.filter(s => !chatsWithRecentMessages.has(s.chat_id));
         if (incomingSessions.length === 0) {
           isCheckingRef = false;
           return;
