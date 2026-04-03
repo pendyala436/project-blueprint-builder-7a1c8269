@@ -338,10 +338,10 @@ const AdminUserManagement = () => {
   };
 
   useEffect(() => {
-    fetchUsers(); loadLanguageGroups(); loadStats();
+    loadStats();
   }, []);
   useEffect(() => {
-    fetchUsers(); loadLanguageGroups(); loadStats();
+    fetchUsers(); loadLanguageGroups();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
