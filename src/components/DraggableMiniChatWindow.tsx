@@ -12,8 +12,9 @@ import { cn } from "@/lib/utils";
 import {
   Send, X, Maximize2, Minimize2, Clock, IndianRupee, Loader2,
   ChevronDown, ChevronUp, TrendingUp, Wallet, AlertTriangle,
-  Move, Paperclip, Image, Video, FileText, Mic, MoreHorizontal
+  Move, Paperclip, Image, Video, FileText, Mic, MoreHorizontal, Languages
 } from "lucide-react";
+import { translateText } from "@/lib/translation-service";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
