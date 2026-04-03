@@ -271,7 +271,7 @@ const DraggableMiniChatWindow = ({
       });
     } catch (error) {
       console.error("Error closing chat via chat-manager:", error);
-      toast.error("Chat not closed", { description: "Unable to close the chat session properly. The chat may still appear active." });
+      toast({ title: "Chat not closed", description: "Unable to close the chat session properly. The chat may still appear active.", variant: "destructive" });
       try {
         await supabase
           .from("active_chat_sessions")
