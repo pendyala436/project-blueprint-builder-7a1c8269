@@ -97,12 +97,16 @@ const MiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   
   const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
+  const [previewNative, setPreviewNative] = useState("");
+  const [previewEnglish, setPreviewEnglish] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
