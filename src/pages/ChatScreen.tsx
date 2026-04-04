@@ -407,7 +407,15 @@ const ChatScreen = () => {
           if (langToUse) {
             try {
               const senderLang = newMsg.sender_id === userId ? currentUserLanguageRef.current : partner?.preferredLanguage;
-              const result = await translateForViewer(newMsg.message, langToUse, senderLang);
+              // TRN-03 FIX: Skip re-translation for own messages (already translated optimistically)
+              if (newMsg.sender_id === userId) {
+                // Own message — already translated via optimistic handler, skip
+              } else {
+                const result = await translateForViewer(newMsg.message, langToUse, senderLang);
+                translatedMessage = result.nativeText;
+                englishText = result.englishText;
+                isTranslated = translatedMessage !== newMsg.message;
+              }
               translatedMessage = result.nativeText;
               englishText = result.englishText;
               isTranslated = translatedMessage !== newMsg.message;
