@@ -407,19 +407,50 @@ const ChatScreen = () => {
           if (langToUse) {
             try {
               const senderLang = newMsg.sender_id === userId ? currentUserLanguageRef.current : partner?.preferredLanguage;
-              const result = await translateForViewer(newMsg.message, langToUse, senderLang);
-              translatedMessage = result.nativeText;
-              englishText = result.englishText;
-              isTranslated = translatedMessage !== newMsg.message;
+              // TRN-03 FIX: Skip re-translation for own messages (already translated optimistically)
+              if (newMsg.sender_id === userId) {
+                // Own message — already translated via optimistic handler, skip
+              } else {
+                const result = await translateForViewer(newMsg.message, langToUse, senderLang);
+                translatedMessage = result.nativeText;
+                englishText = result.englishText;
+                isTranslated = translatedMessage !== newMsg.message;
+              }
             } catch {
               // Fallback: show original message
             }
           }
           
-          // Add message to state (with deduplication — replace temp optimistic messages)
+          // BUG-02 FIX: Add message to state with robust deduplication
           setMessages(prev => {
+            // Skip if already in state (exact ID match)
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            // Remove any temp message from same sender within 10s window
+            
+            // For own messages, preserve optimistic translation data
+            if (newMsg.sender_id === userId) {
+              // Find and replace the temp optimistic message, keeping its translation
+              const tempIdx = prev.findIndex(m =>
+                m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
+                Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000
+              );
+              if (tempIdx !== -1) {
+                const tempMsg = prev[tempIdx];
+                const updated = [...prev];
+                updated[tempIdx] = {
+                  id: newMsg.id,
+                  senderId: newMsg.sender_id,
+                  message: newMsg.message,
+                  translatedMessage: tempMsg.translatedMessage,
+                  englishText: tempMsg.englishText,
+                  isTranslated: tempMsg.isTranslated,
+                  isRead: newMsg.is_read,
+                  createdAt: newMsg.created_at,
+                };
+                return updated;
+              }
+            }
+            
+            // Remove any remaining temp message from same sender within 10s window
             const filtered = prev.filter(m =>
               !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
                 Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000)
@@ -1171,7 +1202,11 @@ const ChatScreen = () => {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast({ title: "Message not sent", description: ERROR_MESSAGES.chat.sendFailed, variant: "destructive" });
+      // UX-03 FIX: Keep failed message in state with sendFailed flag for retry
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, sendFailed: true } : m
+      ));
+      toast({ title: "Message not sent", description: "Tap the message to retry.", variant: "destructive" });
     } finally {
       setIsSending(false);
     }

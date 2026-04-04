@@ -31,6 +31,8 @@ interface CommunityMessage {
   senderName: string;
   senderPhoto: string | null;
   message: string | null;
+  translatedMessage?: string | null;
+  englishText?: string | null;
   fileUrl: string | null;
   fileType: string | null;
   fileName: string | null;
@@ -89,6 +91,7 @@ export const LanguageGroupChat = ({
   const [showMembers, setShowMembers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const profileCacheRef = useRef<Map<string, { name: string; photo: string | null }>>(new Map());
 
   // Load messages and members
   useEffect(() => {
@@ -120,7 +123,7 @@ export const LanguageGroupChat = ({
         .select("*")
         .eq("language_code", languageName)
         .order("created_at", { ascending: true })
-        .limit(200);
+        .limit(50); // PERF-03 FIX: Reduced from 200 to 50
 
       if (error) throw error;
 
@@ -131,8 +134,13 @@ export const LanguageGroupChat = ({
         const profiles = await fetchPublicProfiles(senderIds as string[]);
 
         const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+        
+        // BUG-05 FIX: Pre-populate profile cache
+        profileMap.forEach((p, id) => {
+          profileCacheRef.current.set(id, { name: p.full_name || "Unknown", photo: p.photo_url || null });
+        });
 
-        setMessages(messagesData.map(m => ({
+        const mappedMessages: CommunityMessage[] = messagesData.map(m => ({
           id: m.id,
           senderId: m.sender_id,
           senderName: profileMap.get(m.sender_id)?.full_name || "Unknown",
@@ -144,7 +152,31 @@ export const LanguageGroupChat = ({
           fileSize: m.file_size,
           createdAt: m.created_at,
           isOwn: m.sender_id === currentUserId
-        })));
+        }));
+
+        setMessages(mappedMessages);
+
+        // TRN-02 FIX: Translate history messages in background batches
+        const { translateForViewer } = await import("@/lib/translation-service");
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < mappedMessages.length; i += BATCH_SIZE) {
+          const batch = mappedMessages.slice(i, i + BATCH_SIZE);
+          const translations = await Promise.allSettled(
+            batch.filter(m => m.message).map(async (m) => {
+              const result = await translateForViewer(m.message!, languageName);
+              return { id: m.id, ...result };
+            })
+          );
+          setMessages(prev => prev.map(m => {
+            const t = translations.find(
+              r => r.status === 'fulfilled' && r.value.id === m.id
+            );
+            if (t && t.status === 'fulfilled') {
+              return { ...m, translatedMessage: t.value.nativeText, englishText: t.value.englishText };
+            }
+            return m;
+          }));
+        }
       }
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -212,19 +244,46 @@ export const LanguageGroupChat = ({
         async (payload) => {
           const newMsg = payload.new as any;
           
-          // Get sender profile
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, photo_url")
-            .eq("user_id", newMsg.sender_id)
-            .maybeSingle();
+          // BUG-05 FIX: Use profile cache first, only query if not cached
+          let senderName = "Unknown";
+          let senderPhoto: string | null = null;
+          const cached = profileCacheRef.current.get(newMsg.sender_id);
+          if (cached) {
+            senderName = cached.name;
+            senderPhoto = cached.photo;
+          } else {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, photo_url")
+              .eq("user_id", newMsg.sender_id)
+              .maybeSingle();
+            senderName = profile?.full_name || "Unknown";
+            senderPhoto = profile?.photo_url || null;
+            profileCacheRef.current.set(newMsg.sender_id, { name: senderName, photo: senderPhoto });
+          }
+
+          // BUG-03/TRN-02 FIX: Translate incoming realtime messages
+          let translatedMessage: string | null = null;
+          let englishText: string | null = null;
+          if (newMsg.message) {
+            try {
+              const { translateForViewer } = await import("@/lib/translation-service");
+              const result = await translateForViewer(newMsg.message, languageName);
+              translatedMessage = result.nativeText;
+              englishText = result.englishText;
+            } catch {
+              // Fallback: show raw message
+            }
+          }
 
           const message: CommunityMessage = {
             id: newMsg.id,
             senderId: newMsg.sender_id,
-            senderName: profile?.full_name || "Unknown",
-            senderPhoto: profile?.photo_url || null,
+            senderName,
+            senderPhoto,
             message: newMsg.message,
+            translatedMessage,
+            englishText,
             fileUrl: newMsg.file_url,
             fileType: newMsg.file_type,
             fileName: newMsg.file_name,
@@ -501,9 +560,16 @@ export const LanguageGroupChat = ({
                         
                         {/* Message text */}
                         {msg.message && (
-                          <p className="text-sm whitespace-pre-wrap break-words">
-                            {msg.message}
-                          </p>
+                          <div>
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {msg.translatedMessage || msg.message}
+                            </p>
+                            {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message || '').toLowerCase() && (
+                              <p className="text-[10px] text-muted-foreground/70 italic mt-1" dir="ltr">
+                                english: {msg.englishText.toLowerCase()}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>

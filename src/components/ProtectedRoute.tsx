@@ -32,7 +32,7 @@ interface RoleCacheEntry {
 }
 
 let roleCache: RoleCacheEntry | null = null;
-const ROLE_CACHE_TTL = 60_000; // 60s — matches revalidation interval
+const ROLE_CACHE_TTL = 15_000; // BUG-04 FIX: 15s — reduces stale role window
 
 function clearRoleCache() {
   roleCache = null;

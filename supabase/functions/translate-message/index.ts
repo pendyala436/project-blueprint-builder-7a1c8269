@@ -134,6 +134,7 @@ function resolveLanguageCode(lang: string): string {
 /**
  * Core: Scrape Google Translate mobile page directly (lingva-scraper approach).
  * No API key needed. Supports all 130+ languages.
+ * TRN-04 FIX: Added 429/rate-limit handling with exponential back-off.
  */
 async function scrapeGoogleTranslate(
   text: string,
@@ -155,9 +156,24 @@ async function scrapeGoogleTranslate(
       signal: AbortSignal.timeout(10000),
     });
 
+    // TRN-04 FIX: Handle 429 rate limiting with exponential back-off
+    if (resp.status === 429) {
+      if (retry < 3) {
+        const delay = Math.pow(2, retry) * 500 + Math.random() * 200;
+        await new Promise(r => setTimeout(r, delay));
+        return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+      }
+      console.warn('[translate] Rate limited after 3 retries');
+      return null;
+    }
+
     if (!resp.ok) {
       await resp.text();
-      if (retry < 3) return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+      if (retry < 3) {
+        const delay = Math.pow(2, retry) * 300;
+        await new Promise(r => setTimeout(r, delay));
+        return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+      }
       return null;
     }
 
@@ -171,14 +187,24 @@ async function scrapeGoogleTranslate(
     const resultEl = doc.querySelector(".result-container");
     const translation = resultEl?.textContent?.trim();
 
-    if (!translation || translation.includes("#af-error-page")) {
-      if (retry < 3) return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+    // TRN-04 FIX: Detect CAPTCHA or error pages in 200 responses
+    if (!translation || translation.includes("#af-error-page") || 
+        (translation.length > 500 && translation.toLowerCase().includes('captcha'))) {
+      if (retry < 3) {
+        const delay = Math.pow(2, retry) * 500;
+        await new Promise(r => setTimeout(r, delay));
+        return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+      }
       return null;
     }
 
     return translation;
   } catch {
-    if (retry < 3) return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+    if (retry < 3) {
+      const delay = Math.pow(2, retry) * 300;
+      await new Promise(r => setTimeout(r, delay));
+      return scrapeGoogleTranslate(text, sourceLang, targetLang, retry + 1);
+    }
     return null;
   }
 }
