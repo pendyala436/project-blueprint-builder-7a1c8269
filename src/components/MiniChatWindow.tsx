@@ -41,6 +41,7 @@ interface Message {
   translatedMessage?: string;
   englishText?: string;
   isTranslated?: boolean;
+  isTranslating?: boolean;
   createdAt: string;
 }
 
