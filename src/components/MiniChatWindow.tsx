@@ -910,7 +910,29 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          
+          {/* Typing preview box */}
+          {newMessage.trim() && (previewNative || isPreviewLoading) && (
+            <div className="px-2 py-1 border-b bg-muted/30">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground mb-0.5">
+                <span>👁 Preview:</span>
+              </div>
+              {isPreviewLoading ? (
+                <div className="flex items-center gap-1">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Translating...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] unicode-text text-foreground" dir="auto">{previewNative}</p>
+                  {previewEnglish && previewEnglish.toLowerCase() !== previewNative.toLowerCase() && (
+                    <p className="text-[9px] text-muted-foreground/60 italic" dir="ltr">
+                      english: {previewEnglish.toLowerCase()}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
