@@ -244,19 +244,46 @@ export const LanguageGroupChat = ({
         async (payload) => {
           const newMsg = payload.new as any;
           
-          // Get sender profile
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, photo_url")
-            .eq("user_id", newMsg.sender_id)
-            .maybeSingle();
+          // BUG-05 FIX: Use profile cache first, only query if not cached
+          let senderName = "Unknown";
+          let senderPhoto: string | null = null;
+          const cached = profileCacheRef.current.get(newMsg.sender_id);
+          if (cached) {
+            senderName = cached.name;
+            senderPhoto = cached.photo;
+          } else {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, photo_url")
+              .eq("user_id", newMsg.sender_id)
+              .maybeSingle();
+            senderName = profile?.full_name || "Unknown";
+            senderPhoto = profile?.photo_url || null;
+            profileCacheRef.current.set(newMsg.sender_id, { name: senderName, photo: senderPhoto });
+          }
+
+          // BUG-03/TRN-02 FIX: Translate incoming realtime messages
+          let translatedMessage: string | null = null;
+          let englishText: string | null = null;
+          if (newMsg.message) {
+            try {
+              const { translateForViewer } = await import("@/lib/translation-service");
+              const result = await translateForViewer(newMsg.message, languageName);
+              translatedMessage = result.nativeText;
+              englishText = result.englishText;
+            } catch {
+              // Fallback: show raw message
+            }
+          }
 
           const message: CommunityMessage = {
             id: newMsg.id,
             senderId: newMsg.sender_id,
-            senderName: profile?.full_name || "Unknown",
-            senderPhoto: profile?.photo_url || null,
+            senderName,
+            senderPhoto,
             message: newMsg.message,
+            translatedMessage,
+            englishText,
             fileUrl: newMsg.file_url,
             fileType: newMsg.file_type,
             fileName: newMsg.file_name,
