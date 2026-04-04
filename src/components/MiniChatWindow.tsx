@@ -609,9 +609,13 @@ const MiniChatWindow = ({
       // For English speakers or on failure, still get English translation for subtitle
       getEnglishTranslation(messageText, 'auto').then(eng => {
         setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...m, englishText: eng } : m
+          m.id === tempId ? { ...m, englishText: eng, isTranslating: false } : m
         ));
-      }).catch(() => { /* fallback: show original */ });
+      }).catch(() => {
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, isTranslating: false } : m
+        ));
+      });
     });
 
     try {
