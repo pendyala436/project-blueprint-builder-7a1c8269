@@ -374,19 +374,20 @@ const EnhancedParallelChatsContainer = ({
 
   const displayedChats = activeChats.slice(0, maxParallelChats);
 
-  // For men: auto-accept incoming chats (no popup needed)
-  // For women: show accept/reject popup
+  // For men: silently clear incoming chat popups WITHOUT changing session status
+  // Session stays "pending" so women can still see their accept/reject popup
+  // Men's chat windows already open from loadActiveChats (isAccepted = true for men)
   useEffect(() => {
     if (userGender === "male" && incomingChats.length > 0) {
       for (const incoming of incomingChats) {
         if (!acceptedSessionsRef.current.has(incoming.sessionId) &&
-            !activeChats.some(ac => ac.id === incoming.sessionId) &&
-            !existingPartnersRef.current.has(incoming.partnerId)) {
-          handleAcceptChat(incoming.sessionId);
+            !activeChats.some(ac => ac.id === incoming.sessionId)) {
+          // Just clear the popup — don't update DB status
+          clearChat(incoming.sessionId);
         }
       }
     }
-  }, [incomingChats, userGender, handleAcceptChat, activeChats]);
+  }, [incomingChats, userGender, clearChat, activeChats]);
 
   const pendingIncomingChats = userGender === "female" 
     ? incomingChats.filter(
