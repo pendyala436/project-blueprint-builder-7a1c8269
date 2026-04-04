@@ -577,6 +577,9 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
+    setPreviewNative("");
+    setPreviewEnglish("");
+    setIsPreviewLoading(false);
     setLastActivityTime(Date.now());
 
     const tempId = `temp-${Date.now()}`;
@@ -584,6 +587,7 @@ const MiniChatWindow = ({
       id: tempId,
       senderId: currentUserId,
       message: messageText,
+      isTranslating: true,
       createdAt: new Date().toISOString()
     };
     setMessages(prev => [...prev, optimisticMessage]);
