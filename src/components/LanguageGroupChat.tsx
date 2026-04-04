@@ -560,9 +560,16 @@ export const LanguageGroupChat = ({
                         
                         {/* Message text */}
                         {msg.message && (
-                          <p className="text-sm whitespace-pre-wrap break-words">
-                            {msg.message}
-                          </p>
+                          <div>
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {msg.translatedMessage || msg.message}
+                            </p>
+                            {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message || '').toLowerCase() && (
+                              <p className="text-[10px] text-muted-foreground/70 italic mt-1" dir="ltr">
+                                english: {msg.englishText.toLowerCase()}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
