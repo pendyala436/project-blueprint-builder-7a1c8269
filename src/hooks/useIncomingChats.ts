@@ -135,13 +135,19 @@ export const useIncomingChats = (
           return;
         }
 
-        // Filter out already accepted, rejected, or self-initiated sessions
-        const pendingSessions = sessions.filter(
-          s => !acceptedChatsRef.current.has(s.id) && 
-               !rejectedChatsRef.current.has(s.id) &&
-               !selfInitiatedSessionIds.has(s.id) &&
-               !selfInitiatedChatIds.has(s.chat_id)
-        );
+        // Filter out already accepted or self-initiated sessions
+        // NOTE: rejected sessions are NOT filtered here — if a session is back to "pending"
+        // in the DB, it means the man re-initiated, so we should show it again
+        const pendingSessions = sessions.filter(s => {
+          // If session was previously rejected but is now pending again (recycled), clear the stale ref
+          if (rejectedChatsRef.current.has(s.id)) {
+            // Check if updated_at is newer than when we rejected it — just clear it since DB says pending
+            rejectedChatsRef.current.delete(s.id);
+          }
+          return !acceptedChatsRef.current.has(s.id) && 
+                 !selfInitiatedSessionIds.has(s.id) &&
+                 !selfInitiatedChatIds.has(s.chat_id);
+        });
         if (pendingSessions.length === 0) {
           isCheckingRef = false;
           return;
