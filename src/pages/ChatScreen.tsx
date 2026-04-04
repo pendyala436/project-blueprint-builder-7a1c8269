@@ -1182,9 +1182,13 @@ const ChatScreen = () => {
       import("@/lib/translation-service").then(({ getEnglishTranslation }) => {
         getEnglishTranslation(messageText, 'auto').then(eng => {
           setMessages(prev => prev.map(m =>
-            m.id === tempId ? { ...m, englishText: eng } : m
+            m.id === tempId ? { ...m, englishText: eng, isTranslating: false } : m
           ));
-        }).catch(() => {});
+        }).catch(() => {
+          setMessages(prev => prev.map(m =>
+            m.id === tempId ? { ...m, isTranslating: false } : m
+          ));
+        });
       });
     });
 
