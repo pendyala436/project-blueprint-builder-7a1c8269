@@ -103,57 +103,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     return () => viewport.removeEventListener("resize", handleResize);
   }, []);
 
-  // Debounced native preview — converts input to user's native language
-  // Works for ALL language types:
-  // - Non-Latin lang user typing Latin (transliteration/English) → shows native script
-  // - Latin-script lang user typing English → shows their language (e.g., French)
-  // - Native script input → no preview needed (already native)
-  useEffect(() => {
-    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-
-    const trimmed = message.trim();
-    if (!trimmed || !isNonEnglish) {
-      setNativePreview(null);
-      return;
-    }
-
-    const inputIsLatin = isLatinScript(trimmed);
-    const userUsesLatin = isLatinScriptLanguage(langNorm);
-
-    // Show preview whenever user is non-English:
-    // - Latin input (English/transliteration) → translate to user's native
-    // - Non-Latin input for non-Latin user → might be different script (e.g., Telugu user typing Hindi)
-    //   In that case, auto→userLang will translate; if same script, result===input → no preview shown
-    setIsPreviewLoading(true);
-    previewTimeoutRef.current = setTimeout(async () => {
-      try {
-        // Auto-detect → user's language (handles English, transliteration, other scripts, other Latin langs)
-        const result = await translateText(trimmed, 'auto', userLanguage || 'English');
-        if (result && result !== trimmed) {
-          setNativePreview(result);
-        } else if (inputIsLatin && !userUsesLatin) {
-          // For Latin input → non-Latin target: if auto-detect failed, try English → target
-          // This handles transliterations like "bagunnava" → బాగున్నావా
-          const fallback = await translateText(trimmed, 'English', userLanguage || 'English');
-          if (fallback && fallback !== trimmed) {
-            setNativePreview(fallback);
-          } else {
-            setNativePreview(null);
-          }
-        } else {
-          setNativePreview(null);
-        }
-      } catch {
-        setNativePreview(null);
-      } finally {
-        setIsPreviewLoading(false);
-      }
-    }, 600);
-
-    return () => {
-      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-    };
-  }, [message, isNonEnglish, userLanguage, langNorm]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
