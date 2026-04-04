@@ -1174,6 +1174,7 @@ const ChatScreen = () => {
           translatedMessage: result.nativeText,
           englishText: result.englishText,
           isTranslated: result.nativeText !== messageText,
+          isTranslating: false,
         } : m
       ));
     }).catch(() => {
