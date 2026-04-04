@@ -176,7 +176,7 @@ const MiniChatWindow = ({
     };
   }, [newMessage, currentUserLanguage]);
 
-
+  useEffect(() => {
     const loadInitialData = async () => {
       try {
         const { data: pricing } = await supabase
