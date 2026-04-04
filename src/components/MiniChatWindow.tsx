@@ -522,6 +522,7 @@ const MiniChatWindow = ({
         description: `Messages must be under ${MAX_MESSAGE_LENGTH} characters`,
         variant: "destructive"
       });
+      setIsSending(false);
       return;
     }
 
@@ -533,10 +534,12 @@ const MiniChatWindow = ({
         description: moderationResult.reason,
         variant: "destructive"
       });
+      setIsSending(false);
       return;
     }
 
     if (messageText.length === 0) {
+      setIsSending(false);
       return;
     }
 

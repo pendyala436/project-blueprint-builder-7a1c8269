@@ -1202,7 +1202,11 @@ const ChatScreen = () => {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      toast({ title: "Message not sent", description: ERROR_MESSAGES.chat.sendFailed, variant: "destructive" });
+      // UX-03 FIX: Keep failed message in state with sendFailed flag for retry
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, sendFailed: true } : m
+      ));
+      toast({ title: "Message not sent", description: "Tap the message to retry.", variant: "destructive" });
     } finally {
       setIsSending(false);
     }
