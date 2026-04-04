@@ -443,7 +443,8 @@ const MiniChatWindow = ({
 
           const langToUse = currentUserLanguage || 'English';
           try {
-            const result = await translateForViewer(newMsg.message, langToUse);
+            const senderLang = newMsg.sender_id === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateForViewer(newMsg.message, langToUse, senderLang);
             translatedMessage = result.nativeText;
             isTranslated = result.nativeText !== newMsg.message;
             englishText = result.englishText;
