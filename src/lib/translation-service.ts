@@ -244,7 +244,12 @@ export async function translateForViewer(
       // Works for BOTH cross-language AND same-language transliteration.
       // Example cross: Hindi user types "main theek hoon" → English→Hindi = "मैं ठीक हूँ" → Hindi→Telugu
       // Example same: Telugu user types "bagunnava" for Telugu viewer → English→Telugu = "బాగున్నావా"
-      if (senderLang && senderLang !== 'english' && !senderUsesLatin) {
+      // Use senderLang if known, otherwise fall back to viewerLang (common for self-preview)
+      const bridgeLang = (senderLang && senderLang !== 'english' && !senderUsesLatin) 
+        ? senderLang 
+        : (!viewerUsesLatin && viewerLang !== 'english') ? viewerLang : '';
+      const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLanguage : viewerLanguage) : '';
+      if (bridgeLang) {
         const senderNative = await translateText(message, 'English', senderLanguage || '');
         if (senderNative && !isLatinScript(senderNative) && senderNative !== message) {
           if (senderLang !== viewerLang) {
