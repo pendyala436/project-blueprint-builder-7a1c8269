@@ -216,6 +216,8 @@ export async function translateForViewer(
     //
     // We do NOT apply these fallbacks when the viewer uses Latin script,
     // because Latin→Latin translation already works correctly via auto-detect.
+    let englishText = englishResult || message;
+
     if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
 
@@ -238,35 +240,54 @@ export async function translateForViewer(
         }
       }
 
-      // Strategy C: Sender Language Bridge (for cross-language transliteration)
-      // When sender language is known and different from viewer language,
-      // first convert Latin input to sender's native script, then translate to viewer's language.
-      // Example: Hindi user types "main theek hoon" → English→Hindi = "मैं ठीक हूँ" → Hindi→Telugu = "నేను బాగున్నాను"
-      if (senderLang && senderLang !== viewerLang && senderLang !== 'english' && !senderUsesLatin) {
-        // Check if current result looks like garbage transliteration (non-Latin but not meaningful)
-        // We apply this when: either result is still Latin, or result came from auto-detect which
-        // may have produced wrong transliteration (e.g., "మెయిన్ తీక్ హూన్ ఆప్" instead of "నేను బాగున్నాను")
+      // Strategy C: Sender Language Bridge (for transliteration)
+      // Works for BOTH cross-language AND same-language transliteration.
+      // Example cross: Hindi user types "main theek hoon" → English→Hindi = "मैं ठीक हूँ" → Hindi→Telugu
+      // Example same: Telugu user types "bagunnava" for Telugu viewer → English→Telugu = "బాగున్నావా"
+      if (senderLang && senderLang !== 'english' && !senderUsesLatin) {
         const senderNative = await translateText(message, 'English', senderLanguage || '');
         if (senderNative && !isLatinScript(senderNative) && senderNative !== message) {
-          // Now translate from sender's native script to viewer's language
-          const crossTranslated = await translateText(senderNative, senderLanguage || 'auto', viewerLanguage);
-          if (crossTranslated && crossTranslated !== senderNative) {
-            nativeText = crossTranslated;
+          if (senderLang !== viewerLang) {
+            // Cross-language: translate sender's native to viewer's language
+            const crossTranslated = await translateText(senderNative, senderLanguage || 'auto', viewerLanguage);
+            if (crossTranslated && crossTranslated !== senderNative) {
+              nativeText = crossTranslated;
+            }
+          } else {
+            // Same language: sender's native IS the viewer's native
+            nativeText = senderNative;
+          }
+
+          // Fix English subtitle: if auto→English failed (returned same text),
+          // translate the sender's native script to English for a proper subtitle
+          if (englishText === message || isLatinScript(englishText)) {
+            const properEnglish = await translateText(senderNative, senderLanguage || 'auto', 'English');
+            if (properEnglish && properEnglish !== senderNative && properEnglish !== message) {
+              englishText = properEnglish;
+            }
           }
         }
       }
     }
 
+    // ── Also fix English subtitle for non-Latin input when auto→English failed ──
+    if (!inputIsLatin && (englishText === message || englishText === nativeText) && senderLang && senderLang !== 'english') {
+      const betterEnglish = await translateText(message, senderLanguage || 'auto', 'English');
+      if (betterEnglish && betterEnglish !== message) {
+        englishText = betterEnglish;
+      }
+    }
+
     // ── Fallback: unchanged Latin input for non-Latin viewer ──
-    if (nativeText === message && englishResult && englishResult !== message) {
+    if (nativeText === message && englishText && englishText !== message) {
       if (inputIsLatin && !viewerUsesLatin) {
-        nativeText = englishResult;
+        nativeText = englishText;
       }
     }
 
     return {
       nativeText: nativeText || message,
-      englishText: englishResult || message,
+      englishText: englishText || message,
     };
   } catch {
     // On any failure, try English fallback one more time
