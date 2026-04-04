@@ -1094,6 +1094,7 @@ const ChatScreen = () => {
       id: tempId,
       senderId: currentUserId,
       message: messageText,
+      isRead: false,
       createdAt: new Date().toISOString(),
     }]);
 
