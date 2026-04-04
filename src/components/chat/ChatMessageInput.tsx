@@ -2,7 +2,7 @@ import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { Send, Smile, Loader2, Languages } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
 import { translateText, isLatinScript, isLatinScriptLanguage } from '@/lib/translation-service';
 
