@@ -416,10 +416,15 @@ const ChatScreen = () => {
             }
           }
           
-          // Add message to state (with deduplication check)
+          // Add message to state (with deduplication — replace temp optimistic messages)
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, {
+            // Remove any temp message from same sender within 10s window
+            const filtered = prev.filter(m =>
+              !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
+                Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000)
+            );
+            return [...filtered, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
@@ -1087,6 +1092,39 @@ const ChatScreen = () => {
 
     setIsSending(true);
 
+    // Add optimistic message immediately so sender sees it right away
+    const tempId = `temp-${Date.now()}`;
+    const senderLang = currentUserLanguageRef.current || 'English';
+    setMessages(prev => [...prev, {
+      id: tempId,
+      senderId: currentUserId,
+      message: messageText,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    }]);
+
+    // Translate optimistic message for sender's own view (native script + English subtitle)
+    // Pass senderLang as 3rd arg so Strategy C (transliteration bridge) fires for Latin input
+    translateForViewer(messageText, senderLang, senderLang).then(result => {
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? {
+          ...m,
+          translatedMessage: result.nativeText,
+          englishText: result.englishText,
+          isTranslated: result.nativeText !== messageText,
+        } : m
+      ));
+    }).catch(() => {
+      // Fallback: at least get English subtitle
+      import("@/lib/translation-service").then(({ getEnglishTranslation }) => {
+        getEnglishTranslation(messageText, 'auto').then(eng => {
+          setMessages(prev => prev.map(m =>
+            m.id === tempId ? { ...m, englishText: eng } : m
+          ));
+        }).catch(() => {});
+      });
+    });
+
     try {
       const { error } = await supabase
         .from("chat_messages")
@@ -1097,7 +1135,11 @@ const ChatScreen = () => {
           message: messageText,
         });
 
-      if (error) throw error;
+      if (error) {
+        // Remove optimistic message on failure
+        setMessages(prev => prev.filter(m => m.id !== tempId));
+        throw error;
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast({ title: "Message not sent", description: ERROR_MESSAGES.chat.sendFailed, variant: "destructive" });

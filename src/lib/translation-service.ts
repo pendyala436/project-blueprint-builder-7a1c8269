@@ -244,25 +244,30 @@ export async function translateForViewer(
       // Works for BOTH cross-language AND same-language transliteration.
       // Example cross: Hindi user types "main theek hoon" → English→Hindi = "मैं ठीक हूँ" → Hindi→Telugu
       // Example same: Telugu user types "bagunnava" for Telugu viewer → English→Telugu = "బాగున్నావా"
-      if (senderLang && senderLang !== 'english' && !senderUsesLatin) {
-        const senderNative = await translateText(message, 'English', senderLanguage || '');
-        if (senderNative && !isLatinScript(senderNative) && senderNative !== message) {
-          if (senderLang !== viewerLang) {
+      // Use senderLang if known, otherwise fall back to viewerLang (common for self-preview)
+      const bridgeLang = (senderLang && senderLang !== 'english' && !senderUsesLatin) 
+        ? senderLang 
+        : (!viewerUsesLatin && viewerLang !== 'english') ? viewerLang : '';
+      const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLanguage : viewerLanguage) : '';
+      if (bridgeLang) {
+        const bridgeNative = await translateText(message, 'English', bridgeLangFull || viewerLanguage);
+        if (bridgeNative && !isLatinScript(bridgeNative) && bridgeNative !== message) {
+          if (bridgeLang !== viewerLang) {
             // Cross-language: translate sender's native to viewer's language
-            const crossTranslated = await translateText(senderNative, senderLanguage || 'auto', viewerLanguage);
-            if (crossTranslated && crossTranslated !== senderNative) {
+            const crossTranslated = await translateText(bridgeNative, bridgeLangFull || 'auto', viewerLanguage);
+            if (crossTranslated && crossTranslated !== bridgeNative) {
               nativeText = crossTranslated;
             }
           } else {
             // Same language: sender's native IS the viewer's native
-            nativeText = senderNative;
+            nativeText = bridgeNative;
           }
 
           // Fix English subtitle: if auto→English failed (returned same text),
-          // translate the sender's native script to English for a proper subtitle
+          // translate the native script to English for a proper subtitle
           if (englishText === message || isLatinScript(englishText)) {
-            const properEnglish = await translateText(senderNative, senderLanguage || 'auto', 'English');
-            if (properEnglish && properEnglish !== senderNative && properEnglish !== message) {
+            const properEnglish = await translateText(bridgeNative, bridgeLangFull || 'auto', 'English');
+            if (properEnglish && properEnglish !== bridgeNative && properEnglish !== message) {
               englishText = properEnglish;
             }
           }
