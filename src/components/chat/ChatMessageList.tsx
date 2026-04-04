@@ -2,7 +2,7 @@ import React, { memo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Check, CheckCheck, MessageCircle } from 'lucide-react';
+import { Check, CheckCheck, MessageCircle, Loader2 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 
 export interface ChatMessage {
