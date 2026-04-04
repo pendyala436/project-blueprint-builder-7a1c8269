@@ -127,7 +127,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     setIsSending(true);
     try {
       setMessage('');
-      setNativePreview(null);
       onTyping?.(false);
       textareaRef.current?.focus();
       await onSendMessage(text);
