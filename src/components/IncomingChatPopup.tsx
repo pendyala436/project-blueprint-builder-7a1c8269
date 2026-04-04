@@ -20,43 +20,7 @@ interface IncomingChatPopupProps {
   onReject: (sessionId: string, reason?: 'manual' | 'auto_timeout') => void;
 }
 
-// Audio context for buzz sound
-let audioContext: AudioContext | null = null;
-
-const playBuzzSound = () => {
-  try {
-    if (!audioContext || audioContext.state === 'closed') {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    // Create a pleasant notification tone
-    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-    oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-    oscillator.type = "sine";
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.4);
-  } catch (error) {
-    console.error("Error playing buzz sound:", error);
-  }
-};
-
-const stopBuzzSound = () => {
-  if (audioContext && audioContext.state !== 'closed') {
-    try { audioContext.close(); } catch (_) {}
-    audioContext = null;
-  }
-};
+// Sound is managed globally by useIncomingChats hook - no duplicate sound here
 
 const IncomingChatPopup = ({
   sessionId,
@@ -72,25 +36,6 @@ const IncomingChatPopup = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const [isExiting, setIsExiting] = useState(false);
-  const buzzIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Play buzz sound on mount and every 2 seconds for BOTH genders
-  useEffect(() => {
-    // Play initial sound
-    playBuzzSound();
-
-    // Continuous buzz until accepted/rejected - for both men and women
-    buzzIntervalRef.current = setInterval(() => {
-      playBuzzSound();
-    }, 2000);
-
-    return () => {
-      if (buzzIntervalRef.current) {
-        clearInterval(buzzIntervalRef.current);
-        buzzIntervalRef.current = null;
-      }
-    };
-  }, []);
 
   // Calculate elapsed time since chat started
   useEffect(() => {
