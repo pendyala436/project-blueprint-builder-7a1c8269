@@ -253,6 +253,9 @@ export const useIncomingChats = (
           if (session.status === "ended") {
             setIncomingChats(prev => prev.filter(c => c.sessionId !== session.id));
           } else if (session.status === "pending") {
+            // Clear stale refs so recycled session IDs can reappear
+            rejectedChatsRef.current.delete(session.id);
+            acceptedChatsRef.current.delete(session.id);
             checkForNewChats();
           }
         }
