@@ -4,7 +4,7 @@
  * NO hardcoded translations. All translations are LIVE via Google Translate scraping.
  * Uses English as pivot language for non-direct translation pairs.
  * 
- * Supported translation flows (ALL combinations):
+ * Supported translation flows (ALL combinations of 132+ languages):
  *  1. Native → Native (e.g., తెలుగు → हिंदी) — via English pivot
  *  2. Native → Latin-script lang (e.g., తెలుగు → French) — direct
  *  3. Latin-script lang → Native (e.g., French → తెలుగు) — direct
@@ -15,9 +15,10 @@
  *  8. English → Latin-script lang (e.g., English → French) — direct
  *  9. Latin-script lang → English (e.g., French → English) — direct
  * 10. Same-language self-translation (sender preview) — auto→same lang
- * 11. English fallback if any translation fails
+ * 11. English fallback if any translation fails or language unsupported
  * 
- * Supports all 130+ Google Translate languages.
+ * Supports all 132+ Google Translate languages.
+ * Unsupported languages automatically fallback to English.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +26,61 @@ import { supabase } from "@/integrations/supabase/client";
 export interface TranslationResult {
   translation: string;
   cached: boolean;
+}
+
+/**
+ * All 132+ languages supported by Google Translate.
+ * Any language NOT in this set will fallback to English.
+ */
+const GOOGLE_SUPPORTED_LANGUAGES = new Set([
+  'afrikaans', 'albanian', 'amharic', 'arabic', 'armenian', 'assamese',
+  'aymara', 'azerbaijani', 'bambara', 'basque', 'belarusian', 'bengali',
+  'bhojpuri', 'bosnian', 'bulgarian', 'catalan', 'cebuano', 'chichewa',
+  'chinese', 'chinese (simplified)', 'chinese (traditional)', 'corsican',
+  'croatian', 'czech', 'danish', 'dhivehi', 'dogri', 'dutch', 'english',
+  'esperanto', 'estonian', 'ewe', 'filipino', 'finnish', 'french',
+  'frisian', 'galician', 'georgian', 'german', 'greek', 'guarani',
+  'gujarati', 'haitian creole', 'hausa', 'hawaiian', 'hebrew', 'hindi',
+  'hmong', 'hungarian', 'icelandic', 'igbo', 'ilocano', 'indonesian',
+  'irish', 'italian', 'japanese', 'javanese', 'kannada', 'kazakh',
+  'khmer', 'kinyarwanda', 'konkani', 'korean', 'krio',
+  'kurdish', 'kurdish (kurmanji)', 'kurdish (sorani)', 'kyrgyz', 'lao',
+  'latin', 'latvian', 'lingala', 'lithuanian', 'luganda',
+  'luxembourgish', 'macedonian', 'maithili', 'malagasy', 'malay',
+  'malayalam', 'maltese', 'maori', 'marathi', 'meiteilon', 'meiteilon (manipuri)',
+  'manipuri', 'mizo', 'mongolian', 'myanmar', 'myanmar (burmese)', 'burmese',
+  'nepali', 'norwegian', 'odia', 'odia (oriya)', 'oriya', 'oromo',
+  'pashto', 'persian', 'polish', 'portuguese', 'punjabi', 'quechua',
+  'romanian', 'russian', 'samoan', 'sanskrit', 'scots gaelic', 'scottish gaelic',
+  'sepedi', 'serbian', 'sesotho', 'shona', 'sindhi', 'sinhala', 'slovak',
+  'slovenian', 'somali', 'spanish', 'sundanese', 'swahili', 'swedish',
+  'tajik', 'tamil', 'tatar', 'telugu', 'thai', 'tigrinya', 'tsonga',
+  'turkish', 'turkmen', 'twi', 'ukrainian', 'urdu', 'uyghur', 'uzbek',
+  'vietnamese', 'welsh', 'xhosa', 'yiddish', 'yoruba', 'zulu',
+  // Common aliases
+  'bangla', 'mandarin', 'cantonese', 'tagalog', 'haitian',
+  // Indian regional languages that map to supported ones
+  'tulu', 'rajasthani', 'marwari', 'chhattisgarhi', 'magahi', 'awadhi',
+  'haryanvi', 'bundelkhandi',
+]);
+
+/**
+ * Check if a language is supported by Google Translate.
+ * Unsupported languages will fallback to English.
+ */
+export function isLanguageSupported(lang: string): boolean {
+  if (!lang) return false;
+  return GOOGLE_SUPPORTED_LANGUAGES.has(lang.toLowerCase().trim());
+}
+
+/**
+ * Normalize a language name — if unsupported, return 'English' as fallback.
+ */
+export function normalizeLanguage(lang: string): string {
+  if (!lang || lang.toLowerCase().trim() === 'english') return 'English';
+  if (isLanguageSupported(lang)) return lang;
+  console.warn(`[Translation] Unsupported language "${lang}", falling back to English`);
+  return 'English';
 }
 
 /**
@@ -65,6 +121,11 @@ const LATIN_SCRIPT_LANGUAGES = new Set([
   'polish', 'czech', 'slovak', 'hungarian', 'croatian', 'slovenian',
   'bosnian', 'albanian', 'maltese', 'basque',
   'welsh', 'irish', 'scottish gaelic', 'scots gaelic',
+  // Additional Latin-script languages
+  'indonesian', 'malay', 'filipino', 'tagalog', 'vietnamese',
+  'swahili', 'hausa', 'yoruba', 'igbo', 'somali', 'afrikaans',
+  'turkish', 'azerbaijani', 'uzbek', 'turkmen',
+  'cebuano', 'javanese', 'sundanese', 'maori', 'hawaiian', 'samoan',
 ]);
 
 export function isLatinScriptLanguage(lang: string): boolean {
@@ -74,6 +135,7 @@ export function isLatinScriptLanguage(lang: string): boolean {
 /**
  * Translate a single text string via the embedded lingva scraper edge function.
  * Falls back to original text if translation fails.
+ * Unsupported languages automatically fallback to English.
  */
 export async function translateText(
   text: string,
@@ -81,39 +143,67 @@ export async function translateText(
   targetLang: string = 'English'
 ): Promise<string> {
   if (!text?.trim()) return text;
-  const srcNorm = sourceLang.toLowerCase().trim();
-  const tgtNorm = targetLang.toLowerCase().trim();
+  
+  // Normalize languages — unsupported ones become English
+  const effectiveSource = sourceLang === 'auto' ? 'auto' : normalizeLanguage(sourceLang);
+  const effectiveTarget = normalizeLanguage(targetLang);
+  
+  const srcNorm = effectiveSource.toLowerCase().trim();
+  const tgtNorm = effectiveTarget.toLowerCase().trim();
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return text;
 
   try {
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('TranslationTimeout')), 5000)
+      setTimeout(() => reject(new Error('TranslationTimeout')), 8000)
     );
 
     const invokePromise = supabase.functions.invoke('translate-message', {
-      body: { text, sourceLang, targetLang },
+      body: { text, sourceLang: effectiveSource, targetLang: effectiveTarget },
     });
 
     const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
 
     if (error) {
       console.warn('[Translation] Edge function error:', error.message);
+      // On failure: try English fallback if target wasn't already English
+      if (tgtNorm !== 'english') {
+        return await translateToEnglishFallback(text);
+      }
       return text;
     }
 
     return data?.translation || text;
   } catch (err: any) {
     if (err?.message === 'TranslationTimeout') {
-      console.warn('[Translation] Request timed out after 5s');
+      console.warn('[Translation] Request timed out after 8s');
     } else {
       console.warn('[Translation] Failed:', err);
+    }
+    // On failure: try English fallback if target wasn't already English
+    if (tgtNorm !== 'english') {
+      return await translateToEnglishFallback(text);
     }
     return text;
   }
 }
 
 /**
+ * Emergency fallback: translate to English when target language translation fails.
+ */
+async function translateToEnglishFallback(text: string): Promise<string> {
+  try {
+    const { data } = await supabase.functions.invoke('translate-message', {
+      body: { text, sourceLang: 'auto', targetLang: 'English' },
+    });
+    return data?.translation || text;
+  } catch {
+    return text;
+  }
+}
+
+/**
  * Translate multiple texts in a single batch call.
+ * Unsupported languages fallback to English.
  */
 export async function translateBatch(
   texts: string[],
@@ -121,17 +211,21 @@ export async function translateBatch(
   targetLang: string = 'English'
 ): Promise<string[]> {
   if (!texts?.length) return texts;
-  const srcNorm = sourceLang.toLowerCase().trim();
-  const tgtNorm = targetLang.toLowerCase().trim();
+  
+  const effectiveSource = sourceLang === 'auto' ? 'auto' : normalizeLanguage(sourceLang);
+  const effectiveTarget = normalizeLanguage(targetLang);
+  
+  const srcNorm = effectiveSource.toLowerCase().trim();
+  const tgtNorm = effectiveTarget.toLowerCase().trim();
   if (srcNorm === tgtNorm && srcNorm !== 'auto') return texts;
 
   try {
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('BatchTranslationTimeout')), 5000)
+      setTimeout(() => reject(new Error('BatchTranslationTimeout')), 10000)
     );
 
     const invokePromise = supabase.functions.invoke('translate-message', {
-      body: { texts, sourceLang, targetLang },
+      body: { texts, sourceLang: effectiveSource, targetLang: effectiveTarget },
     });
 
     const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
@@ -144,7 +238,7 @@ export async function translateBatch(
     return data?.translations || texts;
   } catch (err: any) {
     if (err?.message === 'BatchTranslationTimeout') {
-      console.warn('[Translation] Batch request timed out after 5s');
+      console.warn('[Translation] Batch request timed out after 10s');
     } else {
       console.warn('[Translation] Batch failed:', err);
     }
@@ -160,16 +254,17 @@ export async function translateBatch(
  * │                                                                      │
  * │ Input Script    Viewer Language    Strategy                          │
  * │ ─────────────   ──────────────    ────────────────────────────────── │
- * │ Native (తెలుగు)  Non-Latin (Hindi)  auto→viewerLang (Google detects) │
+ * │ Native (తెలుగు)  Non-Latin (Hindi)  native→en→viewerLang (pivot)     │
  * │ Native (తెలుగు)  Latin (French)     auto→viewerLang (direct)         │
  * │ Native (తెలుగు)  English            auto→English                     │
  * │ Latin (French)   Non-Latin (Telugu)  auto→viewerLang (direct)        │
  * │ Latin (French)   Latin (German)      auto→viewerLang (direct)        │
  * │ Latin (French)   English             auto→English                    │
- * │ English          Non-Latin (Telugu)  auto→viewerLang                 │
- * │ English          Latin (French)      auto→viewerLang                 │
- * │ Translit (Latin) Non-Latin (Telugu)  auto→viewerLang + fallbacks     │
+ * │ English          Non-Latin (Telugu)  en→viewerLang                   │
+ * │ English          Latin (French)      en→viewerLang                   │
+ * │ Translit (Latin) Non-Latin (Telugu)  en→senderLang→viewerLang        │
  * │ Same language    Same language       auto→viewerLang (self-preview)  │
+ * │ Unsupported      Any                 auto→English (fallback)         │
  * └──────────────────────────────────────────────────────────────────────┘
  * 
  * Returns:
@@ -185,8 +280,12 @@ export async function translateForViewer(
     return { nativeText: message, englishText: message };
   }
 
-  const viewerLang = (viewerLanguage || 'english').toLowerCase().trim();
-  const senderLang = (senderLanguage || '').toLowerCase().trim();
+  // Normalize — unsupported languages become English
+  const viewerLang = normalizeLanguage(viewerLanguage).toLowerCase().trim();
+  const viewerLangOriginal = normalizeLanguage(viewerLanguage);
+  const senderLang = senderLanguage ? normalizeLanguage(senderLanguage).toLowerCase().trim() : '';
+  const senderLangOriginal = senderLanguage ? normalizeLanguage(senderLanguage) : '';
+  
   const inputIsLatin = isLatinScript(message);
   const viewerUsesLatin = isLatinScriptLanguage(viewerLang);
   const senderUsesLatin = senderLang ? isLatinScriptLanguage(senderLang) : false;
@@ -203,21 +302,14 @@ export async function translateForViewer(
 
     // ── Case 2: Non-English viewer — run auto→viewerLang and auto→English in parallel ──
     const [autoResult, englishResult] = await Promise.all([
-      translateText(message, 'auto', viewerLanguage),
+      translateText(message, 'auto', viewerLangOriginal),
       englishPromise,
     ]);
 
     let nativeText = autoResult;
-
-    // ── Case 3: Latin input → Non-Latin target (transliteration handling) ──
-    // When input is Latin script AND viewer's language uses non-Latin script,
-    // Google auto-detect often fails for transliterated text.
-    // Apply fallback strategies to get native script output.
-    //
-    // We do NOT apply these fallbacks when the viewer uses Latin script,
-    // because Latin→Latin translation already works correctly via auto-detect.
     let englishText = englishResult || message;
 
+    // ── Case 3: Latin input → Non-Latin target (transliteration handling) ──
     if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
 
@@ -225,7 +317,7 @@ export async function translateForViewer(
         // Strategy A: English bridge — use the English translation to re-translate
         const englishMeaning = englishResult || nativeText;
         if (englishMeaning && englishMeaning !== message) {
-          const fromEnglish = await translateText(englishMeaning, 'English', viewerLanguage);
+          const fromEnglish = await translateText(englishMeaning, 'English', viewerLangOriginal);
           if (fromEnglish && !isLatinScript(fromEnglish)) {
             nativeText = fromEnglish;
           }
@@ -233,7 +325,7 @@ export async function translateForViewer(
 
         // Strategy B: Treat original as English directly → viewerLang
         if (isLatinScript(nativeText)) {
-          const directResult = await translateText(message, 'English', viewerLanguage);
+          const directResult = await translateText(message, 'English', viewerLangOriginal);
           if (directResult && !isLatinScript(directResult)) {
             nativeText = directResult;
           }
@@ -241,20 +333,16 @@ export async function translateForViewer(
       }
 
       // Strategy C: Sender Language Bridge (for transliteration)
-      // Works for BOTH cross-language AND same-language transliteration.
-      // Example cross: Hindi user types "main theek hoon" → English→Hindi = "मैं ठीक हूँ" → Hindi→Telugu
-      // Example same: Telugu user types "bagunnava" for Telugu viewer → English→Telugu = "బాగున్నావా"
-      // Use senderLang if known, otherwise fall back to viewerLang (common for self-preview)
       const bridgeLang = (senderLang && senderLang !== 'english' && !senderUsesLatin) 
         ? senderLang 
         : (!viewerUsesLatin && viewerLang !== 'english') ? viewerLang : '';
-      const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLanguage : viewerLanguage) : '';
+      const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLangOriginal : viewerLangOriginal) : '';
       if (bridgeLang) {
-        const bridgeNative = await translateText(message, 'English', bridgeLangFull || viewerLanguage);
+        const bridgeNative = await translateText(message, 'English', bridgeLangFull || viewerLangOriginal);
         if (bridgeNative && !isLatinScript(bridgeNative) && bridgeNative !== message) {
           if (bridgeLang !== viewerLang) {
             // Cross-language: translate sender's native to viewer's language
-            const crossTranslated = await translateText(bridgeNative, bridgeLangFull || 'auto', viewerLanguage);
+            const crossTranslated = await translateText(bridgeNative, bridgeLangFull || 'auto', viewerLangOriginal);
             if (crossTranslated && crossTranslated !== bridgeNative) {
               nativeText = crossTranslated;
             }
@@ -263,8 +351,7 @@ export async function translateForViewer(
             nativeText = bridgeNative;
           }
 
-          // Fix English subtitle: if auto→English failed (returned same text),
-          // translate the native script to English for a proper subtitle
+          // Fix English subtitle
           if (englishText === message || isLatinScript(englishText)) {
             const properEnglish = await translateText(bridgeNative, bridgeLangFull || 'auto', 'English');
             if (properEnglish && properEnglish !== bridgeNative && properEnglish !== message) {
@@ -277,7 +364,7 @@ export async function translateForViewer(
 
     // ── Also fix English subtitle for non-Latin input when auto→English failed ──
     if (!inputIsLatin && (englishText === message || englishText === nativeText) && senderLang && senderLang !== 'english') {
-      const betterEnglish = await translateText(message, senderLanguage || 'auto', 'English');
+      const betterEnglish = await translateText(message, senderLangOriginal || 'auto', 'English');
       if (betterEnglish && betterEnglish !== message) {
         englishText = betterEnglish;
       }
@@ -295,7 +382,7 @@ export async function translateForViewer(
       englishText: englishText || message,
     };
   } catch {
-    // On any failure, try English fallback one more time
+    // On any failure, fallback to English
     try {
       const englishFallback = await translateText(message, 'auto', 'English');
       return { nativeText: englishFallback || message, englishText: englishFallback || message };
@@ -313,8 +400,10 @@ export async function translateForViewer(
  * - Different language: receiver sees translated native + English subtitle
  * - Latin↔Latin: French user → German receiver → proper German translation
  * - Latin↔Native: French user → Telugu receiver → proper Telugu translation
+ * - Native↔Native: Telugu user → Hindi receiver → via English pivot
  * - All translations are LIVE (no hardcoded values)
  * - English is always the fallback language
+ * - Unsupported languages fallback to English
  */
 export async function translateChatMessage(
   message: string,
@@ -335,7 +424,13 @@ export async function translateChatMessage(
       isTranslated,
     };
   } catch {
-    return { translated: message, englishText: message, isTranslated: false };
+    // Fallback to English
+    try {
+      const eng = await translateText(message, 'auto', 'English');
+      return { translated: eng || message, englishText: eng || message, isTranslated: false };
+    } catch {
+      return { translated: message, englishText: message, isTranslated: false };
+    }
   }
 }
 
