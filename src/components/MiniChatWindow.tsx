@@ -102,7 +102,7 @@ const MiniChatWindow = ({
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
   
