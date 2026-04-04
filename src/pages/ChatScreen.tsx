@@ -470,6 +470,10 @@ const ChatScreen = () => {
   useEffect(() => {
     if (!chatPartner?.userId || !currentUserId) return;
 
+    // 15-second debounce timer for partner offline detection
+    // Prevents brief network flickers from ending active chats
+    let offlineDebounceTimer: NodeJS.Timeout | null = null;
+
     // Monitor partner's online status
     const statusChannel = supabase
       .channel(`partner-status-${chatPartner.userId}`)
@@ -481,23 +485,47 @@ const ChatScreen = () => {
           table: 'user_status',
           filter: `user_id=eq.${chatPartner.userId}`
         },
-        (payload: any) => {
+        async (payload: any) => {
           const newStatus = payload.new;
           
-          // Partner went offline
+          // Partner went offline - debounce for 15 seconds before acting
           if (!newStatus.is_online && isSessionActive) {
-            setPartnerDisconnected(true);
             setChatPartner(prev => prev ? { ...prev, isOnline: false } : null);
             
-            // If current user is male, trigger auto-reconnect
-            if (currentUserGender === "male") {
-              toast({
-                title: "Partner Disconnected",
-                description: "Finding another available user..."
-              });
-              handleAutoReconnect([chatPartner.userId]);
-            }
+            // Clear any existing timer
+            if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
+            
+            offlineDebounceTimer = setTimeout(async () => {
+              // Re-check partner status before disconnecting
+              const { data: currentStatus } = await supabase
+                .from("user_status")
+                .select("is_online")
+                .eq("user_id", chatPartner.userId)
+                .maybeSingle();
+
+              // Only disconnect if partner is still truly offline after 15s
+              if (currentStatus && currentStatus.is_online === false) {
+                setPartnerDisconnected(true);
+                
+                // If current user is male, trigger auto-reconnect
+                if (currentUserGender === "male") {
+                  toast({
+                    title: "Partner Disconnected",
+                    description: "Finding another available user..."
+                  });
+                  handleAutoReconnect([chatPartner.userId]);
+                }
+              } else {
+                // Partner came back online within the debounce window
+                setChatPartner(prev => prev ? { ...prev, isOnline: true } : null);
+              }
+            }, 15000); // 15-second debounce
           } else if (newStatus.is_online) {
+            // Partner came back online - cancel any pending offline timer
+            if (offlineDebounceTimer) {
+              clearTimeout(offlineDebounceTimer);
+              offlineDebounceTimer = null;
+            }
             setPartnerDisconnected(false);
             setChatPartner(prev => prev ? { ...prev, isOnline: true } : null);
           }
