@@ -145,7 +145,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
     };
   }, []);
 
