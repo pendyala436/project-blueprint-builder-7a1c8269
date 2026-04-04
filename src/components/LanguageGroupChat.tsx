@@ -91,6 +91,7 @@ export const LanguageGroupChat = ({
   const [showMembers, setShowMembers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const profileCacheRef = useRef<Map<string, { name: string; photo: string | null }>>(new Map());
 
   // Load messages and members
   useEffect(() => {
