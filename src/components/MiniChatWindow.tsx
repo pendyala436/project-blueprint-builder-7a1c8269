@@ -364,14 +364,15 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
 
   // Translate history messages in background using live Lingva translation
-  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
+  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string, userId: string, partnerLang: string) => {
     const batchSize = 5;
     for (let i = 0; i < msgs.length; i += batchSize) {
       const batch = msgs.slice(i, i + batchSize);
       const results = await Promise.allSettled(
         batch.map(async (msg) => {
           try {
-            const result = await translateForViewer(msg.message, viewerLanguage);
+            const senderLang = msg.senderId === userId ? viewerLanguage : partnerLang;
+            const result = await translateForViewer(msg.message, viewerLanguage, senderLang);
             return {
               id: msg.id,
               translatedMessage: result.nativeText,
