@@ -416,9 +416,6 @@ const ChatScreen = () => {
                 englishText = result.englishText;
                 isTranslated = translatedMessage !== newMsg.message;
               }
-              translatedMessage = result.nativeText;
-              englishText = result.englishText;
-              isTranslated = translatedMessage !== newMsg.message;
             } catch {
               // Fallback: show original message
             }
