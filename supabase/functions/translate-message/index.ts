@@ -96,6 +96,40 @@ NAME_TO_CODE["magahi"] = "hi";
 NAME_TO_CODE["awadhi"] = "hi";
 NAME_TO_CODE["haryanvi"] = "hi";
 NAME_TO_CODE["bundelkhandi"] = "hi";
+// Additional Indian regional aliases → nearest supported
+NAME_TO_CODE["angika"] = "hi";
+NAME_TO_CODE["braj"] = "hi";
+NAME_TO_CODE["garhwali"] = "hi";
+NAME_TO_CODE["kumaoni"] = "hi";
+NAME_TO_CODE["pahari"] = "hi";
+NAME_TO_CODE["maithili"] = "mai";
+NAME_TO_CODE["santali"] = "hi";
+NAME_TO_CODE["ho"] = "hi";
+NAME_TO_CODE["mundari"] = "hi";
+NAME_TO_CODE["khasi"] = "en";
+NAME_TO_CODE["garo"] = "en";
+NAME_TO_CODE["mising"] = "as";
+NAME_TO_CODE["bodo"] = "hi";
+NAME_TO_CODE["kokborok"] = "bn";
+NAME_TO_CODE["lepcha"] = "ne";
+NAME_TO_CODE["limbu"] = "ne";
+NAME_TO_CODE["nagamese"] = "en";
+NAME_TO_CODE["tenyidie"] = "en";
+NAME_TO_CODE["ao"] = "en";
+NAME_TO_CODE["lotha"] = "en";
+NAME_TO_CODE["sema"] = "en";
+NAME_TO_CODE["pochury"] = "en";
+NAME_TO_CODE["rengma"] = "en";
+NAME_TO_CODE["ladakhi"] = "hi";
+NAME_TO_CODE["balti"] = "ur";
+NAME_TO_CODE["gondi"] = "hi";
+NAME_TO_CODE["korku"] = "hi";
+NAME_TO_CODE["kurukh"] = "hi";
+// Global aliases
+NAME_TO_CODE["persian"] = "fa";
+NAME_TO_CODE["farsi"] = "fa";
+NAME_TO_CODE["scots"] = "gd";
+NAME_TO_CODE["creole"] = "ht";
 
 // Random User-Agent pool
 const USER_AGENTS = [
