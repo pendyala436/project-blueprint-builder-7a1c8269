@@ -159,20 +159,6 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
-      {/* Native script preview — shows transliteration conversion before send */}
-      {(nativePreview || isPreviewLoading) && message.trim() && (
-        <div className="px-4 py-1.5 border-b border-border/30 flex items-center gap-2">
-          <Languages className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-          {isPreviewLoading ? (
-            <span className="text-xs text-muted-foreground italic">Converting...</span>
-          ) : nativePreview ? (
-            <span className="text-sm unicode-text text-primary font-medium" dir="auto">
-              {nativePreview}
-            </span>
-          ) : null}
-        </div>
-      )}
-      
       <div className="p-3 pt-2 flex items-end gap-2">
         <div className="flex-1 relative">
           <Textarea
