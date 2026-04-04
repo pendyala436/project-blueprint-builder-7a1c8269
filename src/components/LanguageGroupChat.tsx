@@ -31,6 +31,8 @@ interface CommunityMessage {
   senderName: string;
   senderPhoto: string | null;
   message: string | null;
+  translatedMessage?: string | null;
+  englishText?: string | null;
   fileUrl: string | null;
   fileType: string | null;
   fileName: string | null;
