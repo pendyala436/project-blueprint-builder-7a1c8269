@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { MessageCircle, X, Check, Clock, IndianRupee, Volume2 } from "lucide-react";
+import { MessageCircle, X, Check, Clock, Volume2 } from "lucide-react";
 
 interface IncomingChatPopupProps {
   sessionId: string;
@@ -61,37 +61,16 @@ const IncomingChatPopup = ({
   }, [startedAt]);
 
   const handleAccept = () => {
-    // Stop buzz sound completely
-    if (buzzIntervalRef.current) {
-      clearInterval(buzzIntervalRef.current);
-      buzzIntervalRef.current = null;
-    }
-    stopBuzzSound();
-    
     onAccept(sessionId);
     setIsExiting(true);
   };
 
   const handleReject = () => {
-    // Stop buzz sound completely
-    if (buzzIntervalRef.current) {
-      clearInterval(buzzIntervalRef.current);
-      buzzIntervalRef.current = null;
-    }
-    stopBuzzSound();
-    
     onReject(sessionId, 'manual');
     setIsExiting(true);
   };
 
   const handleAutoReject = () => {
-    // Stop buzz sound completely
-    if (buzzIntervalRef.current) {
-      clearInterval(buzzIntervalRef.current);
-      buzzIntervalRef.current = null;
-    }
-    stopBuzzSound();
-    
     onReject(sessionId, 'auto_timeout');
     setIsExiting(true);
   };
