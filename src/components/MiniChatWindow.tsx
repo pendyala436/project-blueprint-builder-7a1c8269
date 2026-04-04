@@ -876,19 +876,28 @@ const MiniChatWindow = ({
                           : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-sm"
                       )}
                     >
-                      <p className={cn(
-                        "unicode-text",
-                        isOwn
-                          ? "text-primary dark:text-primary"
-                          : "text-emerald-800 dark:text-emerald-200"
-                      )} dir="auto">
-                        {msg.translatedMessage ? msg.translatedMessage : msg.message}
-                      </p>
-                      {/* English subtitle below every bubble */}
-                      {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message).toLowerCase() && (
-                        <p className="text-[9px] text-muted-foreground/60 italic mt-0.5" dir="ltr">
-                          english: {msg.englishText.toLowerCase()}
-                        </p>
+                      {msg.isTranslating ? (
+                        <div className="flex items-center gap-1 py-1">
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          <span className="text-muted-foreground text-[10px]">Translating...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <p className={cn(
+                            "unicode-text",
+                            isOwn
+                              ? "text-primary dark:text-primary"
+                              : "text-emerald-800 dark:text-emerald-200"
+                          )} dir="auto">
+                            {msg.translatedMessage ? msg.translatedMessage : msg.message}
+                          </p>
+                          {/* English subtitle below every bubble */}
+                          {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message).toLowerCase() && (
+                            <p className="text-[9px] text-muted-foreground/60 italic mt-0.5" dir="ltr">
+                              english: {msg.englishText.toLowerCase()}
+                            </p>
+                          )}
+                        </>
                       )}
                       <span className="text-[8px] text-muted-foreground/50 block mt-0.5">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
