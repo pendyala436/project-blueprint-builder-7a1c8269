@@ -94,9 +94,7 @@ const MiniChatWindow = ({
   const [earningRate, setEarningRate] = useState(2);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
-  // CHT-06 FIX: Native preview state for MiniChatWindow
-  const [nativePreview, setNativePreview] = useState<string | null>(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  
   const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
