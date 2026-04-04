@@ -15,6 +15,7 @@ export interface ChatMessage {
   timestamp: string;
   isRead?: boolean;
   isDelivered?: boolean;
+  isTranslating?: boolean;
   englishText?: string;
   translatedContent?: string;
 }

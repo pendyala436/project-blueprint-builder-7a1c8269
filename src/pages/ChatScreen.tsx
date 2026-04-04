@@ -103,6 +103,7 @@ interface Message {
   translatedMessage?: string;    // Translated message for display
   englishText?: string;          // English translation shown below every bubble
   isTranslated?: boolean;        // Whether translation was applied
+  isTranslating?: boolean;       // Whether translation is in progress
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
