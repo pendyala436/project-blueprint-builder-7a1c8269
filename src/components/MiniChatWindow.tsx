@@ -418,7 +418,7 @@ const MiniChatWindow = ({
 
       // Always translate history messages for native display + English subtitles
       const langToUse = currentUserLanguage || 'English';
-      translateHistoryMessages(formattedMessages, langToUse);
+      translateHistoryMessages(formattedMessages, langToUse, currentUserId, partnerLanguage);
     }
   };
 
