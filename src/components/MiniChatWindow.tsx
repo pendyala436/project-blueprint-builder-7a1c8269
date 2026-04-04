@@ -601,7 +601,8 @@ const MiniChatWindow = ({
           ...m, 
           translatedMessage: result.nativeText,
           englishText: result.englishText,
-          isTranslated: result.nativeText !== messageText 
+          isTranslated: result.nativeText !== messageText,
+          isTranslating: false,
         } : m
       ));
     }).catch(() => {
