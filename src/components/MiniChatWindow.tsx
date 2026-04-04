@@ -94,9 +94,7 @@ const MiniChatWindow = ({
   const [earningRate, setEarningRate] = useState(2);
   const [inactiveWarning, setInactiveWarning] = useState<string | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
-  // CHT-06 FIX: Native preview state for MiniChatWindow
-  const [nativePreview, setNativePreview] = useState<string | null>(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  
   const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -104,7 +102,7 @@ const MiniChatWindow = ({
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
   
@@ -132,35 +130,8 @@ const MiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // CHT-06 FIX: Debounced native preview for MiniChatWindow
   const langNorm = (currentUserLanguage || 'english').toLowerCase().trim();
   const isNonEnglish = langNorm !== 'english';
-
-  useEffect(() => {
-    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-    const trimmed = newMessage.trim();
-    if (!trimmed || !isNonEnglish) {
-      setNativePreview(null);
-      setIsPreviewLoading(false);
-      return;
-    }
-    setIsPreviewLoading(true);
-    previewTimeoutRef.current = setTimeout(async () => {
-      try {
-        const result = await translateText(trimmed, 'auto', currentUserLanguage || 'English');
-        if (result && result !== trimmed) {
-          setNativePreview(result);
-        } else if (isLatinScript(trimmed) && !isLatinScriptLanguage(langNorm)) {
-          const fallback = await translateText(trimmed, 'English', currentUserLanguage || 'English');
-          setNativePreview(fallback && fallback !== trimmed ? fallback : null);
-        } else {
-          setNativePreview(null);
-        }
-      } catch { setNativePreview(null); }
-      finally { setIsPreviewLoading(false); }
-    }, 600);
-    return () => { if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current); };
-  }, [newMessage, isNonEnglish, currentUserLanguage, langNorm]);
 
   // CHT-07 FIX: Translate placeholder dynamically
   useEffect(() => {
@@ -393,14 +364,15 @@ const MiniChatWindow = ({
   }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
 
   // Translate history messages in background using live Lingva translation
-  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string) => {
+  const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string, userId: string, partnerLang: string) => {
     const batchSize = 5;
     for (let i = 0; i < msgs.length; i += batchSize) {
       const batch = msgs.slice(i, i + batchSize);
       const results = await Promise.allSettled(
         batch.map(async (msg) => {
           try {
-            const result = await translateForViewer(msg.message, viewerLanguage);
+            const senderLang = msg.senderId === userId ? viewerLanguage : partnerLang;
+            const result = await translateForViewer(msg.message, viewerLanguage, senderLang);
             return {
               id: msg.id,
               translatedMessage: result.nativeText,
@@ -446,7 +418,7 @@ const MiniChatWindow = ({
 
       // Always translate history messages for native display + English subtitles
       const langToUse = currentUserLanguage || 'English';
-      translateHistoryMessages(formattedMessages, langToUse);
+      translateHistoryMessages(formattedMessages, langToUse, currentUserId, partnerLanguage);
     }
   };
 
@@ -472,7 +444,8 @@ const MiniChatWindow = ({
 
           const langToUse = currentUserLanguage || 'English';
           try {
-            const result = await translateForViewer(newMsg.message, langToUse);
+            const senderLang = newMsg.sender_id === currentUserId ? currentUserLanguage : partnerLanguage;
+            const result = await translateForViewer(newMsg.message, langToUse, senderLang);
             translatedMessage = result.nativeText;
             isTranslated = result.nativeText !== newMsg.message;
             englishText = result.englishText;
@@ -882,16 +855,7 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          {/* CHT-06 FIX: Native preview */}
-          {(nativePreview || isPreviewLoading) && newMessage.trim() && (
-            <div className="px-2 py-0.5 border-t border-border/30 flex items-center gap-1">
-              {isPreviewLoading ? (
-                <span className="text-[9px] text-muted-foreground italic">Converting...</span>
-              ) : nativePreview ? (
-                <span className="text-[10px] text-primary font-medium unicode-text" dir="auto">{nativePreview}</span>
-              ) : null}
-            </div>
-          )}
+          
 
           <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">
