@@ -130,35 +130,8 @@ const MiniChatWindow = ({
     }
   }, [isBlocked]);
 
-  // CHT-06 FIX: Debounced native preview for MiniChatWindow
   const langNorm = (currentUserLanguage || 'english').toLowerCase().trim();
   const isNonEnglish = langNorm !== 'english';
-
-  useEffect(() => {
-    if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
-    const trimmed = newMessage.trim();
-    if (!trimmed || !isNonEnglish) {
-      setNativePreview(null);
-      setIsPreviewLoading(false);
-      return;
-    }
-    setIsPreviewLoading(true);
-    previewTimeoutRef.current = setTimeout(async () => {
-      try {
-        const result = await translateText(trimmed, 'auto', currentUserLanguage || 'English');
-        if (result && result !== trimmed) {
-          setNativePreview(result);
-        } else if (isLatinScript(trimmed) && !isLatinScriptLanguage(langNorm)) {
-          const fallback = await translateText(trimmed, 'English', currentUserLanguage || 'English');
-          setNativePreview(fallback && fallback !== trimmed ? fallback : null);
-        } else {
-          setNativePreview(null);
-        }
-      } catch { setNativePreview(null); }
-      finally { setIsPreviewLoading(false); }
-    }, 600);
-    return () => { if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current); };
-  }, [newMessage, isNonEnglish, currentUserLanguage, langNorm]);
 
   // CHT-07 FIX: Translate placeholder dynamically
   useEffect(() => {
