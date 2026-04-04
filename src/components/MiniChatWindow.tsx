@@ -148,7 +148,35 @@ const MiniChatWindow = ({
     return () => { cancelled = true; };
   }, [currentUserLanguage, isNonEnglish]);
 
+  // Typing preview: debounce 600ms, translate input for sender's own view
   useEffect(() => {
+    if (!newMessage.trim()) {
+      setPreviewNative("");
+      setPreviewEnglish("");
+      setIsPreviewLoading(false);
+      return;
+    }
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    setIsPreviewLoading(true);
+    previewDebounceRef.current = setTimeout(() => {
+      let cancelled = false;
+      const senderLang = currentUserLanguage || 'English';
+      translateForViewer(newMessage.trim(), senderLang, senderLang).then(result => {
+        if (!cancelled) {
+          setPreviewNative(result.nativeText);
+          setPreviewEnglish(result.englishText);
+          setIsPreviewLoading(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setIsPreviewLoading(false);
+      });
+    }, 600);
+    return () => {
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    };
+  }, [newMessage, currentUserLanguage]);
+
+
     const loadInitialData = async () => {
       try {
         const { data: pricing } = await supabase
