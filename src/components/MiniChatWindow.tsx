@@ -553,8 +553,9 @@ const MiniChatWindow = ({
     setMessages(prev => [...prev, optimisticMessage]);
 
     // Translate optimistic message for sender's own view (native script + English subtitle)
+    // Pass senderLang as 3rd arg so Strategy C (transliteration bridge) fires for Latin input
     const senderLang = currentUserLanguage || 'English';
-    translateForViewer(messageText, senderLang).then(result => {
+    translateForViewer(messageText, senderLang, senderLang).then(result => {
       setMessages(prev => prev.map(m => 
         m.id === tempId ? { 
           ...m, 
