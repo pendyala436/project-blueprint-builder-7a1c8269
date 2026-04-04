@@ -41,6 +41,7 @@ interface Message {
   translatedMessage?: string;
   englishText?: string;
   isTranslated?: boolean;
+  isTranslating?: boolean;
   createdAt: string;
 }
 
@@ -96,12 +97,16 @@ const MiniChatWindow = ({
   const [sessionStarted, setSessionStarted] = useState(false);
   
   const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
+  const [previewNative, setPreviewNative] = useState("");
+  const [previewEnglish, setPreviewEnglish] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityRef = useRef<NodeJS.Timeout | null>(null);
   const logoutTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const billingPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
@@ -142,6 +147,34 @@ const MiniChatWindow = ({
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [currentUserLanguage, isNonEnglish]);
+
+  // Typing preview: debounce 600ms, translate input for sender's own view
+  useEffect(() => {
+    if (!newMessage.trim()) {
+      setPreviewNative("");
+      setPreviewEnglish("");
+      setIsPreviewLoading(false);
+      return;
+    }
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    setIsPreviewLoading(true);
+    previewDebounceRef.current = setTimeout(() => {
+      let cancelled = false;
+      const senderLang = currentUserLanguage || 'English';
+      translateForViewer(newMessage.trim(), senderLang, senderLang).then(result => {
+        if (!cancelled) {
+          setPreviewNative(result.nativeText);
+          setPreviewEnglish(result.englishText);
+          setIsPreviewLoading(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setIsPreviewLoading(false);
+      });
+    }, 600);
+    return () => {
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    };
+  }, [newMessage, currentUserLanguage]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -544,6 +577,9 @@ const MiniChatWindow = ({
     }
 
     setNewMessage("");
+    setPreviewNative("");
+    setPreviewEnglish("");
+    setIsPreviewLoading(false);
     setLastActivityTime(Date.now());
 
     const tempId = `temp-${Date.now()}`;
@@ -551,6 +587,7 @@ const MiniChatWindow = ({
       id: tempId,
       senderId: currentUserId,
       message: messageText,
+      isTranslating: true,
       createdAt: new Date().toISOString()
     };
     setMessages(prev => [...prev, optimisticMessage]);
@@ -564,16 +601,21 @@ const MiniChatWindow = ({
           ...m, 
           translatedMessage: result.nativeText,
           englishText: result.englishText,
-          isTranslated: result.nativeText !== messageText 
+          isTranslated: result.nativeText !== messageText,
+          isTranslating: false,
         } : m
       ));
     }).catch(() => {
       // For English speakers or on failure, still get English translation for subtitle
       getEnglishTranslation(messageText, 'auto').then(eng => {
         setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...m, englishText: eng } : m
+          m.id === tempId ? { ...m, englishText: eng, isTranslating: false } : m
         ));
-      }).catch(() => { /* fallback: show original */ });
+      }).catch(() => {
+        setMessages(prev => prev.map(m => 
+          m.id === tempId ? { ...m, isTranslating: false } : m
+        ));
+      });
     });
 
     try {
@@ -834,19 +876,28 @@ const MiniChatWindow = ({
                           : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-sm"
                       )}
                     >
-                      <p className={cn(
-                        "unicode-text",
-                        isOwn
-                          ? "text-primary dark:text-primary"
-                          : "text-emerald-800 dark:text-emerald-200"
-                      )} dir="auto">
-                        {msg.translatedMessage ? msg.translatedMessage : msg.message}
-                      </p>
-                      {/* English subtitle below every bubble */}
-                      {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message).toLowerCase() && (
-                        <p className="text-[9px] text-muted-foreground/60 italic mt-0.5" dir="ltr">
-                          english: {msg.englishText.toLowerCase()}
-                        </p>
+                      {msg.isTranslating ? (
+                        <div className="flex items-center gap-1 py-1">
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                          <span className="text-muted-foreground text-[10px]">Translating...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <p className={cn(
+                            "unicode-text",
+                            isOwn
+                              ? "text-primary dark:text-primary"
+                              : "text-emerald-800 dark:text-emerald-200"
+                          )} dir="auto">
+                            {msg.translatedMessage ? msg.translatedMessage : msg.message}
+                          </p>
+                          {/* English subtitle below every bubble */}
+                          {msg.englishText && msg.englishText.toLowerCase() !== (msg.translatedMessage || msg.message).toLowerCase() && (
+                            <p className="text-[9px] text-muted-foreground/60 italic mt-0.5" dir="ltr">
+                              english: {msg.englishText.toLowerCase()}
+                            </p>
+                          )}
+                        </>
                       )}
                       <span className="text-[8px] text-muted-foreground/50 block mt-0.5">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -859,7 +910,29 @@ const MiniChatWindow = ({
             </div>
           </ScrollArea>
 
-          
+          {/* Typing preview box */}
+          {newMessage.trim() && (previewNative || isPreviewLoading) && (
+            <div className="px-2 py-1 border-b bg-muted/30">
+              <div className="flex items-center gap-1 text-[9px] text-muted-foreground mb-0.5">
+                <span>👁 Preview:</span>
+              </div>
+              {isPreviewLoading ? (
+                <div className="flex items-center gap-1">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">Translating...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] unicode-text text-foreground" dir="auto">{previewNative}</p>
+                  {previewEnglish && previewEnglish.toLowerCase() !== previewNative.toLowerCase() && (
+                    <p className="text-[9px] text-muted-foreground/60 italic" dir="ltr">
+                      english: {previewEnglish.toLowerCase()}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div className="p-1.5 border-t">
             <div className="flex items-center gap-1">

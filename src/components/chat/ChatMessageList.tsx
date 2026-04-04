@@ -2,7 +2,7 @@ import React, { memo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Check, CheckCheck, MessageCircle } from 'lucide-react';
+import { Check, CheckCheck, MessageCircle, Loader2 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 
 export interface ChatMessage {
@@ -15,6 +15,7 @@ export interface ChatMessage {
   timestamp: string;
   isRead?: boolean;
   isDelivered?: boolean;
+  isTranslating?: boolean;
   englishText?: string;
   translatedContent?: string;
 }
@@ -96,19 +97,28 @@ const MessageBubble = memo(({
           )}
           dir="auto"
         >
-          <p className={cn(
-            'text-sm leading-relaxed whitespace-pre-wrap break-words',
-            isOwn
-              ? 'text-primary dark:text-primary'
-              : 'text-emerald-800 dark:text-emerald-200'
-          )}>
-            {message.translatedContent || message.content}
-          </p>
-          {/* English translation below every message — helps users who can speak but not read native script */}
-          {message.englishText && message.englishText.toLowerCase() !== (message.translatedContent || message.content).toLowerCase() && (
-            <p className="text-[10px] text-muted-foreground/70 italic mt-1" dir="ltr">
-              english: {message.englishText.toLowerCase()}
-            </p>
+          {message.isTranslating ? (
+            <div className="flex items-center gap-1.5 py-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Translating...</span>
+            </div>
+          ) : (
+            <>
+              <p className={cn(
+                'text-sm leading-relaxed whitespace-pre-wrap break-words',
+                isOwn
+                  ? 'text-primary dark:text-primary'
+                  : 'text-emerald-800 dark:text-emerald-200'
+              )}>
+                {message.translatedContent || message.content}
+              </p>
+              {/* English translation below every message */}
+              {message.englishText && message.englishText.toLowerCase() !== (message.translatedContent || message.content).toLowerCase() && (
+                <p className="text-[10px] text-muted-foreground/70 italic mt-1" dir="ltr">
+                  english: {message.englishText.toLowerCase()}
+                </p>
+              )}
+            </>
           )}
         </div>
 

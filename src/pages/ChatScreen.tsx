@@ -103,6 +103,7 @@ interface Message {
   translatedMessage?: string;    // Translated message for display
   englishText?: string;          // English translation shown below every bubble
   isTranslated?: boolean;        // Whether translation was applied
+  isTranslating?: boolean;       // Whether translation is in progress
   isRead: boolean;               // Read receipt status
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
@@ -1160,6 +1161,7 @@ const ChatScreen = () => {
       senderId: currentUserId,
       message: messageText,
       isRead: false,
+      isTranslating: true,
       createdAt: new Date().toISOString(),
     }]);
 
@@ -1172,6 +1174,7 @@ const ChatScreen = () => {
           translatedMessage: result.nativeText,
           englishText: result.englishText,
           isTranslated: result.nativeText !== messageText,
+          isTranslating: false,
         } : m
       ));
     }).catch(() => {
@@ -1179,9 +1182,13 @@ const ChatScreen = () => {
       import("@/lib/translation-service").then(({ getEnglishTranslation }) => {
         getEnglishTranslation(messageText, 'auto').then(eng => {
           setMessages(prev => prev.map(m =>
-            m.id === tempId ? { ...m, englishText: eng } : m
+            m.id === tempId ? { ...m, englishText: eng, isTranslating: false } : m
           ));
-        }).catch(() => {});
+        }).catch(() => {
+          setMessages(prev => prev.map(m =>
+            m.id === tempId ? { ...m, isTranslating: false } : m
+          ));
+        });
       });
     });
 
