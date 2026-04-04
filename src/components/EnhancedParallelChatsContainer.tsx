@@ -246,7 +246,15 @@ const EnhancedParallelChatsContainer = ({
           table: 'active_chat_sessions',
           filter: `${column}=eq.${currentUserId}`
         },
-        () => debouncedLoadChats()
+        (payload) => {
+          // When a session is recycled back to pending, clear stale closed refs
+          const session = payload.new as { id?: string; chat_id?: string; status?: string } | undefined;
+          if (session?.status === 'pending') {
+            if (session.id) closedSessionsRef.current.delete(session.id);
+            if (session.chat_id) closedChatIdsRef.current.delete(session.chat_id);
+          }
+          debouncedLoadChats();
+        }
       )
       .subscribe();
 
