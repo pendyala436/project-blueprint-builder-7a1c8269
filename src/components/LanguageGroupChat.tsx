@@ -123,7 +123,7 @@ export const LanguageGroupChat = ({
         .select("*")
         .eq("language_code", languageName)
         .order("created_at", { ascending: true })
-        .limit(200);
+        .limit(50); // PERF-03 FIX: Reduced from 200 to 50
 
       if (error) throw error;
 
@@ -134,8 +134,13 @@ export const LanguageGroupChat = ({
         const profiles = await fetchPublicProfiles(senderIds as string[]);
 
         const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+        
+        // BUG-05 FIX: Pre-populate profile cache
+        profileMap.forEach((p, id) => {
+          profileCacheRef.current.set(id, { name: p.full_name || "Unknown", photo: p.photo_url || null });
+        });
 
-        setMessages(messagesData.map(m => ({
+        const mappedMessages: CommunityMessage[] = messagesData.map(m => ({
           id: m.id,
           senderId: m.sender_id,
           senderName: profileMap.get(m.sender_id)?.full_name || "Unknown",
@@ -147,7 +152,31 @@ export const LanguageGroupChat = ({
           fileSize: m.file_size,
           createdAt: m.created_at,
           isOwn: m.sender_id === currentUserId
-        })));
+        }));
+
+        setMessages(mappedMessages);
+
+        // TRN-02 FIX: Translate history messages in background batches
+        const { translateForViewer } = await import("@/lib/translation-service");
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < mappedMessages.length; i += BATCH_SIZE) {
+          const batch = mappedMessages.slice(i, i + BATCH_SIZE);
+          const translations = await Promise.allSettled(
+            batch.filter(m => m.message).map(async (m) => {
+              const result = await translateForViewer(m.message!, languageName);
+              return { id: m.id, ...result };
+            })
+          );
+          setMessages(prev => prev.map(m => {
+            const t = translations.find(
+              r => r.status === 'fulfilled' && r.value.id === m.id
+            );
+            if (t && t.status === 'fulfilled') {
+              return { ...m, translatedMessage: t.value.nativeText, englishText: t.value.englishText };
+            }
+            return m;
+          }));
+        }
       }
     } catch (error) {
       console.error("Error loading messages:", error);
