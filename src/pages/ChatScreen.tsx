@@ -416,10 +416,15 @@ const ChatScreen = () => {
             }
           }
           
-          // Add message to state (with deduplication check)
+          // Add message to state (with deduplication — replace temp optimistic messages)
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
-            return [...prev, {
+            // Remove any temp message from same sender within 10s window
+            const filtered = prev.filter(m =>
+              !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
+                Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000)
+            );
+            return [...filtered, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
