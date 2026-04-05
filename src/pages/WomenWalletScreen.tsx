@@ -176,7 +176,7 @@ const WomenWalletScreen = () => {
     }
   };
 
-  const effectiveMin = minWithdrawal ?? 5000;
+  const effectiveMin = minWithdrawal ?? 100;
   const canWithdraw = availableBalance >= effectiveMin;
 
   // ── Loading ───────────────────────────────────────────────────────────────
