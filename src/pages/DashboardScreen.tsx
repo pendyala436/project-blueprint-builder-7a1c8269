@@ -86,6 +86,7 @@ import { WhatsAppHeader } from "@/components/WhatsAppHeader";
 import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 import { WhatsAppFAB } from "@/components/WhatsAppFAB";
+import { CallHistoryTab } from "@/components/CallHistoryTab";
 interface Notification {
   id: string;
   title: string;
