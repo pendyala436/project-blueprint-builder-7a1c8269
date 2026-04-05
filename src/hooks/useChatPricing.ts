@@ -31,7 +31,7 @@ const DEFAULT_PRICING: ChatPricing = {
   audioRatePerMinute: 6,           // men pay ₹6/min audio
   audioWomenEarningRate: 3,        // women earn ₹3/min audio (half of men)
   groupCallRatePerMinute: 4,       // each man pays ₹4/min group call
-  groupCallWomenEarningRate: 2,    // host earns ₹2/min per man (half of men)
+  groupCallWomenEarningRate: 0.50, // host earns ₹0.50/min per man
   minWithdrawalBalance: 5000,      // min ₹5000 to withdraw
   currency: 'INR'
 };
