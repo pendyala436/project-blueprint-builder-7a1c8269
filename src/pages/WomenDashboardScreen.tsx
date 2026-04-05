@@ -736,29 +736,31 @@ const WomenDashboardScreen = () => {
         return b.walletBalance - a.walletBalance;
       });
 
-      // Separate premium (balance > 0) and regular (balance = 0)
-      const recharged = sortedMen.filter(m => m.hasRecharged);
-      const nonRecharged = sortedMen.filter(m => !m.hasRecharged);
+      // Only show men with wallet balance > 0 to women
+      const menWithBalance = sortedMen.filter(m => m.walletBalance > 0);
+      const menWithoutBalance = sortedMen.filter(m => m.walletBalance <= 0);
 
-      // Sort premium men by wallet balance descending (highest balance first)
-      const sortedRecharged = recharged.sort((a, b) => b.walletBalance - a.walletBalance);
+      // Sort by wallet balance descending (highest balance first)
+      const sortedRecharged = menWithBalance.sort((a, b) => b.walletBalance - a.walletBalance);
 
       // Split by same language / other language (like men's dashboard)
-      const sameLanguage = sortedMen.filter(m => m.isSameLanguage);
-      const otherLanguage = sortedMen.filter(m => !m.isSameLanguage);
+      // Only men with balance are visible to women
+      const sameLanguage = menWithBalance.filter(m => m.isSameLanguage);
+      const otherLanguage = menWithBalance.filter(m => !m.isSameLanguage);
 
-      console.log("[WomenDashboard] Online same-language men:", sameLanguage.length);
-      console.log("[WomenDashboard] Online other-language men:", otherLanguage.length);
+      console.log("[WomenDashboard] Visible same-language men (with balance):", sameLanguage.length);
+      console.log("[WomenDashboard] Visible other-language men (with balance):", otherLanguage.length);
+      console.log("[WomenDashboard] Hidden men (no balance):", menWithoutBalance.length);
 
       setRechargedMen(sortedRecharged);
-      setNonRechargedMen(nonRecharged);
+      setNonRechargedMen([]); // No longer showing men without balance
       setSameLanguageMen(sameLanguage);
       setOtherLanguageMen(otherLanguage);
       setStats(prev => ({
         ...prev,
         totalOnlineMen: sortedMen.length,
         rechargedMen: sortedRecharged.length,
-        nonRechargedMen: nonRecharged.length
+        nonRechargedMen: menWithoutBalance.length
       }));
 
     } catch (error) {
