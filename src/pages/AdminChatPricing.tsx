@@ -248,10 +248,10 @@ const AdminChatPricing = () => {
     }
   };
 
-  // Women always earn exactly half — these are derived, never independently editable.
+  // Chat & video: women earn half. Group: women earn admin-configured rate (default ₹0.50).
   const chatWomenRate  = (parseFloat(formData.rate_per_minute  || "0") / 2);
   const videoWomenRate = (parseFloat(formData.video_rate_per_minute  || "0") / 2);
-  const groupWomenRate = (parseFloat(formData.group_call_rate_per_minute || "0") / 2);
+  const groupWomenRate = parseFloat(formData.group_call_women_earning_rate || "0.50");
 
   const chatPlatformProfit  = parseFloat(formData.rate_per_minute  || "0") - chatWomenRate;
   const videoPlatformProfit = parseFloat(formData.video_rate_per_minute  || "0") - videoWomenRate;
