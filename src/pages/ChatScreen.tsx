@@ -327,6 +327,9 @@ const ChatScreen = () => {
   // Track user activity and update online status
   const { setOnlineStatus } = useActivityStatus(currentUserId || null);
   
+  // ============= INCOMING CALLS =============
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, currentUserGender);
+  
   // ============= AUTO-RECONNECT HANDLER =============
   
   /**
