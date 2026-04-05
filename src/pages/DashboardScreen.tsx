@@ -1288,7 +1288,8 @@ const DashboardScreen = () => {
   // activeTab state is declared at top of component
 
   const onlineCount = sameLanguageWomen.length + indianTranslatedWomen.length;
-  const menTabs = getMenTabs(onlineCount || undefined, activeChatCount || undefined, matchedWomen.length || undefined);
+  const totalUnreadCount = activeChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const menTabs = getMenTabs(onlineCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedWomen.length || undefined);
 
   const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">

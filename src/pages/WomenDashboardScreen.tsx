@@ -1027,7 +1027,8 @@ const WomenDashboardScreen = () => {
   }
 
   const onlineMenCount = sameLanguageMen.length + otherLanguageMen.length;
-  const womenTabs = getWomenTabs(onlineMenCount || undefined, activeChatCount || undefined, matchedMen.length || undefined);
+  const totalUnreadCount = womenActiveChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const womenTabs = getWomenTabs(onlineMenCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedMen.length || undefined);
 
   const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">
