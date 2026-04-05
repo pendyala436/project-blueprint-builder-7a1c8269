@@ -113,6 +113,7 @@ interface Message {
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
   attachmentType?: "image" | "file"; // Type of attachment
+  sendFailed?: boolean;          // Whether send failed (for retry UI)
 }
 
 /**
