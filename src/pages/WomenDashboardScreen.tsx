@@ -1531,6 +1531,27 @@ const WomenDashboardScreen = () => {
     </div>
   );
 
+  const renderCommunityTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {currentUserId && currentWomanLanguage ? (
+        <div className="px-4 py-3">
+          <LanguageGroupChat
+            currentUserId={currentUserId}
+            languageCode={currentWomanLanguageCode || "eng_Latn"}
+            languageName={currentWomanLanguage}
+            userName={userName || 'User'}
+            userPhoto={userPhoto}
+          />
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading community...</p>
+        </div>
+      )}
+    </div>
+  );
+
   const renderEarningsTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Wallet Balance */}
