@@ -488,6 +488,19 @@ const DashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
+  // Lazy-load data on tab switch
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (activeTab === "matches" && !matchesFetchedRef.current) {
+      matchesFetchedRef.current = true;
+      fetchMatchedWomen(currentUserId);
+    }
+    if (activeTab === "chats" && !chatsFetchedRef.current) {
+      chatsFetchedRef.current = true;
+      fetchActiveChats();
+    }
+  }, [activeTab, currentUserId]);
+
   const loadWalletBalance = async () => {
     if (!currentUserId) return;
     const { data } = await supabase.rpc('get_men_wallet_balance', {
