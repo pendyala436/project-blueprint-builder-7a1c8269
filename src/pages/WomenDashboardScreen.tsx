@@ -324,8 +324,17 @@ const WomenDashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'active_chat_sessions' },
-        // Only refresh chat count - full loadDashboardData is too expensive on every chat event
+        { event: 'INSERT', schema: 'public', table: 'active_chat_sessions', filter: `woman_user_id=eq.${currentUserId}` },
+        () => {
+          loadActiveChatCount();
+          fetchWomenActiveChats();
+          playMessageSound();
+          toast({ title: 'New Chat', description: 'Someone started a conversation with you!' });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'active_chat_sessions' },
         () => { loadActiveChatCount(); }
       )
       .on(
@@ -413,16 +422,21 @@ const WomenDashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineMen reads from refs; language handlers fetch directly
 
+  // Eager-load active chats on mount for unread badge
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (!chatsFetchedRef.current) {
+      chatsFetchedRef.current = true;
+      fetchWomenActiveChats();
+    }
+  }, [currentUserId]);
+
   // Lazy-load data on tab switch
   useEffect(() => {
     if (!currentUserId) return;
     if (activeTab === "matches" && !matchesFetchedRef.current) {
       matchesFetchedRef.current = true;
       fetchMatchedMen(currentUserId);
-    }
-    if (activeTab === "chats" && !chatsFetchedRef.current) {
-      chatsFetchedRef.current = true;
-      fetchWomenActiveChats();
     }
   }, [activeTab, currentUserId]);
 

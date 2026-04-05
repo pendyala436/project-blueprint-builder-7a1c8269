@@ -389,7 +389,17 @@ const DashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'active_chat_sessions' },
+        { event: 'INSERT', schema: 'public', table: 'active_chat_sessions', filter: `man_user_id=eq.${currentUserId}` },
+        () => {
+          loadActiveChatCount();
+          fetchActiveChats();
+          playMessageSound();
+          toast({ title: 'New Chat', description: 'You have a new conversation!' });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'active_chat_sessions' },
         () => { loadActiveChatCount(); }
       )
       .on(
@@ -476,16 +486,21 @@ const DashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
+  // Eager-load active chats on mount for unread badge
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (!chatsFetchedRef.current) {
+      chatsFetchedRef.current = true;
+      fetchActiveChats();
+    }
+  }, [currentUserId]);
+
   // Lazy-load data on tab switch
   useEffect(() => {
     if (!currentUserId) return;
     if (activeTab === "matches" && !matchesFetchedRef.current) {
       matchesFetchedRef.current = true;
       fetchMatchedWomen(currentUserId);
-    }
-    if (activeTab === "chats" && !chatsFetchedRef.current) {
-      chatsFetchedRef.current = true;
-      fetchActiveChats();
     }
   }, [activeTab, currentUserId]);
 
