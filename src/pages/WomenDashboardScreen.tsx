@@ -1259,6 +1259,22 @@ const WomenDashboardScreen = () => {
         </div>
       </div>
 
+      {/* Sub-tabs: Recharged / No Balance */}
+      <div className="flex border-b border-border/30">
+        <button
+          className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "recharged" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+          onClick={() => setOnlineSubTab("recharged")}
+        >
+          💰 Recharged ({sameLanguageMen.length + otherLanguageMen.length})
+        </button>
+        <button
+          className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "nobalance" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+          onClick={() => setOnlineSubTab("nobalance")}
+        >
+          No Balance ({nonRechargedMen.length})
+        </button>
+      </div>
+
 
       {/* Notifications */}
       {notifications.length > 0 && (
