@@ -155,7 +155,14 @@ export const useMiniChatMessages = ({
         .limit(100);
 
       if (data) {
-        const msgs: Message[] = data.map((m) => {
+        // Filter out messages deleted for the current user
+        const filtered = data.filter((m: any) => {
+          if (m.deleted_for_everyone) return false;
+          if (m.sender_id === currentUserId && m.deleted_for_sender) return false;
+          if (m.receiver_id === currentUserId && m.deleted_for_receiver) return false;
+          return true;
+        });
+        const msgs: Message[] = filtered.map((m) => {
           seenIdsRef.current.add(m.id);
           return {
             id: m.id,

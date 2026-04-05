@@ -850,7 +850,14 @@ const ChatScreen = () => {
 
       // Transform database records to Message interface
       if (existingMessages) {
-        const loadedMessages: Message[] = existingMessages.map(msg => ({
+        // Filter out messages deleted for the current user
+        const filteredMessages = existingMessages.filter(msg => {
+          if ((msg as any).deleted_for_everyone) return false;
+          if (msg.sender_id === user.id && (msg as any).deleted_for_sender) return false;
+          if (msg.receiver_id === user.id && (msg as any).deleted_for_receiver) return false;
+          return true;
+        });
+        const loadedMessages: Message[] = filteredMessages.map(msg => ({
           id: msg.id,
           senderId: msg.sender_id,
           message: msg.message,
