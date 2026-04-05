@@ -180,10 +180,6 @@ const IncomingVideoCallWindow = ({
   };
 
   const stopRing = () => {
-    if (ringIntervalRef.current) {
-      clearInterval(ringIntervalRef.current);
-      ringIntervalRef.current = null;
-    }
     stopRingSound();
   };
 
