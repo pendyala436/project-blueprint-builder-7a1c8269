@@ -536,7 +536,7 @@ const AdminChatPricing = () => {
                 Private Group Call Pricing
               </CardTitle>
               <CardDescription>
-                Hosted by Indian women. Each man charged individually. Host earns half per man per minute.
+                Hosted by Indian women. Each man charged individually. Host earns ₹0.50/min per man (configurable).
               </CardDescription>
             </div>
             {!isEditingGroupRates && pricing && (
