@@ -239,6 +239,13 @@ const ChatScreen = () => {
   const [partnerDisconnected, setPartnerDisconnected] = useState(false);
   const [showStopChatDialog, setShowStopChatDialog] = useState(false);
   const [isStoppingChat, setIsStoppingChat] = useState(false);
+  
+  // Typing preview state (native + English subtitle while typing)
+  const [previewNative, setPreviewNative] = useState("");
+  const [previewEnglish, setPreviewEnglish] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [typingText, setTypingText] = useState("");
+  const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
   
