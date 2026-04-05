@@ -1167,8 +1167,7 @@ const WomenDashboardScreen = () => {
                   isPremium={user.hasRecharged}
                   walletBalance={user.walletBalance}
                   activeChatCount={user.activeChatCount}
-                  onClick={() => handleViewProfile(user.userId)}
-                  onDoubleClick={() => handleStartChatWithUser(user.userId)}
+                  onClick={() => handleStartChatWithUser(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
