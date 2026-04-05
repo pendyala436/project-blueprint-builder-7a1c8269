@@ -574,7 +574,7 @@ async function getAvailableWoman(supabase: any, data: any) {
 
 // Create a direct video call session to a specific user
 async function createDirectCall(supabase: any, data: any) {
-  const { call_id, man_user_id, woman_user_id, rate_per_minute = 8 } = data;
+  const { call_id, man_user_id, woman_user_id, rate_per_minute = 8, call_type = 'video' } = data;
 
   if (!call_id || !man_user_id || !woman_user_id) {
     return new Response(
@@ -591,6 +591,7 @@ async function createDirectCall(supabase: any, data: any) {
       woman_user_id,
       status: 'ringing',
       rate_per_minute,
+      call_type,
     });
 
   if (error) {
