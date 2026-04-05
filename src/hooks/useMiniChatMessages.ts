@@ -12,6 +12,7 @@ interface Message {
   translationFailed?: boolean;
   createdAt: string;
   sendFailed?: boolean;
+  deletedForEveryone?: boolean;
 }
 
 interface UseMiniChatMessagesOptions {
@@ -155,7 +156,14 @@ export const useMiniChatMessages = ({
         .limit(100);
 
       if (data) {
-        const msgs: Message[] = data.map((m) => {
+        // Filter out messages deleted for the current user
+        const filtered = data.filter((m: any) => {
+          if (m.deleted_for_everyone) return false;
+          if (m.sender_id === currentUserId && m.deleted_for_sender) return false;
+          if (m.receiver_id === currentUserId && m.deleted_for_receiver) return false;
+          return true;
+        });
+        const msgs: Message[] = filtered.map((m) => {
           seenIdsRef.current.add(m.id);
           return {
             id: m.id,
@@ -241,6 +249,29 @@ export const useMiniChatMessages = ({
             if (!isMinimized) {
               markMessagesAsReadWithRetry(chatId, currentUserId);
             }
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
+        (payload) => {
+          const m = payload.new as any;
+          // Handle "delete for everyone" — remove from view for both parties
+          if (m.deleted_for_everyone) {
+            setMessages(prev => prev.map(msg =>
+              msg.id === m.id ? { ...msg, message: 'This message was deleted', translatedMessage: undefined, englishText: undefined, deletedForEveryone: true } : msg
+            ));
+            return;
+          }
+          // Handle "delete for me" — remove only for the deleter
+          if (m.sender_id === currentUserId && m.deleted_for_sender) {
+            setMessages(prev => prev.filter(msg => msg.id !== m.id));
+            return;
+          }
+          if (m.receiver_id === currentUserId && m.deleted_for_receiver) {
+            setMessages(prev => prev.filter(msg => msg.id !== m.id));
+            return;
           }
         }
       )
