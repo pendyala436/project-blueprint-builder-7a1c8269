@@ -89,6 +89,7 @@ const IncomingVideoCallWindow = ({
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [pausedChatCount, setPausedChatCount] = useState(0);
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
+  const [preAcquiredStream, setPreAcquiredStream] = useState<MediaStream | null>(null);
   
 
   // Unregister session on close
