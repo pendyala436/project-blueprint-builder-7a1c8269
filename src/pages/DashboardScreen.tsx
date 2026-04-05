@@ -600,7 +600,7 @@ const DashboardScreen = () => {
     return 'bg-online';
   };
 
-  const getStatusDotColor = getStatusColor;
+  // getStatusDotColor removed — use getStatusColor directly
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {
