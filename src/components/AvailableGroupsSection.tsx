@@ -262,7 +262,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Badge variant="outline" className="text-xs">
-            {liveCount} Live / {groups.length} Total
+            {liveCount} Live
           </Badge>
         </div>
       </div>
