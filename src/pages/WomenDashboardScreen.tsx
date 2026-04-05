@@ -1238,9 +1238,10 @@ const WomenDashboardScreen = () => {
     );
   }
 
-  const womenTabs = getWomenTabs(activeChatCount || undefined, matchedMen.length || undefined);
+  const onlineMenCount = sameLanguageMen.length + otherLanguageMen.length;
+  const womenTabs = getWomenTabs(onlineMenCount || undefined, activeChatCount || undefined, matchedMen.length || undefined);
 
-  const renderChatsTab = () => (
+  const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Status bar */}
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
