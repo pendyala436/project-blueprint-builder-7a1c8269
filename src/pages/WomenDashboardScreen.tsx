@@ -1497,32 +1497,6 @@ const WomenDashboardScreen = () => {
         </div>
       )}
 
-      {/* Golden Badge */}
-      {isIndianWoman && (
-        <div className="px-4 py-3 border-b border-border/30">
-          {hasGoldenBadge ? (
-            <div className="flex items-center gap-3">
-              <Star className="w-5 h-5 text-primary fill-primary" />
-              <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
-                {goldenBadgeExpiry && <p className="text-[10px] text-muted-foreground">Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}</p>}
-              </div>
-              <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Star className="w-5 h-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">🌟 Golden Badge</p>
-                <p className="text-[10px] text-muted-foreground">₹{goldenBadgePrice.toLocaleString()}/month</p>
-              </div>
-              <Button variant="aurora" size="sm" className="h-7 text-[10px] px-2" onClick={handlePurchaseGoldenBadge} disabled={isPurchasingBadge}>
-                {isPurchasingBadge ? <Loader2 className="h-3 w-3 animate-spin" /> : "Buy"}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-0 border-b border-border/30">
