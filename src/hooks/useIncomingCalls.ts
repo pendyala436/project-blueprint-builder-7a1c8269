@@ -99,7 +99,7 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
         async (payload) => {
           const call = payload.new as any;
           
-          if (call.status === 'ringing') {
+          if (call.status === 'ringing' || call.status === 'connecting') {
             // Priority check: block incoming call if already in a P3 session
             const callType = call.call_type === 'audio' ? 'audio_call' : 'video_call';
             if (shouldBlockIncoming(callType)) {

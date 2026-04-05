@@ -777,11 +777,10 @@ export const useP2PCall = ({
       console.log('[P2P] Starting call as initiator...');
       setState(prev => ({ ...prev, isConnecting: true, callStatus: 'connecting' }));
 
-      // Update database to mark call as connecting
-      await supabase
-        .from('video_call_sessions')
-        .update({ status: 'connecting' })
-        .eq('call_id', callId);
+      // NOTE: Do NOT update DB status to 'connecting' here.
+      // The session must remain 'ringing' in the DB so the receiver's
+      // useIncomingCalls INSERT listener sees status='ringing' and shows the popup.
+      // The status will transition to 'active' when the receiver accepts.
 
       // Initialize media and signaling
       const localStream = await initLocalMedia();
