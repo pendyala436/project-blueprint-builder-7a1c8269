@@ -12,6 +12,7 @@ interface Message {
   translationFailed?: boolean;
   createdAt: string;
   sendFailed?: boolean;
+  deletedForEveryone?: boolean;
 }
 
 interface UseMiniChatMessagesOptions {
