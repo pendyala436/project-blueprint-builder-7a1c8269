@@ -84,6 +84,12 @@ export const useP2PCall = ({
   const sessionIdRef = useRef<string | null>(null);
   const lastBilledMinuteRef = useRef<number>(0);
   const billingInProgressRef = useRef<boolean>(false);
+  const callStatusRef = useRef<string>('idle');
+
+  // Keep callStatusRef in sync with state
+  useEffect(() => {
+    callStatusRef.current = state.callStatus;
+  }, [state.callStatus]);
 
   const wait = useCallback((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)), []);
 
@@ -999,14 +1005,16 @@ export const useP2PCall = ({
           const status = payload.new.status;
           console.log('[P2P] Call status update from DB:', status);
           
-          if (['declined', 'missed', 'ended'].includes(status)) {
-            // Only react if WE didn't trigger it (avoid double-cleanup)
-            if (state.callStatus !== 'ended') {
+          if (['declined', 'missed', 'ended', 'timeout_cleanup'].includes(status)) {
+            // Use ref to avoid stale closure — ensures we always check latest status
+            if (callStatusRef.current !== 'ended') {
+              console.log('[P2P] Remote party ended/declined call, closing locally');
               toast({
                 title: "Call Ended",
                 description: status === 'declined' ? 'Call was declined' : status === 'missed' ? 'Call was missed' : 'The other user ended the call',
               });
               cleanup();
+              callStatusRef.current = 'ended';
               setState(prev => ({ ...prev, callStatus: 'ended' }));
               onCallEnded?.();
             }

@@ -212,6 +212,7 @@ const DirectAudioCallButton = ({
 
   const handleEndCall = async () => {
     if (activeCall) {
+      activeCall.stream?.getTracks().forEach(t => t.stop());
       await supabase
         .from('video_call_sessions')
         .update({
@@ -220,8 +221,8 @@ const DirectAudioCallButton = ({
           end_reason: 'user_ended',
         })
         .eq('call_id', activeCall.callId);
+      unregisterSession('audio_call', activeCall.callId);
     }
-    if (activeCall) unregisterSession('audio_call', activeCall.callId);
     setActiveCall(null);
   };
 

@@ -213,6 +213,8 @@ const DirectVideoCallButton = ({
 
   const handleEndCall = async () => {
     if (activeCall) {
+      // Stop pre-acquired stream tracks
+      activeCall.stream?.getTracks().forEach(t => t.stop());
       await supabase
         .from('video_call_sessions')
         .update({
@@ -221,8 +223,8 @@ const DirectVideoCallButton = ({
           end_reason: 'user_ended',
         })
         .eq('call_id', activeCall.callId);
+      unregisterSession('video_call', activeCall.callId);
     }
-    if (activeCall) unregisterSession('video_call', activeCall.callId);
     setActiveCall(null);
   };
 
