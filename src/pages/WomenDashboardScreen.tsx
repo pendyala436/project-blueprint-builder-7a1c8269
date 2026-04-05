@@ -1449,43 +1449,6 @@ const WomenDashboardScreen = () => {
         </>
       )}
 
-      {/* Matches */}
-      {matchedMen.length > 0 && (
-        <div className="px-4 py-3 border-t border-border/30">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <Heart className="h-4 w-4 text-primary" />
-              Matches ({matchedMen.length})
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedMen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
-              <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
-            </Button>
-          </div>
-          {matchedMen.map((man) => (
-            <WhatsAppUserCard
-              key={man.matchId}
-              name={man.fullName || "User"}
-              photoUrl={man.photoUrl}
-              age={man.age}
-              language={man.primaryLanguage}
-              country={man.country}
-              isOnline={man.isOnline}
-              onClick={() => navigate(`/profile/${man.userId}`)}
-              actions={
-                hasGoldenBadge ? (
-                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(man.userId); }}>
-                    <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                  </Button>
-                ) : (
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
-                    <Eye className="w-3.5 h-3.5 text-primary" />
-                  </Button>
-                )
-              }
-            />
-          ))}
-        </div>
-      )}
 
       {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && notifications.length === 0 && (
         <div className="text-center py-16">
