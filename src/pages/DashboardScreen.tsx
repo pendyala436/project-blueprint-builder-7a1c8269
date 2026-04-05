@@ -924,16 +924,6 @@ const DashboardScreen = () => {
       return;
     }
 
-    // Guard: check parallel chat limit before connecting
-    if (!canStartNewChat) {
-      toast({
-        title: t('maxChatsReached', 'Max Chats Reached'),
-        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsConnecting(true);
     toast({
       title: t('searchingForMatch', 'Searching...'),
