@@ -86,6 +86,11 @@ export const useP2PCall = ({
   const billingInProgressRef = useRef<boolean>(false);
   const callStatusRef = useRef<string>('idle');
 
+  // Keep callStatusRef in sync with state
+  useEffect(() => {
+    callStatusRef.current = state.callStatus;
+  }, [state.callStatus]);
+
   const wait = useCallback((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)), []);
 
   const sendSignal = useCallback(async (
