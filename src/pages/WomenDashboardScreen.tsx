@@ -1253,7 +1253,7 @@ const WomenDashboardScreen = () => {
     );
   }
 
-  const womenTabs = getWomenTabs(activeChatCount || undefined, sameLanguageMen.length + otherLanguageMen.length || undefined);
+  const womenTabs = getWomenTabs(activeChatCount || undefined);
 
   const renderChatsTab = () => (
     <div className="flex-1 overflow-y-auto">
