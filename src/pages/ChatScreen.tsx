@@ -449,6 +449,8 @@ const ChatScreen = () => {
               );
               if (tempIdx !== -1) {
                 const tempMsg = prev[tempIdx];
+                // Record mapping so pending translation promise can find the real message
+                tempToRealIdRef.current.set(tempMsg.id, newMsg.id);
                 const updated = [...prev];
                 updated[tempIdx] = {
                   id: newMsg.id,
@@ -457,6 +459,7 @@ const ChatScreen = () => {
                   translatedMessage: tempMsg.translatedMessage,
                   englishText: tempMsg.englishText,
                   isTranslated: tempMsg.isTranslated,
+                  isTranslating: tempMsg.isTranslating, // preserve translating state
                   isRead: newMsg.is_read,
                   createdAt: newMsg.created_at,
                 };
