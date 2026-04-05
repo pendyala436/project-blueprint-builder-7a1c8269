@@ -280,7 +280,7 @@ const AdminFinanceReports = () => {
           .reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const giftSpending = (walletTxns || [])
-          .filter((t: any) => t.transaction_type === "gift_purchase")
+          .filter((t: any) => t.transaction_type === "gift_debit")
           .reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
 
         const womenEarningsTotal = (womenEarningsData || []).reduce((sum, e) => sum + e.amount, 0);
