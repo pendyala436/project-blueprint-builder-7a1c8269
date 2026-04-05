@@ -35,7 +35,7 @@ interface RandomChatButtonProps {
   size?: "default" | "lg" | "sm";
   className?: string;
   onInsufficientBalance?: () => void;
-  hasGoldenBadge?: boolean;
+  
   chatMode?: "paid" | "free" | "exclusive_free";
 }
 
