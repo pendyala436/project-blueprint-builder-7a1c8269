@@ -281,19 +281,7 @@ const DashboardScreen = () => {
     return Math.round(converted * 100) / 100;
   };
 
-  // Format chat timestamps with date context
-  const formatChatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const dayMs = 86400000;
-    if (diff < dayMs && now.getDate() === date.getDate()) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    if (diff < 2 * dayMs && now.getDate() - date.getDate() === 1) return 'Yesterday';
-    if (diff < 7 * dayMs) return date.toLocaleDateString([], { weekday: 'short' });
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
+  // formatChatTime now imported from @/lib/utils
 
   // Format currency display
   const formatLocalCurrency = (amountINR: number) => {
