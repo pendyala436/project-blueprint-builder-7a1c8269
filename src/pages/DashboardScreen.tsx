@@ -287,8 +287,7 @@ const DashboardScreen = () => {
     initiateReconnect 
   } = useAutoReconnect(currentUserId, userLanguage);
 
-  // Men's free chat minutes (10 min every 15 days)
-  const menFreeMinutes = useMenFreeMinutes(currentUserId || null);
+  // Men's free chat minutes removed - feature deprecated
 
   // ScrollableUserList extracted to avoid hooks-in-render violations - see below
 
