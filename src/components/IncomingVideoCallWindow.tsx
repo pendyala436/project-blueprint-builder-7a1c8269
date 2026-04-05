@@ -63,6 +63,7 @@ const IncomingVideoCallWindow = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [pausedChatCount, setPausedChatCount] = useState(0);
+  const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Continuous ring sound until answered/declined
@@ -109,6 +110,15 @@ const IncomingVideoCallWindow = ({
   // Check active chats on mount to show warning
   useEffect(() => {
     checkActiveChats();
+    // Detect call type from session
+    supabase
+      .from('video_call_sessions')
+      .select('call_type')
+      .eq('call_id', callId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.call_type === 'audio') setCallType('audio');
+      });
   }, []);
 
   const checkActiveChats = async () => {
@@ -240,6 +250,7 @@ const IncomingVideoCallWindow = ({
 
   // If answered, show the draggable video call window
   if (isAnswered) {
+    const isAudio = callType === 'audio';
     return (
       <DraggableVideoCallWindow
         callId={callId}
@@ -251,7 +262,8 @@ const IncomingVideoCallWindow = ({
         onClose={onClose}
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
         zIndex={130}
-        ratePerMinute={pricing.videoRatePerMinute}
+        ratePerMinute={isAudio ? pricing.audioRatePerMinute : pricing.videoRatePerMinute}
+        audioOnly={isAudio}
       />
     );
   }
@@ -273,12 +285,12 @@ const IncomingVideoCallWindow = ({
         </div>
 
         <div className="flex items-center gap-2 mb-2 text-success">
-          <Video className="w-4 h-4" />
-          <span className="text-xs font-medium">Incoming Video Call</span>
+          {callType === 'audio' ? <Phone className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+          <span className="text-xs font-medium">Incoming {callType === 'audio' ? 'Audio' : 'Video'} Call</span>
         </div>
 
         <h3 className="text-lg font-semibold text-foreground mb-1">{callerName}</h3>
-        <p className="text-muted-foreground text-sm mb-1">wants to video call you</p>
+        <p className="text-muted-foreground text-sm mb-1">wants to {callType === 'audio' ? 'audio' : 'video'} call you</p>
         
         {/* Show chat pause warning */}
         {pausedChatCount > 0 && (

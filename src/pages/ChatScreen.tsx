@@ -87,6 +87,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
+import DirectAudioCallButton from "@/components/DirectAudioCallButton";
+import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
 
@@ -239,6 +241,7 @@ const ChatScreen = () => {
   const [partnerDisconnected, setPartnerDisconnected] = useState(false);
   const [showStopChatDialog, setShowStopChatDialog] = useState(false);
   const [isStoppingChat, setIsStoppingChat] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
   
   // Typing preview state (native + English subtitle while typing)
   const [previewNative, setPreviewNative] = useState("");
@@ -760,7 +763,18 @@ const ChatScreen = () => {
                           "English";
       
       setCurrentUserLanguage(motherTongue);
-      setCurrentUserGender(currentProfile?.gender === "female" || currentProfile?.gender === "Female" ? "female" : "male");
+      const userGender = currentProfile?.gender === "female" || currentProfile?.gender === "Female" ? "female" : "male";
+      setCurrentUserGender(userGender);
+
+      // Fetch wallet balance for call buttons
+      if (userGender === "male") {
+        const { data: walletData } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setWalletBalance(Number(walletData?.balance) || 0);
+      }
 
       // ============= FETCH PARTNER PROFILE =============
       
@@ -1626,30 +1640,28 @@ const ChatScreen = () => {
           )}
 
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
-          {currentUserGender === "male" && (
+          {currentUserGender === "male" && chatPartner && (
           <div className="flex items-center gap-0.5">
-            <button
-              onClick={() => {
-                toast({
-                  title: "Audio Call",
-                  description: "₹6/min • Coming soon",
-                });
-              }}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Phone className="w-5 h-5 text-foreground" />
-            </button>
-            <button
-              onClick={() => {
-                toast({
-                  title: "Video Call", 
-                  description: "₹8/min • Coming soon",
-                });
-              }}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Video className="w-5 h-5 text-foreground" />
-            </button>
+            <DirectAudioCallButton
+              currentUserId={currentUserId}
+              targetUserId={chatPartner.userId}
+              targetName={chatPartner.fullName}
+              targetPhoto={chatPartner.avatar}
+              walletBalance={walletBalance}
+              size="icon"
+              variant="ghost"
+              iconOnly={true}
+            />
+            <DirectVideoCallButton
+              currentUserId={currentUserId}
+              targetUserId={chatPartner.userId}
+              targetName={chatPartner.fullName}
+              targetPhoto={chatPartner.avatar}
+              walletBalance={walletBalance}
+              size="icon"
+              variant="ghost"
+              iconOnly={true}
+            />
           </div>
           )}
 

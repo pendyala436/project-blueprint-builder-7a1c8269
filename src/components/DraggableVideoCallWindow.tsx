@@ -59,6 +59,7 @@ interface DraggableVideoCallWindowProps {
   onFocus?: () => void;
   ratePerMinute?: number;
   preAcquiredStream?: MediaStream | null;
+  audioOnly?: boolean;
 }
 
 const DraggableVideoCallWindow = ({
@@ -74,6 +75,7 @@ const DraggableVideoCallWindow = ({
   onFocus,
   ratePerMinute = 8,
   preAcquiredStream = null,
+  audioOnly = false,
 }: DraggableVideoCallWindowProps) => {
   const { toast } = useToast();
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -110,6 +112,7 @@ const DraggableVideoCallWindow = ({
     ratePerMinute,
     onCallEnded: onClose,
     preAcquiredStream,
+    audioOnly,
   });
 
   // Check block status

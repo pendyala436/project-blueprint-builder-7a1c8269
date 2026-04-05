@@ -13,6 +13,8 @@ export interface ChatPricing {
   womenEarningRate: number;
   videoRatePerMinute: number;
   videoWomenEarningRate: number;
+  audioRatePerMinute: number;
+  audioWomenEarningRate: number;
   groupCallRatePerMinute: number;
   groupCallWomenEarningRate: number;
   minWithdrawalBalance: number;
@@ -26,6 +28,8 @@ const DEFAULT_PRICING: ChatPricing = {
   womenEarningRate: 2,             // women earn ₹2/min chat (half of men)
   videoRatePerMinute: 8,           // men pay ₹8/min video
   videoWomenEarningRate: 4,        // women earn ₹4/min video (half of men)
+  audioRatePerMinute: 6,           // men pay ₹6/min audio
+  audioWomenEarningRate: 3,        // women earn ₹3/min audio (half of men)
   groupCallRatePerMinute: 4,       // each man pays ₹4/min group call
   groupCallWomenEarningRate: 2,    // host earns ₹2/min per man (half of men)
   minWithdrawalBalance: 5000,      // min ₹5000 to withdraw
@@ -58,13 +62,16 @@ export const useChatPricing = () => {
         const menChat  = Number(data.rate_per_minute)              || DEFAULT_PRICING.ratePerMinute;
         const menVideo = Number(data.video_rate_per_minute)        || DEFAULT_PRICING.videoRatePerMinute;
         const menGroup = Number((data as any).group_call_rate_per_minute) || DEFAULT_PRICING.groupCallRatePerMinute;
+        const menAudio = Number((data as any).audio_rate_per_minute) || DEFAULT_PRICING.audioRatePerMinute;
         setPricing({
           ratePerMinute:             menChat,
-          womenEarningRate:          parseFloat((menChat  / 2).toFixed(2)),   // always half
+          womenEarningRate:          parseFloat((menChat  / 2).toFixed(2)),
           videoRatePerMinute:        menVideo,
-          videoWomenEarningRate:     parseFloat((menVideo / 2).toFixed(2)),   // always half
+          videoWomenEarningRate:     parseFloat((menVideo / 2).toFixed(2)),
+          audioRatePerMinute:        menAudio,
+          audioWomenEarningRate:     parseFloat((menAudio / 2).toFixed(2)),
           groupCallRatePerMinute:    menGroup,
-          groupCallWomenEarningRate: parseFloat((menGroup / 2).toFixed(2)),   // always half per man
+          groupCallWomenEarningRate: parseFloat((menGroup / 2).toFixed(2)),
           minWithdrawalBalance:      Number(data.min_withdrawal_balance) || DEFAULT_PRICING.minWithdrawalBalance,
           currency:                  data.currency || DEFAULT_PRICING.currency
         });
