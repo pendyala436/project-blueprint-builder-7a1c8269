@@ -799,13 +799,15 @@ const DashboardScreen = () => {
     setIsConnecting(true);
     setConnectingUserId(womanUserId);
 
+    // Navigate immediately so the chat window opens on single click
+    navigate(`/chat/${womanUserId}`);
+
+    // Start the chat session in the background
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       const user = session.user;
 
-      // Route through chat-manager edge function for proper security checks
-      // (balance verification, block check, parallel chat limits, super user bypass)
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "start_chat",
@@ -814,7 +816,10 @@ const DashboardScreen = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Chat manager error:", error);
+        return;
+      }
 
       // Mark as self-initiated to prevent incoming chat popup
       if (data?.session_id || data?.chat_id) {
@@ -822,29 +827,9 @@ const DashboardScreen = () => {
         markChatAsSelfInitiated(data.session_id, data.chat_id);
       }
 
-      if (!data.success) {
-        // If woman is busy, try auto-reconnect
-        if (data.message?.includes("capacity") || data.message?.includes("Maximum")) {
-          toast({
-            title: 'User Busy',
-            description: 'Finding another available user...',
-          });
-
-          const nextWoman = _reconnectDepth < 2 ? await initiateReconnect(womanUserId) : null;
-          if (nextWoman) {
-            await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
-          } else {
-            toast({
-              title: 'No One Available',
-              description: 'All users are busy. Please try again later.',
-              variant: "destructive",
-            });
-          }
-          return;
-        }
-
+      if (!data?.success) {
         // Insufficient balance - show recharge dialog
-        if (data.message?.includes("balance") || data.message?.includes("Insufficient")) {
+        if (data?.message?.includes("balance") || data?.message?.includes("Insufficient")) {
           toast({
             title: 'Insufficient Balance',
             description: data.message,
@@ -855,14 +840,14 @@ const DashboardScreen = () => {
         }
 
         toast({
-          title: 'Cannot Start Chat',
-          description: data.message || "Unable to start chat session",
+          title: 'Chat Notice',
+          description: data?.message || "Chat session may not have started properly",
           variant: "destructive",
         });
         return;
       }
 
-      // Send initial message so the incoming chat hook doesn't show popup for the initiator
+      // Send initial message
       if (data.chat_id) {
         await supabase.from("chat_messages").insert({
           chat_id: data.chat_id,
@@ -871,28 +856,8 @@ const DashboardScreen = () => {
           message: "👋 Hi!"
         });
       }
-
-      toast({
-        title: 'Chat Started',
-        description: `${'Starting chat with'} ${womanName} (${formatPrice(data.rate_per_minute || pricing.ratePerMinute)}/min)`,
-      });
-
-      // Navigate to full-screen WhatsApp-style chat view
-      navigate(`/chat/${womanUserId}`);
     } catch (error: any) {
-      console.error("Error starting chat:", error);
-      
-      // On error, try to auto-reconnect to another woman
-      const nextWoman = _reconnectDepth < 2 ? await initiateReconnect(womanUserId) : null;
-      if (nextWoman) {
-        await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
-      } else {
-        toast({
-          title: 'Error',
-          description: classifyError(error, 'start the chat').message,
-          variant: "destructive",
-        });
-      }
+      console.error("Failed to start chat session:", error);
     } finally {
       setIsConnecting(false);
       setConnectingUserId(null);
