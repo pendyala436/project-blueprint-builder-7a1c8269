@@ -87,6 +87,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
 import GiftSendButton from "@/components/GiftSendButton";
+import DirectAudioCallButton from "@/components/DirectAudioCallButton";
+import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
 
