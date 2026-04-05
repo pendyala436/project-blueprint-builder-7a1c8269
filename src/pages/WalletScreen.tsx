@@ -334,7 +334,7 @@ const WalletScreen = () => {
                     if (val >= 10) handleRecharge(val);
                     else toast.error("Minimum amount is ₹10");
                   }}
-                  disabled={processingPayment || !customAmount || Number(customAmount) < 10}
+                  disabled={processingPayment || !customAmount || Number(customAmount) < 10 || !rechargeConsent}
                 >
                   {processingPayment && customAmount ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Pay"}
                 </Button>
