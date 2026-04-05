@@ -1550,12 +1550,7 @@ const WomenDashboardScreen = () => {
         )}
       </div>
 
-      {/* Private Groups */}
-      {currentUserId && (
-        <div id="women-private-groups-section" className="px-4 py-3 border-t border-border/30">
-          <PrivateGroupsSection currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
-        </div>
-      )}
+      {/* Private Groups moved to dedicated Groups tab */}
 
       {/* Language Group Chat */}
       {currentUserId && currentWomanLanguage && (
@@ -1567,6 +1562,27 @@ const WomenDashboardScreen = () => {
             userName={userName || 'User'}
             userPhoto={userPhoto}
           />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderGroupsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <Video className="h-4 w-4 text-primary" />
+          Private Groups
+        </span>
+      </div>
+      {currentUserId ? (
+        <div className="px-4 py-3">
+          <PrivateGroupsSection currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
+        </div>
+      ) : (
+        <div className="text-center py-10">
+          <Video className="w-10 h-10 text-muted-foreground/20 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Loading groups...</p>
         </div>
       )}
     </div>
@@ -1731,17 +1747,14 @@ const WomenDashboardScreen = () => {
 
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "users" && renderUsersTab()}
+      {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "chats" && (
-        <WhatsAppFAB onClick={() => {
-          const el = document.getElementById('women-private-groups-section');
-          if (el) { setActiveTab("users"); setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 100); }
-          else setActiveTab("users");
-        }} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
+        <WhatsAppFAB onClick={() => setActiveTab("groups")} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
       )}
 
       {/* Profile Edit Dialog */}
