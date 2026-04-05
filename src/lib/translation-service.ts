@@ -94,6 +94,21 @@ export function isLatinScript(text: string): boolean {
 }
 
 /**
+ * Detect if text is a MIX of Latin and non-Latin scripts (partial translation).
+ * Returns true if both Latin and non-Latin characters are present in significant amounts.
+ * This catches cases where auto-detect translates only PART of a transliterated message.
+ */
+export function isMixedScript(text: string): boolean {
+  const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
+  if (!cleaned || cleaned.length < 4) return false;
+  const latinChars = (cleaned.match(/[a-zA-Z\u00C0-\u024F]/g) || []).length;
+  const nonLatinChars = cleaned.length - latinChars;
+  // Mixed if both Latin and non-Latin make up at least 15% of text
+  const latinRatio = latinChars / cleaned.length;
+  return latinRatio > 0.15 && latinRatio < 0.85 && nonLatinChars > 2 && latinChars > 2;
+}
+
+/**
  * Languages whose native script IS Latin. For these languages:
  * - Translation output will also be in Latin script
  * - We must NOT apply the "still Latin → override with English" fallback
@@ -312,34 +327,37 @@ export async function translateForViewer(
     // ── Case 3: Latin input → Non-Latin target (transliteration handling) ──
     if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
+      const isPartiallyTranslated = !isStillLatin && isMixedScript(nativeText);
 
-      if (isStillLatin) {
+      if (isStillLatin || isPartiallyTranslated) {
         // Strategy A: English bridge — use the English translation to re-translate
         const englishMeaning = englishResult || nativeText;
         if (englishMeaning && englishMeaning !== message) {
           const fromEnglish = await translateText(englishMeaning, 'English', viewerLangOriginal);
-          if (fromEnglish && !isLatinScript(fromEnglish)) {
+          if (fromEnglish && !isLatinScript(fromEnglish) && !isMixedScript(fromEnglish)) {
             nativeText = fromEnglish;
           }
         }
 
         // Strategy B: Treat original as English directly → viewerLang
-        if (isLatinScript(nativeText)) {
+        if (isLatinScript(nativeText) || isMixedScript(nativeText)) {
           const directResult = await translateText(message, 'English', viewerLangOriginal);
-          if (directResult && !isLatinScript(directResult)) {
+          if (directResult && !isLatinScript(directResult) && !isMixedScript(directResult)) {
             nativeText = directResult;
           }
         }
       }
 
       // Strategy C: Sender Language Bridge (for transliteration)
+      // Also fires when current result is mixed (partial translation)
+      const needsBridge = isLatinScript(nativeText) || isMixedScript(nativeText) || nativeText === message;
       const bridgeLang = (senderLang && senderLang !== 'english' && !senderUsesLatin) 
         ? senderLang 
         : (!viewerUsesLatin && viewerLang !== 'english') ? viewerLang : '';
       const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLangOriginal : viewerLangOriginal) : '';
-      if (bridgeLang) {
+      if (bridgeLang && needsBridge) {
         const bridgeNative = await translateText(message, 'English', bridgeLangFull || viewerLangOriginal);
-        if (bridgeNative && !isLatinScript(bridgeNative) && bridgeNative !== message) {
+        if (bridgeNative && !isLatinScript(bridgeNative) && !isMixedScript(bridgeNative) && bridgeNative !== message) {
           if (bridgeLang !== viewerLang) {
             // Cross-language: translate sender's native to viewer's language
             const crossTranslated = await translateText(bridgeNative, bridgeLangFull || 'auto', viewerLangOriginal);
