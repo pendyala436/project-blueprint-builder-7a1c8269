@@ -1743,6 +1743,7 @@ const DashboardScreen = () => {
       />
 
       {/* Tab Content */}
+      {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
