@@ -23,6 +23,8 @@ interface WhatsAppUserCardProps {
   /** Right-side action area */
   actions?: React.ReactNode;
   onClick?: () => void;
+  /** Double-click handler (e.g. open chat) */
+  onDoubleClick?: () => void;
   className?: string;
 }
 
@@ -40,15 +42,17 @@ export const WhatsAppUserCard: React.FC<WhatsAppUserCardProps> = ({
   subtitle,
   actions,
   onClick,
+  onDoubleClick,
   className,
 }) => {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30",
+        "flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30 select-none",
         className
       )}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
     >
       {/* Avatar with status */}
       <div className="relative flex-shrink-0">
