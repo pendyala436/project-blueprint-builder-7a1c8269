@@ -235,6 +235,7 @@ const DashboardScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("chats");
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
