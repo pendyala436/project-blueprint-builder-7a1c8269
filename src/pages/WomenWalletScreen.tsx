@@ -86,7 +86,7 @@ const WomenWalletScreen = () => {
         .select("min_withdrawal_balance")
         .eq("is_active", true)
         .maybeSingle();
-      if (pricing) setMinWithdrawal(Number(pricing.min_withdrawal_balance) || 5000);
+      if (pricing) setMinWithdrawal(Number(pricing.min_withdrawal_balance) || 100);
 
       // users_wallet.balance is the single source of truth for women's wallet.
       // It is incremented directly on every session earning credit (chat, video, group call).
