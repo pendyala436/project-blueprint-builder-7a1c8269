@@ -116,6 +116,107 @@ export function isMixedScript(text: string): boolean {
   return latinRatio > 0.08 && latinRatio < 0.92;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getMeaningfulLatinTokens(text: string): string[] {
+  return Array.from(new Set(text.match(/[a-zA-Z\u00C0-\u024F]{3,}/g) ?? []));
+}
+
+function countLatinChars(text: string): number {
+  const tokens: string[] = text.match(/[a-zA-Z\u00C0-\u024F]+/g) ?? [];
+  let total = 0;
+  for (const token of tokens) total += token.length;
+  return total;
+}
+
+function scoreTranslationCandidate(
+  original: string,
+  candidate: string,
+  viewerUsesLatin: boolean
+): number {
+  if (!candidate?.trim()) return Number.NEGATIVE_INFINITY;
+
+  const cleaned = candidate.trim();
+  let score = 0;
+
+  if (cleaned !== original.trim()) score += 40;
+
+  if (!viewerUsesLatin) {
+    const latinChars = countLatinChars(cleaned);
+    const totalChars = cleaned.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '').length;
+    const nonLatinChars = Math.max(0, totalChars - latinChars);
+
+    if (!isLatinScript(cleaned)) score += 30;
+    if (!isMixedScript(cleaned)) score += 30;
+    score += nonLatinChars * 2;
+    score -= latinChars * 3;
+  }
+
+  return score;
+}
+
+function pickBetterTranslationCandidate(
+  original: string,
+  current: string,
+  contender: string,
+  viewerUsesLatin: boolean
+): string {
+  return scoreTranslationCandidate(original, contender, viewerUsesLatin) >
+    scoreTranslationCandidate(original, current, viewerUsesLatin)
+    ? contender
+    : current;
+}
+
+async function cleanMixedTranslation(
+  text: string,
+  targetLanguage: string
+): Promise<string> {
+  if (!text?.trim() || isLatinScriptLanguage(targetLanguage) || !isMixedScript(text)) {
+    return text;
+  }
+
+  const tokens = getMeaningfulLatinTokens(text);
+  if (!tokens.length) return text;
+
+  const replacements = new Map<string, string>();
+
+  await Promise.all(tokens.map(async (token) => {
+    const [fromEnglish, fromAuto] = await Promise.all([
+      translateText(token, 'English', targetLanguage),
+      translateText(token, 'auto', targetLanguage),
+    ]);
+
+    const bestReplacement = pickBetterTranslationCandidate(
+      token,
+      token,
+      pickBetterTranslationCandidate(token, token, fromEnglish || token, false),
+      false
+    );
+
+    const finalReplacement = pickBetterTranslationCandidate(
+      token,
+      bestReplacement,
+      fromAuto || token,
+      false
+    );
+
+    if (finalReplacement && finalReplacement !== token) {
+      replacements.set(token, finalReplacement);
+    }
+  }));
+
+  if (!replacements.size) return text;
+
+  let cleanedText = text;
+  for (const [token, replacement] of replacements.entries()) {
+    cleanedText = cleanedText.replace(new RegExp(`\\b${escapeRegExp(token)}\\b`, 'g'), replacement);
+  }
+
+  return cleanedText;
+}
+
 /**
  * Languages whose native script IS Latin. For these languages:
  * - Translation output will also be in Latin script
@@ -342,17 +443,13 @@ export async function translateForViewer(
         const englishMeaning = englishResult || nativeText;
         if (englishMeaning && englishMeaning !== message) {
           const fromEnglish = await translateText(englishMeaning, 'English', viewerLangOriginal);
-          if (fromEnglish && !isLatinScript(fromEnglish) && !isMixedScript(fromEnglish)) {
-            nativeText = fromEnglish;
-          }
+          nativeText = pickBetterTranslationCandidate(message, nativeText, fromEnglish || nativeText, viewerUsesLatin);
         }
 
         // Strategy B: Treat original as English directly → viewerLang
         if (isLatinScript(nativeText) || isMixedScript(nativeText)) {
           const directResult = await translateText(message, 'English', viewerLangOriginal);
-          if (directResult && !isLatinScript(directResult) && !isMixedScript(directResult)) {
-            nativeText = directResult;
-          }
+          nativeText = pickBetterTranslationCandidate(message, nativeText, directResult || nativeText, viewerUsesLatin);
         }
       }
 
@@ -365,16 +462,14 @@ export async function translateForViewer(
       const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLangOriginal : viewerLangOriginal) : '';
       if (bridgeLang && needsBridge) {
         const bridgeNative = await translateText(message, 'English', bridgeLangFull || viewerLangOriginal);
-        if (bridgeNative && !isLatinScript(bridgeNative) && !isMixedScript(bridgeNative) && bridgeNative !== message) {
+        if (bridgeNative && bridgeNative !== message) {
           if (bridgeLang !== viewerLang) {
             // Cross-language: translate sender's native to viewer's language
             const crossTranslated = await translateText(bridgeNative, bridgeLangFull || 'auto', viewerLangOriginal);
-            if (crossTranslated && crossTranslated !== bridgeNative) {
-              nativeText = crossTranslated;
-            }
+            nativeText = pickBetterTranslationCandidate(message, nativeText, crossTranslated || bridgeNative, viewerUsesLatin);
           } else {
             // Same language: sender's native IS the viewer's native
-            nativeText = bridgeNative;
+            nativeText = pickBetterTranslationCandidate(message, nativeText, bridgeNative, viewerUsesLatin);
           }
 
           // Fix English subtitle
@@ -385,6 +480,11 @@ export async function translateForViewer(
             }
           }
         }
+      }
+
+      if (isMixedScript(nativeText)) {
+        const cleanedNative = await cleanMixedTranslation(nativeText, viewerLangOriginal);
+        nativeText = pickBetterTranslationCandidate(message, nativeText, cleanedNative, viewerUsesLatin);
       }
     }
 
@@ -399,7 +499,8 @@ export async function translateForViewer(
     // ── Fallback: unchanged Latin input for non-Latin viewer ──
     if (nativeText === message && englishText && englishText !== message) {
       if (inputIsLatin && !viewerUsesLatin) {
-        nativeText = englishText;
+        const englishFallback = await translateText(englishText, 'English', viewerLangOriginal);
+        nativeText = pickBetterTranslationCandidate(message, nativeText, englishFallback || englishText, viewerUsesLatin);
       }
     }
 
