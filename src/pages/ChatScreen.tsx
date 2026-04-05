@@ -57,8 +57,16 @@ import {
   LogOut,       // Leave chat icon
   Home,         // Home navigation icon
   Phone,        // Audio call icon
-  Video         // Video call icon
+  Video,        // Video call icon
+  Trash2        // Delete message icon
 } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Popover,
   PopoverContent,
