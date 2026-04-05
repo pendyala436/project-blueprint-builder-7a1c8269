@@ -11,7 +11,7 @@ import { toast } from "sonner";
  * - Uses atomic transaction functions for any operations
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AdminNav from "@/components/AdminNav";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 
 import { 
   ArrowLeft, 
@@ -172,30 +173,7 @@ const AdminTransactionHistory = () => {
   const [menStats, setMenStats] = useState({ transactions: 0, spent: 0, giftsSent: 0 });
   const [womenStats, setWomenStats] = useState({ transactions: 0, earned: 0, withdrawals: 0 });
 
-  useEffect(() => {
-    loadAllData();
-  }, [dateRange]);
-
-  // #18: Real-time subscriptions with error handler
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin-transaction-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ledger_transactions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, () => loadAllData())
-      .on('system' as any, { event: 'error' }, () => {
-        toast.error('Live updates paused', { description: 'Realtime connection lost. Data may be stale.' });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     try {
       const days = parseInt(dateRange);
       const startDate = startOfDay(subDays(new Date(), days)).toISOString();
@@ -374,15 +352,7 @@ const AdminTransactionHistory = () => {
         totalVideoCalls: enrichedVideoCalls.length,
         totalGiftsSent: enrichedGifts.length
       });
-      
-      console.log("Admin Transaction Stats (real data):", {
-        creditTransactions: creditTxns.length,
-        debitTransactions: debitTxns.length,
-        totalCredits,
-        totalDebits,
-        totalEarningsPaid,
-        completedWithdrawals
-      });
+
 
     } catch (error) {
       console.error("Error loading admin transaction data:", error);
@@ -390,7 +360,18 @@ const AdminTransactionHistory = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  // Use debounced realtime subscriptions
+  useMultipleRealtimeSubscriptions(
+    ["ledger_transactions", "active_chat_sessions", "video_call_sessions", "gift_transactions", "withdrawal_requests"],
+    loadAllData,
+    true
+  );
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -906,7 +887,7 @@ const AdminTransactionHistory = () => {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <TrendingUp className="h-4 w-4 text-success" />
                     Women's Session Earnings
                     <Badge variant="outline" className="text-xs ml-auto">
                       {womenEarnings.length} records
@@ -924,7 +905,7 @@ const AdminTransactionHistory = () => {
                         <TableHead className="text-xs">Woman</TableHead>
                         <TableHead className="text-xs">Session Type</TableHead>
                         <TableHead className="text-xs">Session ID</TableHead>
-                        <TableHead className="text-xs text-right text-green-600">Earned (₹)</TableHead>
+                        <TableHead className="text-xs text-right text-success">Earned (₹)</TableHead>
                         <TableHead className="text-xs">Description</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -943,7 +924,7 @@ const AdminTransactionHistory = () => {
                           <TableCell className="text-xs font-mono text-muted-foreground">
                             {e.chat_id ? String(e.chat_id).slice(0, 8) + "…" : "—"}
                           </TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-green-600">
+                          <TableCell className="text-xs text-right font-semibold text-success">
                             ₹{Number(e.amount).toFixed(2)}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground max-w-56 truncate">
