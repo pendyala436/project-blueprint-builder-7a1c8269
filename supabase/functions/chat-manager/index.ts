@@ -1104,7 +1104,7 @@ serve(async (req) => {
                 man_user_id,
                 woman_user_id,
                 rate_per_minute: ratePerMinute,
-                status: "pending",
+                status: "active",
                 started_at: new Date().toISOString(),
                 ended_at: null,
                 end_reason: null,
