@@ -127,7 +127,7 @@ const AdminChatPricing = () => {
           video_rate_per_minute: "8.00",     // men video: ₹8/min
           video_women_earning_rate: "4.00",  // women video: ₹4/min (half)
           group_call_rate_per_minute: "4.00",       // men group: ₹4/min each
-          group_call_women_earning_rate: "2.00",     // women group: ₹2/min per man (half)
+          group_call_women_earning_rate: "0.50",     // women group: ₹0.50/min per man
           min_withdrawal_balance: "5000"     // min withdrawal: ₹5,000
         });
       }
