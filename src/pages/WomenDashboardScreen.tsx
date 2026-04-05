@@ -598,11 +598,15 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    return t('available', 'Available');
+    if (isManuallyOffline) return 'Offline';
+    if (!isOnline) return 'Away';
+    return 'Available';
   };
 
   const getStatusColor = () => {
-    return "bg-online";
+    if (isManuallyOffline) return 'bg-muted-foreground';
+    if (!isOnline) return 'bg-amber-500';
+    return 'bg-online';
   };
 
   const loadDashboardData = async () => {

@@ -1712,7 +1712,7 @@ const DashboardScreen = () => {
         { icon: <UserCircle className="w-5 h-5 text-primary" />, label: "Edit Profile", onClick: () => setProfileEditOpen(true) },
         { icon: <Compass className="w-5 h-5 text-primary" />, label: "Discover Matches", onClick: () => navigate("/match-discovery") },
         { icon: <Eye className="w-5 h-5 text-primary" />, label: "Online Users", onClick: () => navigate("/online-users") },
-        { icon: <Gift className="w-5 h-5 text-primary" />, label: "Send Gift", onClick: () => navigate("/gift-sending") },
+        { icon: <Gift className="w-5 h-5 text-primary" />, label: "Send Gift", onClick: () => navigate("/match-discovery") },
         { icon: <Settings className="w-5 h-5 text-primary" />, label: "Settings", onClick: () => navigate("/settings") },
       ].map((item, i) => (
         <div key={i} className="px-4 py-3 flex items-center gap-3 border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={item.onClick}>
