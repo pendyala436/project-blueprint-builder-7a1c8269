@@ -229,7 +229,18 @@ const WomenDashboardScreen = () => {
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
-  const [activeTab, setActiveTab] = useState("chats");
+  const [activeTab, setActiveTab] = useState("online");
+  const [onlineSubTab, setOnlineSubTab] = useState<"recharged" | "nobalance">("recharged");
+  const [womenActiveChats, setWomenActiveChats] = useState<Array<{
+    chatId: string;
+    partnerId: string;
+    partnerName: string;
+    partnerPhoto: string | null;
+    lastMessage: string;
+    lastMessageAt: string;
+    unreadCount: number;
+  }>>([]);
+  const [loadingWomenChats, setLoadingWomenChats] = useState(false);
   
   // All women are in paid mode by default - no mode switching needed
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
