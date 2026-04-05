@@ -534,22 +534,16 @@ const DashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return t('busy', 'Busy') + `(${MAX_PARALLEL_CHATS})`;
     return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
-
-  const MAX_PARALLEL_CHATS = settings?.maxParallelChats || 3;
-  const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {
