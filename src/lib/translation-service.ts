@@ -327,21 +327,22 @@ export async function translateForViewer(
     // ── Case 3: Latin input → Non-Latin target (transliteration handling) ──
     if (inputIsLatin && !viewerUsesLatin) {
       const isStillLatin = isLatinScript(nativeText);
+      const isPartiallyTranslated = !isStillLatin && isMixedScript(nativeText);
 
-      if (isStillLatin) {
+      if (isStillLatin || isPartiallyTranslated) {
         // Strategy A: English bridge — use the English translation to re-translate
         const englishMeaning = englishResult || nativeText;
         if (englishMeaning && englishMeaning !== message) {
           const fromEnglish = await translateText(englishMeaning, 'English', viewerLangOriginal);
-          if (fromEnglish && !isLatinScript(fromEnglish)) {
+          if (fromEnglish && !isLatinScript(fromEnglish) && !isMixedScript(fromEnglish)) {
             nativeText = fromEnglish;
           }
         }
 
         // Strategy B: Treat original as English directly → viewerLang
-        if (isLatinScript(nativeText)) {
+        if (isLatinScript(nativeText) || isMixedScript(nativeText)) {
           const directResult = await translateText(message, 'English', viewerLangOriginal);
-          if (directResult && !isLatinScript(directResult)) {
+          if (directResult && !isLatinScript(directResult) && !isMixedScript(directResult)) {
             nativeText = directResult;
           }
         }
