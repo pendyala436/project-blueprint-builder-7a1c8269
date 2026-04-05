@@ -1276,22 +1276,10 @@ const DashboardScreen = () => {
           <span className="text-xs text-muted-foreground">{formatLocalCurrency(walletBalance)}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <RandomChatButton 
-            userGender="male"
-            userLanguage={userLanguage}
-            userCountry={userCountry}
-            walletBalance={walletBalance}
-            onInsufficientBalance={() => setRechargeDialogOpen(true)}
-            className="text-[10px] h-7 !px-2"
-          />
-          {userCountry === "IN" && (
-            <VideoCallMiniButton 
-              currentUserId={currentUserId}
-              userLanguage={userLanguage}
-              walletBalance={walletBalance}
-              onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-            />
-          )}
+          <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={userCountry} />
+          <Button variant="ghost" size="sm" onClick={() => userLanguage && fetchOnlineWomen(userLanguage)} disabled={loadingOnlineWomen} className="h-7 w-7 p-0">
+            <RefreshCw className={cn("w-3.5 h-3.5", loadingOnlineWomen && "animate-spin")} />
+          </Button>
         </div>
       </div>
 
@@ -1306,77 +1294,49 @@ const DashboardScreen = () => {
         />
       </div>
 
-      {/* Recent notifications as chat-style list */}
-      <div id="notifications-section">
-        {notifications.length > 0 ? (
-          <div>
-            {notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
-                onClick={() => markNotificationRead(notification.id)}
-              >
-                <div className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
-                  notification.type === "match" ? "bg-primary/10 text-primary" :
-                  notification.type === "message" ? "bg-primary/10 text-primary" :
-                  "bg-primary/10 text-primary"
-                )}>
-                  {notification.type === "match" ? <Heart className="w-5 h-5" /> :
-                   notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
-                   <Bell className="w-5 h-5" />}
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <div id="notifications-section">
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
+              onClick={() => markNotificationRead(notification.id)}
+            >
+              <div className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
+                "bg-primary/10 text-primary"
+              )}>
+                {notification.type === "match" ? <Heart className="w-5 h-5" /> :
+                 notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
+                 <Bell className="w-5 h-5" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm text-foreground truncate">{notification.title}</span>
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                    {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-foreground truncate">{notification.title}</span>
-                    <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                      {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
-                    {!notification.is_read && (
-                      <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 ml-2" />
-                    )}
-                  </div>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                  {!notification.is_read && (
+                    <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 ml-2" />
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-            <p className="text-muted-foreground text-sm">No recent activity</p>
-            <p className="text-muted-foreground/60 text-xs mt-1">Start chatting to see activity here</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderUsersTab = () => (
-    <div className="flex-1 overflow-y-auto">
-      {/* Header with refresh & filter */}
-      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">Women Online</span>
-          <Badge variant="outline" className="text-[9px]">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
+            </div>
+          ))}
         </div>
-        <div className="flex items-center gap-1.5">
-          <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={userCountry} />
-          <Button variant="ghost" size="sm" onClick={() => userLanguage && fetchOnlineWomen(userLanguage)} disabled={loadingOnlineWomen} className="h-7 w-7 p-0">
-            <RefreshCw className={cn("w-3.5 h-3.5", loadingOnlineWomen && "animate-spin")} />
-          </Button>
-        </div>
-      </div>
+      )}
 
+      {/* Women Online - Same Language */}
       {loadingOnlineWomen ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       ) : (
         <>
-          {/* Same Language Section */}
           {sameLanguageWomen.length > 0 && (
             <>
               <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
@@ -1402,6 +1362,21 @@ const DashboardScreen = () => {
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
+                      {/* Audio Call - same language only */}
+                      {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          disabled={(woman.active_chat_count || 0) >= 3}
+                          onClick={() => {
+                            toast({ title: "Audio Call", description: "₹6/min • Coming soon" });
+                          }}
+                        >
+                          <Phone className="w-3.5 h-3.5 text-green-600" />
+                        </Button>
+                      )}
+                      {/* Video Call - same language only */}
                       {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
                         <DirectVideoCallButton
                           currentUserId={currentUserId}
@@ -1457,6 +1432,7 @@ const DashboardScreen = () => {
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
+                      {/* Chat only - no audio/video for other languages */}
                       <Button
                         variant="aurora"
                         size="sm"
@@ -1474,14 +1450,13 @@ const DashboardScreen = () => {
             </>
           )}
 
-          {sameLanguageWomen.length === 0 && indianTranslatedWomen.length === 0 && (
+          {sameLanguageWomen.length === 0 && indianTranslatedWomen.length === 0 && notifications.length === 0 && (
             <div className="text-center py-16">
-              <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
               <p className="text-muted-foreground text-sm">No women online right now</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">Check back later</p>
             </div>
           )}
-
-          {/* Private Groups moved to dedicated Groups tab */}
         </>
       )}
     </div>
