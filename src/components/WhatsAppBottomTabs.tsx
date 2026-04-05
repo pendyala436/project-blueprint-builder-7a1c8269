@@ -70,6 +70,7 @@ export const getMenTabs = (onlineBadge?: number, chatBadge?: number, matchBadge?
 export const getWomenTabs = (onlineBadge?: number, chatBadge?: number, matchesBadge?: number, earningsBadge?: number): TabItem[] => [
   { id: "online", label: "Online", icon: <Users className="w-5 h-5" />, badge: onlineBadge },
   { id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge },
+  { id: "history", label: "History", icon: <Clock className="w-5 h-5" /> },
   { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchesBadge },
   { id: "community", label: "Community", icon: <Users className="w-5 h-5" /> },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
