@@ -1191,17 +1191,7 @@ const WomenDashboardScreen = () => {
                 <MessageCircleIcon className="h-3.5 w-3.5" />
                 Chat
               </Button>
-              {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                <DirectVideoCallButton
-                  currentUserId={currentUserId}
-                  targetUserId={user.userId}
-                  targetName={user.fullName}
-                  targetPhoto={user.photoUrl}
-                  walletBalance={myWalletBalance}
-                  onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
-                  iconOnly={true}
-                />
-              )}
+              {/* Women cannot initiate video/audio calls — they only receive */}
               <Button 
                 size="sm" 
                 variant="auroraOutline"
