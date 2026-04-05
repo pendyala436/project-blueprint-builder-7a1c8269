@@ -316,6 +316,7 @@ const IncomingVideoCallWindow = ({
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
         zIndex={130}
         ratePerMinute={isAudio ? pricing.audioRatePerMinute : pricing.videoRatePerMinute}
+        preAcquiredStream={preAcquiredStream}
         audioOnly={isAudio}
       />
     );
