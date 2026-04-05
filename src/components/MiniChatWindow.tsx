@@ -494,6 +494,30 @@ const MiniChatWindow = ({
             const existingRealIndex = prev.findIndex(m => m.id === newMsg.id);
             if (existingRealIndex >= 0) return prev;
             
+            // For own messages, find and replace temp message, preserving translation
+            if (newMsg.sender_id === currentUserId) {
+              const tempIdx = prev.findIndex(m =>
+                m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
+                Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 5000
+              );
+              if (tempIdx !== -1) {
+                const tempMsg = prev[tempIdx];
+                tempToRealIdRef.current.set(tempMsg.id, newMsg.id);
+                const updated = [...prev];
+                updated[tempIdx] = {
+                  id: newMsg.id,
+                  senderId: newMsg.sender_id,
+                  message: newMsg.message,
+                  translatedMessage: tempMsg.translatedMessage,
+                  englishText: tempMsg.englishText,
+                  isTranslated: tempMsg.isTranslated,
+                  isTranslating: tempMsg.isTranslating,
+                  createdAt: newMsg.created_at
+                };
+                return updated;
+              }
+            }
+            
             const filtered = prev.filter(m => 
               !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id && 
                 Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 5000)
