@@ -188,6 +188,8 @@ const IncomingVideoCallWindow = ({
       }
 
       setIsAnswered(true);
+      const sessionType = callType === 'audio' ? 'audio_call' : 'video_call';
+      registerSession(sessionType as any, callId);
       
       toast({
         title: "Call Connected",
