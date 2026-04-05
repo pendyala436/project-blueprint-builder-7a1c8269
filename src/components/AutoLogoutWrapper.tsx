@@ -59,8 +59,8 @@ export const AutoLogoutWrapper = ({ children }: AutoLogoutWrapperProps) => {
     return () => { mounted = false; };
   }, [authUser, authReady]);
 
-  const idleTimeout = isFemale ? WOMEN_IDLE_TIMEOUT : MEN_IDLE_TIMEOUT;
-  const idleMinutes = isFemale ? 45 : 15;
+  const idleTimeout = IDLE_TIMEOUT;
+  const idleMinutes = 15;
 
   const logout = useCallback(async () => {
     if (!isAuthenticated) return;
