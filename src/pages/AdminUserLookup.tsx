@@ -163,6 +163,7 @@ const AdminUserLookup = () => {
       setLoading(false);
     }
   };
+  loadAllUsersRef.current = loadAllUsers;
 
   const selectUser = async (user: UserProfile) => {
     setSelectedUser(user);
