@@ -276,7 +276,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => {
-          const isLive = group.is_live && !!group.current_host_id;
+          const isLive = true; // All groups in this list are live
           const isFull = group.participant_count >= MAX_PARTICIPANTS;
           const isJoining = joiningGroupId === group.id;
 
