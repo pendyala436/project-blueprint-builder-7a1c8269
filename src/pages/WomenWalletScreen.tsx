@@ -367,6 +367,26 @@ const WomenWalletScreen = () => {
               </RadioGroup>
             </div>
 
+            {/* Fee breakdown */}
+            {withdrawAmount && Number(withdrawAmount) > 0 && (
+              <Card className="p-3 bg-muted/50 border-muted">
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Withdrawal Amount</span>
+                    <span>₹{Number(withdrawAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-warning">
+                    <span>Platform Fee (5%)</span>
+                    <span>-₹{(Number(withdrawAmount) * 0.05).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold border-t pt-1">
+                    <span>You Receive</span>
+                    <span className="text-success">₹{(Number(withdrawAmount) * 0.95).toFixed(2)}</span>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Button
               onClick={handleWithdraw}
               disabled={isSubmitting || !withdrawAmount || !paymentMethod}
