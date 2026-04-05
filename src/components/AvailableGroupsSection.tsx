@@ -281,17 +281,11 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
           const isJoining = joiningGroupId === group.id;
 
           return (
-            <Card key={group.id} className={cn("relative overflow-hidden", isLive ? "border-destructive/30" : "border-muted opacity-75")}>
-              {isLive ? (
-                <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
-                  <Radio className="h-3 w-3 animate-pulse" />
-                  LIVE
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="absolute top-2 right-2 gap-1 z-10 text-muted-foreground">
-                  OFFLINE
-                </Badge>
-              )}
+            <Card key={group.id} className={cn("relative overflow-hidden border-destructive/30")}>
+              <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
+                <Radio className="h-3 w-3 animate-pulse" />
+                LIVE
+              </Badge>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">{FLOWER_EMOJIS[group.name] || '🌸'}</div>
