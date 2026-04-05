@@ -104,6 +104,16 @@ const AdminLegalDocuments = () => {
 
   useEffect(() => {
     fetchDocuments();
+
+    // #1: Add realtime subscription for legal document updates
+    const channel = supabase
+      .channel('legal-docs-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'legal_documents' }, () => {
+        fetchDocuments();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchDocuments = async () => {

@@ -87,6 +87,19 @@ const AdminMessaging = () => {
     loadAdmin();
     fetchBroadcastMessages();
     fetchInboxThreads();
+
+    // #4: Realtime subscription instead of polling
+    const channel = supabase
+      .channel('admin-messaging-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_user_messages' }, () => {
+        fetchBroadcastMessages();
+        fetchInboxThreads();
+        if (selectedThread) fetchThreadMessages(selectedThread.user_id);
+        if (selectedUser) fetchChatMessages(selectedUser.user_id);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   useEffect(() => {

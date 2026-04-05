@@ -84,14 +84,18 @@ const AdminPerformanceMonitoring = () => {
   useEffect(() => {
     loadData();
     
-    // Set up live updates - refetch from database every 10 seconds
-    const interval = setInterval(() => {
-      if (isLive) {
-        loadData(true); // silent refresh
-      }
-    }, 10000);
+    // #19: Replace setInterval with realtime subscription
+    const channel = supabase
+      .channel('performance-metrics-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_metrics' }, () => {
+        if (isLive) loadData(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
+        if (isLive) loadData(true);
+      })
+      .subscribe();
 
-    return () => clearInterval(interval);
+    return () => { supabase.removeChannel(channel); };
   }, [timeRange, isLive]);
 
   const getTimeRangeMinutes = () => {

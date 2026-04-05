@@ -6,10 +6,11 @@ import { toast } from "sonner";
 const ADMIN_CHECK_TIMEOUT = 15000; // 15 seconds — generous for slow DBs
 
 // Module-level cache so multiple components share one check per session
-let cachedResult: { isAdmin: boolean; email: string; userId: string } | null = null;
-let pendingPromise: Promise<{ isAdmin: boolean; email: string; userId: string } | null> | null = null;
+const CACHE_TTL = 300_000; // 5 minutes
+let cachedResult: { isAdmin: boolean; email: string; userId: string; timestamp: number } | null = null;
+let pendingPromise: Promise<{ isAdmin: boolean; email: string; userId: string; timestamp: number } | null> | null = null;
 
-const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; userId: string } | null> => {
+const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; userId: string; timestamp: number } | null> => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
 
@@ -44,6 +45,7 @@ const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; u
     isAdmin: !!roleData,
     email: user.email || "",
     userId: user.id,
+    timestamp: Date.now(),
   };
 };
 
@@ -63,7 +65,7 @@ export const useAdminAccess = () => {
 
     const check = async () => {
       // Fast path: use cached result from another component's check
-      if (cachedResult) {
+      if (cachedResult && (Date.now() - cachedResult.timestamp) < CACHE_TTL) {
         if (!mounted) return;
         if (!cachedResult.isAdmin) {
           toast.error("Access Denied", { description: "You don't have admin privileges" });

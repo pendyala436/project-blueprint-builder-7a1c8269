@@ -176,7 +176,7 @@ const AdminTransactionHistory = () => {
     loadAllData();
   }, [dateRange]);
 
-  // Real-time subscriptions
+  // #18: Real-time subscriptions with error handler
   useEffect(() => {
     const channel = supabase
       .channel('admin-transaction-updates')
@@ -185,6 +185,9 @@ const AdminTransactionHistory = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => loadAllData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => loadAllData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, () => loadAllData())
+      .on('system' as any, { event: 'error' }, () => {
+        toast.error('Live updates paused', { description: 'Realtime connection lost. Data may be stale.' });
+      })
       .subscribe();
 
     return () => {

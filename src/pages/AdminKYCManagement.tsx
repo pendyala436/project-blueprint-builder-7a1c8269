@@ -164,6 +164,16 @@ const AdminKYCManagement = () => {
   useEffect(() => {
     loadIndianWomen();
     loadStats();
+
+    // #1: Add realtime subscription for KYC updates
+    const channel = supabase
+      .channel('kyc-management-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, () => {
+        loadStats();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   useEffect(() => {

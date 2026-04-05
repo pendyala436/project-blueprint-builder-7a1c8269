@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import AdminNav from "@/components/AdminNav";
@@ -119,13 +120,16 @@ const AdminUserLookup = () => {
     loadAllUsers();
   }, []);
 
+  // #22: Debounce search to prevent excessive DB queries
+  const debouncedSearch = useDebounce(searchQuery, 400);
+
   useEffect(() => {
     let users = allUsers;
     if (genderFilter !== "all") {
       users = users.filter(u => u.gender?.toLowerCase() === genderFilter);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       users = users.filter(u =>
         (u.full_name?.toLowerCase().includes(q)) ||
         (u.email?.toLowerCase().includes(q)) ||
@@ -133,7 +137,7 @@ const AdminUserLookup = () => {
       );
     }
     setFilteredUsers(users);
-  }, [searchQuery, allUsers, genderFilter]);
+  }, [debouncedSearch, allUsers, genderFilter]);
 
   const loadAllUsers = async () => {
     setLoading(true);
