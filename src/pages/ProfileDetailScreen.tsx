@@ -288,10 +288,10 @@ const ProfileDetailScreen = () => {
     if (!profile || !currentUserId) return;
 
     try {
-      // Get current user's gender and golden badge status
+      // Get current user's gender
       const { data: currentProfile } = await supabase
         .from("profiles")
-        .select("gender, has_golden_badge, golden_badge_expires_at")
+        .select("gender")
         .eq("user_id", currentUserId)
         .maybeSingle();
 
