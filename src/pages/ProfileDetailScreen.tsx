@@ -75,7 +75,7 @@ const ProfileDetailScreen = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
-  const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
+  
   const [currentUserGender, setCurrentUserGender] = useState("");
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
@@ -142,7 +142,7 @@ const ProfileDetailScreen = () => {
         walletResult
       ] = await Promise.all([
         supabase.from("profiles")
-          .select("gender, has_golden_badge, golden_badge_expires_at")
+          .select("gender")
           .eq("user_id", user.id).maybeSingle(),
         fetchPublicProfile(targetUserId).then(data => ({ data, error: null })),
         supabase.from("user_languages")
@@ -171,12 +171,6 @@ const ProfileDetailScreen = () => {
       const gender = currentUserProfile?.gender?.toLowerCase() || "";
       setCurrentUserGender(gender);
       
-      if (gender === "female") {
-        const badgeActive = currentUserProfile?.has_golden_badge === true && 
-          currentUserProfile?.golden_badge_expires_at && 
-          new Date(currentUserProfile.golden_badge_expires_at) > new Date();
-        setHasGoldenBadge(!!badgeActive);
-      }
 
       if (!profileData) {
         toast({
@@ -294,10 +288,10 @@ const ProfileDetailScreen = () => {
     if (!profile || !currentUserId) return;
 
     try {
-      // Get current user's gender and golden badge status
+      // Get current user's gender
       const { data: currentProfile } = await supabase
         .from("profiles")
-        .select("gender, has_golden_badge, golden_badge_expires_at")
+        .select("gender")
         .eq("user_id", currentUserId)
         .maybeSingle();
 
@@ -323,28 +317,11 @@ const ProfileDetailScreen = () => {
         }
       }
 
-      // Women without golden badge cannot initiate chats
-      if (isFemale) {
-        const badgeActive = currentProfile?.has_golden_badge === true && 
-          currentProfile?.golden_badge_expires_at && 
-          new Date(currentProfile.golden_badge_expires_at) > new Date();
-        
-        if (!badgeActive) {
-          toast({
-            title: "Action Not Allowed",
-            description: "Wait for men to send you a chat request, or purchase a Golden Badge to initiate chats.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: isMale ? currentUserId : profile.userId,
           woman_user_id: isMale ? profile.userId : currentUserId,
-          golden_badge_override: isFemale,
         }
       });
 
@@ -666,27 +643,16 @@ const ProfileDetailScreen = () => {
             {isLiked ? t('liked', 'Liked') : t('like', 'Like')}
           </Button>
 
-          {/* Chat Button - Only for men or Golden Badge women */}
-          {(currentUserGender === "male" || hasGoldenBadge) && (
-            <Button
-              variant="auroraOutline"
-              className="flex-1 h-14 text-lg gap-2"
-              onClick={handleChat}
-            >
-              <MessageCircle className="w-6 h-6" />
-              {t('chat', 'Chat')}
-            </Button>
-          )}
+          {/* Chat Button */}
+          <Button
+            variant="auroraOutline"
+            className="flex-1 h-14 text-lg gap-2"
+            onClick={handleChat}
+          >
+            <MessageCircle className="w-6 h-6" />
+            {t('chat', 'Chat')}
+          </Button>
         </div>
-
-        {/* View-only notice for women without Golden Badge */}
-        {currentUserGender === "female" && !hasGoldenBadge && (
-          <Card className="p-4 animate-fade-in bg-muted/50 border-border" style={{ animationDelay: "0.25s" }}>
-            <p className="text-sm text-muted-foreground text-center">
-              {t('viewOnlyMode', 'View-only mode — wait for men to send you a chat or video call request, or purchase a Golden Badge to initiate.')}
-            </p>
-          </Card>
-        )}
 
         {/* Online Status Card */}
         <Card className={`p-4 animate-fade-in border-2 transition-colors ${

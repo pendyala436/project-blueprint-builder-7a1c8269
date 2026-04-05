@@ -66,34 +66,10 @@ serve(async (req) => {
       console.log(`[SECURITY] Admin ${authenticatedUserId} authorized for ${action}`);
     }
 
-    // SECURITY: For distribution actions, verify the caller is male (only men can initiate)
-    // Exception: Women with Golden Badge can initiate chats and calls
+    // SECURITY: For distribution actions, verify the caller's gender
     if (action === 'distribute_for_chat' || action === 'distribute_for_call') {
-      const { data: callerProfile } = await supabase
-        .from('profiles')
-        .select('gender, has_golden_badge, golden_badge_expires_at')
-        .eq('user_id', authenticatedUserId)
-        .maybeSingle();
-      
-      if (callerProfile?.gender?.toLowerCase() === 'female') {
-        // Check if woman has active Golden Badge
-        const hasActiveBadge = callerProfile.has_golden_badge === true && 
-          callerProfile.golden_badge_expires_at && 
-          new Date(callerProfile.golden_badge_expires_at) > new Date();
-        
-        if (!hasActiveBadge) {
-          console.log(`[SECURITY] Female user ${authenticatedUserId} attempted to initiate ${action} without Golden Badge - BLOCKED`);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: 'Women cannot initiate chats or video calls. Purchase a Golden Badge to unlock this feature.',
-              error_code: 'WOMEN_CANNOT_INITIATE'
-            }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        console.log(`[SECURITY] Female user ${authenticatedUserId} has Golden Badge - ALLOWED to initiate ${action}`);
-      }
+      // Women can now initiate chats and calls freely
+      console.log(`[SECURITY] User ${authenticatedUserId} initiating ${action}`);
     }
 
     switch (action) {

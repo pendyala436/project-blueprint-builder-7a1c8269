@@ -223,10 +223,6 @@ const WomenDashboardScreen = () => {
   });
   const [myWalletBalance, setMyWalletBalance] = useState(0);
   const [biggestEarner, setBiggestEarner] = useState<BiggestEarner | null>(null);
-  const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
-  const [goldenBadgeExpiry, setGoldenBadgeExpiry] = useState<string | null>(null);
-  const [isPurchasingBadge, setIsPurchasingBadge] = useState(false);
-  const [goldenBadgePrice, setGoldenBadgePrice] = useState(1000);
   const [isIndianWoman, setIsIndianWoman] = useState(false);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
@@ -542,7 +538,7 @@ const WomenDashboardScreen = () => {
       // Wrap profile fetch in timeout to prevent hang
       const profilePromise = supabase
         .from("profiles")
-        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, is_indian, has_golden_badge, golden_badge_expires_at")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, is_indian")
         .eq("user_id", user.id)
         .maybeSingle();
       
@@ -550,7 +546,7 @@ const WomenDashboardScreen = () => {
         setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       );
       
-      let mainProfile: { gender?: string | null; approval_status?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; is_indian?: boolean | null; has_golden_badge?: boolean | null; golden_badge_expires_at?: string | null } | null = null;
+      let mainProfile: { gender?: string | null; approval_status?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; is_indian?: boolean | null } | null = null;
       try {
         const result = await Promise.race([profilePromise, profileTimeout]);
         mainProfile = result.data;
@@ -561,29 +557,10 @@ const WomenDashboardScreen = () => {
       // Store user's photo for chat validation
       setUserPhoto(mainProfile?.photo_url || null);
       
-      // Check golden badge status
+      // Check if Indian woman
       const isIndian = mainProfile?.is_indian === true || 
         mainProfile?.country?.toLowerCase().includes('india');
       setIsIndianWoman(isIndian && mainProfile?.gender?.toLowerCase() === 'female');
-      
-      const badgeActive = mainProfile?.has_golden_badge === true && 
-        mainProfile?.golden_badge_expires_at && 
-        new Date(mainProfile.golden_badge_expires_at) > new Date();
-      setHasGoldenBadge(!!badgeActive);
-      if (mainProfile?.golden_badge_expires_at) {
-        setGoldenBadgeExpiry(mainProfile.golden_badge_expires_at);
-      }
-
-      // Fetch golden badge price from app_settings
-      const { data: badgePriceSetting } = await supabase
-        .from("app_settings")
-        .select("setting_value")
-        .eq("setting_key", "golden_badge_price")
-        .eq("is_public", true)
-        .maybeSingle();
-      if (badgePriceSetting?.setting_value) {
-        setGoldenBadgePrice(Number(badgePriceSetting.setting_value) || 1000);
-      }
 
       // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
@@ -980,25 +957,14 @@ const WomenDashboardScreen = () => {
   };
 
 
-  // Women cannot initiate chats - UNLESS they have Golden Badge
+  // Women can initiate chats freely
   const handleStartChatWithUser = async (userId: string) => {
-    if (!hasGoldenBadge) {
-      toast({
-        title: t('actionNotAllowed', 'Action Not Allowed'),
-        description: t('womenCannotInitiateChat', 'Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.'),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Golden badge holder - initiate chat
     try {
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: userId,
           woman_user_id: currentUserId,
-          golden_badge_override: true
         }
       });
 
@@ -1018,7 +984,7 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      // Send initial message so the incoming chat hook doesn't treat it as "incoming" for the woman
+      // Send initial message
       if (data.chat_id) {
         await supabase.from("chat_messages").insert({
           chat_id: data.chat_id,
@@ -1028,7 +994,6 @@ const WomenDashboardScreen = () => {
         });
       }
 
-      // Navigate to full-screen WhatsApp-style chat view
       navigate(`/chat/${userId}`);
 
       toast({
@@ -1044,49 +1009,10 @@ const WomenDashboardScreen = () => {
     }
   };
 
-  const handlePurchaseGoldenBadge = async () => {
-    setIsPurchasingBadge(true);
-    try {
-      const { data, error } = await supabase.rpc('purchase_golden_badge', {
-        p_user_id: currentUserId
-      });
-
-      if (error) throw error;
-
-      const result = data as any;
-      if (result?.success) {
-        setHasGoldenBadge(true);
-        setGoldenBadgeExpiry(result.expires_at);
-        toast({
-          title: "🌟 Golden Badge Activated!",
-          description: "You can now initiate chats with men for 30 days!",
-        });
-        // Refresh only wallet balance — badge state already updated above
-        fetchWalletBalance(currentUserId);
-      } else {
-        toast({
-          title: "Purchase Failed",
-          description: result?.error || "Could not purchase badge",
-          variant: "destructive",
-        });
-      }
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to purchase badge",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPurchasingBadge(false);
-    }
-  };
-
   const handleViewProfile = (userId: string) => {
     toast({
       title: t('viewingProfile', 'Profile'),
-      description: hasGoldenBadge 
-        ? t('useButtonsToChat', 'Use the Chat or Video buttons to connect')
-        : t('waitForChatRequest', 'Wait for this user to send you a chat request'),
+      description: t('useButtonsToChat', 'Use the Chat or Video buttons to connect'),
     });
   };
 
@@ -1171,44 +1097,26 @@ const WomenDashboardScreen = () => {
 
             {/* Action buttons */}
             <div className="flex items-center gap-1 sm:gap-1.5 mt-2 flex-wrap">
-              {hasGoldenBadge && (
-                <>
-                  <Button 
-                    size="sm" 
-                    variant="aurora"
-                    className="h-7 text-xs gap-1 px-2"
-                    onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
-                    title="Start Chat (Golden Badge)"
-                  >
-                    <MessageCircleIcon className="h-3.5 w-3.5" />
-                    Chat
-                  </Button>
-                  {/* Video call: Golden Badge + Indian woman + Indian man + same language */}
-                  {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                    <DirectVideoCallButton
-                      currentUserId={currentUserId}
-                      targetUserId={user.userId}
-                      targetName={user.fullName}
-                      targetPhoto={user.photoUrl}
-                      walletBalance={myWalletBalance}
-                      onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
-                      iconOnly={true}
-                    />
-                  )}
-                </>
-              )}
-              {/* Show disabled video call hint for women without golden badge */}
-              {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="opacity-50 gap-1 text-[10px] h-7 px-2"
-                  title="Purchase Golden Badge to enable video calls"
-                >
-                  <Video className="h-3 w-3" />
-                  🔒
-                </Button>
+              <Button 
+                size="sm" 
+                variant="aurora"
+                className="h-7 text-xs gap-1 px-2"
+                onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
+                title="Start Chat"
+              >
+                <MessageCircleIcon className="h-3.5 w-3.5" />
+                Chat
+              </Button>
+              {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                <DirectVideoCallButton
+                  currentUserId={currentUserId}
+                  targetUserId={user.userId}
+                  targetName={user.fullName}
+                  targetPhoto={user.photoUrl}
+                  walletBalance={myWalletBalance}
+                  onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
+                  iconOnly={true}
+                />
               )}
               <Button 
                 size="sm" 
@@ -1328,17 +1236,15 @@ const WomenDashboardScreen = () => {
                   onClick={() => handleViewProfile(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
-                      {hasGoldenBadge && (
-                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                          <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                        </Button>
-                      )}
-                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                      <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
+                        <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                      </Button>
+                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
                           <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
-                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <DirectVideoCallButton currentUserId={currentUserId} targetUserId={user.userId} targetName={user.fullName} targetPhoto={user.photoUrl} walletBalance={myWalletBalance} onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)} iconOnly={true} />
                       )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
@@ -1370,12 +1276,10 @@ const WomenDashboardScreen = () => {
                   onClick={() => handleViewProfile(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
-                      {hasGoldenBadge && (
-                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                          <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                        </Button>
-                      )}
-                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                      <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
+                        <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                      </Button>
+                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
                           <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
@@ -1415,11 +1319,9 @@ const WomenDashboardScreen = () => {
               onClick={() => handleViewProfile(user.userId)}
               actions={
                 <div className="flex items-center gap-1">
-                  {hasGoldenBadge && (
-                    <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                      <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                    </Button>
-                  )}
+                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
+                    <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                  </Button>
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                     <Eye className="w-3.5 h-3.5 text-primary" />
                   </Button>
@@ -1509,15 +1411,14 @@ const WomenDashboardScreen = () => {
             isOnline={man.isOnline}
             onClick={() => navigate(`/profile/${man.userId}`)}
             actions={
-              hasGoldenBadge ? (
+              <div className="flex items-center gap-1">
                 <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(man.userId); }}>
                   <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                 </Button>
-              ) : (
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
                   <Eye className="w-3.5 h-3.5 text-primary" />
                 </Button>
-              )
+              </div>
             }
           />
         ))
@@ -1596,32 +1497,6 @@ const WomenDashboardScreen = () => {
         </div>
       )}
 
-      {/* Golden Badge */}
-      {isIndianWoman && (
-        <div className="px-4 py-3 border-b border-border/30">
-          {hasGoldenBadge ? (
-            <div className="flex items-center gap-3">
-              <Star className="w-5 h-5 text-primary fill-primary" />
-              <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
-                {goldenBadgeExpiry && <p className="text-[10px] text-muted-foreground">Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}</p>}
-              </div>
-              <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Star className="w-5 h-5 text-muted-foreground" />
-              <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">🌟 Golden Badge</p>
-                <p className="text-[10px] text-muted-foreground">₹{goldenBadgePrice.toLocaleString()}/month</p>
-              </div>
-              <Button variant="aurora" size="sm" className="h-7 text-[10px] px-2" onClick={handlePurchaseGoldenBadge} disabled={isPurchasingBadge}>
-                {isPurchasingBadge ? <Loader2 className="h-3 w-3 animate-spin" /> : "Buy"}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-0 border-b border-border/30">
@@ -1667,7 +1542,7 @@ const WomenDashboardScreen = () => {
         <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
           {getStatusText()}
         </Badge>
-        {hasGoldenBadge && <Badge className="mt-1 bg-primary text-primary-foreground text-[10px]">🌟 Golden Badge</Badge>}
+        
       </div>
 
       {[

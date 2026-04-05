@@ -35,7 +35,7 @@ interface RandomChatButtonProps {
   size?: "default" | "lg" | "sm";
   className?: string;
   onInsufficientBalance?: () => void;
-  hasGoldenBadge?: boolean;
+  
   chatMode?: "paid" | "free" | "exclusive_free";
 }
 
@@ -48,7 +48,7 @@ export const RandomChatButton = ({
   size = "lg",
   className = "",
   onInsufficientBalance,
-  hasGoldenBadge = false,
+  
   chatMode = "paid"
 }: RandomChatButtonProps) => {
   const navigate = useNavigate();
@@ -67,15 +67,6 @@ export const RandomChatButton = ({
   } | null>(null);
 
   const findRandomPartner = async () => {
-    // SECURITY: Women cannot initiate chats - UNLESS they have Golden Badge
-    if (userGender === "female" && !hasGoldenBadge) {
-      toast({
-        title: "Action Not Allowed",
-        description: "Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.",
-        variant: "destructive"
-      });
-      return;
-    }
 
     // Check wallet balance for men - need at least ₹8 to start chat
     if (userGender === "male") {
@@ -296,7 +287,7 @@ export const RandomChatButton = ({
           });
         }
       } else if (userGender === "female") {
-        // Woman with Golden Badge initiating chat with man
+        // Woman initiating chat with man
         const { data, error } = await supabase.functions.invoke("chat-manager", {
           body: {
             action: "start_chat",
