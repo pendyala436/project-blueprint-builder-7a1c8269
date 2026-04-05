@@ -1987,102 +1987,126 @@ const ChatScreen = () => {
                 }
 
                 return (
-                  <div
-                    key={message.id}
-                    className={`flex ${isMine ? "justify-end" : "justify-start"} animate-slide-up`}
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
-                    <div className={`flex items-end gap-2 max-w-[80%] ${isMine ? "flex-row-reverse" : ""}`}>
-                      {/* Avatar placeholder for alignment */}
-                      {!isMine && (
-                        <div className="w-8 flex-shrink-0">
-                          {showAvatar && chatPartner?.avatar ? (
-                            <img 
-                              src={chatPartner.avatar} 
-                              alt=""
-                              className="w-8 h-8 rounded-full object-cover"
-                            />
-                          ) : showAvatar ? (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                              <span className="text-xs font-bold text-primary">
-                                {chatPartner?.fullName.charAt(0).toUpperCase()}
-                              </span>
+                  <ContextMenu key={message.id}>
+                    <ContextMenuTrigger asChild>
+                      <div
+                        className={`flex ${isMine ? "justify-end" : "justify-start"} animate-slide-up`}
+                        style={{ animationDelay: `${index * 0.05}s` }}
+                      >
+                        <div className={`flex items-end gap-2 max-w-[80%] ${isMine ? "flex-row-reverse" : ""}`}>
+                          {/* Avatar placeholder for alignment */}
+                          {!isMine && (
+                            <div className="w-8 flex-shrink-0">
+                              {showAvatar && chatPartner?.avatar ? (
+                                <img 
+                                  src={chatPartner.avatar} 
+                                  alt=""
+                                  className="w-8 h-8 rounded-full object-cover"
+                                />
+                              ) : showAvatar ? (
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                                  <span className="text-xs font-bold text-primary">
+                                    {chatPartner?.fullName.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              ) : null}
                             </div>
-                          ) : null}
-                        </div>
-                      )}
-
-                      {/* Message bubble and translations */}
-                      <div className={`space-y-1`}>
-                        {/* Sender/Receiver name with distinct colors */}
-                        <span className={`text-[10px] font-semibold px-1 block ${
-                          isMine
-                            ? "text-primary text-right"
-                            : "text-emerald-600 dark:text-emerald-400 text-left"
-                        }`}>
-                          {isMine ? "You" : chatPartner?.fullName}
-                        </span>
-
-                        {/* Voice message player */}
-                        {voiceUrl && (
-                          <VoiceMessagePlayer 
-                            audioUrl={voiceUrl} 
-                            isMine={isMine} 
-                          />
-                        )}
-                        
-                        {/* Attachment preview */}
-                        {attachmentUrl && (
-                          <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
-                        )}
-                        
-                        {/* Primary message bubble — light background with colored text */}
-                        {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
-                          <div
-                            className={`px-4 py-2.5 rounded-2xl shadow-sm border ${
-                              isMine 
-                                ? "bg-primary/5 border-primary/20 rounded-br-md" 
-                                : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"
-                            }`}
-                          >
-                            {message.isTranslating ? (
-                              <div className="flex items-center gap-1.5 py-1">
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">Translating...</span>
-                              </div>
-                            ) : (
-                              <>
-                                <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${
-                                  isMine
-                                    ? "text-primary dark:text-primary"
-                                    : "text-emerald-800 dark:text-emerald-200"
-                                }`} dir="auto">{displayText}</p>
-                                {/* English translation below EVERY message */}
-                                {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                                  <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">
-                                    english: {englishSubtitle.toLowerCase()}
-                                  </p>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Time and read status */}
-                        <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-                          <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
-                          {/* Read receipt icons (only for sender) */}
-                          {isMine && (
-                            message.isRead ? (
-                              <CheckCheck className="w-3.5 h-3.5 text-info" /> // Double check = read
-                            ) : (
-                              <Check className="w-3.5 h-3.5 text-muted-foreground" /> // Single check = sent
-                            )
                           )}
+
+                          {/* Message bubble and translations */}
+                          <div className={`space-y-1`}>
+                            {/* Sender/Receiver name with distinct colors */}
+                            <span className={`text-[10px] font-semibold px-1 block ${
+                              isMine
+                                ? "text-primary text-right"
+                                : "text-emerald-600 dark:text-emerald-400 text-left"
+                            }`}>
+                              {isMine ? "You" : chatPartner?.fullName}
+                            </span>
+
+                            {/* Voice message player */}
+                            {voiceUrl && (
+                              <VoiceMessagePlayer 
+                                audioUrl={voiceUrl} 
+                                isMine={isMine} 
+                              />
+                            )}
+                            
+                            {/* Attachment preview */}
+                            {attachmentUrl && (
+                              <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
+                            )}
+                            
+                            {/* Primary message bubble — light background with colored text */}
+                            {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
+                              <div
+                                className={`px-4 py-2.5 rounded-2xl shadow-sm border ${
+                                  isMine 
+                                    ? "bg-primary/5 border-primary/20 rounded-br-md" 
+                                    : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"
+                                }`}
+                              >
+                                {message.isTranslating ? (
+                                  <div className="flex items-center gap-1.5 py-1">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground">Translating...</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${
+                                      isMine
+                                        ? "text-primary dark:text-primary"
+                                        : "text-emerald-800 dark:text-emerald-200"
+                                    }`} dir="auto">{displayText}</p>
+                                    {/* English translation below EVERY message */}
+                                    {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                                      <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">
+                                        english: {englishSubtitle.toLowerCase()}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Time and read status */}
+                            <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                              <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
+                              {/* Read receipt icons (only for sender) */}
+                              {isMine && (
+                                message.isRead ? (
+                                  <CheckCheck className="w-3.5 h-3.5 text-info" /> // Double check = read
+                                ) : (
+                                  <Check className="w-3.5 h-3.5 text-muted-foreground" /> // Single check = sent
+                                )
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-52">
+                      <ContextMenuItem
+                        onClick={() => handleDeleteMessage(message.id, 'for_me')}
+                        className="gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete for me
+                      </ContextMenuItem>
+                      {isMine && (
+                        <>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem
+                            onClick={() => handleDeleteMessage(message.id, 'for_everyone')}
+                            className="gap-2 text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete for everyone
+                          </ContextMenuItem>
+                        </>
+                      )}
+                    </ContextMenuContent>
+                  </ContextMenu>
                 );
               })}
             </div>
