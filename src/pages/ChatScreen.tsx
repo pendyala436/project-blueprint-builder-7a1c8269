@@ -414,42 +414,21 @@ const ChatScreen = () => {
           const userId = currentUserIdRef.current;
           const partner = chatPartnerRef.current;
           
-          let translatedMessage: string | undefined;
-          let englishText: string | undefined;
-          let isTranslated = false;
-
-          if (langToUse) {
-            try {
-              const senderLang = newMsg.sender_id === userId ? currentUserLanguageRef.current : partner?.preferredLanguage;
-              // TRN-03 FIX: Skip re-translation for own messages (already translated optimistically)
-              if (newMsg.sender_id === userId) {
-                // Own message — already translated via optimistic handler, skip
-              } else {
-                const result = await translateForViewer(newMsg.message, langToUse, senderLang);
-                translatedMessage = result.nativeText;
-                englishText = result.englishText;
-                isTranslated = translatedMessage !== newMsg.message;
-              }
-            } catch {
-              // Fallback: show original message
-            }
-          }
-          
           // BUG-02 FIX: Add message to state with robust deduplication
+          // For OWN messages: preserve optimistic data immediately
+          // For PARTNER messages: show spinner immediately, translate async
           setMessages(prev => {
             // Skip if already in state (exact ID match)
             if (prev.some(m => m.id === newMsg.id)) return prev;
             
             // For own messages, preserve optimistic translation data
             if (newMsg.sender_id === userId) {
-              // Find and replace the temp optimistic message, keeping its translation
               const tempIdx = prev.findIndex(m =>
                 m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
                 Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000
               );
               if (tempIdx !== -1) {
                 const tempMsg = prev[tempIdx];
-                // Record mapping so pending translation promise can find the real message
                 tempToRealIdRef.current.set(tempMsg.id, newMsg.id);
                 const updated = [...prev];
                 updated[tempIdx] = {
@@ -459,7 +438,7 @@ const ChatScreen = () => {
                   translatedMessage: tempMsg.translatedMessage,
                   englishText: tempMsg.englishText,
                   isTranslated: tempMsg.isTranslated,
-                  isTranslating: tempMsg.isTranslating, // preserve translating state
+                  isTranslating: tempMsg.isTranslating,
                   isRead: newMsg.is_read,
                   createdAt: newMsg.created_at,
                 };
@@ -472,17 +451,44 @@ const ChatScreen = () => {
               !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
                 Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000)
             );
+            
+            // For partner messages: add with isTranslating=true (preview spinner)
+            // For own messages without a temp match: add as-is
+            const isPartnerMsg = newMsg.sender_id !== userId;
             return [...filtered, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage,
-              englishText,
-              isTranslated,
+              translatedMessage: undefined,
+              englishText: undefined,
+              isTranslated: false,
+              isTranslating: isPartnerMsg, // show spinner for partner messages
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
           });
+
+          // For partner messages: translate async then update bubble
+          if (newMsg.sender_id !== userId && langToUse) {
+            const senderLang = partner?.preferredLanguage;
+            try {
+              const result = await translateForViewer(newMsg.message, langToUse, senderLang);
+              setMessages(prev => prev.map(m =>
+                m.id === newMsg.id ? {
+                  ...m,
+                  translatedMessage: result.nativeText,
+                  englishText: result.englishText,
+                  isTranslated: result.nativeText !== newMsg.message,
+                  isTranslating: false,
+                } : m
+              ));
+            } catch {
+              // Translation failed — show original, remove spinner
+              setMessages(prev => prev.map(m =>
+                m.id === newMsg.id ? { ...m, isTranslating: false } : m
+              ));
+            }
+          }
 
           // Mark received messages as read automatically
           if (newMsg.sender_id !== userId) {
