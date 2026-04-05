@@ -114,6 +114,12 @@ const MiniChatWindow = ({
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
+  
+  // Free chat tracking for women chatting with no-balance men
+  const [isFreeChatMode, setIsFreeChatMode] = useState(false);
+  const [freeChatRemainingSeconds, setFreeChatRemainingSeconds] = useState(300);
+  const freeChatTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const freeChatElapsedRef = useRef(0);
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
