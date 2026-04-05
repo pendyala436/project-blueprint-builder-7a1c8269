@@ -397,6 +397,58 @@ const MiniChatWindow = ({
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
+  // Free chat timer: 5-min countdown for women chatting with no-balance men
+  useEffect(() => {
+    if (!isFreeChatMode || !billingStarted) return;
+    
+    freeChatTimerRef.current = setInterval(async () => {
+      freeChatElapsedRef.current += 10; // update every 10 seconds
+      const remaining = Math.max(300 - freeChatElapsedRef.current, 0);
+      setFreeChatRemainingSeconds(remaining);
+      
+      // Persist to DB every 10 seconds
+      try {
+        const { data } = await supabase.rpc("update_free_chat_usage", {
+          p_woman_id: currentUserId,
+          p_man_id: partnerId,
+          p_seconds: 10,
+        });
+        
+        if (data?.blocked) {
+          // 5 minutes up — auto-close and send recharge message
+          if (freeChatTimerRef.current) clearInterval(freeChatTimerRef.current);
+          
+          await supabase.from("chat_messages").insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: "⏰ Free chat time is over! Please recharge your wallet to continue chatting. 💳",
+          });
+          
+          toast({
+            title: "Free Chat Ended",
+            description: "5-minute free chat with this user has ended. They need to recharge to chat again.",
+          });
+          
+          try {
+            await supabase
+              .from("active_chat_sessions")
+              .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "free_chat_expired" })
+              .eq("id", sessionId);
+          } catch {}
+          
+          onClose();
+        }
+      } catch (err) {
+        console.error("[FreeChat] Error updating usage:", err);
+      }
+    }, 10000); // every 10 seconds
+    
+    return () => {
+      if (freeChatTimerRef.current) clearInterval(freeChatTimerRef.current);
+    };
+  }, [isFreeChatMode, billingStarted, currentUserId, partnerId, chatId, sessionId, onClose]);
+
   // Translate history messages in background using live Lingva translation
   const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string, userId: string, partnerLang: string) => {
     const batchSize = 5;
