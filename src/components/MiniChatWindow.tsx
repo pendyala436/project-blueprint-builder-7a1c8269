@@ -110,6 +110,7 @@ const MiniChatWindow = ({
   
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
+  const tempToRealIdRef = useRef<Map<string, string>>(new Map());
   
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
@@ -493,6 +494,30 @@ const MiniChatWindow = ({
             const existingRealIndex = prev.findIndex(m => m.id === newMsg.id);
             if (existingRealIndex >= 0) return prev;
             
+            // For own messages, find and replace temp message, preserving translation
+            if (newMsg.sender_id === currentUserId) {
+              const tempIdx = prev.findIndex(m =>
+                m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
+                Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 5000
+              );
+              if (tempIdx !== -1) {
+                const tempMsg = prev[tempIdx];
+                tempToRealIdRef.current.set(tempMsg.id, newMsg.id);
+                const updated = [...prev];
+                updated[tempIdx] = {
+                  id: newMsg.id,
+                  senderId: newMsg.sender_id,
+                  message: newMsg.message,
+                  translatedMessage: tempMsg.translatedMessage,
+                  englishText: tempMsg.englishText,
+                  isTranslated: tempMsg.isTranslated,
+                  isTranslating: tempMsg.isTranslating,
+                  createdAt: newMsg.created_at
+                };
+                return updated;
+              }
+            }
+            
             const filtered = prev.filter(m => 
               !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id && 
                 Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 5000)
@@ -596,25 +621,40 @@ const MiniChatWindow = ({
     // Pass senderLang as 3rd arg so Strategy C (transliteration bridge) fires for Latin input
     const senderLang = currentUserLanguage || 'English';
     translateForViewer(messageText, senderLang, senderLang).then(result => {
-      setMessages(prev => prev.map(m => 
-        m.id === tempId ? { 
-          ...m, 
-          translatedMessage: result.nativeText,
-          englishText: result.englishText,
-          isTranslated: result.nativeText !== messageText,
-          isTranslating: false,
-        } : m
-      ));
+      setMessages(prev => prev.map(m => {
+        const realId = tempToRealIdRef.current.get(tempId);
+        if (m.id === tempId || (realId && m.id === realId)) {
+          return { 
+            ...m, 
+            translatedMessage: result.nativeText,
+            englishText: result.englishText,
+            isTranslated: result.nativeText !== messageText,
+            isTranslating: false,
+          };
+        }
+        return m;
+      }));
+      tempToRealIdRef.current.delete(tempId);
     }).catch(() => {
       // For English speakers or on failure, still get English translation for subtitle
       getEnglishTranslation(messageText, 'auto').then(eng => {
-        setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...m, englishText: eng, isTranslating: false } : m
-        ));
+        setMessages(prev => prev.map(m => {
+          const realId = tempToRealIdRef.current.get(tempId);
+          if (m.id === tempId || (realId && m.id === realId)) {
+            return { ...m, englishText: eng, isTranslating: false };
+          }
+          return m;
+        }));
+        tempToRealIdRef.current.delete(tempId);
       }).catch(() => {
-        setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...m, isTranslating: false } : m
-        ));
+        setMessages(prev => prev.map(m => {
+          const realId = tempToRealIdRef.current.get(tempId);
+          if (m.id === tempId || (realId && m.id === realId)) {
+            return { ...m, isTranslating: false };
+          }
+          return m;
+        }));
+        tempToRealIdRef.current.delete(tempId);
       });
     });
 
