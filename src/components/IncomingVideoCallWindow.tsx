@@ -285,12 +285,12 @@ const IncomingVideoCallWindow = ({
         </div>
 
         <div className="flex items-center gap-2 mb-2 text-success">
-          <Video className="w-4 h-4" />
-          <span className="text-xs font-medium">Incoming Video Call</span>
+          {callType === 'audio' ? <Phone className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+          <span className="text-xs font-medium">Incoming {callType === 'audio' ? 'Audio' : 'Video'} Call</span>
         </div>
 
         <h3 className="text-lg font-semibold text-foreground mb-1">{callerName}</h3>
-        <p className="text-muted-foreground text-sm mb-1">wants to video call you</p>
+        <p className="text-muted-foreground text-sm mb-1">wants to {callType === 'audio' ? 'audio' : 'video'} call you</p>
         
         {/* Show chat pause warning */}
         {pausedChatCount > 0 && (
