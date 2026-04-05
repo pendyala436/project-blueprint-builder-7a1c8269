@@ -147,14 +147,16 @@ const DirectVideoCallButton = ({
       const callId = `call_${currentUserId}_${targetUserId}_${Date.now()}`;
       registerOutgoingCall(callId);
       
-      // Determine man/woman roles based on gender
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('gender')
-        .eq('user_id', currentUserId)
-        .maybeSingle();
-
-      const isMale = currentProfile?.gender?.toLowerCase() === 'male';
+      // Determine man/woman roles based on gender (use prop if available, else fetch)
+      let isMale = currentUserGender === 'male';
+      if (!currentUserGender) {
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+        isMale = currentProfile?.gender?.toLowerCase() === 'male';
+      }
       
       const { error: sessionError } = await supabase.functions.invoke('ai-women-manager', {
         body: {

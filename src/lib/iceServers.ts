@@ -71,9 +71,9 @@ function buildIceServers(): RTCIceServer[] {
       { urls: `turns:${turnHost}:443?transport=tcp`, username: turnUser, credential: turnCred }
     );
   } else {
-    // VID-C-03: No fallback to public shared credentials.
-    // TURN is required for users behind symmetric NAT. Deploy coturn and set env vars.
-    console.warn('[ICE] ⚠️ No TURN server configured! Set VITE_TURN_URL, VITE_TURN_USERNAME, VITE_TURN_CREDENTIAL. Calls behind symmetric NAT will fail.');
+    // Use free Metered.ca TURN relay as fallback
+    servers.push(...FREE_TURN_SERVERS);
+    console.info('[ICE] Using free Metered.ca TURN relay. For production, set VITE_TURN_URL/USERNAME/CREDENTIAL for your coturn.');
   }
 
   return servers;

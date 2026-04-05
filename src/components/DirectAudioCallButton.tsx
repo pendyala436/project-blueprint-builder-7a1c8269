@@ -147,13 +147,16 @@ const DirectAudioCallButton = ({
       const callId = `call_${currentUserId}_${targetUserId}_${Date.now()}`;
       registerOutgoingCall(callId);
       
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('gender')
-        .eq('user_id', currentUserId)
-        .maybeSingle();
-
-      const isMale = currentProfile?.gender?.toLowerCase() === 'male';
+      // Use prop if available, else fetch (fallback)
+      let isMale = currentUserGender === 'male';
+      if (!currentUserGender) {
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+        isMale = currentProfile?.gender?.toLowerCase() === 'male';
+      }
       
       const { error: sessionError } = await supabase.functions.invoke('ai-women-manager', {
         body: {
