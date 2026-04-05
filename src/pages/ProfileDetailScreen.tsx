@@ -171,12 +171,6 @@ const ProfileDetailScreen = () => {
       const gender = currentUserProfile?.gender?.toLowerCase() || "";
       setCurrentUserGender(gender);
       
-      if (gender === "female") {
-        const badgeActive = currentUserProfile?.has_golden_badge === true && 
-          currentUserProfile?.golden_badge_expires_at && 
-          new Date(currentUserProfile.golden_badge_expires_at) > new Date();
-        setHasGoldenBadge(!!badgeActive);
-      }
 
       if (!profileData) {
         toast({
