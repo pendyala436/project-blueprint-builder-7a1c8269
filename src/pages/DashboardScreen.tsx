@@ -242,17 +242,14 @@ const DashboardScreen = () => {
 
   // ScrollableUserList extracted to avoid hooks-in-render violations - see below
 
+  const { playMessageSound } = useMessageSound();
+
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
     isOnline, 
     isManuallyOffline,
     toggleOnlineStatus 
   } = useActivityBasedStatus({
-  const { playMessageSound } = useMessageSound();
-  const {
-    isOnline,
-    isManuallyOffline,
-    toggleOnlineStatus
     userId: currentUserId,
     inactivityTimeout: 10 * 60 * 1000, // 10 minutes
     onStatusChange: (online) => {
