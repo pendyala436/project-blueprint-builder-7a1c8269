@@ -13,6 +13,8 @@ export interface ChatPricing {
   womenEarningRate: number;
   videoRatePerMinute: number;
   videoWomenEarningRate: number;
+  audioRatePerMinute: number;
+  audioWomenEarningRate: number;
   groupCallRatePerMinute: number;
   groupCallWomenEarningRate: number;
   minWithdrawalBalance: number;
@@ -26,6 +28,8 @@ const DEFAULT_PRICING: ChatPricing = {
   womenEarningRate: 2,             // women earn ₹2/min chat (half of men)
   videoRatePerMinute: 8,           // men pay ₹8/min video
   videoWomenEarningRate: 4,        // women earn ₹4/min video (half of men)
+  audioRatePerMinute: 6,           // men pay ₹6/min audio
+  audioWomenEarningRate: 3,        // women earn ₹3/min audio (half of men)
   groupCallRatePerMinute: 4,       // each man pays ₹4/min group call
   groupCallWomenEarningRate: 2,    // host earns ₹2/min per man (half of men)
   minWithdrawalBalance: 5000,      // min ₹5000 to withdraw
