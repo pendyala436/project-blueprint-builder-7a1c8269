@@ -756,9 +756,7 @@ const WomenDashboardScreen = () => {
         .eq("status", "accepted");
 
       setStats(prev => ({ ...prev, matchCount: count || 0 }));
-      
-      // Also fetch matched men profiles
-      await fetchMatchedMen(userId);
+      // Matches profiles loaded lazily when Matches tab is opened
     } catch (error) {
       console.error('[WomenDashboard] fetchMatchCount error:', error);
     }
