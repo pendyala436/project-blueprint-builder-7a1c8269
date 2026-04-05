@@ -40,13 +40,14 @@ import { useAdminAccess } from "@/hooks/useAdminAccess";
  * Video Call (1-to-1, same language only):
  *   - Men pay ₹8/min  |  Women earn ₹4/min  (woman = half of man)
  *   - Same primary/preferred language required for matching
- *   - Indian and non-Indian men allowed
+ *
+ * Audio Call (1-to-1, P2P):
+ *   - Men pay ₹6/min  |  Women earn ₹3/min  (woman = half of man)
  *
  * Private Group Call (hosted by Indian women only):
  *   - Each man pays ₹4/min individually
- *   - Host (Indian woman) earns ₹2/min per active male participant
+ *   - Host (Indian woman) earns ₹0.50/min per active male participant
  *   - Any man can join (Indian or non-Indian)
- *   - No duplicate per-minute billing — 50s cooldown guard in DB
  *
  * All sessions: women earn exactly half what men pay.
  * Minimum withdrawal: ₹5,000 (Indian women only).
