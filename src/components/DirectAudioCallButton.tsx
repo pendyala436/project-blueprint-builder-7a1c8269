@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { registerOutgoingCall } from "@/hooks/useIncomingCalls";
+import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Phone, Loader2, Wallet, ShieldAlert } from "lucide-react";
@@ -190,6 +191,7 @@ const DirectAudioCallButton = ({
       }
 
       setActiveCall({ callId, stream: preStream });
+      registerSession('audio_call', callId);
 
       toast({
         title: "Calling...",
@@ -219,6 +221,7 @@ const DirectAudioCallButton = ({
         })
         .eq('call_id', activeCall.callId);
     }
+    if (activeCall) unregisterSession('audio_call', activeCall.callId);
     setActiveCall(null);
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,6 +66,15 @@ const IncomingVideoCallWindow = ({
   const [pausedChatCount, setPausedChatCount] = useState(0);
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Unregister session on close
+  const handleClose = () => {
+    if (isAnswered) {
+      const sessionType = callType === 'audio' ? 'audio_call' : 'video_call';
+      unregisterSession(sessionType as any, callId);
+    }
+    onClose();
+  };
 
   // Continuous ring sound until answered/declined
   useEffect(() => {
@@ -187,6 +197,8 @@ const IncomingVideoCallWindow = ({
       }
 
       setIsAnswered(true);
+      const sessionType = callType === 'audio' ? 'audio_call' : 'video_call';
+      registerSession(sessionType as any, callId);
       
       toast({
         title: "Call Connected",
@@ -259,7 +271,7 @@ const IncomingVideoCallWindow = ({
         remotePhoto={callerPhoto}
         isInitiator={false}
         currentUserId={currentUserId}
-        onClose={onClose}
+        onClose={handleClose}
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
         zIndex={130}
         ratePerMinute={isAudio ? pricing.audioRatePerMinute : pricing.videoRatePerMinute}

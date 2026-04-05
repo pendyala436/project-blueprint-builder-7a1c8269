@@ -15,6 +15,7 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { registerSession, unregisterSession } from '@/hooks/useSessionPriority';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -302,6 +303,16 @@ export function PrivateGroupCallWindow({
     };
     checkExtension();
   }, [currentUserId, group.id]);
+
+  // Register/unregister P3 session for priority management
+  useEffect(() => {
+    if (isConnected || isLive) {
+      registerSession('private_group_call', group.id);
+    }
+    return () => {
+      unregisterSession('private_group_call', group.id);
+    };
+  }, [isConnected, isLive, group.id]);
 
   // Auto-start
   const hasAutoStarted = useRef(false);

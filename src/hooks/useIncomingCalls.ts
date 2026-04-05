@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { shouldBlockIncoming } from './useSessionPriority';
 
 interface IncomingCall {
   callId: string;
@@ -99,6 +100,18 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
           const call = payload.new as any;
           
           if (call.status === 'ringing') {
+            // Priority check: block incoming call if already in a P3 session
+            const callType = call.call_type === 'audio' ? 'audio_call' : 'video_call';
+            if (shouldBlockIncoming(callType)) {
+              console.log('[IncomingCalls] Blocked by session priority — already in an active call/group');
+              // Auto-decline the call so caller gets feedback
+              await supabase
+                .from('video_call_sessions')
+                .update({ status: 'declined', end_reason: 'busy' })
+                .eq('call_id', call.call_id);
+              return;
+            }
+
             // Skip if this is a call the current user initiated (by call_id tracking)
             if (outgoingCallIds.has(call.call_id)) {
               console.log('[IncomingCalls] Skipping own outgoing call (by call_id):', call.call_id);

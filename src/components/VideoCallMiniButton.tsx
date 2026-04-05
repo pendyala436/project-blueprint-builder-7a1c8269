@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet } from "lucide-react";
@@ -129,6 +130,7 @@ const VideoCallMiniButton = ({
         womanPhoto: result.woman.photo_url,
         stream: preStream
       });
+      registerSession('video_call', callId);
 
       toast({
         title: "Calling...",
@@ -159,6 +161,7 @@ const VideoCallMiniButton = ({
         })
         .eq('call_id', activeCall.callId);
     }
+    if (activeCall) unregisterSession('video_call', activeCall.callId);
     setActiveCall(null);
   };
 
