@@ -59,6 +59,7 @@ interface DraggableVideoCallWindowProps {
   onFocus?: () => void;
   ratePerMinute?: number;
   preAcquiredStream?: MediaStream | null;
+  audioOnly?: boolean;
 }
 
 const DraggableVideoCallWindow = ({
