@@ -148,7 +148,8 @@ const getSignedUrl = async (storedValue: string): Promise<string> => {
 };
 
 const AdminKYCManagement = () => {
-  
+  // FIX #6: Add admin access guard
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [indianWomen, setIndianWomen] = useState<IndianWoman[]>([]);
   const [filteredWomen, setFilteredWomen] = useState<IndianWoman[]>([]);
