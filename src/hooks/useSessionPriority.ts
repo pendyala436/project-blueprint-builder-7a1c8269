@@ -50,6 +50,18 @@ export const registerSession = (type: SessionType, id: string) => {
   });
   console.log(`[SessionPriority] Registered ${type} session: ${id}`, getActiveSessions());
   notify();
+
+  // Auto-cleanup stale P3 sessions after 2 hours (safety net)
+  if (PRIORITY_MAP[type] >= 3) {
+    setTimeout(() => {
+      const idx = activeSessions.findIndex((s) => s.type === type && s.id === id);
+      if (idx !== -1) {
+        console.warn(`[SessionPriority] Auto-cleaning stale ${type} session: ${id}`);
+        activeSessions.splice(idx, 1);
+        notify();
+      }
+    }, 2 * 60 * 60 * 1000);
+  }
 };
 
 /**
