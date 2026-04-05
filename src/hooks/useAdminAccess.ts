@@ -6,8 +6,9 @@ import { toast } from "sonner";
 const ADMIN_CHECK_TIMEOUT = 15000; // 15 seconds — generous for slow DBs
 
 // Module-level cache so multiple components share one check per session
-let cachedResult: { isAdmin: boolean; email: string; userId: string } | null = null;
-let pendingPromise: Promise<{ isAdmin: boolean; email: string; userId: string } | null> | null = null;
+const CACHE_TTL = 300_000; // 5 minutes
+let cachedResult: { isAdmin: boolean; email: string; userId: string; timestamp: number } | null = null;
+let pendingPromise: Promise<{ isAdmin: boolean; email: string; userId: string; timestamp: number } | null> | null = null;
 
 const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; userId: string } | null> => {
   const { data: { session } } = await supabase.auth.getSession();
