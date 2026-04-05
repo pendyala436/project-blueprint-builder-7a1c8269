@@ -2254,13 +2254,13 @@ const ChatScreen = () => {
               </PopoverContent>
             </Popover>
             
-            {/* Gift button - only show for men */}
-            {currentUserGender === "male" && chatPartner && (
-              <GiftSendButton
-                senderId={currentUserId}
+            {/* Voice recorder */}
+            {chatPartner && activeChatId && (
+              <VoiceRecorder
+                chatId={activeChatId}
+                currentUserId={currentUserId}
                 receiverId={chatPartner.userId}
-                receiverName={chatPartner.fullName}
-                disabled={isSending}
+                disabled={isSending || isBlocked || isBlockedByPartner}
               />
             )}
           </div>
