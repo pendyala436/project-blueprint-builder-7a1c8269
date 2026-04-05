@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { shouldBlockIncoming } from './useSessionPriority';
 
 interface IncomingCall {
   callId: string;
