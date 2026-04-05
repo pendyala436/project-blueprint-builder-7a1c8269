@@ -1357,21 +1357,19 @@ const WomenDashboardScreen = () => {
                   actions={
                     <div className="flex items-center gap-1">
                       {hasGoldenBadge && (
-                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(user.userId)}>
+                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
                           <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                         </Button>
                       )}
-                      {/* Audio call - same language Indian users only */}
                       {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" })}>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
                           <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
-                      {/* Video call - same language Indian users only */}
                       {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <DirectVideoCallButton currentUserId={currentUserId} targetUserId={user.userId} targetName={user.fullName} targetPhoto={user.photoUrl} walletBalance={myWalletBalance} onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)} iconOnly={true} />
                       )}
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
                     </div>
@@ -1401,17 +1399,16 @@ const WomenDashboardScreen = () => {
                   actions={
                     <div className="flex items-center gap-1">
                       {hasGoldenBadge && (
-                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(user.userId)}>
+                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
                           <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                         </Button>
                       )}
-                      {/* Audio call for same language */}
                       {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" })}>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
                           <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
                     </div>
@@ -1447,11 +1444,11 @@ const WomenDashboardScreen = () => {
               actions={
                 <div className="flex items-center gap-1">
                   {hasGoldenBadge && (
-                    <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(user.userId)}>
+                    <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
                       <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                     <Eye className="w-3.5 h-3.5 text-primary" />
                   </Button>
                 </div>
@@ -1471,7 +1468,7 @@ const WomenDashboardScreen = () => {
               subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
               onClick={() => handleViewProfile(user.userId)}
               actions={
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                   <Eye className="w-3.5 h-3.5 text-primary" />
                 </Button>
               }
@@ -1504,11 +1501,11 @@ const WomenDashboardScreen = () => {
               onClick={() => navigate(`/profile/${man.userId}`)}
               actions={
                 hasGoldenBadge ? (
-                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(man.userId)}>
+                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(man.userId); }}>
                     <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                   </Button>
                 ) : (
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${man.userId}`)}>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
                     <Eye className="w-3.5 h-3.5 text-primary" />
                   </Button>
                 )

@@ -1339,14 +1339,10 @@ const DashboardScreen = () => {
                   language={woman.primary_language}
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
-                  onClick={() => {
-                    if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
-                      handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                    }
-                  }}
+                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
                       {/* Audio Call - same language only */}
@@ -1355,8 +1351,8 @@ const DashboardScreen = () => {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0"
-                          disabled={(woman.active_chat_count || 0) >= 3}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             toast({ title: "Audio Call", description: "₹6/min • Coming soon" });
                           }}
                         >
@@ -1379,11 +1375,13 @@ const DashboardScreen = () => {
                         variant="aurora"
                         size="sm"
                         className="h-7 px-2 text-[10px]"
-                        disabled={(woman.active_chat_count || 0) >= 3}
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                        }}
                       >
                         <MessageCircle className="w-3 h-3 mr-0.5" />
-                        {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
+                        Chat
                       </Button>
                     </div>
                   }
@@ -1409,26 +1407,23 @@ const DashboardScreen = () => {
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
                   subtitle={`${woman.primary_language} → ${userLanguage}`}
-                  onClick={() => {
-                    if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
-                      handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                    }
-                  }}
+                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
-                      {/* Chat only - no audio/video for other languages */}
                       <Button
                         variant="aurora"
                         size="sm"
                         className="h-7 px-2 text-[10px]"
-                        disabled={(woman.active_chat_count || 0) >= 3}
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                        }}
                       >
                         <MessageCircle className="w-3 h-3 mr-0.5" />
-                        {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
+                        Chat
                       </Button>
                     </div>
                   }
