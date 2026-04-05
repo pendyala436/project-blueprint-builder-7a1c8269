@@ -1247,7 +1247,7 @@ const WomenDashboardScreen = () => {
           <Badge className={cn("text-[10px] text-primary-foreground", getStatusColor())}>
             {getStatusText()}
           </Badge>
-          <span className="text-xs text-muted-foreground">₹{myWalletBalance.toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground">{formatLocalCurrency(myWalletBalance)}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={currentWomanCountry} />
