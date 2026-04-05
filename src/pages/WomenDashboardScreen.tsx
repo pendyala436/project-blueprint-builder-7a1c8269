@@ -436,7 +436,10 @@ const WomenDashboardScreen = () => {
       .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
-    fetchWomenActiveChats();
+    // Only fetch chat details if chats tab has been opened
+    if (chatsFetchedRef.current) {
+      fetchWomenActiveChats();
+    }
   };
 
   const fetchWomenActiveChats = async () => {
