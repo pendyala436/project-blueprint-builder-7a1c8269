@@ -430,17 +430,26 @@ export type Database = {
           deleted_for_everyone: boolean
           deleted_for_receiver: boolean
           deleted_for_sender: boolean
+          edited_at: string | null
           flag_reason: string | null
           flagged: boolean
           flagged_at: string | null
           flagged_by: string | null
+          forwarded_from_id: string | null
           id: string
+          is_edited: boolean
+          is_forwarded: boolean
+          is_pinned: boolean
           is_read: boolean | null
           is_translated: boolean | null
           message: string
           moderation_status: string | null
           original_english: string | null
+          original_message: string | null
+          pinned_at: string | null
+          pinned_by: string | null
           receiver_id: string
+          reply_to_id: string | null
           sender_id: string
           translated_message: string | null
         }
@@ -451,17 +460,26 @@ export type Database = {
           deleted_for_everyone?: boolean
           deleted_for_receiver?: boolean
           deleted_for_sender?: boolean
+          edited_at?: string | null
           flag_reason?: string | null
           flagged?: boolean
           flagged_at?: string | null
           flagged_by?: string | null
+          forwarded_from_id?: string | null
           id?: string
+          is_edited?: boolean
+          is_forwarded?: boolean
+          is_pinned?: boolean
           is_read?: boolean | null
           is_translated?: boolean | null
           message: string
           moderation_status?: string | null
           original_english?: string | null
+          original_message?: string | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           receiver_id: string
+          reply_to_id?: string | null
           sender_id: string
           translated_message?: string | null
         }
@@ -472,21 +490,38 @@ export type Database = {
           deleted_for_everyone?: boolean
           deleted_for_receiver?: boolean
           deleted_for_sender?: boolean
+          edited_at?: string | null
           flag_reason?: string | null
           flagged?: boolean
           flagged_at?: string | null
           flagged_by?: string | null
+          forwarded_from_id?: string | null
           id?: string
+          is_edited?: boolean
+          is_forwarded?: boolean
+          is_pinned?: boolean
           is_read?: boolean | null
           is_translated?: boolean | null
           message?: string
           moderation_status?: string | null
           original_english?: string | null
+          original_message?: string | null
+          pinned_at?: string | null
+          pinned_by?: string | null
           receiver_id?: string
+          reply_to_id?: string | null
           sender_id?: string
           translated_message?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_pricing: {
         Row: {
@@ -1467,6 +1502,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       moderation_reports: {
         Row: {
