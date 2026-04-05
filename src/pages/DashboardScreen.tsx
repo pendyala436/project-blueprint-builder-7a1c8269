@@ -409,7 +409,7 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
-        () => { fetchActiveChats(); }
+        () => { fetchActiveChats(); playMessageSound(); }
       )
       .on(
         'postgres_changes',
