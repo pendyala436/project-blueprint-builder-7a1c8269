@@ -1217,6 +1217,42 @@ const ChatScreen = () => {
   };
 
   /**
+   * Delete message for me or for everyone (WhatsApp-style)
+   */
+  const handleDeleteMessage = async (messageId: string, deleteType: 'for_me' | 'for_everyone') => {
+    try {
+      if (deleteType === 'for_everyone') {
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({
+            deleted_for_everyone: true,
+            deleted_for_sender: true,
+            deleted_for_receiver: true,
+            deleted_at: new Date().toISOString(),
+          } as any)
+          .eq('id', messageId);
+        if (error) throw error;
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+        toast({ title: 'Message deleted for everyone' });
+      } else {
+        const msg = messages.find(m => m.id === messageId);
+        const isMsgSender = msg?.senderId === currentUserId;
+        const updateField = isMsgSender ? 'deleted_for_sender' : 'deleted_for_receiver';
+        const { error } = await supabase
+          .from('chat_messages')
+          .update({ [updateField]: true, deleted_at: new Date().toISOString() } as any)
+          .eq('id', messageId);
+        if (error) throw error;
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+        toast({ title: 'Message deleted' });
+      }
+    } catch (err) {
+      console.error('Delete message error:', err);
+      toast({ title: 'Error', description: 'Failed to delete message', variant: 'destructive' });
+    }
+  
+
+  /**
    * handleSendMessage Function
    * 
    * Sends a new message to the chat partner.
