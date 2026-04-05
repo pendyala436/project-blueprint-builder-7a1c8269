@@ -1633,7 +1633,7 @@ const WomenDashboardScreen = () => {
           <p className="text-[10px] text-muted-foreground">Online Men</p>
         </div>
         <div className="text-center py-4">
-          <p className="text-xl font-bold text-foreground">{activeChatCount}/3</p>
+          <p className="text-xl font-bold text-foreground">{activeChatCount}</p>
           <p className="text-[10px] text-muted-foreground">Active Chats</p>
         </div>
       </div>

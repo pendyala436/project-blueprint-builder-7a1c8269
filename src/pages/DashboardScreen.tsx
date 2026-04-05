@@ -1547,7 +1547,7 @@ const DashboardScreen = () => {
           <p className="text-[10px] text-muted-foreground">Matches</p>
         </div>
         <div className="text-center py-4">
-          <p className="text-xl font-bold text-foreground">{activeChatCount}/{MAX_PARALLEL_CHATS}</p>
+          <p className="text-xl font-bold text-foreground">{activeChatCount}</p>
           <p className="text-[10px] text-muted-foreground">Active Chats</p>
         </div>
       </div>
