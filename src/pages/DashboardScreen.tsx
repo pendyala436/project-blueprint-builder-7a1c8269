@@ -1319,33 +1319,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const quickActions = [
-    { 
-      icon: <Compass className="w-6 h-6" />, 
-      label: t('findMatch', 'Discover'), 
-      color: "from-primary to-primary/80",
-      action: () => navigate("/match-discovery")
-    },
-    { 
-      icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Chats'), 
-      color: "from-primary/90 to-primary/70",
-      action: () => {
-        const el = document.getElementById('parallel-chats-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-      }
-    },
-    { 
-      icon: <UserCircle className="w-6 h-6" />, 
-      label: t('profile', 'My Profile'), 
-      color: "from-primary/80 to-primary/60",
-      action: () => setProfileEditOpen(true)
-    },
-  ];
+  // quickActions removed — not used in WhatsApp-style layout
 
   if (isLoading) {
     return (
