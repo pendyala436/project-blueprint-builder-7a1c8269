@@ -365,25 +365,7 @@ const EnhancedParallelChatsContainer = ({
         </Popover>
       </div>
 
-      {/* Incoming chat popups */}
-      <div className="fixed bottom-20 left-4 z-[9999] flex flex-col gap-2">
-        {pendingIncomingChats.map((incoming) => (
-          <IncomingChatPopup
-            key={incoming.sessionId}
-            sessionId={incoming.sessionId}
-            chatId={incoming.chatId}
-            partnerId={incoming.partnerId}
-            partnerName={incoming.partnerName}
-            partnerPhoto={incoming.partnerPhoto}
-            partnerLanguage={incoming.partnerLanguage}
-            ratePerMinute={incoming.ratePerMinute}
-            startedAt={incoming.startedAt}
-            userGender={userGender}
-            onAccept={handleAcceptChat}
-            onReject={handleRejectChat}
-          />
-        ))}
-      </div>
+      {/* Chat is async (WhatsApp-style) — no incoming chat popups needed */}
 
       {/* Active chat windows */}
       <div className="fixed bottom-4 right-2 left-2 sm:left-auto sm:right-4 z-50 flex flex-row flex-wrap-reverse sm:flex-nowrap justify-end gap-2 sm:gap-3 items-end max-w-full overflow-x-auto">
