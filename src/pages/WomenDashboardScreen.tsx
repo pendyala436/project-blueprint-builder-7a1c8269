@@ -43,6 +43,7 @@ import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useMessageSound } from "@/hooks/useMessageSound";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 // DirectVideoCallButton removed - women cannot initiate calls
 
@@ -270,6 +271,8 @@ const WomenDashboardScreen = () => {
   useEffect(() => { currentWomanLanguageRef.current = currentWomanLanguage; }, [currentWomanLanguage]);
   useEffect(() => { currentWomanCountryRef.current = currentWomanCountry; }, [currentWomanCountry]);
 
+  const { playMessageSound } = useMessageSound();
+
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
     isOnline, 
@@ -333,7 +336,7 @@ const WomenDashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
-        () => { fetchWomenActiveChats(); }
+        () => { fetchWomenActiveChats(); playMessageSound(); }
       )
       .on(
         'postgres_changes',
@@ -1027,7 +1030,8 @@ const WomenDashboardScreen = () => {
   }
 
   const onlineMenCount = sameLanguageMen.length + otherLanguageMen.length;
-  const womenTabs = getWomenTabs(onlineMenCount || undefined, activeChatCount || undefined, matchedMen.length || undefined);
+  const totalUnreadCount = womenActiveChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const womenTabs = getWomenTabs(onlineMenCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedMen.length || undefined);
 
   const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">

@@ -91,6 +91,7 @@ import DirectAudioCallButton from "@/components/DirectAudioCallButton";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
+import { useMessageSound } from "@/hooks/useMessageSound";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -189,6 +190,7 @@ const ChatScreen = () => {
   
   // Toast notifications hook
   const { toast } = useToast();
+  const { playMessageSound } = useMessageSound();
   
   // ============= STATE DECLARATIONS =============
   
@@ -483,9 +485,10 @@ const ChatScreen = () => {
             }];
           });
 
-          // Mark received messages as read automatically
+          // Mark received messages as read automatically & play sound
           if (newMsg.sender_id !== userId) {
             markAsRead(newMsg.id);
+            playMessageSound();
           }
         }
       )

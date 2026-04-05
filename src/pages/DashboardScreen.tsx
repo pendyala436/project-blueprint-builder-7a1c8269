@@ -75,6 +75,7 @@ import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useMessageSound } from "@/hooks/useMessageSound";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { WhatsAppHeader } from "@/components/WhatsAppHeader";
 import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
@@ -240,6 +241,8 @@ const DashboardScreen = () => {
   // Men's free chat minutes removed - feature deprecated
 
   // ScrollableUserList extracted to avoid hooks-in-render violations - see below
+
+  const { playMessageSound } = useMessageSound();
 
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
@@ -409,7 +412,7 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
-        () => { fetchActiveChats(); }
+        () => { fetchActiveChats(); playMessageSound(); }
       )
       .on(
         'postgres_changes',
@@ -1288,7 +1291,8 @@ const DashboardScreen = () => {
   // activeTab state is declared at top of component
 
   const onlineCount = sameLanguageWomen.length + indianTranslatedWomen.length;
-  const menTabs = getMenTabs(onlineCount || undefined, activeChatCount || undefined, matchedWomen.length || undefined);
+  const totalUnreadCount = activeChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const menTabs = getMenTabs(onlineCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedWomen.length || undefined);
 
   const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">
