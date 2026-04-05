@@ -287,7 +287,7 @@ export const RandomChatButton = ({
           });
         }
       } else if (userGender === "female") {
-        // Woman with Golden Badge initiating chat with man
+        // Woman initiating chat with man
         const { data, error } = await supabase.functions.invoke("chat-manager", {
           body: {
             action: "start_chat",
