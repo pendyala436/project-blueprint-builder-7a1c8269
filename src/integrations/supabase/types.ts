@@ -794,6 +794,36 @@ export type Database = {
         }
         Relationships: []
       }
+      free_chat_usage: {
+        Row: {
+          created_at: string
+          id: string
+          is_blocked: boolean
+          man_user_id: string
+          total_seconds_used: number
+          updated_at: string
+          woman_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_blocked?: boolean
+          man_user_id: string
+          total_seconds_used?: number
+          updated_at?: string
+          woman_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_blocked?: boolean
+          man_user_id?: string
+          total_seconds_used?: number
+          updated_at?: string
+          woman_user_id?: string
+        }
+        Relationships: []
+      }
       gift_transactions: {
         Row: {
           created_at: string
@@ -3228,6 +3258,10 @@ export type Database = {
       }
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
       cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
+      check_free_chat_status: {
+        Args: { p_man_id: string; p_woman_id: string }
+        Returns: Json
+      }
       check_men_free_minutes: { Args: { p_user_id: string }; Returns: Json }
       check_rate_limit: {
         Args: {
@@ -3559,6 +3593,10 @@ export type Database = {
       unblock_user: { Args: { p_target_user_id: string }; Returns: Json }
       unfriend_user: { Args: { p_target_user_id: string }; Returns: Json }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
+      update_free_chat_usage: {
+        Args: { p_man_id: string; p_seconds: number; p_woman_id: string }
+        Returns: Json
+      }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
     }
     Enums: {

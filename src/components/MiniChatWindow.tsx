@@ -114,6 +114,12 @@ const MiniChatWindow = ({
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
+  
+  // Free chat tracking for women chatting with no-balance men
+  const [isFreeChatMode, setIsFreeChatMode] = useState(false);
+  const [freeChatRemainingSeconds, setFreeChatRemainingSeconds] = useState(300);
+  const freeChatTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const freeChatElapsedRef = useRef(0);
 
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, partnerId);
 
@@ -211,6 +217,38 @@ const MiniChatWindow = ({
           setTodayEarnings(total);
         }
 
+        // Check if this is a free chat (woman chatting with no-balance man)
+        if (userGender === "female") {
+          const { data: partnerWallet } = await supabase
+            .from("users_wallet")
+            .select("balance")
+            .eq("user_id", partnerId)
+            .maybeSingle();
+          
+          const partnerBalance = partnerWallet?.balance ?? 0;
+          if (partnerBalance <= 0) {
+            // Check free chat status
+            const { data: freeChatStatus } = await supabase.rpc("check_free_chat_status", {
+              p_woman_id: currentUserId,
+              p_man_id: partnerId,
+            });
+            
+            if (freeChatStatus?.blocked) {
+              toast({
+                title: "Free Chat Expired",
+                description: "You've used your 5-minute free chat with this user. Ask them to recharge!",
+                variant: "destructive",
+              });
+              onClose();
+              return;
+            }
+            
+            setIsFreeChatMode(true);
+            setFreeChatRemainingSeconds(freeChatStatus?.remaining_seconds ?? 300);
+            freeChatElapsedRef.current = freeChatStatus?.seconds_used ?? 0;
+          }
+        }
+
         if (!sessionStartedRef.current) {
           sessionStartedRef.current = true;
         }
@@ -221,7 +259,7 @@ const MiniChatWindow = ({
     };
 
     loadInitialData();
-  }, [currentUserId, userGender, ratePerMinute]);
+  }, [currentUserId, userGender, ratePerMinute, partnerId]);
 
   useEffect(() => {
     loadMessages();
@@ -358,6 +396,58 @@ const MiniChatWindow = ({
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
     };
   }, [lastActivityTime, billingStarted, sessionId, onClose]);
+
+  // Free chat timer: 5-min countdown for women chatting with no-balance men
+  useEffect(() => {
+    if (!isFreeChatMode || !billingStarted) return;
+    
+    freeChatTimerRef.current = setInterval(async () => {
+      freeChatElapsedRef.current += 10; // update every 10 seconds
+      const remaining = Math.max(300 - freeChatElapsedRef.current, 0);
+      setFreeChatRemainingSeconds(remaining);
+      
+      // Persist to DB every 10 seconds
+      try {
+        const { data } = await supabase.rpc("update_free_chat_usage", {
+          p_woman_id: currentUserId,
+          p_man_id: partnerId,
+          p_seconds: 10,
+        });
+        
+        if (data?.blocked) {
+          // 5 minutes up — auto-close and send recharge message
+          if (freeChatTimerRef.current) clearInterval(freeChatTimerRef.current);
+          
+          await supabase.from("chat_messages").insert({
+            chat_id: chatId,
+            sender_id: currentUserId,
+            receiver_id: partnerId,
+            message: "⏰ Free chat time is over! Please recharge your wallet to continue chatting. 💳",
+          });
+          
+          toast({
+            title: "Free Chat Ended",
+            description: "5-minute free chat with this user has ended. They need to recharge to chat again.",
+          });
+          
+          try {
+            await supabase
+              .from("active_chat_sessions")
+              .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "free_chat_expired" })
+              .eq("id", sessionId);
+          } catch {}
+          
+          onClose();
+        }
+      } catch (err) {
+        console.error("[FreeChat] Error updating usage:", err);
+      }
+    }, 10000); // every 10 seconds
+    
+    return () => {
+      if (freeChatTimerRef.current) clearInterval(freeChatTimerRef.current);
+    };
+  }, [isFreeChatMode, billingStarted, currentUserId, partnerId, chatId, sessionId, onClose]);
 
   // Translate history messages in background using live Lingva translation
   const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string, userId: string, partnerLang: string) => {
@@ -760,6 +850,11 @@ const MiniChatWindow = ({
                 </Badge>
               )}
             </div>
+            {isFreeChatMode && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 border-amber-400 text-amber-600">
+                ⏱ Free {Math.floor(freeChatRemainingSeconds / 60)}:{String(freeChatRemainingSeconds % 60).padStart(2, '0')}
+              </Badge>
+            )}
             {billingStarted && (
               <div className="flex items-center gap-1 text-[10px]">
                 <Clock className="h-2 w-2 text-muted-foreground" />
