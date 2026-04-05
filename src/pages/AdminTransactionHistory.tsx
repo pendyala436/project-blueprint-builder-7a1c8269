@@ -172,30 +172,7 @@ const AdminTransactionHistory = () => {
   const [menStats, setMenStats] = useState({ transactions: 0, spent: 0, giftsSent: 0 });
   const [womenStats, setWomenStats] = useState({ transactions: 0, earned: 0, withdrawals: 0 });
 
-  useEffect(() => {
-    loadAllData();
-  }, [dateRange]);
-
-  // #18: Real-time subscriptions with error handler
-  useEffect(() => {
-    const channel = supabase
-      .channel('admin-transaction-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ledger_transactions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'video_call_sessions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gift_transactions' }, () => loadAllData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'withdrawal_requests' }, () => loadAllData())
-      .on('system' as any, { event: 'error' }, () => {
-        toast.error('Live updates paused', { description: 'Realtime connection lost. Data may be stale.' });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     try {
       const days = parseInt(dateRange);
       const startDate = startOfDay(subDays(new Date(), days)).toISOString();
