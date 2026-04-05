@@ -750,6 +750,7 @@ const DashboardScreen = () => {
   const handleStartChatWithWoman = async (womanUserId: string, womanName: string, _reconnectDepth = 0) => {
     if (isConnecting) return;
     setIsConnecting(true);
+    setConnectingUserId(womanUserId);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
