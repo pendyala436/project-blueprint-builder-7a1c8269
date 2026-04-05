@@ -348,10 +348,10 @@ const AdminTransactionHistory = () => {
       // Men deposit money, women withdraw money
       // Profit = Total Deposits - Total Withdrawals
       setStats({
-        totalRevenue: totalCredits, // Men's deposits
+        totalRevenue, // Men's recharge deposits only
         totalEarningsPaid: totalEarningsPaid,
         totalWithdrawals: completedWithdrawals, // Women's withdrawals
-        platformProfit: totalCredits - completedWithdrawals, // Deposits - Withdrawals
+        platformProfit: totalRevenue - completedWithdrawals, // Deposits - Withdrawals
         totalTransactions: enrichedWalletTxns.length,
         totalChatSessions: enrichedChatSessions.length,
         totalVideoCalls: enrichedVideoCalls.length,

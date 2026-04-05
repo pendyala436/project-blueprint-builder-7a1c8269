@@ -81,7 +81,7 @@ const AdminLanguageLimits = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [isAdmin, adminLoading]);
 
   const loadLimits = async () => {
     try {

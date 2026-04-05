@@ -193,11 +193,12 @@ const AdminChatMonitoring = () => {
 
   const loadMessages = async () => {
     try {
+      // FIX #11: Increased limit from 100 to 500 for better coverage
       let query = supabase
         .from("chat_messages")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (filterFlagged === "flagged") query = query.eq("flagged", true);
       else if (filterFlagged === "unflagged") query = query.eq("flagged", false);

@@ -404,7 +404,7 @@ const AdminDashboard = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold">₹{stats.todayEarnings}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Revenue</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Today Deposits</p>
               </div>
             </div>
           </Card>

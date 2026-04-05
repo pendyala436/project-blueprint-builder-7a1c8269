@@ -93,7 +93,12 @@ const AdminPerformanceMonitoring = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
         if (isLive) loadData(true);
       })
-      .subscribe();
+      .subscribe((status) => {
+        // FIX #19 (partial): Error handler for channel
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[Performance] Realtime channel error, will auto-reconnect');
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [timeRange, isLive]);

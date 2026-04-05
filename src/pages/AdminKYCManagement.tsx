@@ -341,7 +341,7 @@ const AdminKYCManagement = () => {
     }
   };
 
-  if (loading) {
+  if (adminLoading || !isAdmin || loading) {
     return (
       <AdminNav>
         <div className="space-y-4">

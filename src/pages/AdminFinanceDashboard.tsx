@@ -298,7 +298,7 @@ const AdminFinanceDashboard = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="all">All Time (last 365 days)</SelectItem>
               <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="14">Last 14 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>
