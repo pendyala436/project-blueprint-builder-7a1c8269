@@ -400,31 +400,31 @@ const AdminAnalyticsDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             title="Total Deposits (Men)"
-            value={`₹${analytics.menRecharges.toLocaleString()}`}
+            value={analytics.menRecharges < 0 ? "N/A" : `₹${analytics.menRecharges.toLocaleString()}`}
             icon={IndianRupee}
             color="success"
           />
           <StatCard
             title="Men Spent"
-            value={`₹${analytics.menSpent.toLocaleString()}`}
+            value={analytics.menSpent < 0 ? "N/A" : `₹${analytics.menSpent.toLocaleString()}`}
             icon={IndianRupee}
             color="warning"
           />
           <StatCard
             title="Women Earnings"
-            value={`₹${analytics.womenEarnings.toLocaleString()}`}
+            value={analytics.womenEarnings < 0 ? "N/A" : `₹${analytics.womenEarnings.toLocaleString()}`}
             icon={IndianRupee}
             color="danger"
           />
           <StatCard
             title="Total Withdrawals (Women)"
-            value={`₹${analytics.womenWithdrawals.toLocaleString()}`}
+            value={analytics.womenWithdrawals < 0 ? "N/A" : `₹${analytics.womenWithdrawals.toLocaleString()}`}
             icon={Wallet}
             color="warning"
           />
           <StatCard
             title="Total Profit (Deposits − Withdrawals)"
-            value={`₹${analytics.adminProfit.toLocaleString()}`}
+            value={analytics.adminProfit < 0 ? "N/A" : `₹${analytics.adminProfit.toLocaleString()}`}
             icon={TrendingUp}
             color={analytics.adminProfit > 0 ? "success" : "danger"}
           />
