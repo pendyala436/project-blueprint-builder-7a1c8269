@@ -23,6 +23,8 @@ interface WhatsAppUserCardProps {
   /** Right-side action area */
   actions?: React.ReactNode;
   onClick?: () => void;
+  /** Double-click handler (e.g. open chat) */
+  onDoubleClick?: () => void;
   className?: string;
 }
 
