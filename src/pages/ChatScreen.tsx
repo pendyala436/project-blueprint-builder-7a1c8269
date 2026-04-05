@@ -1791,6 +1791,17 @@ const ChatScreen = () => {
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* ============= INCOMING CALL POPUP ============= */}
+      {incomingCall && (
+        <IncomingVideoCallWindow
+          callId={incomingCall.callId}
+          callerUserId={incomingCall.callerUserId}
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          currentUserId={currentUserId}
+          onClose={clearIncomingCall}
+        />
+      )}
       {/* ============= HEADER SECTION ============= */}
       <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
         <div className="px-3 py-2.5 flex items-center gap-3">
