@@ -1543,7 +1543,7 @@ const WomenDashboardScreen = () => {
         <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-lg mb-3">
           <AvatarImage src={userPhoto || undefined} />
           <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-2xl font-bold">
-            {userName?.charAt(0) || "?"}
+            {userName?.charAt(0) || <User className="w-8 h-8" />}
           </AvatarFallback>
         </Avatar>
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
