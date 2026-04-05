@@ -295,7 +295,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                     {item.type === "group" ? item.groupName : item.partnerName}
                   </span>
                   {item.status === "active" && (
-                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-green-500/10 text-green-600 border-green-500/30">
+                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-primary/10 text-primary border-primary/30">
                       LIVE
                     </Badge>
                   )}
@@ -303,8 +303,8 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                   {item.isIncoming !== undefined && (
                     item.isIncoming
-                      ? <ArrowDownLeft className="w-3 h-3 text-green-500" />
-                      : <ArrowUpRight className="w-3 h-3 text-blue-500" />
+                      ? <ArrowDownLeft className="w-3 h-3 text-primary" />
+                      : <ArrowUpRight className="w-3 h-3 text-accent-foreground" />
                   )}
                   <span className={getStatusColor(item.status)}>
                     {item.status === "active" ? "Ongoing" : item.endReason || "Ended"}
