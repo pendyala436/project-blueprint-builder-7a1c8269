@@ -34,6 +34,32 @@ import { moderateMessage } from '@/lib/content-moderation';
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
 import { 
+  ArrowLeft,
+  Send,
+  Circle,
+  Loader2,
+  MoreVertical,
+  Check,
+  CheckCheck,
+  Paperclip,
+  Image,
+  FileText,
+  Camera,
+  X,
+  UserPlus,
+  UserMinus,
+  Ban,
+  Shield,
+  Heart,
+  AlertTriangle,
+  PhoneOff,
+  LogOut,
+  Home,
+  Phone,
+  Video,
+  Trash2,
+  Pin
+} from "lucide-react";
   ArrowLeft,    // Back navigation icon
   Send,         // Send message icon
   Circle,       // Status indicator
