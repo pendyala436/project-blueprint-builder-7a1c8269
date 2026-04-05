@@ -142,7 +142,7 @@ const ProfileDetailScreen = () => {
         walletResult
       ] = await Promise.all([
         supabase.from("profiles")
-          .select("gender, has_golden_badge, golden_badge_expires_at")
+          .select("gender")
           .eq("user_id", user.id).maybeSingle(),
         fetchPublicProfile(targetUserId).then(data => ({ data, error: null })),
         supabase.from("user_languages")
