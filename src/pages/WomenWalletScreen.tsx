@@ -72,6 +72,7 @@ const WomenWalletScreen = () => {
   const [withdrawAmount,     setWithdrawAmount]     = useState("");
   const [paymentMethod,      setPaymentMethod]      = useState("");
   const [isSubmitting,       setIsSubmitting]       = useState(false);
+  const [withdrawConsent,    setWithdrawConsent]    = useState(false);
 
   // ── Load balance (no transaction list) ──────────────────────────────────
   const loadData = async () => {
