@@ -81,6 +81,10 @@ import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
+import { WhatsAppHeader } from "@/components/WhatsAppHeader";
+import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
+import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
+import { WhatsAppFAB } from "@/components/WhatsAppFAB";
 interface Notification {
   id: string;
   title: string;
