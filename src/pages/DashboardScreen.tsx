@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import MeowLogo from "@/components/MeowLogo";
+import { useToast } from "@/hooks/use-toast";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Heart, 

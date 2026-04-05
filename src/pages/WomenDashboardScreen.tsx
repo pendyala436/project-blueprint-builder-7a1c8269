@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-import { RandomChatButton } from "@/components/RandomChatButton";
 import { 
   Heart, 
   Users, 
