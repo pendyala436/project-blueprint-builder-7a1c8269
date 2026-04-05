@@ -108,13 +108,14 @@ const AdminChatPricing = () => {
         const menChat = data.rate_per_minute ?? 4;
         const menVideo = (data as any).video_rate_per_minute ?? 8;
         const menGroup = (data as any).group_call_rate_per_minute ?? 4;
+        const groupWomenEarn = (data as any).group_call_women_earning_rate ?? 0.50;
         setFormData({
           rate_per_minute: menChat.toString(),
           women_earning_rate: (menChat / 2).toFixed(2),
           video_rate_per_minute: menVideo.toString(),
           video_women_earning_rate: (menVideo / 2).toFixed(2),
           group_call_rate_per_minute: menGroup.toString(),
-          group_call_women_earning_rate: (menGroup / 2).toFixed(2),
+          group_call_women_earning_rate: groupWomenEarn.toFixed(2),
           min_withdrawal_balance: (data.min_withdrawal_balance ?? 5000).toString()
         });
       } else if (!pricing) {
