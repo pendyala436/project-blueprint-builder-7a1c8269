@@ -48,7 +48,7 @@ export const RandomChatButton = ({
   size = "lg",
   className = "",
   onInsufficientBalance,
-  hasGoldenBadge = false,
+  
   chatMode = "paid"
 }: RandomChatButtonProps) => {
   const navigate = useNavigate();
