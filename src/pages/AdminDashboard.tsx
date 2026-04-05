@@ -269,7 +269,7 @@ const AdminDashboard = () => {
         supabase.from("chat_messages").select("*", { count: "exact", head: true }),
         supabase.from("female_profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
         supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("ledger_transactions").select("credit").eq("transaction_type", "recharge").gte("created_at", `${today}T00:00:00`),
+        supabase.from("ledger_transactions").select("credit").eq("transaction_type", "recharge").gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`),
       ]);
 
       const getCount = (res: PromiseSettledResult<any>) => 
