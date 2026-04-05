@@ -233,6 +233,7 @@ const WomenDashboardScreen = () => {
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("chats");
   
   // Women Chat Mode (paid/free/exclusive_free)
   const chatMode = useWomenChatMode(currentUserId || null, isIndianWoman);
