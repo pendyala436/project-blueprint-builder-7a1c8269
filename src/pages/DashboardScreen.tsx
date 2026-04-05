@@ -1423,12 +1423,13 @@ const DashboardScreen = () => {
                         variant="aurora"
                         size="sm"
                         className="h-7 px-2 text-[10px]"
+                        disabled={isConnecting}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                         }}
                       >
-                        <MessageCircle className="w-3 h-3 mr-0.5" />
+                        {connectingUserId === woman.user_id ? <Loader2 className="w-3 h-3 mr-0.5 animate-spin" /> : <MessageCircle className="w-3 h-3 mr-0.5" />}
                         Chat
                       </Button>
                     </div>
