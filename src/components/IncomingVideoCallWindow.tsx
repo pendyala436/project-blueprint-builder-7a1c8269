@@ -250,6 +250,7 @@ const IncomingVideoCallWindow = ({
 
   // If answered, show the draggable video call window
   if (isAnswered) {
+    const isAudio = callType === 'audio';
     return (
       <DraggableVideoCallWindow
         callId={callId}
@@ -261,7 +262,8 @@ const IncomingVideoCallWindow = ({
         onClose={onClose}
         initialPosition={{ x: window.innerWidth - 400, y: 80 }}
         zIndex={130}
-        ratePerMinute={pricing.videoRatePerMinute}
+        ratePerMinute={isAudio ? pricing.audioRatePerMinute : pricing.videoRatePerMinute}
+        audioOnly={isAudio}
       />
     );
   }
