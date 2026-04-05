@@ -34,6 +34,32 @@ import { moderateMessage } from '@/lib/content-moderation';
 import { useToast } from "@/hooks/use-toast";
 // Lucide icons for UI elements
 import { 
+  ArrowLeft,
+  Send,
+  Circle,
+  Loader2,
+  MoreVertical,
+  Check,
+  CheckCheck,
+  Paperclip,
+  Image,
+  FileText,
+  Camera,
+  X,
+  UserPlus,
+  UserMinus,
+  Ban,
+  Shield,
+  Heart,
+  AlertTriangle,
+  PhoneOff,
+  LogOut,
+  Home,
+  Phone,
+  Video,
+  Trash2,
+  Pin
+} from "lucide-react";
   ArrowLeft,    // Back navigation icon
   Send,         // Send message icon
   Circle,       // Status indicator
@@ -94,12 +120,17 @@ import { supabase } from "@/integrations/supabase/client";
 // Activity status tracking hook
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
-import GiftSendButton from "@/components/GiftSendButton";
 import DirectAudioCallButton from "@/components/DirectAudioCallButton";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
 import { useMessageSound } from "@/hooks/useMessageSound";
+import { MessageActions } from "@/components/chat/MessageActions";
+import { ReplyPreview } from "@/components/chat/ReplyPreview";
+import { ForwardDialog } from "@/components/chat/ForwardDialog";
+import { PinnedMessages } from "@/components/chat/PinnedMessages";
+import { MessageReactions } from "@/components/chat/MessageReactions";
+import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -123,6 +154,13 @@ interface Message {
   attachmentUrl?: string;        // URL of attached file/image
   attachmentType?: "image" | "file"; // Type of attachment
   sendFailed?: boolean;          // Whether send failed (for retry UI)
+  replyToId?: string;            // Message this is replying to
+  replyToText?: string;          // Text of replied message (for display)
+  replyToSender?: string;        // Sender name of replied message
+  isForwarded?: boolean;         // Whether message was forwarded
+  isEdited?: boolean;            // Whether message was edited
+  isPinned?: boolean;            // Whether message is pinned
+  reactions?: { emoji: string; count: number; userReacted: boolean }[];
 }
 
 /**
@@ -262,6 +300,11 @@ const ChatScreen = () => {
   const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
+
+  // Reply, Forward, Edit state
+  const [replyTo, setReplyTo] = useState<{ id: string; text: string; senderName: string } | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<{ id: string; text: string } | null>(null);
+  const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
   
   // ============= REFS =============
   
@@ -1252,6 +1295,73 @@ const ChatScreen = () => {
     }
   };
 
+  // === Reaction handler ===
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      const { data: existing } = await supabase
+        .from('message_reactions')
+        .select('id')
+        .eq('message_id', messageId)
+        .eq('user_id', currentUserId)
+        .eq('emoji', emoji)
+        .maybeSingle();
+      if (existing) {
+        await supabase.from('message_reactions').delete().eq('id', existing.id);
+      } else {
+        await supabase.from('message_reactions').insert({ message_id: messageId, user_id: currentUserId, emoji } as any);
+      }
+    } catch (err) { console.error('Reaction error:', err); }
+  };
+
+  // === Reply handler ===
+  const handleReply = (messageId: string, text: string, senderName: string) => {
+    setReplyTo({ id: messageId, text, senderName });
+  };
+
+  // === Forward handler ===
+  const handleForward = (messageId: string, text: string) => {
+    setForwardMsg({ id: messageId, text });
+  };
+
+  // === Edit handler ===
+  const handleStartEdit = (messageId: string, currentText: string) => {
+    setEditingMsg({ id: messageId, text: currentText });
+  };
+
+  const handleSaveEdit = async (newText: string) => {
+    if (!editingMsg) return;
+    try {
+      await supabase.from('chat_messages').update({
+        message: newText,
+        is_edited: true,
+        edited_at: new Date().toISOString(),
+        original_message: editingMsg.text,
+      } as any).eq('id', editingMsg.id);
+      setMessages(prev => prev.map(m => m.id === editingMsg.id ? { ...m, message: newText, isEdited: true } : m));
+      setEditingMsg(null);
+      toast({ title: 'Message edited' });
+    } catch (err) {
+      console.error('Edit error:', err);
+      toast({ title: 'Error', description: 'Failed to edit message', variant: 'destructive' });
+    }
+  };
+
+  // === Pin handler ===
+  const handlePinToggle = async (messageId: string, isPinned: boolean) => {
+    try {
+      await supabase.from('chat_messages').update({
+        is_pinned: !isPinned,
+        pinned_at: !isPinned ? new Date().toISOString() : null,
+        pinned_by: !isPinned ? currentUserId : null,
+      } as any).eq('id', messageId);
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, isPinned: !isPinned } : m));
+      toast({ title: isPinned ? 'Message unpinned' : 'Message pinned' });
+    } catch (err) {
+      console.error('Pin error:', err);
+    }
+  };
+
+
   /**
    * handleSendMessage Function
    * 
@@ -1340,14 +1450,19 @@ const ChatScreen = () => {
         return m;
       }));
 
-      const { error } = await supabase
-        .from("chat_messages")
-        .insert({
+      const insertData: any = {
           chat_id: chatId.current,
           sender_id: currentUserId,
           receiver_id: chatPartner.userId,
           message: actualMessage,
-        });
+        };
+      if (replyTo) {
+        insertData.reply_to_id = replyTo.id;
+        setReplyTo(null);
+      }
+      const { error } = await supabase
+        .from("chat_messages")
+        .insert(insertData);
 
       if (error) {
         // Remove optimistic message on failure
@@ -1987,126 +2102,86 @@ const ChatScreen = () => {
                 }
 
                 return (
-                  <ContextMenu key={message.id}>
-                    <ContextMenuTrigger asChild>
-                      <div
-                        className={`flex ${isMine ? "justify-end" : "justify-start"} animate-slide-up`}
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
-                        <div className={`flex items-end gap-2 max-w-[80%] ${isMine ? "flex-row-reverse" : ""}`}>
-                          {/* Avatar placeholder for alignment */}
-                          {!isMine && (
-                            <div className="w-8 flex-shrink-0">
-                              {showAvatar && chatPartner?.avatar ? (
-                                <img 
-                                  src={chatPartner.avatar} 
-                                  alt=""
-                                  className="w-8 h-8 rounded-full object-cover"
-                                />
-                              ) : showAvatar ? (
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                                  <span className="text-xs font-bold text-primary">
-                                    {chatPartner?.fullName.charAt(0).toUpperCase()}
-                                  </span>
+                  <MessageActions
+                    key={message.id}
+                    messageId={message.id}
+                    messageText={displayText || message.message}
+                    senderId={message.senderId}
+                    currentUserId={currentUserId}
+                    chatId={activeChatId}
+                    createdAt={message.createdAt}
+                    isPinned={message.isPinned}
+                    senderName={isMine ? "You" : (chatPartner?.fullName || "")}
+                    onReply={handleReply}
+                    onForward={handleForward}
+                    onEdit={handleStartEdit}
+                    onDelete={handleDeleteMessage}
+                    onReaction={handleReaction}
+                    onPinToggle={handlePinToggle}
+                  >
+                    <div
+                      className={`flex ${isMine ? "justify-end" : "justify-start"} animate-slide-up`}
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <div className={`flex items-end gap-2 max-w-[80%] ${isMine ? "flex-row-reverse" : ""}`}>
+                        {!isMine && (
+                          <div className="w-8 flex-shrink-0">
+                            {showAvatar && chatPartner?.avatar ? (
+                              <img src={chatPartner.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            ) : showAvatar ? (
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                                <span className="text-xs font-bold text-primary">{chatPartner?.fullName.charAt(0).toUpperCase()}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <span className={`text-[10px] font-semibold px-1 block ${isMine ? "text-primary text-right" : "text-emerald-600 dark:text-emerald-400 text-left"}`}>
+                            {isMine ? "You" : chatPartner?.fullName}
+                            {message.isForwarded && <span className="text-muted-foreground/60 font-normal ms-1">↗ Forwarded</span>}
+                          </span>
+
+                          {/* Reply quote */}
+                          {message.replyToText && (
+                            <ReplyPreview replyToText={message.replyToText} replyToSender={message.replyToSender || ''} isOwn={isMine} compact />
+                          )}
+
+                          {voiceUrl && <VoiceMessagePlayer audioUrl={voiceUrl} isMine={isMine} />}
+                          {attachmentUrl && <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
+                          
+                          {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
+                            <div className={`px-4 py-2.5 rounded-2xl shadow-sm border ${isMine ? "bg-primary/5 border-primary/20 rounded-br-md" : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"}`}>
+                              {message.isTranslating ? (
+                                <div className="flex items-center gap-1.5 py-1">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground">Translating...</span>
                                 </div>
-                              ) : null}
+                              ) : (
+                                <>
+                                  <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${isMine ? "text-primary dark:text-primary" : "text-emerald-800 dark:text-emerald-200"}`} dir="auto">{displayText}</p>
+                                  {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                                    <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">english: {englishSubtitle.toLowerCase()}</p>
+                                  )}
+                                </>
+                              )}
                             </div>
                           )}
 
-                          {/* Message bubble and translations */}
-                          <div className={`space-y-1`}>
-                            {/* Sender/Receiver name with distinct colors */}
-                            <span className={`text-[10px] font-semibold px-1 block ${
-                              isMine
-                                ? "text-primary text-right"
-                                : "text-emerald-600 dark:text-emerald-400 text-left"
-                            }`}>
-                              {isMine ? "You" : chatPartner?.fullName}
-                            </span>
+                          {/* Reactions */}
+                          {message.reactions && message.reactions.length > 0 && (
+                            <MessageReactions reactions={message.reactions} onToggle={(emoji) => handleReaction(message.id, emoji)} isOwn={isMine} />
+                          )}
 
-                            {/* Voice message player */}
-                            {voiceUrl && (
-                              <VoiceMessagePlayer 
-                                audioUrl={voiceUrl} 
-                                isMine={isMine} 
-                              />
-                            )}
-                            
-                            {/* Attachment preview */}
-                            {attachmentUrl && (
-                              <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
-                            )}
-                            
-                            {/* Primary message bubble — light background with colored text */}
-                            {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
-                              <div
-                                className={`px-4 py-2.5 rounded-2xl shadow-sm border ${
-                                  isMine 
-                                    ? "bg-primary/5 border-primary/20 rounded-br-md" 
-                                    : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"
-                                }`}
-                              >
-                                {message.isTranslating ? (
-                                  <div className="flex items-center gap-1.5 py-1">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">Translating...</span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${
-                                      isMine
-                                        ? "text-primary dark:text-primary"
-                                        : "text-emerald-800 dark:text-emerald-200"
-                                    }`} dir="auto">{displayText}</p>
-                                    {/* English translation below EVERY message */}
-                                    {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                                      <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">
-                                        english: {englishSubtitle.toLowerCase()}
-                                      </p>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Time and read status */}
-                            <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-                              <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
-                              {/* Read receipt icons (only for sender) */}
-                              {isMine && (
-                                message.isRead ? (
-                                  <CheckCheck className="w-3.5 h-3.5 text-info" /> // Double check = read
-                                ) : (
-                                  <Check className="w-3.5 h-3.5 text-muted-foreground" /> // Single check = sent
-                                )
-                              )}
-                            </div>
+                          <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                            <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
+                            {message.isEdited && <span className="text-[10px] text-muted-foreground italic">edited</span>}
+                            {message.isPinned && <Pin className="w-3 h-3 text-primary" />}
+                            {isMine && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-info" /> : <Check className="w-3.5 h-3.5 text-muted-foreground" />)}
                           </div>
                         </div>
                       </div>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent className="w-52">
-                      <ContextMenuItem
-                        onClick={() => handleDeleteMessage(message.id, 'for_me')}
-                        className="gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete for me
-                      </ContextMenuItem>
-                      {isMine && (
-                        <>
-                          <ContextMenuSeparator />
-                          <ContextMenuItem
-                            onClick={() => handleDeleteMessage(message.id, 'for_everyone')}
-                            className="gap-2 text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete for everyone
-                          </ContextMenuItem>
-                        </>
-                      )}
-                    </ContextMenuContent>
-                  </ContextMenu>
+                    </div>
+                  </MessageActions>
                 );
               })}
             </div>
@@ -2242,13 +2317,13 @@ const ChatScreen = () => {
               </PopoverContent>
             </Popover>
             
-            {/* Gift button - only show for men */}
-            {currentUserGender === "male" && chatPartner && (
-              <GiftSendButton
-                senderId={currentUserId}
+            {/* Voice recorder */}
+            {chatPartner && activeChatId && (
+              <VoiceRecorder
+                chatId={activeChatId}
+                currentUserId={currentUserId}
                 receiverId={chatPartner.userId}
-                receiverName={chatPartner.fullName}
-                disabled={isSending}
+                disabled={isSending || isBlocked || isBlockedByPartner}
               />
             )}
           </div>
