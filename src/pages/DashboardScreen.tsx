@@ -140,8 +140,7 @@ const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [];
 
 const ALL_PAYMENT_GATEWAYS: PaymentGateway[] = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
-// ScrollableUserList extracted to shared component
-import ScrollableUserList from "@/components/ScrollableUserList";
+// ScrollableUserList removed — not used in WhatsApp tab layout
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
