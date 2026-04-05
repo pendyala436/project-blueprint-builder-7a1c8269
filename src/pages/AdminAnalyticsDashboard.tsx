@@ -691,7 +691,7 @@ const AdminAnalyticsDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
+        {/* Quick Insights */}
         <Card>
           <CardHeader>
             <CardTitle>Quick Insights</CardTitle>
@@ -699,12 +699,12 @@ const AdminAnalyticsDashboard = () => {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Peak Active Time</p>
-                <p className="text-lg font-semibold">8:00 PM - 11:00 PM</p>
+                <p className="text-sm text-muted-foreground">New Users Today</p>
+                <p className="text-lg font-semibold">{analytics.newUsersToday}</p>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Most Active Day</p>
-                <p className="text-lg font-semibold">Saturday</p>
+                <p className="text-sm text-muted-foreground">Avg Session Time</p>
+                <p className="text-lg font-semibold">{analytics.avgSessionTime} min</p>
               </div>
               <div className="p-4 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">Avg Messages/User</p>
