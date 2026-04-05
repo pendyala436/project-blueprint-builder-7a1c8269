@@ -15,30 +15,48 @@ let ringIntervalId: NodeJS.Timeout | null = null;
 
 const playRingSound = () => {
   try {
-    if (!ringAudioContext) {
+    if (!ringAudioContext || ringAudioContext.state === 'closed') {
       ringAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    const osc = ringAudioContext.createOscillator();
-    const gain = ringAudioContext.createGain();
-    osc.connect(gain);
-    gain.connect(ringAudioContext.destination);
-    osc.frequency.setValueAtTime(440, ringAudioContext.currentTime);
-    osc.frequency.setValueAtTime(520, ringAudioContext.currentTime + 0.15);
-    osc.type = "sine";
-    gain.gain.setValueAtTime(0.3, ringAudioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ringAudioContext.currentTime + 0.4);
-    osc.start(ringAudioContext.currentTime);
-    osc.stop(ringAudioContext.currentTime + 0.4);
+    const ctx = ringAudioContext;
+    const now = ctx.currentTime;
+
+    // Old-school telephone "tring-tring" — two rapid bell strikes
+    const bellFreqs = [2000, 2500]; // High metallic bell frequencies
+    const strikeGap = 0.08;
+
+    for (let burst = 0; burst < 2; burst++) {
+      const burstStart = now + burst * 0.35; // Two bursts 350ms apart
+
+      for (let i = 0; i < 6; i++) {
+        const t = burstStart + i * strikeGap;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        // Alternate between two bell frequencies for metallic ring
+        osc.frequency.setValueAtTime(bellFreqs[i % 2], t);
+        osc.type = 'square';
+
+        // Sharp attack, quick decay — like a bell hammer strike
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.15, t + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + strikeGap - 0.01);
+
+        osc.start(t);
+        osc.stop(t + strikeGap);
+      }
+    }
   } catch (e) {
     console.error("Ring sound error:", e);
-      // Audio playback failure - non-critical, call still works
   }
 };
 
 const startRingLoop = () => {
   if (ringIntervalId) return;
   playRingSound();
-  ringIntervalId = setInterval(playRingSound, 2000);
+  ringIntervalId = setInterval(playRingSound, 1500); // Repeat every 1.5s
 };
 
 const stopRingLoop = () => {
