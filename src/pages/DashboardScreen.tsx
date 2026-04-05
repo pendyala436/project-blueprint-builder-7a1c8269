@@ -1333,9 +1333,10 @@ const DashboardScreen = () => {
 
   // activeTab state is declared at top of component
 
-  const menTabs = getMenTabs(activeChatCount || undefined, matchedWomen.length || undefined);
+  const onlineCount = sameLanguageWomen.length + indianTranslatedWomen.length;
+  const menTabs = getMenTabs(onlineCount || undefined, activeChatCount || undefined, matchedWomen.length || undefined);
 
-  const renderChatsTab = () => (
+  const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Active status bar */}
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
