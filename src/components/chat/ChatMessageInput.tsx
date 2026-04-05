@@ -35,6 +35,7 @@ interface ChatMessageInputProps {
 export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   onSendMessage,
   onTyping,
+  onInputChange,
   disabled = false,
   placeholder,
   className,
