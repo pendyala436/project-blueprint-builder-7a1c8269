@@ -1550,12 +1550,7 @@ const WomenDashboardScreen = () => {
         )}
       </div>
 
-      {/* Private Groups */}
-      {currentUserId && (
-        <div id="women-private-groups-section" className="px-4 py-3 border-t border-border/30">
-          <PrivateGroupsSection currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
-        </div>
-      )}
+      {/* Private Groups moved to dedicated Groups tab */}
 
       {/* Language Group Chat */}
       {currentUserId && currentWomanLanguage && (
