@@ -1375,11 +1375,13 @@ const DashboardScreen = () => {
                         variant="aurora"
                         size="sm"
                         className="h-7 px-2 text-[10px]"
-                        disabled={(woman.active_chat_count || 0) >= 3}
-                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                        }}
                       >
                         <MessageCircle className="w-3 h-3 mr-0.5" />
-                        {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
+                        Chat
                       </Button>
                     </div>
                   }
