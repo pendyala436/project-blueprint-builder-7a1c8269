@@ -2712,3 +2712,284 @@ html {
     scroll-behavior: auto !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   WhatsApp Admin Theme — cascading styles for all /admin/* pages
+   Applied via .wa-admin wrapper class on AdminNav
+   ═══════════════════════════════════════════════════════════════════ */
+
+.wa-admin {
+  --wa-dark-green: 153 100% 18%;
+  --wa-teal: 168 44% 34%;
+  --wa-light-green: 142 70% 49%;
+  --wa-chat-bg: 34 33% 91%;
+  --wa-sent: 98 55% 88%;
+  --wa-sidebar: 220 12% 13%;
+  --wa-header: 153 100% 18%;
+}
+
+/* Cards → WhatsApp white cards with teal left accent */
+.wa-admin [data-slot="card"],
+.wa-admin .card,
+.wa-admin [class*="CardContent"],
+.wa-admin > main [class*="rounded-lg"][class*="border"] {
+  border-left: 3px solid hsl(var(--wa-teal));
+  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.06);
+}
+
+/* Page titles → WhatsApp dark green */
+.wa-admin h1 {
+  color: hsl(var(--wa-dark-green)) !important;
+  font-weight: 700;
+}
+
+.wa-admin h2,
+.wa-admin h3 {
+  color: hsl(var(--wa-dark-green));
+}
+
+/* Tabs → WhatsApp green active state */
+.wa-admin [role="tablist"] {
+  background: hsl(var(--wa-dark-green));
+  border-radius: 0;
+  padding: 0;
+  border: none;
+}
+
+.wa-admin [role="tab"] {
+  color: hsl(0 0% 100% / 0.7);
+  border-radius: 0;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  padding: 0.625rem 1rem;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.wa-admin [role="tab"][data-state="active"] {
+  color: hsl(0 0% 100%);
+  background: transparent !important;
+  border-bottom-color: hsl(0 0% 100%);
+  box-shadow: none;
+}
+
+.wa-admin [role="tab"]:hover:not([data-state="active"]) {
+  color: hsl(0 0% 100% / 0.9);
+  background: hsl(0 0% 100% / 0.08) !important;
+}
+
+/* Badges → WhatsApp green */
+.wa-admin .badge,
+.wa-admin [class*="Badge"] {
+  font-weight: 600;
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+}
+
+/* Primary action buttons → WhatsApp teal */
+.wa-admin button[class*="bg-primary"],
+.wa-admin [class*="btn-primary"] {
+  background: hsl(var(--wa-teal)) !important;
+}
+
+.wa-admin button[class*="bg-primary"]:hover {
+  background: hsl(var(--wa-dark-green)) !important;
+}
+
+/* Tables → WhatsApp-style clean rows */
+.wa-admin table thead {
+  background: hsl(var(--wa-dark-green));
+}
+
+.wa-admin table thead th {
+  color: hsl(0 0% 100%) !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.75rem 1rem;
+  border: none;
+}
+
+.wa-admin table tbody tr {
+  border-bottom: 1px solid hsl(var(--wa-chat-bg));
+  transition: background 0.15s;
+}
+
+.wa-admin table tbody tr:hover {
+  background: hsl(var(--wa-light-green) / 0.06) !important;
+}
+
+.wa-admin table tbody td {
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+}
+
+/* Stat cards → green gradient accents */
+.wa-admin .wa-stat-card {
+  background: linear-gradient(135deg, hsl(0 0% 100%), hsl(var(--wa-light-green) / 0.04));
+  border-left: 4px solid hsl(var(--wa-teal));
+}
+
+/* Search inputs → WhatsApp-style rounded */
+.wa-admin input[type="text"],
+.wa-admin input[type="search"],
+.wa-admin input[type="email"],
+.wa-admin input[class*="Input"] {
+  border-radius: 1.25rem;
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(var(--wa-chat-bg));
+  padding-left: 1rem;
+}
+
+.wa-admin input:focus {
+  border-color: hsl(var(--wa-teal));
+  box-shadow: 0 0 0 2px hsl(var(--wa-teal) / 0.15);
+}
+
+/* Select triggers → WhatsApp style */
+.wa-admin [class*="SelectTrigger"] {
+  border-radius: 1.25rem;
+  border-color: hsl(var(--wa-chat-bg));
+  font-size: 0.8125rem;
+}
+
+/* Dialog overlays → subtle green tint */
+.wa-admin [class*="DialogContent"] {
+  border-top: 3px solid hsl(var(--wa-teal));
+}
+
+/* ScrollArea → subtle bg */
+.wa-admin [class*="ScrollArea"] {
+  background: hsl(var(--wa-chat-bg) / 0.3);
+  border-radius: 0.5rem;
+}
+
+/* Skeleton loader → WhatsApp shimmer */
+.wa-admin [class*="Skeleton"] {
+  background: linear-gradient(90deg, hsl(var(--wa-chat-bg)) 25%, hsl(0 0% 96%) 50%, hsl(var(--wa-chat-bg)) 75%);
+  background-size: 200% 100%;
+  animation: wa-shimmer 1.5s infinite;
+}
+
+@keyframes wa-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Progress bars → WhatsApp green */
+.wa-admin [class*="Progress"] [class*="indicator"] {
+  background: hsl(var(--wa-teal));
+}
+
+/* Empty states */
+.wa-admin .text-muted-foreground {
+  color: hsl(220 8% 50%);
+}
+
+/* Chart tooltip → WhatsApp style */
+.wa-admin .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: hsl(0 0% 100%) !important;
+  border: 1px solid hsl(var(--wa-chat-bg)) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.1) !important;
+}
+
+/* Icon containers → Green circle bg (WhatsApp contact-list style) */
+.wa-admin .wa-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: hsl(var(--wa-light-green) / 0.12);
+  color: hsl(var(--wa-dark-green));
+  flex-shrink: 0;
+}
+
+/* Alert/notification cards → WhatsApp style */
+.wa-admin .wa-alert {
+  background: hsl(var(--wa-sent));
+  border-left: 4px solid hsl(var(--wa-teal));
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.75rem 1rem;
+}
+
+/* Chat bubbles in monitoring */
+.wa-admin .wa-bubble-sent {
+  background: hsl(var(--wa-sent));
+  border-radius: 0.5rem 0.5rem 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  max-width: 80%;
+  margin-left: auto;
+}
+
+.wa-admin .wa-bubble-received {
+  background: hsl(0 0% 100%);
+  border-radius: 0.5rem 0.5rem 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  max-width: 80%;
+  box-shadow: 0 1px 2px hsl(0 0% 0% / 0.05);
+}
+
+/* Floating action area */
+.wa-admin .wa-fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 40;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: hsl(var(--wa-teal));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px hsl(var(--wa-teal) / 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.wa-admin .wa-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px hsl(var(--wa-teal) / 0.5);
+}
+
+/* List items → WhatsApp contact-list style */
+.wa-admin .wa-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid hsl(var(--wa-chat-bg));
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+.wa-admin .wa-list-item:hover {
+  background: hsl(var(--wa-light-green) / 0.06);
+}
+
+.wa-admin .wa-list-item.active {
+  background: hsl(var(--wa-light-green) / 0.12);
+  border-left: 3px solid hsl(var(--wa-teal));
+}
+
+/* Pill badges for counts */
+.wa-admin .wa-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 625rem;
+  background: hsl(var(--wa-light-green));
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
