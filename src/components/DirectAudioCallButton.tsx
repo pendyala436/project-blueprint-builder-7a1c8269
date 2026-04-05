@@ -221,6 +221,7 @@ const DirectAudioCallButton = ({
         })
         .eq('call_id', activeCall.callId);
     }
+    if (activeCall) unregisterSession('audio_call', activeCall.callId);
     setActiveCall(null);
   };
 

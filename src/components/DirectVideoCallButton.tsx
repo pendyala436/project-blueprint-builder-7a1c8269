@@ -222,6 +222,7 @@ const DirectVideoCallButton = ({
         })
         .eq('call_id', activeCall.callId);
     }
+    if (activeCall) unregisterSession('video_call', activeCall.callId);
     setActiveCall(null);
   };
 
