@@ -163,6 +163,7 @@ const VideoCallMiniButton = ({
     }
     if (activeCall) unregisterSession('video_call', activeCall.callId);
     setActiveCall(null);
+  };
 
   return (
     <>
