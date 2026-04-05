@@ -411,7 +411,7 @@ const WomenWalletScreen = () => {
               {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ArrowDownToLine className="h-4 w-4" />}
               {isSubmitting
                 ? t("submitting", "Submitting...")
-                : `${t("withdraw", "Withdraw")} ₹${withdrawAmount || "0"}`}
+                : `${t("withdraw", "Withdraw")} ₹${withdrawAmount ? (Number(withdrawAmount) * 0.95).toFixed(2) : "0"}`}
             </Button>
           </div>
         </DialogContent>
