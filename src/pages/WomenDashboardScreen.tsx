@@ -1319,11 +1319,9 @@ const WomenDashboardScreen = () => {
               onClick={() => handleViewProfile(user.userId)}
               actions={
                 <div className="flex items-center gap-1">
-                  {hasGoldenBadge && (
-                    <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                      <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                    </Button>
-                  )}
+                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
+                    <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                  </Button>
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                     <Eye className="w-3.5 h-3.5 text-primary" />
                   </Button>
