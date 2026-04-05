@@ -125,8 +125,10 @@ function getMeaningfulLatinTokens(text: string): string[] {
 }
 
 function countLatinChars(text: string): number {
-  const tokens = text.match(/[a-zA-Z\u00C0-\u024F]+/g) ?? [];
-  return tokens.reduce<number>((sum, token) => sum + token.length, 0);
+  const tokens: string[] = text.match(/[a-zA-Z\u00C0-\u024F]+/g) ?? [];
+  let total = 0;
+  for (const token of tokens) total += token.length;
+  return total;
 }
 
 function scoreTranslationCandidate(
