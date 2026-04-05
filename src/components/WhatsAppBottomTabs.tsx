@@ -30,7 +30,7 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-0.5 py-2 relative transition-colors",
+                "flex-1 min-w-[56px] flex flex-col items-center justify-center gap-0.5 py-2 relative transition-colors",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"

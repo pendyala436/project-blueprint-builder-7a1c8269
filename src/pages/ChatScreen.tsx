@@ -113,6 +113,7 @@ interface Message {
   createdAt: string;             // ISO timestamp of creation
   attachmentUrl?: string;        // URL of attached file/image
   attachmentType?: "image" | "file"; // Type of attachment
+  sendFailed?: boolean;          // Whether send failed (for retry UI)
 }
 
 /**
@@ -768,12 +769,17 @@ const ChatScreen = () => {
 
       // Fetch wallet balance for call buttons
       if (userGender === "male") {
-        const { data: walletData } = await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setWalletBalance(Number(walletData?.balance) || 0);
+        try {
+          const { data: walletRpc } = await supabase.rpc('get_men_wallet_balance', {
+            p_user_id: user.id
+          });
+          if (walletRpc) {
+            const wd = walletRpc as Record<string, number>;
+            setWalletBalance(Number(wd.balance) || 0);
+          }
+        } catch {
+          console.warn('[Chat] Wallet balance fetch failed');
+        }
       }
 
       // ============= FETCH PARTNER PROFILE =============
@@ -1571,28 +1577,23 @@ const ChatScreen = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* ============= HEADER SECTION ============= */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
-          {/* Back & Home buttons */}
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/dashboard")}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
-            </button>
-            <button 
-              onClick={() => navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard")}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Home className="w-5 h-5 text-foreground" />
-            </button>
-          </div>
+      <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
+        <div className="px-3 py-2.5 flex items-center gap-3">
+          {/* Back button */}
+          <button 
+            onClick={() => {
+              const dashboardPath = currentUserGender === "female" ? "/women-dashboard" : "/dashboard";
+              window.history.length > 1 ? navigate(-1) : navigate(dashboardPath);
+            }}
+            className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-primary-foreground" />
+          </button>
           
           {/* Chat partner info - clickable to view profile */}
           {chatPartner && (
             <div 
-              className="flex items-center gap-3 flex-1 cursor-pointer"
+              className="flex items-center gap-2.5 flex-1 cursor-pointer"
               onClick={() => navigate(`/profile/${chatPartner.userId}`)}
             >
               {/* Partner avatar with online indicator */}
@@ -1601,33 +1602,28 @@ const ChatScreen = () => {
                   <img 
                     src={chatPartner.avatar} 
                     alt={chatPartner.fullName}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/20"
                   />
                 ) : (
-                  // Fallback avatar with initial
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary">
+                  <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                    <span className="text-lg font-bold text-primary-foreground">
                       {chatPartner.fullName.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                {/* Online status indicator dot */}
-                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background ${
+                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-primary ${
                   chatPartner.isOnline ? "bg-online" : "bg-muted-foreground"
                 }`} />
               </div>
 
-              {/* Partner name and status */}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{chatPartner.fullName}</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {/* Online/Offline status text */}
+                <p className="font-semibold text-primary-foreground truncate">{chatPartner.fullName}</p>
+                <p className="text-xs text-primary-foreground/70 flex items-center gap-1">
                   {chatPartner.isOnline ? (
-                    <span className="text-online">Online</span>
+                    <span className="text-primary-foreground/90">Online</span>
                   ) : (
                     <span>Offline</span>
                   )}
-                  {/* Show language if different from current user */}
                   {chatPartner.preferredLanguage !== currentUserLanguage && (
                     <>
                       <span>•</span>
@@ -1641,7 +1637,7 @@ const ChatScreen = () => {
 
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
           {currentUserGender === "male" && chatPartner && (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 [&_button]:text-primary-foreground [&_button]:hover:bg-primary-foreground/10">
             <DirectAudioCallButton
               currentUserId={currentUserId}
               targetUserId={chatPartner.userId}
@@ -1668,8 +1664,8 @@ const ChatScreen = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-full hover:bg-muted transition-colors">
-                <MoreVertical className="w-5 h-5 text-foreground" />
+              <button className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors">
+                <MoreVertical className="w-5 h-5 text-primary-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -1789,8 +1785,8 @@ const ChatScreen = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Stop Chat Confirmation Dialog - Only for men */}
-      {currentUserGender === "male" && (
+      {/* Stop Chat Confirmation Dialog - Both genders */}
+      {(
         <AlertDialog open={showStopChatDialog} onOpenChange={setShowStopChatDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -1799,7 +1795,7 @@ const ChatScreen = () => {
                 Stop Chat?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will end the current chat session. Billing will stop and you'll be disconnected from this conversation.
+                This will end the current chat session.{currentUserGender === "male" ? " Billing will stop and you'll be disconnected from this conversation." : " You'll be disconnected from this conversation."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -2016,7 +2012,7 @@ const ChatScreen = () => {
       )}
 
       {/* ============= MESSAGE INPUT AREA ============= */}
-      <footer className="sticky bottom-0 bg-background">
+      <footer className="sticky bottom-0 bg-background pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-4xl mx-auto">
           {/* Selected file preview */}
           {selectedFile && (

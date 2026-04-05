@@ -140,8 +140,7 @@ const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [];
 
 const ALL_PAYMENT_GATEWAYS: PaymentGateway[] = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
-// ScrollableUserList extracted to shared component
-import ScrollableUserList from "@/components/ScrollableUserList";
+// ScrollableUserList removed — not used in WhatsApp tab layout
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -187,6 +186,7 @@ const DashboardScreen = () => {
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("online");
   const matchesFetchedRef = useRef(false);
+  const chatsFetchedRef = useRef(false);
   const [activeChats, setActiveChats] = useState<Array<{
     chatId: string;
     partnerId: string;
@@ -488,6 +488,19 @@ const DashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
+  // Lazy-load data on tab switch
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (activeTab === "matches" && !matchesFetchedRef.current) {
+      matchesFetchedRef.current = true;
+      fetchMatchedWomen(currentUserId);
+    }
+    if (activeTab === "chats" && !chatsFetchedRef.current) {
+      chatsFetchedRef.current = true;
+      fetchActiveChats();
+    }
+  }, [activeTab, currentUserId]);
+
   const loadWalletBalance = async () => {
     if (!currentUserId) return;
     const { data } = await supabase.rpc('get_men_wallet_balance', {
@@ -599,11 +612,7 @@ const DashboardScreen = () => {
     return 'bg-online';
   };
 
-  const getStatusDotColor = () => {
-    if (isManuallyOffline) return 'bg-muted-foreground';
-    if (!isOnline) return 'bg-amber-500';
-    return 'bg-online';
-  };
+  const getStatusDotColor = getStatusColor;
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {

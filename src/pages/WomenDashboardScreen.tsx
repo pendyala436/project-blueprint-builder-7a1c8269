@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Heart, 
@@ -108,8 +107,7 @@ interface BiggestEarner {
   photoUrl?: string;
 }
 
-// ScrollableUserList extracted to shared component
-import ScrollableUserList from "@/components/ScrollableUserList";
+// ScrollableUserList removed — not used in WhatsApp tab layout
 
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
@@ -147,6 +145,7 @@ const WomenDashboardScreen = () => {
   const [showKYCForm, setShowKYCForm] = useState(false);
   const [activeTab, setActiveTab] = useState("online");
   const matchesFetchedRef = useRef(false);
+  const chatsFetchedRef = useRef(false);
   const [onlineSubTab, setOnlineSubTab] = useState<"recharged" | "nobalance">("recharged");
   const [womenActiveChats, setWomenActiveChats] = useState<Array<{
     chatId: string;
@@ -425,6 +424,19 @@ const WomenDashboardScreen = () => {
       supabase.removeChannel(channel);
     };
   }, [currentUserId]); // stable — throttledFetchOnlineMen reads from refs; language handlers fetch directly
+
+  // Lazy-load data on tab switch
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (activeTab === "matches" && !matchesFetchedRef.current) {
+      matchesFetchedRef.current = true;
+      fetchMatchedMen(currentUserId);
+    }
+    if (activeTab === "chats" && !chatsFetchedRef.current) {
+      chatsFetchedRef.current = true;
+      fetchWomenActiveChats();
+    }
+  }, [activeTab, currentUserId]);
 
   const loadActiveChatCount = async () => {
     if (!currentUserId) return;
@@ -1020,19 +1032,10 @@ const WomenDashboardScreen = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <Skeleton className="h-16 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-          <Skeleton className="h-12 w-full" />
-          <div className="space-y-4">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -1208,7 +1211,7 @@ const WomenDashboardScreen = () => {
                 actions={
                   <div className="flex items-center gap-1">
                     <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                      <MessageCircle className="w-3 h-3 mr-0.5" />5 min Free
+                      <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                     </Button>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                       <Eye className="w-3.5 h-3.5 text-primary" />
