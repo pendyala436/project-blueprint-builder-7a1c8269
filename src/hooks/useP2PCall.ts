@@ -588,11 +588,11 @@ export const useP2PCall = ({
 
       if (offerRetryAttemptsRef.current >= MAX_OFFER_RETRIES) {
         stopOfferRetry();
-        console.warn('[P2P] Offer retries exhausted; ending call setup');
+        console.warn('[P2P] Offer retries exhausted after full incoming-call window; ending call setup');
         setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
         toast({
           title: 'Connection Timeout',
-          description: 'Could not connect the call. Please try again.',
+          description: 'The other user did not answer the call in time.',
           variant: 'destructive',
         });
         onCallEnded?.();
