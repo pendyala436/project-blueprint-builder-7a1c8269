@@ -304,6 +304,16 @@ export function PrivateGroupCallWindow({
     checkExtension();
   }, [currentUserId, group.id]);
 
+  // Register/unregister P3 session for priority management
+  useEffect(() => {
+    if (isConnected || isLive) {
+      registerSession('private_group_call', group.id);
+    }
+    return () => {
+      unregisterSession('private_group_call', group.id);
+    };
+  }, [isConnected, isLive, group.id]);
+
   // Auto-start
   const hasAutoStarted = useRef(false);
   useEffect(() => {
