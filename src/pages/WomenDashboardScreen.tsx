@@ -231,6 +231,7 @@ const WomenDashboardScreen = () => {
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
   const [activeTab, setActiveTab] = useState("online");
+  const matchesFetchedRef = useRef(false);
   const [onlineSubTab, setOnlineSubTab] = useState<"recharged" | "nobalance">("recharged");
   const [womenActiveChats, setWomenActiveChats] = useState<Array<{
     chatId: string;
