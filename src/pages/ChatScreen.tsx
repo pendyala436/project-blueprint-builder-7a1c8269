@@ -1588,7 +1588,7 @@ const ChatScreen = () => {
           {/* Chat partner info - clickable to view profile */}
           {chatPartner && (
             <div 
-              className="flex items-center gap-3 flex-1 cursor-pointer"
+              className="flex items-center gap-2.5 flex-1 cursor-pointer"
               onClick={() => navigate(`/profile/${chatPartner.userId}`)}
             >
               {/* Partner avatar with online indicator */}
@@ -1597,33 +1597,28 @@ const ChatScreen = () => {
                   <img 
                     src={chatPartner.avatar} 
                     alt={chatPartner.fullName}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/20"
                   />
                 ) : (
-                  // Fallback avatar with initial
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary">
+                  <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                    <span className="text-lg font-bold text-primary-foreground">
                       {chatPartner.fullName.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                {/* Online status indicator dot */}
-                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background ${
+                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-primary ${
                   chatPartner.isOnline ? "bg-online" : "bg-muted-foreground"
                 }`} />
               </div>
 
-              {/* Partner name and status */}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{chatPartner.fullName}</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {/* Online/Offline status text */}
+                <p className="font-semibold text-primary-foreground truncate">{chatPartner.fullName}</p>
+                <p className="text-xs text-primary-foreground/70 flex items-center gap-1">
                   {chatPartner.isOnline ? (
-                    <span className="text-online">Online</span>
+                    <span className="text-primary-foreground/90">Online</span>
                   ) : (
                     <span>Offline</span>
                   )}
-                  {/* Show language if different from current user */}
                   {chatPartner.preferredLanguage !== currentUserLanguage && (
                     <>
                       <span>•</span>
