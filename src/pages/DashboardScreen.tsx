@@ -1260,7 +1260,7 @@ const DashboardScreen = () => {
     );
   }
 
-  const [activeTab, setActiveTab] = useState("chats");
+  // activeTab state is declared at top of component
 
   const menTabs = getMenTabs(activeChatCount || undefined, sameLanguageWomen.length + indianTranslatedWomen.length || undefined, matchedWomen.length || undefined);
 
