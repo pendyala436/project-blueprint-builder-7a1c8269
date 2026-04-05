@@ -984,10 +984,10 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Get the other user's ID from each match
-      const otherUserIds = matches.map(m => 
+      // Get unique other user IDs from each match (deduplicate)
+      const otherUserIds = [...new Set(matches.map(m => 
         m.user_id === userId ? m.matched_user_id : m.user_id
-      );
+      ))] as string[];
 
       // Fetch profiles for matched users via secure RPC
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
@@ -1002,9 +1002,12 @@ const DashboardScreen = () => {
       const statusMap = new Map((statuses as any[] || []).map(s => [s.user_id, s.is_online]));
       const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
 
+      const seenUserIds = new Set<string>();
       const matched: MatchedWoman[] = matches
         .map(m => {
           const otherId = m.user_id === userId ? m.matched_user_id : m.user_id;
+          if (seenUserIds.has(otherId)) return null;
+          seenUserIds.add(otherId);
           const profile = profileMap.get(otherId);
           if (!profile || profile.gender?.toLowerCase() !== 'female') return null;
           return {
