@@ -1342,7 +1342,7 @@ const DashboardScreen = () => {
                   onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
                       {/* Audio Call - same language only */}
