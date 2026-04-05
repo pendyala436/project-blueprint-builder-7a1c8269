@@ -71,7 +71,7 @@ export const useChatPricing = () => {
           audioRatePerMinute:        menAudio,
           audioWomenEarningRate:     parseFloat((menAudio / 2).toFixed(2)),
           groupCallRatePerMinute:    menGroup,
-          groupCallWomenEarningRate: parseFloat((menGroup / 2).toFixed(2)),
+          groupCallWomenEarningRate: Number(data.group_call_women_earning_rate) || DEFAULT_PRICING.groupCallWomenEarningRate,
           minWithdrawalBalance:      Number(data.min_withdrawal_balance) || DEFAULT_PRICING.minWithdrawalBalance,
           currency:                  data.currency || DEFAULT_PRICING.currency
         });

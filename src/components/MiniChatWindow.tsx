@@ -30,9 +30,8 @@ import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 
-const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
-const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
-const LOGOUT_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes - close chat and logout
+const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
+const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
 
 interface Message {
   id: string;

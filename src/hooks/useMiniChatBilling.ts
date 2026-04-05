@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000;
-const BILLING_WARNING_MS = 2 * 60 * 1000;
-const LOGOUT_TIMEOUT_MS = 15 * 60 * 1000;
+const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
+const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
 
 interface UseMiniChatBillingOptions {
   chatId: string;
