@@ -56,7 +56,8 @@ import {
   ChevronUp,
   ChevronDown,
   Phone,
-  User
+  User,
+  Loader2
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
