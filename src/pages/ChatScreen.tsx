@@ -1780,8 +1780,8 @@ const ChatScreen = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Stop Chat Confirmation Dialog - Only for men */}
-      {currentUserGender === "male" && (
+      {/* Stop Chat Confirmation Dialog - Both genders */}
+      {(
         <AlertDialog open={showStopChatDialog} onOpenChange={setShowStopChatDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
