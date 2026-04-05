@@ -255,14 +255,15 @@ const AdminUserManagement = () => {
 
   const loadStats = async () => {
     try {
+      // FIX #2: Use female_profiles for women-specific counts (consistent with AdminNav)
       const [total, active, blocked, suspended, pending, approved, aiApproved] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "active"),
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "blocked"),
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("account_status", "suspended"),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending").ilike("gender", "female"),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("approval_status", "approved").ilike("gender", "female"),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("ai_approved", true).ilike("gender", "female"),
+        supabase.from("female_profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
+        supabase.from("female_profiles").select("*", { count: "exact", head: true }).eq("approval_status", "approved"),
+        supabase.from("female_profiles").select("*", { count: "exact", head: true }).eq("ai_approved", true),
       ]);
       setStats({
         totalUsers: total.count || 0,

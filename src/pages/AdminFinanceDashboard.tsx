@@ -92,14 +92,15 @@ const AdminFinanceDashboard = () => {
   const loadFinanceData = useCallback(async () => {
     setLoading(true);
     try {
-      const days = dateRange === "all" ? 3650 : parseInt(dateRange); // 10 years for "all time"
+      const days = dateRange === "all" ? 365 : parseInt(dateRange); // FIX #3: Cap to 1 year to avoid perf issues
       const startDate = startOfDay(subDays(new Date(), days)).toISOString();
       const endDate = endOfDay(new Date()).toISOString();
-      // Load ledger transactions — paginate to avoid 1000-row Supabase limit
+      // Load ledger transactions — paginate with a cap to avoid unbounded loops
       let allLedgerTxns: LedgerTxn[] = [];
       let ledgerPage = 0;
       const BATCH_SIZE = 500;
-      while (true) {
+      const MAX_PAGES = 10; // FIX #3: Cap at 5000 records max to prevent runaway queries
+      while (ledgerPage < MAX_PAGES) {
         const { data: batch, error: ledgerError } = await supabase
           .from("ledger_transactions")
           .select("*")
