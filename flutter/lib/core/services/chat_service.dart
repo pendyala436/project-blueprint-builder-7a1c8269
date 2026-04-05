@@ -27,9 +27,14 @@ class ChatService {
       }
 
       return ChatPricingModel(
-        ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 4.0,  // ₹4/min chat
-        womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 2.0, // Indian women earn ₹2/min for chat
-        videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 8.0, // ₹8/min video
+        ratePerMinute: (response['rate_per_minute'] as num?)?.toDouble() ?? 4.0,
+        womenEarningRate: (response['women_earning_rate'] as num?)?.toDouble() ?? 2.0,
+        videoRatePerMinute: (response['video_rate_per_minute'] as num?)?.toDouble() ?? 8.0,
+        videoWomenEarningRate: (response['video_women_earning_rate'] as num?)?.toDouble() ?? 4.0,
+        audioRatePerMinute: (response['audio_rate_per_minute'] as num?)?.toDouble() ?? 6.0,
+        audioWomenEarningRate: (response['audio_women_earning_rate'] as num?)?.toDouble() ?? 3.0,
+        groupCallRatePerMinute: (response['group_call_rate_per_minute'] as num?)?.toDouble() ?? 4.0,
+        groupCallWomenEarningRate: (response['group_call_women_earning_rate'] as num?)?.toDouble() ?? 0.50,
         videoWomenEarningRate: (response['video_women_earning_rate'] as num?)?.toDouble() ?? 4.0, // ₹4/min video earning
         minWithdrawalBalance: (response['min_withdrawal_balance'] as num?)?.toDouble() ?? 5000.0,
         currency: response['currency'] as String? ?? 'INR',

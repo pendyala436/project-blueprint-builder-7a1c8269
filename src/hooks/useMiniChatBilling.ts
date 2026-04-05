@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000;
-const BILLING_WARNING_MS = 2 * 60 * 1000;
-const LOGOUT_TIMEOUT_MS = 15 * 60 * 1000;
+const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
+const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
 
 interface UseMiniChatBillingOptions {
   chatId: string;
@@ -108,43 +107,25 @@ export const useMiniChatBilling = ({
     }
   }, [messages, currentUserId, billingStarted]);
 
-  // Effect 3: Resume billing when both users reply after pause
+  // Effect 3: Inactivity warning and auto-close after 2 minutes idle
   useEffect(() => {
-    if (isBillingPaused && billingStarted) {
-      const userRepliedAfterPause = lastUserMessageTime > lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000;
-      const partnerRepliedAfterPause = lastPartnerMessageTime > lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000;
-
-      if (userRepliedAfterPause && partnerRepliedAfterPause) {
-        setIsBillingPaused(false);
-        setLastActivityTime(Date.now());
-        startBilling();
-      }
-    }
-  }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime, startBilling]);
-
-  // Effect 4: Inactivity warning, billing pause, and logout timeout
-  useEffect(() => {
-    if (!billingStarted || isBillingPaused) return;
+    if (!billingStarted) return;
 
     const warningInterval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
-      if (timeSinceActivity > BILLING_WARNING_MS && timeSinceActivity < BILLING_PAUSE_TIMEOUT_MS) {
-        const remainingSeconds = Math.ceil((BILLING_PAUSE_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Billing pauses in ${remainingSeconds}s - send a message!`);
+      if (timeSinceActivity > IDLE_WARNING_MS && timeSinceActivity < IDLE_CLOSE_TIMEOUT_MS) {
+        const remainingSeconds = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 1000);
+        setInactiveWarning(`Chat closes in ${remainingSeconds}s - send a message!`);
       } else {
         setInactiveWarning(null);
       }
     }, 1000);
 
+    // Auto-close session after 2 minutes idle
     if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
-    billingPauseTimeoutRef.current = setTimeout(() => {
+    billingPauseTimeoutRef.current = setTimeout(async () => {
       setInactiveWarning(null);
       stopBillingTimers();
-      setIsBillingPaused(true);
-    }, BILLING_PAUSE_TIMEOUT_MS);
-
-    if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
-    logoutTimeoutRef.current = setTimeout(async () => {
       try {
         await supabase
           .from("active_chat_sessions")
@@ -154,21 +135,19 @@ export const useMiniChatBilling = ({
         console.error("Error during inactivity close:", error);
       }
       onClose();
-    }, LOGOUT_TIMEOUT_MS);
+    }, IDLE_CLOSE_TIMEOUT_MS);
 
     return () => {
       clearInterval(warningInterval);
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
-      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     };
-  }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused, stopBillingTimers]);
+  }, [lastActivityTime, billingStarted, sessionId, onClose, stopBillingTimers]);
 
   // Cleanup all timers on unmount
   useEffect(() => {
     return () => {
       stopBillingTimers();
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
-      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     };
   }, [stopBillingTimers]);
 

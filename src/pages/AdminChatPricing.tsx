@@ -40,15 +40,17 @@ import { useAdminAccess } from "@/hooks/useAdminAccess";
  * Video Call (1-to-1, same language only):
  *   - Men pay ₹8/min  |  Women earn ₹4/min  (woman = half of man)
  *   - Same primary/preferred language required for matching
- *   - Indian and non-Indian men allowed
+ *
+ * Audio Call (1-to-1, P2P):
+ *   - Men pay ₹6/min  |  Women earn ₹3/min  (woman = half of man)
  *
  * Private Group Call (hosted by Indian women only):
  *   - Each man pays ₹4/min individually
- *   - Host (Indian woman) earns ₹2/min per active male participant
+ *   - Host (Indian woman) earns ₹0.50/min per active male participant
  *   - Any man can join (Indian or non-Indian)
- *   - No duplicate per-minute billing — 50s cooldown guard in DB
  *
- * All sessions: women earn exactly half what men pay.
+ * All chat/video/audio: women earn exactly half what men pay.
+ * Group calls: women earn ₹0.50/min per man (admin-configurable).
  * Minimum withdrawal: ₹5,000 (Indian women only).
  * All records retained for 6 months in admin.
  */
@@ -107,13 +109,14 @@ const AdminChatPricing = () => {
         const menChat = data.rate_per_minute ?? 4;
         const menVideo = (data as any).video_rate_per_minute ?? 8;
         const menGroup = (data as any).group_call_rate_per_minute ?? 4;
+        const groupWomenEarn = (data as any).group_call_women_earning_rate ?? 0.50;
         setFormData({
           rate_per_minute: menChat.toString(),
           women_earning_rate: (menChat / 2).toFixed(2),
           video_rate_per_minute: menVideo.toString(),
           video_women_earning_rate: (menVideo / 2).toFixed(2),
           group_call_rate_per_minute: menGroup.toString(),
-          group_call_women_earning_rate: (menGroup / 2).toFixed(2),
+          group_call_women_earning_rate: groupWomenEarn.toFixed(2),
           min_withdrawal_balance: (data.min_withdrawal_balance ?? 5000).toString()
         });
       } else if (!pricing) {
@@ -125,7 +128,7 @@ const AdminChatPricing = () => {
           video_rate_per_minute: "8.00",     // men video: ₹8/min
           video_women_earning_rate: "4.00",  // women video: ₹4/min (half)
           group_call_rate_per_minute: "4.00",       // men group: ₹4/min each
-          group_call_women_earning_rate: "2.00",     // women group: ₹2/min per man (half)
+          group_call_women_earning_rate: "0.50",     // women group: ₹0.50/min per man
           min_withdrawal_balance: "5000"     // min withdrawal: ₹5,000
         });
       }
@@ -175,7 +178,7 @@ const AdminChatPricing = () => {
     // Compute women's rates from men's rates — no manual override allowed.
     const womenEarningRate      = parseFloat((ratePerMinute / 2).toFixed(2));
     const videoWomenEarningRate = parseFloat((videoRatePerMinute / 2).toFixed(2));
-    const groupCallWomenRate    = parseFloat((groupCallRate / 2).toFixed(2));
+    const groupCallWomenRate    = parseFloat(formData.group_call_women_earning_rate) || 0.50;
 
     setIsSaving(true);
     try {
@@ -245,10 +248,10 @@ const AdminChatPricing = () => {
     }
   };
 
-  // Women always earn exactly half — these are derived, never independently editable.
+  // Chat & video: women earn half. Group: women earn admin-configured rate (default ₹0.50).
   const chatWomenRate  = (parseFloat(formData.rate_per_minute  || "0") / 2);
   const videoWomenRate = (parseFloat(formData.video_rate_per_minute  || "0") / 2);
-  const groupWomenRate = (parseFloat(formData.group_call_rate_per_minute || "0") / 2);
+  const groupWomenRate = parseFloat(formData.group_call_women_earning_rate || "0.50");
 
   const chatPlatformProfit  = parseFloat(formData.rate_per_minute  || "0") - chatWomenRate;
   const videoPlatformProfit = parseFloat(formData.video_rate_per_minute  || "0") - videoWomenRate;
@@ -290,11 +293,12 @@ const AdminChatPricing = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
-            <p>• <strong>Chat:</strong> Men (Indian &amp; non-Indian) pay per minute. Women earn half per active chat. Max 3 simultaneous chats per woman.</p>
-            <p>• <strong>Video Call:</strong> 1-to-1, same language only. Men pay double what women earn.</p>
-            <p>• <strong>Group Call:</strong> Hosted by Indian women only. Each man charged individually. Host earns half per active man per minute.</p>
-            <p>• <strong>Gifts:</strong> 100% of gift price deducted from man's wallet. No balance = no gift. Women receive exactly half the gift price as earnings. Platform keeps the other half.</p>
-            <p>• <strong>All sessions:</strong> No duplicate billing. Indian women only earn. Min withdrawal ₹5,000. Records stored 6 months.</p>
+            <p>• <strong>Chat:</strong> Men pay ₹4/min. Women earn ₹2/min (half). Billing starts only when both reply. 2 min idle → auto-close.</p>
+            <p>• <strong>Video Call:</strong> 1-to-1, P2P. Men pay ₹8/min, women earn ₹4/min (half).</p>
+            <p>• <strong>Audio Call:</strong> 1-to-1, P2P. Men pay ₹6/min, women earn ₹3/min (half).</p>
+            <p>• <strong>Group Call:</strong> Each man pays ₹4/min. Host earns ₹0.50/min per man.</p>
+            <p>• <strong>Gifts:</strong> 100% deducted from man. Women receive 50%. Platform keeps 50%.</p>
+            <p>• <strong>All sessions:</strong> No duplicate billing. Min withdrawal ₹5,000.</p>
           </CardContent>
         </Card>
 
@@ -532,7 +536,7 @@ const AdminChatPricing = () => {
                 Private Group Call Pricing
               </CardTitle>
               <CardDescription>
-                Hosted by Indian women. Each man charged individually. Host earns half per man per minute.
+                Hosted by Indian women. Each man charged individually. Host earns ₹0.50/min per man (configurable).
               </CardDescription>
             </div>
             {!isEditingGroupRates && pricing && (
@@ -568,21 +572,23 @@ const AdminChatPricing = () => {
                 <div className="space-y-2">
                   <Label htmlFor="groupWomenRate" className="flex items-center gap-2">
                     Host (Indian Woman) Earning Per Man Per Minute (INR)
-                    <Badge variant="secondary" className="text-xs font-normal">Auto: always half of men</Badge>
+                    <Badge variant="secondary" className="text-xs font-normal">Default: ₹0.50</Badge>
                   </Label>
                   <div className="relative">
                     <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="groupWomenRate"
                       type="number"
-                      className="pl-10 bg-muted cursor-not-allowed"
-                      value={groupWomenRate.toFixed(2)}
-                      readOnly
-                      tabIndex={-1}
+                      step="0.01"
+                      min="0.01"
+                      className="pl-10"
+                      value={formData.group_call_women_earning_rate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, group_call_women_earning_rate: e.target.value }))}
+                      placeholder="0.50"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Automatically half of men's rate. With N active men: host earns ₹{groupWomenRate.toFixed(2)} × N/min.
+                    With N active men: host earns ₹{groupWomenRate.toFixed(2)} × N/min.
                   </p>
                 </div>
 

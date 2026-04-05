@@ -30,9 +30,8 @@ import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { GiftSendButton } from "@/components/GiftSendButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 
-const BILLING_PAUSE_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes - pause billing
-const BILLING_WARNING_MS = 2 * 60 * 1000; // 2 minutes - show billing pause warning
-const LOGOUT_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes - close chat and logout
+const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
+const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
 
 interface Message {
   id: string;
@@ -303,38 +302,17 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId]);
 
-  useEffect(() => {
-    if (isBillingPaused && billingStarted) {
-      const now = Date.now();
-      const userRepliedAfterPause = lastUserMessageTime > (lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000);
-      const partnerRepliedAfterPause = lastPartnerMessageTime > (lastActivityTime + BILLING_PAUSE_TIMEOUT_MS - 30000);
-      
-      if (userRepliedAfterPause && partnerRepliedAfterPause) {
-        setIsBillingPaused(false);
-        setLastActivityTime(now);
-        startBilling();
-        toast({
-          title: "Billing Resumed",
-          description: "Both users are active again. Charging/earning resumed.",
-        });
-      }
-    }
-  }, [lastUserMessageTime, lastPartnerMessageTime, isBillingPaused, billingStarted, lastActivityTime]);
-
+  // Inactivity warning and auto-close after 2 minutes idle
   useEffect(() => {
     if (!billingStarted) return;
 
     const warningInterval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       
-      if (!isBillingPaused && timeSinceActivity >= BILLING_WARNING_MS && timeSinceActivity < BILLING_PAUSE_TIMEOUT_MS) {
-        const remainingSecs = Math.ceil((BILLING_PAUSE_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Billing pauses in ${remainingSecs}s`);
-      } 
-      else if (isBillingPaused && timeSinceActivity < LOGOUT_TIMEOUT_MS) {
-        const remainingMins = Math.ceil((LOGOUT_TIMEOUT_MS - timeSinceActivity) / 60000);
-        setInactiveWarning(`Billing paused. Logout in ${remainingMins}m if no activity`);
-      } else if (!isBillingPaused) {
+      if (timeSinceActivity >= IDLE_WARNING_MS && timeSinceActivity < IDLE_CLOSE_TIMEOUT_MS) {
+        const remainingSecs = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 1000);
+        setInactiveWarning(`Chat closes in ${remainingSecs}s - send a message!`);
+      } else {
         setInactiveWarning(null);
       }
     }, 1000);
@@ -343,33 +321,20 @@ const MiniChatWindow = ({
       clearTimeout(billingPauseTimeoutRef.current);
     }
 
-    if (!isBillingPaused) {
-      billingPauseTimeoutRef.current = setTimeout(() => {
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        if (heartbeatRef.current) {
-          clearInterval(heartbeatRef.current);
-          heartbeatRef.current = null;
-        }
-        
-        setIsBillingPaused(true);
-        toast({
-          title: "Billing Paused",
-          description: "No activity for 3 minutes. Charging/earning stopped. Chat remains open.",
-        });
-      }, BILLING_PAUSE_TIMEOUT_MS);
-    }
-
-    if (logoutTimeoutRef.current) {
-      clearTimeout(logoutTimeoutRef.current);
-    }
-
-    logoutTimeoutRef.current = setTimeout(async () => {
+    // Auto-close session after 2 minutes idle
+    billingPauseTimeoutRef.current = setTimeout(async () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      
       toast({
         title: "Session Ended",
-        description: "No activity for 15 minutes. Logging out...",
+        description: "No activity for 2 minutes. Chat session closed automatically.",
       });
       
       try {
@@ -378,24 +343,21 @@ const MiniChatWindow = ({
           .update({
             status: "ended",
             ended_at: new Date().toISOString(),
-            end_reason: "inactivity_logout"
+            end_reason: "inactivity_timeout"
           })
           .eq("id", sessionId);
-        
-        await supabase.auth.signOut();
       } catch (error) {
-        console.error("Error during inactivity logout:", error);
+        console.error("Error during inactivity close:", error);
       }
       
       onClose();
-    }, LOGOUT_TIMEOUT_MS);
+    }, IDLE_CLOSE_TIMEOUT_MS);
 
     return () => {
       clearInterval(warningInterval);
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
-      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     };
-  }, [lastActivityTime, billingStarted, sessionId, onClose, isBillingPaused]);
+  }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Translate history messages in background using live Lingva translation
   const translateHistoryMessages = useCallback(async (msgs: Message[], viewerLanguage: string, userId: string, partnerLang: string) => {

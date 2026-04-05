@@ -31,7 +31,7 @@ const DEFAULT_PRICING: ChatPricing = {
   audioRatePerMinute: 6,           // men pay ₹6/min audio
   audioWomenEarningRate: 3,        // women earn ₹3/min audio (half of men)
   groupCallRatePerMinute: 4,       // each man pays ₹4/min group call
-  groupCallWomenEarningRate: 2,    // host earns ₹2/min per man (half of men)
+  groupCallWomenEarningRate: 0.50, // host earns ₹0.50/min per man
   minWithdrawalBalance: 5000,      // min ₹5000 to withdraw
   currency: 'INR'
 };
@@ -71,7 +71,7 @@ export const useChatPricing = () => {
           audioRatePerMinute:        menAudio,
           audioWomenEarningRate:     parseFloat((menAudio / 2).toFixed(2)),
           groupCallRatePerMinute:    menGroup,
-          groupCallWomenEarningRate: parseFloat((menGroup / 2).toFixed(2)),
+          groupCallWomenEarningRate: Number(data.group_call_women_earning_rate) || DEFAULT_PRICING.groupCallWomenEarningRate,
           minWithdrawalBalance:      Number(data.min_withdrawal_balance) || DEFAULT_PRICING.minWithdrawalBalance,
           currency:                  data.currency || DEFAULT_PRICING.currency
         });
