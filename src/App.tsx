@@ -25,7 +25,13 @@ const queryClient = new QueryClient({
     },
   }),
   defaultOptions: {
-    queries: { retry: 2, staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 },
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    },
   },
 });
 

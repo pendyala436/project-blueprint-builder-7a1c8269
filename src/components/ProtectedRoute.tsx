@@ -188,16 +188,8 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
     return () => clearInterval(interval);
   }, [authorized, user?.id, requiredRole, navigate]);
 
-  // Sign-out listener + back-button guard for admin routes
+  // Back-button guard — sign-out is already handled by module-level listener & useAuthReady
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        checkedForUser.current = null;
-        setAuthorized(false);
-        navigate('/', { replace: true });
-      }
-    });
-
     const handlePopState = () => {
       if (isSignedOut()) {
         window.history.replaceState(null, '', '/');
@@ -205,12 +197,17 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       }
     };
     window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [navigate]);
+
+  // React to sign-out via useAuthReady (no extra subscription needed)
+  useEffect(() => {
+    if (isReady && !user && authorized) {
+      checkedForUser.current = null;
+      setAuthorized(false);
+      navigate('/', { replace: true });
+    }
+  }, [isReady, user, authorized, navigate]);
 
   if (!isReady || checking) {
     return (

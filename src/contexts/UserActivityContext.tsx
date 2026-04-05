@@ -15,7 +15,9 @@ const THROTTLE_MS = 5000; // 5s throttle — matches both existing implementatio
 export const UserActivityProvider = ({ children }: { children: React.ReactNode }) => {
   const subscribersRef = useRef<Set<() => void>>(new Set());
   const lastActivityRef = useRef(Date.now());
-  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  // Use ref instead of state to avoid tree-wide re-renders every 5s
+  const [lastActivityTime] = useState(() => Date.now());
+  const lastActivityTimeRef = useRef(lastActivityTime);
 
   const subscribe = useCallback((callback: () => void) => {
     subscribersRef.current.add(callback);
@@ -30,7 +32,7 @@ export const UserActivityProvider = ({ children }: { children: React.ReactNode }
       if (now - lastEventTime < THROTTLE_MS) return;
       lastEventTime = now;
       lastActivityRef.current = now;
-      setLastActivityTime(now);
+      lastActivityTimeRef.current = now;
       subscribersRef.current.forEach(cb => cb());
     };
 
@@ -53,8 +55,12 @@ export const UserActivityProvider = ({ children }: { children: React.ReactNode }
     };
   }, []);
 
+  // Stable context value — never changes identity, avoids consumer re-renders
+  const valueRef = useRef({ lastActivityTime, subscribe });
+  valueRef.current.lastActivityTime = lastActivityTimeRef.current;
+
   return (
-    <UserActivityContext.Provider value={{ lastActivityTime, subscribe }}>
+    <UserActivityContext.Provider value={valueRef.current}>
       {children}
     </UserActivityContext.Provider>
   );
