@@ -1556,10 +1556,9 @@ const DashboardScreen = () => {
               <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                 <AvatarImage src={chat.partnerPhoto || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                  {chat.partnerName.charAt(0)}
+                  {chat.partnerName?.charAt(0) || <User className="w-5 h-5" />}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-online" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
