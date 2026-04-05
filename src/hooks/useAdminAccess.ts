@@ -10,7 +10,7 @@ const CACHE_TTL = 300_000; // 5 minutes
 let cachedResult: { isAdmin: boolean; email: string; userId: string; timestamp: number } | null = null;
 let pendingPromise: Promise<{ isAdmin: boolean; email: string; userId: string; timestamp: number } | null> | null = null;
 
-const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; userId: string } | null> => {
+const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; userId: string; timestamp: number } | null> => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
 
