@@ -84,6 +84,7 @@ export const useP2PCall = ({
   const sessionIdRef = useRef<string | null>(null);
   const lastBilledMinuteRef = useRef<number>(0);
   const billingInProgressRef = useRef<boolean>(false);
+  const callStatusRef = useRef<string>('idle');
 
   const wait = useCallback((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)), []);
 
