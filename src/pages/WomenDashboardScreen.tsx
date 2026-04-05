@@ -1247,7 +1247,7 @@ const WomenDashboardScreen = () => {
     );
   }
 
-  const womenTabs = getWomenTabs(activeChatCount || undefined);
+  const womenTabs = getWomenTabs(activeChatCount || undefined, matchedMen.length || undefined);
 
   const renderChatsTab = () => (
     <div className="flex-1 overflow-y-auto">
@@ -1449,43 +1449,6 @@ const WomenDashboardScreen = () => {
         </>
       )}
 
-      {/* Matches */}
-      {matchedMen.length > 0 && (
-        <div className="px-4 py-3 border-t border-border/30">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <Heart className="h-4 w-4 text-primary" />
-              Matches ({matchedMen.length})
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedMen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
-              <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
-            </Button>
-          </div>
-          {matchedMen.map((man) => (
-            <WhatsAppUserCard
-              key={man.matchId}
-              name={man.fullName || "User"}
-              photoUrl={man.photoUrl}
-              age={man.age}
-              language={man.primaryLanguage}
-              country={man.country}
-              isOnline={man.isOnline}
-              onClick={() => navigate(`/profile/${man.userId}`)}
-              actions={
-                hasGoldenBadge ? (
-                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(man.userId); }}>
-                    <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                  </Button>
-                ) : (
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
-                    <Eye className="w-3.5 h-3.5 text-primary" />
-                  </Button>
-                )
-              }
-            />
-          ))}
-        </div>
-      )}
 
       {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && notifications.length === 0 && (
         <div className="text-center py-16">
@@ -1526,6 +1489,55 @@ const WomenDashboardScreen = () => {
         <div className="text-center py-10">
           <Video className="w-10 h-10 text-muted-foreground/20 mx-auto mb-2" />
           <p className="text-xs text-muted-foreground">Loading groups...</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderMatchesTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <Heart className="h-4 w-4 text-primary" />
+          Your Matches ({matchedMen.length})
+        </span>
+        <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedMen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
+          <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
+        </Button>
+      </div>
+      {loadingMatches ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : matchedMen.length > 0 ? (
+        matchedMen.map((man) => (
+          <WhatsAppUserCard
+            key={man.matchId}
+            name={man.fullName || "User"}
+            photoUrl={man.photoUrl}
+            age={man.age}
+            language={man.primaryLanguage}
+            country={man.country}
+            isOnline={man.isOnline}
+            onClick={() => navigate(`/profile/${man.userId}`)}
+            actions={
+              hasGoldenBadge ? (
+                <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(man.userId); }}>
+                  <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
+                  <Eye className="w-3.5 h-3.5 text-primary" />
+                </Button>
+              )
+            }
+          />
+        ))
+      ) : (
+        <div className="text-center py-16">
+          <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">No matches yet</p>
+          <p className="text-muted-foreground/60 text-xs mt-1">Matches will appear here when men connect with you</p>
         </div>
       )}
     </div>
@@ -1689,6 +1701,7 @@ const WomenDashboardScreen = () => {
       />
 
       {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
