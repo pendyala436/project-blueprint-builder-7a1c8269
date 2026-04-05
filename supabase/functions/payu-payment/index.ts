@@ -49,6 +49,12 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Add 3% transaction fee on top of recharge amount
+      const TRANSACTION_FEE_RATE = 0.03;
+      const feeAmount = Math.round(amount * TRANSACTION_FEE_RATE * 100) / 100;
+      const totalCharged = Math.round((amount + feeAmount) * 100) / 100;
+      console.log(`[PayU] Recharge ₹${amount} + 3% fee ₹${feeAmount} = Total ₹${totalCharged}`);
+
       // Get user details for PayU
       const { data: profile } = await supabase
         .from("male_profiles")
@@ -65,13 +71,13 @@ Deno.serve(async (req) => {
       const txnid = `MEOW_${userId.substring(0, 8)}_${Date.now()}`;
       const productinfo = "Wallet Recharge";
 
-      // Create pending recharge record
+      // Create pending recharge record (store wallet credit amount, not total charged)
       const { error: insertErr } = await supabase
         .from("pending_recharges")
         .insert({
           txn_id: txnid,
           user_id: userId,
-          amount: Number(amount),
+          amount: Number(amount),  // Only the wallet credit amount
           gateway: "payu",
           status: "pending",
         });
@@ -80,8 +86,8 @@ Deno.serve(async (req) => {
         console.error("Failed to create pending recharge:", insertErr);
       }
 
-      // Generate PayU hash
-      const hashString = `${merchantKey}|${txnid}|${amount}.00|${productinfo}|${firstname}|${email}|||||||||||${salt}`;
+      // Generate PayU hash with total amount (recharge + 3% fee)
+      const hashString = `${merchantKey}|${txnid}|${totalCharged.toFixed(2)}|${productinfo}|${firstname}|${email}|||||||||||${salt}`;
       const hash = await sha512(hashString);
 
       // PayU payment form data
@@ -94,7 +100,7 @@ Deno.serve(async (req) => {
       const paymentData = {
         key: merchantKey,
         txnid,
-        amount: `${Number(amount).toFixed(2)}`,
+        amount: `${totalCharged.toFixed(2)}`,  // Men pay amount + 3% fee
         productinfo,
         firstname,
         email,
