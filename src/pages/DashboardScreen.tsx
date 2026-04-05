@@ -70,8 +70,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
-import MenFreeMinutesBadge from "@/components/MenFreeMinutesBadge";
-import { useMenFreeMinutes } from "@/hooks/useMenFreeMinutes";
+// MenFreeMinutesBadge removed - free minutes feature removed
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 // LanguageCommunityPanel removed - language chat is women-only

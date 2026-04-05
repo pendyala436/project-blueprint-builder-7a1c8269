@@ -65,7 +65,7 @@ import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
-import DirectVideoCallButton from "@/components/DirectVideoCallButton";
+// DirectVideoCallButton removed - women cannot initiate calls
 
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { WhatsAppHeader } from "@/components/WhatsAppHeader";
