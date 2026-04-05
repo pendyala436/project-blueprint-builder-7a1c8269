@@ -121,12 +121,6 @@ const AdminUserLookup = () => {
     loadAllUsers();
   }, []);
 
-  // Real-time subscription for profiles updates
-  useRealtimeSubscription({
-    table: "profiles",
-    onUpdate: loadAllUsers,
-  });
-
   // #22: Debounce search to prevent excessive DB queries
   const debouncedSearch = useDebounce(searchQuery, 400);
 
