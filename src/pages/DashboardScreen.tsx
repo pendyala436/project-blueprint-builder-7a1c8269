@@ -844,7 +844,6 @@ const DashboardScreen = () => {
   };
 
   const fetchOnlineWomen = async (language: string) => {
-    console.log("[Dashboard] fetchOnlineWomen called with language:", language);
     setLoadingOnlineWomen(true);
     try {
       // Get ONLY online user IDs - strict online check
@@ -857,7 +856,6 @@ const DashboardScreen = () => {
       
       // If no users online, show empty lists
       if (onlineUserIds.length === 0) {
-        console.log("[Dashboard] No online users found");
         setSameLanguageWomen([]);
         setIndianTranslatedWomen([]);
         setLoadingOnlineWomen(false);
@@ -876,44 +874,41 @@ const DashboardScreen = () => {
       const onlineWomenList: OnlineWoman[] = femaleProfiles || [];
 
       if (onlineWomenList.length === 0) {
-        console.log("[Dashboard] No online women found");
         setSameLanguageWomen([]);
         setIndianTranslatedWomen([]);
         setLoadingOnlineWomen(false);
         return;
       }
 
-      // Get active chat counts for load balancing
+      // Fetch chat counts, availability, and languages in PARALLEL
       const womenUserIds = onlineWomenList.map(w => w.user_id);
-      const { data: chatCounts } = await supabase
-        .from("active_chat_sessions")
-        .select("woman_user_id, status")
-        .in("woman_user_id", womenUserIds)
-        .in("status", ["active", "pending"]);
+      const [chatCountsRes, availabilityRes, userLanguagesRes] = await Promise.all([
+        supabase
+          .from("active_chat_sessions")
+          .select("woman_user_id, status")
+          .in("woman_user_id", womenUserIds)
+          .in("status", ["active", "pending"]),
+        supabase
+          .from("women_availability")
+          .select("user_id, is_available, current_chat_count, max_concurrent_chats")
+          .in("user_id", womenUserIds),
+        supabase
+          .from("user_languages")
+          .select("user_id, language_name")
+          .in("user_id", womenUserIds),
+      ]);
 
       const chatCountMap = new Map<string, number>();
-      chatCounts?.forEach(chat => {
+      chatCountsRes.data?.forEach(chat => {
         const count = chatCountMap.get(chat.woman_user_id) || 0;
         chatCountMap.set(chat.woman_user_id, count + 1);
       });
 
-      // Get availability data
-      const { data: availabilityData } = await supabase
-        .from("women_availability")
-        .select("user_id, is_available, current_chat_count, max_concurrent_chats")
-        .in("user_id", womenUserIds);
-
       const availabilityMap = new Map(
-        (availabilityData as any[] || []).map(a => [a.user_id, a])
+        (availabilityRes.data as any[] || []).map(a => [a.user_id, a])
       );
 
-      // Get languages
-      const { data: userLanguages } = await supabase
-        .from("user_languages")
-        .select("user_id, language_name")
-        .in("user_id", womenUserIds);
-
-      const languageMap = new Map((userLanguages as any[] || []).map(l => [l.user_id, l.language_name as string]));
+      const languageMap = new Map((userLanguagesRes.data as any[] || []).map(l => [l.user_id, l.language_name as string]));
 
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
@@ -931,17 +926,13 @@ const DashboardScreen = () => {
 
       // Sort: Badged (earning eligible) women first, then by availability and load
       const sortByBadgeAndLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
-        // First: Badged (earning eligible) women on top
         if (a.is_earning_eligible !== b.is_earning_eligible) {
           return a.is_earning_eligible ? -1 : 1;
         }
-        // Second: available vs not available
         if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
-        // Third: not at max capacity
         const aAtMax = a.active_chat_count >= a.max_chats;
         const bAtMax = b.active_chat_count >= b.max_chats;
         if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
-        // Fourth: by chat count (lower first = less load)
         return a.active_chat_count - b.active_chat_count;
       };
 
@@ -956,7 +947,7 @@ const DashboardScreen = () => {
         if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
           if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
         }
-        if (matchFilters.verifiedOnly) return true; // verified field not in RPC result
+        if (matchFilters.verifiedOnly) return true;
         return true;
       });
 
@@ -969,13 +960,10 @@ const DashboardScreen = () => {
         .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
         .sort(sortByBadgeAndLoad);
 
-      console.log("[Dashboard] Online same-language women:", sameLanguage.length);
-      console.log("[Dashboard] Online other-language women:", otherWomen.length);
       setSameLanguageWomen(sameLanguage.slice(0, 10));
       setIndianTranslatedWomen(otherWomen.slice(0, 15));
     } catch (error) {
       console.error("Error fetching online women:", error);
-      // Non-critical - online users list, will retry
       setSameLanguageWomen([]);
       setIndianTranslatedWomen([]);
     } finally {
