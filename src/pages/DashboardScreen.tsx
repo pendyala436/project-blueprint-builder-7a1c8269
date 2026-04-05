@@ -248,6 +248,11 @@ const DashboardScreen = () => {
     isManuallyOffline,
     toggleOnlineStatus 
   } = useActivityBasedStatus({
+  const { playMessageSound } = useMessageSound();
+  const {
+    isOnline,
+    isManuallyOffline,
+    toggleOnlineStatus
     userId: currentUserId,
     inactivityTimeout: 10 * 60 * 1000, // 10 minutes
     onStatusChange: (online) => {
