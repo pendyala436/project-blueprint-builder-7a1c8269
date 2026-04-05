@@ -26,18 +26,18 @@ export function PWAInstallPrompt() {
   // Log PWA state for debugging (dev only)
   useEffect(() => {
     if (import.meta.env.DEV) {
-      console.log('[PWA] State:', { isInstallable, isInstalled, isInStandaloneMode, isIOS, isIPadOS, isAndroid });
+      if (import.meta.env.DEV) console.log('[PWA] State:', { isInstallable, isInstalled, isInStandaloneMode, isIOS, isIPadOS, isAndroid });
     }
   }, [isInstallable, isInstalled, isInStandaloneMode, isIOS, isIPadOS, isAndroid]);
 
   // Auto-trigger native install prompt when available (Android, Windows, Linux, macOS Chrome/Edge)
   useEffect(() => {
     if (isInstallable && !isInstalled && !autoPromptTriggered) {
-      console.log('[PWA] Auto-triggering install prompt...');
+      if (import.meta.env.DEV) console.log('[PWA] Auto-triggering install prompt...');
       const timer = setTimeout(async () => {
         setAutoPromptTriggered(true);
         const result = await install();
-        console.log('[PWA] Install result:', result);
+        if (import.meta.env.DEV) console.log('[PWA] Install result:', result);
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -65,10 +65,10 @@ export function PWAInstallPrompt() {
     // 2. Auto-prompt not triggered after 4 seconds (fallback for all platforms)
     const timer = setTimeout(() => {
       if (isIOS || isIPadOS) {
-        console.log('[PWA] Showing iOS manual install prompt');
+        if (import.meta.env.DEV) console.log('[PWA] Showing iOS manual install prompt');
         setShowPrompt(true);
       } else if (!isInstallable && !autoPromptTriggered) {
-        console.log('[PWA] Showing fallback install prompt (beforeinstallprompt not fired)');
+        if (import.meta.env.DEV) console.log('[PWA] Showing fallback install prompt (beforeinstallprompt not fired)');
         setShowPrompt(true);
       }
     }, 4000);
@@ -87,9 +87,9 @@ export function PWAInstallPrompt() {
   const handleInstall = async () => {
     if (isInstallable) {
       // Native install prompt available - trigger it
-      console.log('[PWA] Triggering native install prompt');
+      if (import.meta.env.DEV) console.log('[PWA] Triggering native install prompt');
       const result = await install();
-      console.log('[PWA] Install result:', result);
+      if (import.meta.env.DEV) console.log('[PWA] Install result:', result);
       if (result) {
         setDismissed(true);
       }
