@@ -82,6 +82,10 @@ const AdminMessaging = () => {
   const [isSearching, setIsSearching] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inboxEndRef = useRef<HTMLDivElement>(null);
+  const selectedThreadRef = useRef(selectedThread);
+  selectedThreadRef.current = selectedThread;
+  const selectedUserRef = useRef(selectedUser);
+  selectedUserRef.current = selectedUser;
 
   useEffect(() => {
     loadAdmin();
