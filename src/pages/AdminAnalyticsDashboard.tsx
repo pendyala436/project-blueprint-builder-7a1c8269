@@ -195,15 +195,16 @@ const AdminAnalyticsDashboard = () => {
         const totalUsers = gc(usersRes);
         const totalMatches = gc(matchesRes);
 
+        // FIX #8: Show NaN-safe values; adminProfit = -1 signals "N/A" in fallback
         setAnalytics({
           totalUsers,
           activeUsers: gc(activeRes),
           totalMatches,
-          adminProfit: 0,
-          menRecharges: 0,
-          menSpent: 0,
-          womenEarnings: 0,
-          womenWithdrawals: 0,
+          adminProfit: -1, // signals N/A — RPC failed
+          menRecharges: -1,
+          menSpent: -1,
+          womenEarnings: -1,
+          womenWithdrawals: -1,
           newUsersToday: 0,
           messagesCount: gc(msgsRes),
           avgSessionTime: 0,
