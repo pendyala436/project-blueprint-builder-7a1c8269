@@ -50,6 +50,18 @@ export const registerSession = (type: SessionType, id: string) => {
   });
   console.log(`[SessionPriority] Registered ${type} session: ${id}`, getActiveSessions());
   notify();
+
+  // Auto-cleanup stale P3 sessions after 2 hours (safety net)
+  if (PRIORITY_MAP[type] >= 3) {
+    setTimeout(() => {
+      const idx = activeSessions.findIndex((s) => s.type === type && s.id === id);
+      if (idx !== -1) {
+        console.warn(`[SessionPriority] Auto-cleaning stale ${type} session: ${id}`);
+        activeSessions.splice(idx, 1);
+        notify();
+      }
+    }, 2 * 60 * 60 * 1000);
+  }
 };
 
 /**
@@ -77,8 +89,22 @@ export const shouldBlockIncoming = (incomingType: SessionType): boolean => {
   // Chat (P1) is never blocked
   if (incomingPriority === 1) return false;
   
+  // Clean up stale P3 sessions older than 3 hours before checking
+  const now = Date.now();
+  const maxAge = 3 * 60 * 60 * 1000;
+  const before = activeSessions.length;
+  activeSessions = activeSessions.filter((s) => s.priority < 3 || (now - s.startedAt) < maxAge);
+  if (activeSessions.length !== before) {
+    console.warn('[SessionPriority] Cleaned stale P3 sessions during block check');
+    notify();
+  }
+  
   // P3 incoming (audio/video/group call) — block if ANY P3 session is active
   const hasActiveP3 = activeSessions.some((s) => s.priority >= 3);
+  if (hasActiveP3) {
+    console.log('[SessionPriority] Blocking incoming', incomingType, '— active P3 sessions:', 
+      activeSessions.filter(s => s.priority >= 3).map(s => `${s.type}:${s.id}`));
+  }
   return hasActiveP3;
 };
 
@@ -94,6 +120,18 @@ export const hasActiveCall = (): boolean => {
  */
 export const getActiveSessions = (): ActiveSession[] => {
   return [...activeSessions];
+};
+
+/**
+ * Clear all P3 sessions (safety reset). Call on logout or major navigation.
+ */
+export const clearAllP3Sessions = () => {
+  const before = activeSessions.length;
+  activeSessions = activeSessions.filter((s) => s.priority < 3);
+  if (activeSessions.length !== before) {
+    console.log('[SessionPriority] Cleared all P3 sessions');
+    notify();
+  }
 };
 
 /**
