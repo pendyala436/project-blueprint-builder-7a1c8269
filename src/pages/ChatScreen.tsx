@@ -1250,7 +1250,7 @@ const ChatScreen = () => {
       console.error('Delete message error:', err);
       toast({ title: 'Error', description: 'Failed to delete message', variant: 'destructive' });
     }
-  
+  };
 
   /**
    * handleSendMessage Function
