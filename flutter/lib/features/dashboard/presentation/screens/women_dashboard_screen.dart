@@ -143,6 +143,7 @@ class _WomenDashboardScreenState extends ConsumerState<WomenDashboardScreen> {
         children: const [
           WomenHomeTab(),
           WomenChatsTab(),
+          WomenGroupsTab(),
           WomenEarningsTab(),
           WomenProfileTab(),
         ],
@@ -154,6 +155,7 @@ class _WomenDashboardScreenState extends ConsumerState<WomenDashboardScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chats'),
+          BottomNavigationBarItem(icon: Icon(Icons.videocam), label: 'Groups'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Earnings'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
