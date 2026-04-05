@@ -62,13 +62,16 @@ export const useChatPricing = () => {
         const menChat  = Number(data.rate_per_minute)              || DEFAULT_PRICING.ratePerMinute;
         const menVideo = Number(data.video_rate_per_minute)        || DEFAULT_PRICING.videoRatePerMinute;
         const menGroup = Number((data as any).group_call_rate_per_minute) || DEFAULT_PRICING.groupCallRatePerMinute;
+        const menAudio = Number((data as any).audio_rate_per_minute) || DEFAULT_PRICING.audioRatePerMinute;
         setPricing({
           ratePerMinute:             menChat,
-          womenEarningRate:          parseFloat((menChat  / 2).toFixed(2)),   // always half
+          womenEarningRate:          parseFloat((menChat  / 2).toFixed(2)),
           videoRatePerMinute:        menVideo,
-          videoWomenEarningRate:     parseFloat((menVideo / 2).toFixed(2)),   // always half
+          videoWomenEarningRate:     parseFloat((menVideo / 2).toFixed(2)),
+          audioRatePerMinute:        menAudio,
+          audioWomenEarningRate:     parseFloat((menAudio / 2).toFixed(2)),
           groupCallRatePerMinute:    menGroup,
-          groupCallWomenEarningRate: parseFloat((menGroup / 2).toFixed(2)),   // always half per man
+          groupCallWomenEarningRate: parseFloat((menGroup / 2).toFixed(2)),
           minWithdrawalBalance:      Number(data.min_withdrawal_balance) || DEFAULT_PRICING.minWithdrawalBalance,
           currency:                  data.currency || DEFAULT_PRICING.currency
         });
