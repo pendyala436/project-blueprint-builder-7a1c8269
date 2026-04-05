@@ -598,11 +598,7 @@ const DashboardScreen = () => {
     return 'bg-online';
   };
 
-  const getStatusDotColor = () => {
-    if (isManuallyOffline) return 'bg-muted-foreground';
-    if (!isOnline) return 'bg-amber-500';
-    return 'bg-online';
-  };
+  const getStatusDotColor = getStatusColor;
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {
