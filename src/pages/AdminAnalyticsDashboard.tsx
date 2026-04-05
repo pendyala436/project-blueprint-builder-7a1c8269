@@ -226,22 +226,16 @@ const AdminAnalyticsDashboard = () => {
     }
   }, [dateRange]);
 
-  // Real-time subscriptions for all analytics-related tables
+  // Reduced realtime subscriptions - only subscribe to tables that materially affect analytics
   useMultipleRealtimeSubscriptions(
     [
       "profiles",
-      "user_status",
-      "matches",
       "ledger_transactions",
-      "women_earnings",
-      "chat_messages",
-      "active_chat_sessions",
-      "video_call_sessions",
-      "gift_transactions",
-      "withdrawal_requests"
+      "matches",
     ],
     fetchAnalytics,
-    true
+    true,
+    3000 // 3s debounce - analytics doesn't need instant updates
   );
 
   useEffect(() => {
