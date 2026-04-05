@@ -622,6 +622,35 @@ const ChatScreen = () => {
     };
   }, [chatPartner?.userId, currentUserId, currentUserGender, isSessionActive, handleAutoReconnect, toast]);
 
+  // Typing preview: debounce 600ms, show native script + English subtitle
+  useEffect(() => {
+    if (!typingText.trim()) {
+      setPreviewNative("");
+      setPreviewEnglish("");
+      setIsPreviewLoading(false);
+      return;
+    }
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    setIsPreviewLoading(true);
+    previewDebounceRef.current = setTimeout(() => {
+      let cancelled = false;
+      const senderLang = currentUserLanguageRef.current || 'English';
+      translateForViewer(typingText.trim(), senderLang, senderLang).then(result => {
+        if (!cancelled) {
+          setPreviewNative(result.nativeText);
+          setPreviewEnglish(result.englishText);
+          setIsPreviewLoading(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setIsPreviewLoading(false);
+      });
+      return () => { cancelled = true; };
+    }, 600);
+    return () => {
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    };
+  }, [typingText]);
+
   /**
    * translateHistoryMessages
    * 
