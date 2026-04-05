@@ -1948,16 +1948,25 @@ const ChatScreen = () => {
                                 : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"
                             }`}
                           >
-                            <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${
-                              isMine
-                                ? "text-primary dark:text-primary"
-                                : "text-emerald-800 dark:text-emerald-200"
-                            }`} dir="auto">{displayText}</p>
-                            {/* English translation below EVERY message — helps people who speak but can't read native script */}
-                            {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                              <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">
-                                english: {englishSubtitle.toLowerCase()}
-                              </p>
+                            {message.isTranslating ? (
+                              <div className="flex items-center gap-1.5 py-1">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Translating...</span>
+                              </div>
+                            ) : (
+                              <>
+                                <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${
+                                  isMine
+                                    ? "text-primary dark:text-primary"
+                                    : "text-emerald-800 dark:text-emerald-200"
+                                }`} dir="auto">{displayText}</p>
+                                {/* English translation below EVERY message */}
+                                {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
+                                  <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">
+                                    english: {englishSubtitle.toLowerCase()}
+                                  </p>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
