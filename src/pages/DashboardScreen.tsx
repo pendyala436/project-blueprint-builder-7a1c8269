@@ -1629,18 +1629,12 @@ const DashboardScreen = () => {
 
       {/* Tab Content */}
       {activeTab === "chats" && renderChatsTab()}
-      {activeTab === "users" && renderUsersTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}
       <WhatsAppBottomTabs tabs={menTabs} activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* FAB - Random Chat */}
-      {activeTab === "chats" && (
-        <WhatsAppFAB onClick={handleQuickConnect} badge={activeChatCount || undefined} />
-      )}
 
       {/* Recharge Dialog */}
       <Dialog open={rechargeDialogOpen} onOpenChange={setRechargeDialogOpen}>
