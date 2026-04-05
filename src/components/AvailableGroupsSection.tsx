@@ -298,6 +298,10 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                {group.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
                     {group.participant_count}/{MAX_PARTICIPANTS}
@@ -310,14 +314,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleJoinGroup(group)}
-                  disabled={!isLive || !hasEnoughBalance || isFull || isJoining}
+                  disabled={!hasEnoughBalance || isFull || isJoining}
                 >
                   {isJoining ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Video className="h-4 w-4" />
                   )}
-                  {!isLive ? 'Host Offline' : isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
+                  {isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
                 </Button>
               </CardContent>
             </Card>
