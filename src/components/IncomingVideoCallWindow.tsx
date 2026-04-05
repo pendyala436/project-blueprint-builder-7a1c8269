@@ -67,6 +67,16 @@ const IncomingVideoCallWindow = ({
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Unregister session on close
+  const handleClose = () => {
+    if (isAnswered) {
+      const sessionType = callType === 'audio' ? 'audio_call' : 'video_call';
+      unregisterSession(sessionType as any, callId);
+    }
+    onClose();
+  };
+  const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Continuous ring sound until answered/declined
   useEffect(() => {
     if (isAnswered) return;
