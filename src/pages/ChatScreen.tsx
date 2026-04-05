@@ -1336,6 +1336,7 @@ const ChatScreen = () => {
   };
 
 
+  /**
    * handleSendMessage Function
    * 
    * Sends a new message to the chat partner.
