@@ -103,11 +103,11 @@ export function isMixedScript(text: string): boolean {
   const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
   if (!cleaned || cleaned.length < 4) return false;
 
-  const latinTokens = cleaned.match(/[a-zA-Z\u00C0-\u024F]+/g) || [];
-  const latinChars = latinTokens.reduce((sum, token) => sum + token.length, 0);
+  const latinTokens: string[] = cleaned.match(/[a-zA-Z\u00C0-\u024F]+/g) ?? [];
+  const latinChars = latinTokens.reduce<number>((sum, token) => sum + token.length, 0);
   const nonLatinChars = cleaned.length - latinChars;
 
-  if (!latinChars || !nonLatinChars) return false;
+  if (latinChars === 0 || nonLatinChars === 0) return false;
 
   // Strong signal: even one leftover Latin word inside native script means partial translation.
   if (latinTokens.some((token) => token.length >= 3) && nonLatinChars >= 2) return true;
