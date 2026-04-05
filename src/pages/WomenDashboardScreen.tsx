@@ -271,6 +271,8 @@ const WomenDashboardScreen = () => {
   useEffect(() => { currentWomanLanguageRef.current = currentWomanLanguage; }, [currentWomanLanguage]);
   useEffect(() => { currentWomanCountryRef.current = currentWomanCountry; }, [currentWomanCountry]);
 
+  const { playMessageSound } = useMessageSound();
+
   // Activity-based online/offline status (10 min inactivity = offline)
   const { 
     isOnline, 
