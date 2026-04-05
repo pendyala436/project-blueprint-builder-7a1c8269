@@ -742,7 +742,7 @@ const AdminChatPricing = () => {
                   </Button>
                   {pricing && (
                     <Button variant="outline" onClick={() => {
-                      setFormData(prev => ({ ...prev, min_withdrawal_balance: (pricing.min_withdrawal_balance ?? 5000).toString() }));
+                      setFormData(prev => ({ ...prev, min_withdrawal_balance: (pricing.min_withdrawal_balance ?? 100).toString() }));
                       setIsEditingWithdrawal(false);
                     }}>Cancel</Button>
                   )}
