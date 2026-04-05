@@ -1625,6 +1625,7 @@ const DashboardScreen = () => {
       {/* Tab Content */}
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "users" && renderUsersTab()}
+      {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "profile" && renderProfileTab()}
 
