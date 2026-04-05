@@ -1642,6 +1642,7 @@ const ChatScreen = () => {
               size="icon"
               variant="ghost"
               iconOnly={true}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
             />
             <DirectVideoCallButton
               currentUserId={currentUserId}
@@ -1652,6 +1653,7 @@ const ChatScreen = () => {
               size="icon"
               variant="ghost"
               iconOnly={true}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
             />
           </div>
           )}
