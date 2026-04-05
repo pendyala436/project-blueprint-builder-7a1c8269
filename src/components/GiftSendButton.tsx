@@ -201,7 +201,7 @@ export const GiftSendButton = ({
             <Gift className="w-5 h-5" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-0" side="top" align="start">
+        <PopoverContent className="w-80 p-0 z-[100]" side="top" align="start">
           <div className="p-3 border-b border-border">
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-semibold flex items-center gap-2">
