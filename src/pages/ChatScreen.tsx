@@ -2075,8 +2075,8 @@ const ChatScreen = () => {
                 // English subtitle shown below EVERY bubble (per spec)
                 const englishSubtitle = message.englishText;
                 
-                // Skip empty voice message placeholders (the actual voice URL comes in the next message)
-                if (message.message === '🎤 Voice message') {
+                // Skip empty voice message placeholders
+                if (message.message === '🎤 Voice message' || message.message.startsWith('🎤voice:') && !extractAttachment(message.message).voiceUrl) {
                   return null;
                 }
 
