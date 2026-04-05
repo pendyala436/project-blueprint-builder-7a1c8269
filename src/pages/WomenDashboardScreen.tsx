@@ -538,7 +538,7 @@ const WomenDashboardScreen = () => {
       // Wrap profile fetch in timeout to prevent hang
       const profilePromise = supabase
         .from("profiles")
-        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, is_indian, has_golden_badge, golden_badge_expires_at")
+        .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, is_indian")
         .eq("user_id", user.id)
         .maybeSingle();
       
