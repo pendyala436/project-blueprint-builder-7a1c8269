@@ -389,7 +389,17 @@ const DashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'active_chat_sessions' },
+        { event: 'INSERT', schema: 'public', table: 'active_chat_sessions', filter: `man_user_id=eq.${currentUserId}` },
+        () => {
+          loadActiveChatCount();
+          fetchActiveChats();
+          playMessageSound();
+          toast({ title: 'New Chat', description: 'You have a new conversation!' });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'active_chat_sessions' },
         () => { loadActiveChatCount(); }
       )
       .on(
