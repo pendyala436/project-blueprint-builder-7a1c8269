@@ -760,7 +760,7 @@ const WomenDashboardScreen = () => {
         ...prev,
         totalOnlineMen: sortedMen.length,
         rechargedMen: sortedRecharged.length,
-        nonRechargedMen: nonRecharged.length
+        nonRechargedMen: menWithoutBalance.length
       }));
 
     } catch (error) {
