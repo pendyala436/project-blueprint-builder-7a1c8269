@@ -352,15 +352,7 @@ const AdminTransactionHistory = () => {
         totalVideoCalls: enrichedVideoCalls.length,
         totalGiftsSent: enrichedGifts.length
       });
-      
-      console.log("Admin Transaction Stats (real data):", {
-        creditTransactions: creditTxns.length,
-        debitTransactions: debitTxns.length,
-        totalCredits,
-        totalDebits,
-        totalEarningsPaid,
-        completedWithdrawals
-      });
+
 
     } catch (error) {
       console.error("Error loading admin transaction data:", error);

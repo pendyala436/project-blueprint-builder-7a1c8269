@@ -279,7 +279,7 @@ const AdminAnalyticsDashboard = () => {
     toast.success("Analytics exported successfully!");
   };
 
-  const StatCard = ({ 
+  const StatCard = useCallback(({ 
     title, 
     value, 
     icon: Icon, 
@@ -329,7 +329,7 @@ const AdminAnalyticsDashboard = () => {
         </div>
       </CardContent>
     </Card>
-  );
+  ), []);
 
   if (adminLoading || !isAdmin) {
     return (
