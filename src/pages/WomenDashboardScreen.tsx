@@ -1191,17 +1191,7 @@ const WomenDashboardScreen = () => {
                 <MessageCircleIcon className="h-3.5 w-3.5" />
                 Chat
               </Button>
-              {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                <DirectVideoCallButton
-                  currentUserId={currentUserId}
-                  targetUserId={user.userId}
-                  targetName={user.fullName}
-                  targetPhoto={user.photoUrl}
-                  walletBalance={myWalletBalance}
-                  onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
-                  iconOnly={true}
-                />
-              )}
+              {/* Women cannot initiate video/audio calls — they only receive */}
               <Button 
                 size="sm" 
                 variant="auroraOutline"
@@ -1335,14 +1325,7 @@ const WomenDashboardScreen = () => {
                       <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
                         <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                       </Button>
-                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
-                          <Phone className="w-3.5 h-3.5 text-primary" />
-                        </Button>
-                      )}
-                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                        <DirectVideoCallButton currentUserId={currentUserId} targetUserId={user.userId} targetName={user.fullName} targetPhoto={user.photoUrl} walletBalance={myWalletBalance} onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)} iconOnly={true} />
-                      )}
+                      {/* Women cannot initiate audio/video calls — they only receive */}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
