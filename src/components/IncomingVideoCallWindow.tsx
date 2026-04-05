@@ -75,7 +75,6 @@ const IncomingVideoCallWindow = ({
     }
     onClose();
   };
-  const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Continuous ring sound until answered/declined
   useEffect(() => {
