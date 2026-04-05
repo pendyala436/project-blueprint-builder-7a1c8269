@@ -27,6 +27,7 @@ interface DirectVideoCallButtonProps {
   targetPhoto: string | null;
   walletBalance: number;
   onBalanceChange?: (newBalance: number) => void;
+  currentUserGender?: "male" | "female";
   size?: "sm" | "default" | "lg" | "icon";
   variant?: "aurora" | "auroraOutline" | "ghost" | "outline";
   iconOnly?: boolean;
