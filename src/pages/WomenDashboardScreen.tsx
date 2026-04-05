@@ -1112,10 +1112,8 @@ const WomenDashboardScreen = () => {
             {/* Status indicator: Green=Online, Red=Full */}
             <div className={cn(
               "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-              (user.activeChatCount || 0) >= 3 ? "bg-destructive" : "bg-online"
-            )} title={
-              (user.activeChatCount || 0) >= 3 ? "Busy (3/3)" : "Available"
-            } />
+              "bg-online"
+            )} title="Available" />
             {user.walletBalance > 1000 && (
               <div className="absolute -top-1 -right-1">
                 <Crown className="h-3.5 w-3.5 text-primary" />
