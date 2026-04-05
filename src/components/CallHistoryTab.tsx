@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfiles } from "@/lib/profile-queries";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -98,14 +99,11 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         if (g.private_groups?.owner_id) partnerIds.add(g.private_groups.owner_id);
       });
 
-      // Batch fetch profiles
+      // Batch fetch profiles using RPC (bypasses owner-only RLS on profiles table)
       const profileMap = new Map<string, { full_name: string; photo_url: string }>();
       if (partnerIds.size > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, photo_url")
-          .in("user_id", Array.from(partnerIds));
-        profiles?.forEach((p) => profileMap.set(p.user_id, { full_name: p.full_name || "User", photo_url: p.photo_url || "" }));
+        const publicProfiles = await fetchPublicProfiles(Array.from(partnerIds));
+        publicProfiles.forEach((p) => profileMap.set(p.user_id, { full_name: p.full_name || "User", photo_url: p.photo_url || "" }));
       }
 
       // Map chat sessions
