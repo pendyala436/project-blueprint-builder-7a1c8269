@@ -177,7 +177,7 @@ const AdminChatPricing = () => {
     // Compute women's rates from men's rates — no manual override allowed.
     const womenEarningRate      = parseFloat((ratePerMinute / 2).toFixed(2));
     const videoWomenEarningRate = parseFloat((videoRatePerMinute / 2).toFixed(2));
-    const groupCallWomenRate    = parseFloat((groupCallRate / 2).toFixed(2));
+    const groupCallWomenRate    = parseFloat(formData.group_call_women_earning_rate) || 0.50;
 
     setIsSaving(true);
     try {
