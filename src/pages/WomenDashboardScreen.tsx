@@ -370,7 +370,6 @@ const WomenDashboardScreen = () => {
           const record = payload.new as { user_id?: string; language_name?: string; language_code?: string };
           // Only process if this is our user's language change
           if (record?.user_id === currentUserId && record?.language_name) {
-            console.log("[WomenDashboard] user_languages INSERT:", record.language_name);
             setCurrentWomanLanguage(record.language_name);
             setCurrentWomanLanguageCode(record.language_code || "eng_Latn");
             fetchOnlineMen(record.language_name, currentWomanCountry);
@@ -384,7 +383,6 @@ const WomenDashboardScreen = () => {
         async (payload) => {
           const newLanguage = (payload.new as { language_name?: string })?.language_name;
           const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
-          console.log("[WomenDashboard] user_languages UPDATE:", newLanguage);
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
             setCurrentWomanLanguageCode(newCode);
@@ -399,7 +397,6 @@ const WomenDashboardScreen = () => {
         async (payload) => {
           const newProfile = payload.new as { primary_language?: string; preferred_language?: string };
           const newLanguage = newProfile?.primary_language || newProfile?.preferred_language;
-          console.log("[WomenDashboard] female_profiles language changed:", newLanguage);
           if (newLanguage) {
             setCurrentWomanLanguage(newLanguage);
             fetchOnlineMen(newLanguage, currentWomanCountry);
@@ -638,7 +635,6 @@ const WomenDashboardScreen = () => {
       }
 
       if (!onlineMenData || onlineMenData.length === 0) {
-        console.log("[WomenDashboard] No online men found");
         setRechargedMen([]);
         setNonRechargedMen([]);
         setStats(prev => ({ ...prev, totalOnlineMen: 0, rechargedMen: 0, nonRechargedMen: 0 }));
@@ -724,9 +720,6 @@ const WomenDashboardScreen = () => {
       const sameLanguage = menWithBalance.filter(m => m.isSameLanguage);
       const otherLanguage = menWithBalance.filter(m => !m.isSameLanguage);
 
-      console.log("[WomenDashboard] Visible same-language men (with balance):", sameLanguage.length);
-      console.log("[WomenDashboard] Visible other-language men (with balance):", otherLanguage.length);
-      console.log("[WomenDashboard] Hidden men (no balance):", menWithoutBalance.length);
 
       setRechargedMen(sortedRecharged);
       setNonRechargedMen(menWithoutBalance); // Show men without balance in separate tab

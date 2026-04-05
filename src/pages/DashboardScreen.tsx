@@ -433,7 +433,6 @@ const DashboardScreen = () => {
           const record = payload.new as { user_id?: string; language_name?: string; language_code?: string };
           // Only process if this is our user's language change
           if (record?.user_id === currentUserId && record?.language_name) {
-            console.log("[Dashboard] user_languages INSERT:", record.language_name);
             setUserLanguage(record.language_name);
             setUserLanguageCode(record.language_code || "eng_Latn");
             fetchOnlineWomen(record.language_name);
@@ -447,7 +446,6 @@ const DashboardScreen = () => {
         async (payload) => {
           const newLanguage = (payload.new as { language_name?: string })?.language_name;
           const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
-          console.log("[Dashboard] user_languages UPDATE:", newLanguage);
           if (newLanguage) {
             setUserLanguage(newLanguage);
             setUserLanguageCode(newCode);
@@ -462,7 +460,6 @@ const DashboardScreen = () => {
         async (payload) => {
           const newProfile = payload.new as { primary_language?: string; preferred_language?: string };
           const newLanguage = newProfile?.primary_language || newProfile?.preferred_language;
-          console.log("[Dashboard] male_profiles language changed:", newLanguage);
           if (newLanguage) {
             setUserLanguage(newLanguage);
             fetchOnlineWomen(newLanguage);
