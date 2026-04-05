@@ -647,9 +647,14 @@ const MiniChatWindow = ({
         }));
         tempToRealIdRef.current.delete(tempId);
       }).catch(() => {
-        setMessages(prev => prev.map(m => 
-          m.id === tempId ? { ...m, isTranslating: false } : m
-        ));
+        setMessages(prev => prev.map(m => {
+          const realId = tempToRealIdRef.current.get(tempId);
+          if (m.id === tempId || (realId && m.id === realId)) {
+            return { ...m, isTranslating: false };
+          }
+          return m;
+        }));
+        tempToRealIdRef.current.delete(tempId);
       });
     });
 
