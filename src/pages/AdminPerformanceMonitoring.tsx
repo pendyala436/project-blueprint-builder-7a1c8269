@@ -136,6 +136,11 @@ const AdminPerformanceMonitoring = () => {
       const fetchedMetrics = metricsData || [];
       setMetrics(fetchedMetrics);
       
+      // FIX #15: Show warning when no metrics data is available
+      if (fetchedMetrics.length === 0) {
+        toast.info("No metrics data", { description: "Ensure the collect-metrics Edge Function is running.", duration: 5000 });
+      }
+
       // Set current metrics to the latest one
       if (fetchedMetrics.length > 0) {
         setCurrentMetrics(fetchedMetrics[fetchedMetrics.length - 1]);
