@@ -1616,7 +1616,7 @@ const WomenDashboardScreen = () => {
             <p className="text-xs text-muted-foreground">Top Earner Today</p>
             <p className="text-sm font-semibold text-foreground">{biggestEarner.name}</p>
           </div>
-          <span className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</span>
+          <span className="text-lg font-bold text-primary">{formatLocalCurrency(biggestEarner.amount)}</span>
         </div>
       )}
 
