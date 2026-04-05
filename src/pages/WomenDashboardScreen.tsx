@@ -520,18 +520,12 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return t('busy', 'Busy') + `(${MAX_PARALLEL_CHATS})`;
     return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
-
-  const { settings: womenSettings } = useAppSettings();
-  const MAX_PARALLEL_CHATS = womenSettings?.maxParallelChats || 3;
-  const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async () => {
     try {
