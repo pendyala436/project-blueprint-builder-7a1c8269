@@ -305,11 +305,10 @@ const AdminTransactionHistory = () => {
       setWithdrawalRequests(enrichedWithdrawals);
 
       // Calculate stats from REAL database data only - no defaults or fallbacks
-      const creditTxns = enrichedWalletTxns.filter(t => t.credit > 0);
-      const debitTxns = enrichedWalletTxns.filter(t => t.debit > 0);
+      // FIX #3: Only count recharge credits as revenue, not all credits
+      const rechargeTxns = enrichedWalletTxns.filter(t => t.transaction_type === "recharge" && t.credit > 0);
       
-      const totalCredits = creditTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0);
-      const totalDebits = debitTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0);
+      const totalRevenue = rechargeTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0);
 
       const totalEarningsPaid = enrichedEarnings.length > 0
         ? enrichedEarnings.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
