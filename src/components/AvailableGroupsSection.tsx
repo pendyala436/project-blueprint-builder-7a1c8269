@@ -96,12 +96,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchGroups = async () => {
     try {
-      // Only fetch live groups - non-live groups are hidden from men
+      // Fetch ALL active groups — live groups shown first with Join button, offline groups shown as waiting
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
-        .eq('is_live', true)
+        .order('is_live', { ascending: false })
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -238,7 +238,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p className="font-medium">No private groups available</p>
-          <p className="text-sm">Check back later when groups are created!</p>
+          <p className="text-sm">Groups will appear here once they are created by the admin.</p>
         </CardContent>
       </Card>
     );
