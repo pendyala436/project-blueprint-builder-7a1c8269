@@ -236,7 +236,17 @@ const DashboardScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("chats");
+  const [activeTab, setActiveTab] = useState("online");
+  const [activeChats, setActiveChats] = useState<Array<{
+    chatId: string;
+    partnerId: string;
+    partnerName: string;
+    partnerPhoto: string | null;
+    lastMessage: string;
+    lastMessageAt: string;
+    unreadCount: number;
+  }>>([]);
+  const [loadingChats, setLoadingChats] = useState(false);
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
@@ -531,6 +541,82 @@ const DashboardScreen = () => {
       .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
+    
+    // Also fetch active chat details for the Chats tab
+    fetchActiveChats();
+  };
+
+  const fetchActiveChats = async () => {
+    if (!currentUserId) return;
+    setLoadingChats(true);
+    try {
+      const { data: sessions } = await supabase
+        .from("active_chat_sessions")
+        .select("chat_id, woman_user_id, started_at, last_activity_at, status")
+        .eq("man_user_id", currentUserId)
+        .in("status", ["active", "pending"])
+        .order("last_activity_at", { ascending: false });
+
+      if (!sessions || sessions.length === 0) {
+        setActiveChats([]);
+        setLoadingChats(false);
+        return;
+      }
+
+      const partnerIds = sessions.map(s => s.woman_user_id);
+      
+      // Fetch partner profiles and last messages in parallel
+      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+      const [profiles, lastMessages] = await Promise.all([
+        fetchPublicProfiles(partnerIds),
+        Promise.all(sessions.map(async (s) => {
+          const { data } = await supabase
+            .from("chat_messages")
+            .select("message, created_at, sender_id, is_read")
+            .eq("chat_id", s.chat_id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          // Count unread
+          const { count } = await supabase
+            .from("chat_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("chat_id", s.chat_id)
+            .eq("receiver_id", currentUserId)
+            .eq("is_read", false);
+          
+          return {
+            chatId: s.chat_id,
+            lastMessage: data?.[0]?.message || "",
+            lastMessageAt: data?.[0]?.created_at || s.last_activity_at,
+            unreadCount: count || 0,
+          };
+        }))
+      ]);
+
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+      const messageMap = new Map(lastMessages.map(m => [m.chatId, m]));
+
+      const chats = sessions.map(s => {
+        const profile = profileMap.get(s.woman_user_id);
+        const msg = messageMap.get(s.chat_id);
+        return {
+          chatId: s.chat_id,
+          partnerId: s.woman_user_id,
+          partnerName: profile?.full_name || "User",
+          partnerPhoto: profile?.photo_url || null,
+          lastMessage: msg?.lastMessage || "",
+          lastMessageAt: msg?.lastMessageAt || s.last_activity_at,
+          unreadCount: msg?.unreadCount || 0,
+        };
+      });
+
+      setActiveChats(chats);
+    } catch (error) {
+      console.error("[Dashboard] Error fetching active chats:", error);
+    } finally {
+      setLoadingChats(false);
+    }
   };
 
   const getStatusText = () => {
@@ -1247,9 +1333,10 @@ const DashboardScreen = () => {
 
   // activeTab state is declared at top of component
 
-  const menTabs = getMenTabs(activeChatCount || undefined, matchedWomen.length || undefined);
+  const onlineCount = sameLanguageWomen.length + indianTranslatedWomen.length;
+  const menTabs = getMenTabs(onlineCount || undefined, activeChatCount || undefined, matchedWomen.length || undefined);
 
-  const renderChatsTab = () => (
+  const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Active status bar */}
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
@@ -1431,6 +1518,65 @@ const DashboardScreen = () => {
     </div>
   );
 
+  const renderChatsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <MessageCircle className="h-4 w-4 text-primary" />
+          Active Chats ({activeChats.length})
+        </span>
+        <Button variant="ghost" size="sm" onClick={fetchActiveChats} disabled={loadingChats} className="h-7 w-7 p-0">
+          <RefreshCw className={cn("w-3.5 h-3.5", loadingChats && "animate-spin")} />
+        </Button>
+      </div>
+      {loadingChats ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : activeChats.length > 0 ? (
+        activeChats.map((chat) => (
+          <div
+            key={chat.chatId}
+            className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
+            onClick={() => navigate(`/chat/${chat.partnerId}`)}
+          >
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
+                <AvatarImage src={chat.partnerPhoto || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                  {chat.partnerName.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-online" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm text-foreground truncate">{chat.partnerName}</span>
+                <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                  {new Date(chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-xs text-muted-foreground truncate">{chat.lastMessage || "No messages yet"}</p>
+                {chat.unreadCount > 0 && (
+                  <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 flex-shrink-0 ml-2">
+                    {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="text-center py-16">
+          <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">No active chats</p>
+          <p className="text-muted-foreground/60 text-xs mt-1">Start a chat from the Online tab</p>
+        </div>
+      )}
+    </div>
+  );
+
   const renderGroupsTab = () => (
     <div className="flex-1 overflow-y-auto">
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
@@ -1591,12 +1737,13 @@ const DashboardScreen = () => {
         onLogout={handleLogout}
         unreadNotifications={stats.unreadNotifications}
         onNotifications={() => {
-          setActiveTab("chats");
+          setActiveTab("online");
           setTimeout(() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' }), 100);
         }}
       />
 
       {/* Tab Content */}
+      {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}

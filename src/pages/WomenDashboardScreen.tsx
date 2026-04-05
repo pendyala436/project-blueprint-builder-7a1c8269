@@ -229,7 +229,18 @@ const WomenDashboardScreen = () => {
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
-  const [activeTab, setActiveTab] = useState("chats");
+  const [activeTab, setActiveTab] = useState("online");
+  const [onlineSubTab, setOnlineSubTab] = useState<"recharged" | "nobalance">("recharged");
+  const [womenActiveChats, setWomenActiveChats] = useState<Array<{
+    chatId: string;
+    partnerId: string;
+    partnerName: string;
+    partnerPhoto: string | null;
+    lastMessage: string;
+    lastMessageAt: string;
+    unreadCount: number;
+  }>>([]);
+  const [loadingWomenChats, setLoadingWomenChats] = useState(false);
   
   // All women are in paid mode by default - no mode switching needed
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
@@ -511,6 +522,78 @@ const WomenDashboardScreen = () => {
       .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
+    fetchWomenActiveChats();
+  };
+
+  const fetchWomenActiveChats = async () => {
+    if (!currentUserId) return;
+    setLoadingWomenChats(true);
+    try {
+      const { data: sessions } = await supabase
+        .from("active_chat_sessions")
+        .select("chat_id, man_user_id, started_at, last_activity_at, status, total_earned")
+        .eq("woman_user_id", currentUserId)
+        .in("status", ["active", "pending"])
+        .order("last_activity_at", { ascending: false });
+
+      if (!sessions || sessions.length === 0) {
+        setWomenActiveChats([]);
+        setLoadingWomenChats(false);
+        return;
+      }
+
+      const partnerIds = sessions.map(s => s.man_user_id);
+      
+      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+      const [profiles, lastMessages] = await Promise.all([
+        fetchPublicProfiles(partnerIds),
+        Promise.all(sessions.map(async (s) => {
+          const { data } = await supabase
+            .from("chat_messages")
+            .select("message, created_at")
+            .eq("chat_id", s.chat_id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          const { count } = await supabase
+            .from("chat_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("chat_id", s.chat_id)
+            .eq("receiver_id", currentUserId)
+            .eq("is_read", false);
+          
+          return {
+            chatId: s.chat_id,
+            lastMessage: data?.[0]?.message || "",
+            lastMessageAt: data?.[0]?.created_at || s.last_activity_at,
+            unreadCount: count || 0,
+          };
+        }))
+      ]);
+
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+      const messageMap = new Map(lastMessages.map(m => [m.chatId, m]));
+
+      const chats = sessions.map(s => {
+        const profile = profileMap.get(s.man_user_id);
+        const msg = messageMap.get(s.chat_id);
+        return {
+          chatId: s.chat_id,
+          partnerId: s.man_user_id,
+          partnerName: profile?.full_name || "User",
+          partnerPhoto: profile?.photo_url || null,
+          lastMessage: msg?.lastMessage || "",
+          lastMessageAt: msg?.lastMessageAt || s.last_activity_at,
+          unreadCount: msg?.unreadCount || 0,
+        };
+      });
+
+      setWomenActiveChats(chats);
+    } catch (error) {
+      console.error("[WomenDashboard] Error fetching active chats:", error);
+    } finally {
+      setLoadingWomenChats(false);
+    }
   };
 
   const getStatusText = () => {
@@ -722,7 +805,7 @@ const WomenDashboardScreen = () => {
       console.log("[WomenDashboard] Hidden men (no balance):", menWithoutBalance.length);
 
       setRechargedMen(sortedRecharged);
-      setNonRechargedMen([]); // No longer showing men without balance
+      setNonRechargedMen(menWithoutBalance); // Show men without balance in separate tab
       setSameLanguageMen(sameLanguage);
       setOtherLanguageMen(otherLanguage);
       setStats(prev => ({
@@ -1155,9 +1238,10 @@ const WomenDashboardScreen = () => {
     );
   }
 
-  const womenTabs = getWomenTabs(activeChatCount || undefined, matchedMen.length || undefined);
+  const onlineMenCount = sameLanguageMen.length + otherLanguageMen.length;
+  const womenTabs = getWomenTabs(onlineMenCount || undefined, activeChatCount || undefined, matchedMen.length || undefined);
 
-  const renderChatsTab = () => (
+  const renderOnlineUsersTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Status bar */}
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
@@ -1173,6 +1257,22 @@ const WomenDashboardScreen = () => {
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>
+      </div>
+
+      {/* Sub-tabs: Recharged / No Balance */}
+      <div className="flex border-b border-border/30">
+        <button
+          className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "recharged" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+          onClick={() => setOnlineSubTab("recharged")}
+        >
+          💰 Recharged ({sameLanguageMen.length + otherLanguageMen.length})
+        </button>
+        <button
+          className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "nobalance" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
+          onClick={() => setOnlineSubTab("nobalance")}
+        >
+          No Balance ({nonRechargedMen.length})
+        </button>
       </div>
 
 
@@ -1207,21 +1307,16 @@ const WomenDashboardScreen = () => {
         </div>
       )}
 
-      {/* Same Language Men */}
-      {sameLanguageMen.length > 0 && (
+      {/* Recharged sub-tab content */}
+      {onlineSubTab === "recharged" && (
         <>
-          <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
-            <span className="text-xs font-semibold text-primary">{currentWomanLanguage}</span>
-            <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageMen.length})</span>
-          </div>
-          {/* Premium */}
-          {sameLanguageMen.filter(m => m.hasRecharged).length > 0 && (
+          {sameLanguageMen.length > 0 && (
             <>
-              <div className="px-4 py-1.5 bg-primary/5 flex items-center gap-1.5">
-                <Crown className="h-3.5 w-3.5 text-primary" />
-                <span className="text-[10px] font-semibold text-foreground">Premium</span>
+              <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
+                <span className="text-xs font-semibold text-primary">{currentWomanLanguage}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageMen.length})</span>
               </div>
-              {sameLanguageMen.filter(m => m.hasRecharged).map((user) => (
+              {sameLanguageMen.map((user) => (
                 <WhatsAppUserCard
                   key={user.userId}
                   name={user.fullName}
@@ -1230,7 +1325,7 @@ const WomenDashboardScreen = () => {
                   language={user.motherTongue}
                   country={user.country}
                   state={user.state}
-                  isPremium={true}
+                  isPremium={user.hasRecharged}
                   walletBalance={user.walletBalance}
                   activeChatCount={user.activeChatCount}
                   onClick={() => handleViewProfile(user.userId)}
@@ -1256,14 +1351,14 @@ const WomenDashboardScreen = () => {
               ))}
             </>
           )}
-          {/* Regular */}
-          {sameLanguageMen.filter(m => !m.hasRecharged).length > 0 && (
+
+          {otherLanguageMen.length > 0 && (
             <>
-              <div className="px-4 py-1.5 bg-muted/20 flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-[10px] font-semibold text-foreground">Regular</span>
+              <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+                <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
+                <span className="text-[10px] text-muted-foreground ml-1">({otherLanguageMen.length})</span>
               </div>
-              {sameLanguageMen.filter(m => !m.hasRecharged).map((user) => (
+              {otherLanguageMen.map((user) => (
                 <WhatsAppUserCard
                   key={user.userId}
                   name={user.fullName}
@@ -1272,18 +1367,16 @@ const WomenDashboardScreen = () => {
                   language={user.motherTongue}
                   country={user.country}
                   state={user.state}
+                  isPremium={user.hasRecharged}
+                  walletBalance={user.walletBalance}
                   activeChatCount={user.activeChatCount}
+                  subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
                   onClick={() => handleViewProfile(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
                       <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
                         <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                       </Button>
-                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
-                          <Phone className="w-3.5 h-3.5 text-primary" />
-                        </Button>
-                      )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
@@ -1293,73 +1386,107 @@ const WomenDashboardScreen = () => {
               ))}
             </>
           )}
+
+          {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && (
+            <div className="text-center py-16">
+              <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">No recharged men online</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">Only men with wallet balance are shown here</p>
+            </div>
+          )}
         </>
       )}
 
-      {/* Other Language Men - chat only, no audio/video */}
-      {otherLanguageMen.length > 0 && (
+      {/* No Balance sub-tab content */}
+      {onlineSubTab === "nobalance" && (
         <>
-          <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
-            <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
-            <span className="text-[10px] text-muted-foreground ml-1">({otherLanguageMen.length})</span>
-          </div>
-          {otherLanguageMen.filter(m => m.hasRecharged).map((user) => (
-            <WhatsAppUserCard
-              key={user.userId}
-              name={user.fullName}
-              photoUrl={user.photoUrl}
-              age={user.age}
-              language={user.motherTongue}
-              country={user.country}
-              state={user.state}
-              isPremium={true}
-              walletBalance={user.walletBalance}
-              activeChatCount={user.activeChatCount}
-              subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
-              onClick={() => handleViewProfile(user.userId)}
-              actions={
-                <div className="flex items-center gap-1">
-                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                    <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                  </Button>
+          {nonRechargedMen.length > 0 ? (
+            nonRechargedMen.map((user) => (
+              <WhatsAppUserCard
+                key={user.userId}
+                name={user.fullName}
+                photoUrl={user.photoUrl}
+                age={user.age}
+                language={user.motherTongue}
+                country={user.country}
+                state={user.state}
+                activeChatCount={user.activeChatCount}
+                onClick={() => handleViewProfile(user.userId)}
+                actions={
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
                     <Eye className="w-3.5 h-3.5 text-primary" />
                   </Button>
-                </div>
-              }
-            />
-          ))}
-          {otherLanguageMen.filter(m => !m.hasRecharged).map((user) => (
-            <WhatsAppUserCard
-              key={user.userId}
-              name={user.fullName}
-              photoUrl={user.photoUrl}
-              age={user.age}
-              language={user.motherTongue}
-              country={user.country}
-              state={user.state}
-              activeChatCount={user.activeChatCount}
-              subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
-              onClick={() => handleViewProfile(user.userId)}
-              actions={
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
-                  <Eye className="w-3.5 h-3.5 text-primary" />
-                </Button>
-              }
-            />
-          ))}
+                }
+              />
+            ))
+          ) : (
+            <div className="text-center py-16">
+              <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">No men without balance online</p>
+            </div>
+          )}
         </>
       )}
 
+    </div>
+  );
 
-      {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && notifications.length === 0 && (
+  const renderChatsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <MessageCircle className="h-4 w-4 text-primary" />
+          Active Chats ({womenActiveChats.length})
+        </span>
+        <Button variant="ghost" size="sm" onClick={fetchWomenActiveChats} disabled={loadingWomenChats} className="h-7 w-7 p-0">
+          <RefreshCw className={cn("w-3.5 h-3.5", loadingWomenChats && "animate-spin")} />
+        </Button>
+      </div>
+      {loadingWomenChats ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : womenActiveChats.length > 0 ? (
+        womenActiveChats.map((chat) => (
+          <div
+            key={chat.chatId}
+            className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
+            onClick={() => navigate(`/chat/${chat.partnerId}`)}
+          >
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
+                <AvatarImage src={chat.partnerPhoto || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
+                  {chat.partnerName.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-online" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm text-foreground truncate">{chat.partnerName}</span>
+                <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                  {new Date(chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-0.5">
+                <p className="text-xs text-muted-foreground truncate">{chat.lastMessage || "No messages yet"}</p>
+                {chat.unreadCount > 0 && (
+                  <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 flex-shrink-0 ml-2">
+                    {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
         <div className="text-center py-16">
           <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No men online right now</p>
-          <p className="text-muted-foreground/60 text-xs mt-1">Chat requests will appear here</p>
+          <p className="text-muted-foreground text-sm">No active chats</p>
+          <p className="text-muted-foreground/60 text-xs mt-1">Start a chat from the Online tab</p>
         </div>
       )}
-
     </div>
   );
 
@@ -1579,11 +1706,12 @@ const WomenDashboardScreen = () => {
         onSettings={() => navigate('/settings')}
         onLogout={handleLogout}
         unreadNotifications={stats.unreadNotifications}
-        onNotifications={() => setActiveTab("chats")}
+        onNotifications={() => setActiveTab("online")}
         showKYC={isIndianWoman}
         onKYC={() => setShowKYCForm(true)}
       />
 
+      {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "community" && renderCommunityTab()}
