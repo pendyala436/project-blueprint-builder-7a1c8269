@@ -317,54 +317,6 @@ const EnhancedParallelChatsContainer = ({
     }
   }, [userGender, currentUserId, loadActiveChats]);
 
-  // Handle accepting incoming chat
-  const handleAcceptChat = useCallback((sessionId: string) => {
-    const incomingChat = incomingChats.find(ic => ic.sessionId === sessionId);
-    
-    if (incomingChat) {
-      if (existingPartnersRef.current.has(incomingChat.partnerId)) {
-        toast({
-          title: "Chat Already Active",
-          description: `You already have an active chat with ${incomingChat.partnerName}`,
-          variant: "destructive"
-        });
-        rejectChat(sessionId);
-        return;
-      }
-    }
-    
-    acceptedSessionsRef.current.add(sessionId);
-    acceptChat(sessionId);
-    
-    // Check parallel chat limit
-    const currentCount = existingPartnersRef.current.size;
-    console.log(`[ParallelChats] Accepting chat. Active: ${currentCount}, Max: ${maxParallelChats}`);
-    
-    if (currentCount >= maxParallelChats) {
-      // Find oldest chat to close - get from current state
-      setActiveChats(prev => {
-        if (prev.length >= maxParallelChats) {
-          const oldestChat = prev[prev.length - 1];
-          if (oldestChat) {
-            handleCloseChat(oldestChat.chatId, oldestChat.id, true);
-            toast({
-              title: "Chat Limit Reached",
-              description: `Closed oldest chat to accept new one (max ${maxParallelChats} parallel chats)`,
-            });
-          }
-        }
-        return prev;
-      });
-    }
-    
-    // Force reload to bypass throttle
-    loadActiveChats(true);
-  }, [acceptChat, maxParallelChats, loadActiveChats, incomingChats, rejectChat, toast, handleCloseChat]);
-
-  const handleRejectChat = useCallback(async (sessionId: string, reason?: 'manual' | 'auto_timeout') => {
-    await rejectChat(sessionId, reason);
-  }, [rejectChat]);
-
   const handleFocusChat = useCallback((chatId: string) => {
     setFocusedChatId(chatId);
     setActiveChats(prev => prev.map(chat => {
@@ -378,29 +330,6 @@ const EnhancedParallelChatsContainer = ({
   }, []);
 
   const displayedChats = activeChats.slice(0, maxParallelChats);
-
-  // For men: silently clear incoming chat popups WITHOUT changing session status
-  // Session stays "pending" so women can still see their accept/reject popup
-  // Men's chat windows already open from loadActiveChats (isAccepted = true for men)
-  useEffect(() => {
-    if (userGender === "male" && incomingChats.length > 0) {
-      for (const incoming of incomingChats) {
-        if (!acceptedSessionsRef.current.has(incoming.sessionId) &&
-            !activeChats.some(ac => ac.id === incoming.sessionId)) {
-          // Just clear the popup — don't update DB status
-          clearChat(incoming.sessionId);
-        }
-      }
-    }
-  }, [incomingChats, userGender, clearChat, activeChats]);
-
-  const pendingIncomingChats = userGender === "female" 
-    ? incomingChats.filter(
-        ic => !acceptedSessionsRef.current.has(ic.sessionId) &&
-              !activeChats.some(ac => ac.id === ic.sessionId) &&
-              !existingPartnersRef.current.has(ic.partnerId)
-      )
-    : []; // Men never see the popup — chats auto-accept
 
   return (
     <>
