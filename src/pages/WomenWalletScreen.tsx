@@ -247,10 +247,14 @@ const WomenWalletScreen = () => {
 
         {/* Earning rates info */}
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-4 pb-3 space-y-1">
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               <IndianRupee className="h-3.5 w-3.5 text-primary shrink-0" />
               {t("earningRates", "Earnings are calculated per minute for text chats, video calls, and group calls.")}
+            </p>
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" />
+              5% platform fee is deducted on all withdrawals. Min withdrawal: ₹{effectiveMin.toLocaleString()}.
             </p>
           </CardContent>
         </Card>
