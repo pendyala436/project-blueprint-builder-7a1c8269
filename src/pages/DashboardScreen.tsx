@@ -86,6 +86,7 @@ import { WhatsAppHeader } from "@/components/WhatsAppHeader";
 import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 import { WhatsAppFAB } from "@/components/WhatsAppFAB";
+import { CallHistoryTab } from "@/components/CallHistoryTab";
 interface Notification {
   id: string;
   title: string;
@@ -1745,6 +1746,7 @@ const DashboardScreen = () => {
       {/* Tab Content */}
       {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "profile" && renderProfileTab()}

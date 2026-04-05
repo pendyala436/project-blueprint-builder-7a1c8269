@@ -73,6 +73,7 @@ import { WhatsAppBottomTabs, getWomenTabs } from "@/components/WhatsAppBottomTab
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 import { WhatsAppFAB } from "@/components/WhatsAppFAB";
 import { WomenKYCForm } from "@/components/WomenKYCForm";
+import { CallHistoryTab } from "@/components/CallHistoryTab";
 
 interface Notification {
   id: string;
@@ -1713,6 +1714,7 @@ const WomenDashboardScreen = () => {
 
       {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="female" />}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
