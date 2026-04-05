@@ -485,9 +485,10 @@ const ChatScreen = () => {
             }];
           });
 
-          // Mark received messages as read automatically
+          // Mark received messages as read automatically & play sound
           if (newMsg.sender_id !== userId) {
             markAsRead(newMsg.id);
+            playMessageSound();
           }
         }
       )
