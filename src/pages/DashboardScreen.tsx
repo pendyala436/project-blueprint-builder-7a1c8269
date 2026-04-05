@@ -951,12 +951,27 @@ const DashboardScreen = () => {
         return a.active_chat_count - b.active_chat_count;
       };
 
+      // Apply match filters client-side
+      const filteredWomen = womenWithChatCount.filter(w => {
+        if (matchFilters.ageRange && w.age != null) {
+          if (w.age < matchFilters.ageRange[0] || w.age > matchFilters.ageRange[1]) return false;
+        }
+        if (matchFilters.country && matchFilters.country !== "all" && w.country) {
+          if (w.country.toLowerCase() !== matchFilters.country.toLowerCase()) return false;
+        }
+        if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
+          if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
+        }
+        if (matchFilters.verifiedOnly && !w.is_verified) return false;
+        return true;
+      });
+
       // Split: same language first, others second
-      const sameLanguage = womenWithChatCount
+      const sameLanguage = filteredWomen
         .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
         .sort(sortByBadgeAndLoad);
 
-      const otherWomen = womenWithChatCount
+      const otherWomen = filteredWomen
         .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
         .sort(sortByBadgeAndLoad);
 
