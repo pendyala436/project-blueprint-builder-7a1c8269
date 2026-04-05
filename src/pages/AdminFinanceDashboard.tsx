@@ -165,16 +165,8 @@ const AdminFinanceDashboard = () => {
         }
       });
 
-      // Add gift transactions as revenue
-      giftTxns?.forEach((txn) => {
-        if (txn.status === "completed") {
-          const date = format(new Date(txn.created_at), "yyyy-MM-dd");
-          if (revenueByDay[date]) {
-            revenueByDay[date].revenue += Number(txn.price_paid);
-            revenueByDay[date].transactions += 1;
-          }
-        }
-      });
+      // FIX #4: Removed gift revenue addition — gifts are already in ledger as gift_debit
+      // Adding gift_transactions.price_paid here would double-count the same money
 
       const dailyData = Object.entries(revenueByDay).map(([date, data]) => ({
         date: format(new Date(date), "MMM d"),
@@ -262,6 +254,7 @@ const AdminFinanceDashboard = () => {
 
   const totalRevenue = dailyRevenue.reduce((sum, d) => sum + d.revenue, 0);
   const totalTransactions = walletTransactions.length + giftTransactions.length;
+  // FIX #4: Gift revenue is informational only — already included in recharge deposits
   const giftRevenue = giftTransactions.reduce((sum, t) => sum + Number(t.price_paid), 0);
   const totalProfit = totalRevenue - totalWithdrawals;
 
@@ -305,7 +298,7 @@ const AdminFinanceDashboard = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="all">All Time (last 365 days)</SelectItem>
               <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="14">Last 14 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>

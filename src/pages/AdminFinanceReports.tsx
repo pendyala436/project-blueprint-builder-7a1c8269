@@ -316,12 +316,14 @@ const AdminFinanceReports = () => {
       const endDate = endOfMonth(startDate);
 
       // Load men's spending data
+      // FIX #10: Only fetch male spending debit types, not all debits (which include women earning payouts)
       const { data: walletTxns } = await supabase
         .from("ledger_transactions")
         .select("user_id, debit, transaction_type, created_at")
         .gte("created_at", startDate.toISOString())
         .lte("created_at", endDate.toISOString())
-        .gt("debit", 0);
+        .gt("debit", 0)
+        .in("transaction_type", ["chat_debit", "video_debit", "audio_debit", "group_call_debit", "gift_debit", "recharge"]);
 
       const { data: giftTxns } = await supabase
         .from("gift_transactions")

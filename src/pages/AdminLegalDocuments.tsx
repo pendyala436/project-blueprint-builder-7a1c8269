@@ -111,7 +111,12 @@ const AdminLegalDocuments = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'legal_documents' }, () => {
         fetchDocuments();
       })
-      .subscribe();
+      .subscribe((status) => {
+        // FIX #16: Error handler for reconnection failures
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[LegalDocs] Realtime channel error, will auto-reconnect');
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, []);

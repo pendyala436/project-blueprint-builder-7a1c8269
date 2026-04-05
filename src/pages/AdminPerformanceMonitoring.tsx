@@ -93,7 +93,12 @@ const AdminPerformanceMonitoring = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
         if (isLive) loadData(true);
       })
-      .subscribe();
+      .subscribe((status) => {
+        // FIX #19 (partial): Error handler for channel
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[Performance] Realtime channel error, will auto-reconnect');
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, [timeRange, isLive]);
@@ -136,6 +141,11 @@ const AdminPerformanceMonitoring = () => {
       const fetchedMetrics = metricsData || [];
       setMetrics(fetchedMetrics);
       
+      // FIX #15: Show warning when no metrics data is available
+      if (fetchedMetrics.length === 0) {
+        toast.info("No metrics data", { description: "Ensure the collect-metrics Edge Function is running.", duration: 5000 });
+      }
+
       // Set current metrics to the latest one
       if (fetchedMetrics.length > 0) {
         setCurrentMetrics(fetchedMetrics[fetchedMetrics.length - 1]);

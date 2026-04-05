@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -148,7 +149,8 @@ const getSignedUrl = async (storedValue: string): Promise<string> => {
 };
 
 const AdminKYCManagement = () => {
-  
+  // FIX #6: Add admin access guard
+  const { isAdmin, isLoading: adminLoading } = useAdminAccess();
   const [loading, setLoading] = useState(true);
   const [indianWomen, setIndianWomen] = useState<IndianWoman[]>([]);
   const [filteredWomen, setFilteredWomen] = useState<IndianWoman[]>([]);
@@ -161,11 +163,12 @@ const AdminKYCManagement = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
+  // FIX #6: Guard data fetching behind isAdmin check
   useEffect(() => {
+    if (adminLoading || !isAdmin) return;
     loadIndianWomen();
     loadStats();
 
-    // #1: Add realtime subscription for KYC updates
     const channel = supabase
       .channel('kyc-management-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, () => {
@@ -174,7 +177,7 @@ const AdminKYCManagement = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [isAdmin, adminLoading]);
 
   useEffect(() => {
     filterWomen();
@@ -338,7 +341,7 @@ const AdminKYCManagement = () => {
     }
   };
 
-  if (loading) {
+  if (adminLoading || !isAdmin || loading) {
     return (
       <AdminNav>
         <div className="space-y-4">

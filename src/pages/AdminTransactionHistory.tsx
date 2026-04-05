@@ -305,11 +305,10 @@ const AdminTransactionHistory = () => {
       setWithdrawalRequests(enrichedWithdrawals);
 
       // Calculate stats from REAL database data only - no defaults or fallbacks
-      const creditTxns = enrichedWalletTxns.filter(t => t.credit > 0);
-      const debitTxns = enrichedWalletTxns.filter(t => t.debit > 0);
+      // FIX #3: Only count recharge credits as revenue, not all credits
+      const rechargeTxns = enrichedWalletTxns.filter(t => t.transaction_type === "recharge" && t.credit > 0);
       
-      const totalCredits = creditTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0);
-      const totalDebits = debitTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0);
+      const totalRevenue = rechargeTxns.reduce((sum, t) => sum + (Number(t.credit) || 0), 0);
 
       const totalEarningsPaid = enrichedEarnings.length > 0
         ? enrichedEarnings.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
@@ -325,10 +324,16 @@ const AdminTransactionHistory = () => {
       const menDebitTxns = menTxns.filter(t => t.debit > 0);
       const menSpent = menDebitTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0);
       
+      // FIX #14: Only count gifts sent by men
+      const menGiftsSent = enrichedGifts.filter(g => {
+        const senderProfile = profileMap.get(g.sender_id);
+        return senderProfile?.gender?.toLowerCase() === "male";
+      }).length;
+
       setMenStats({
         transactions: menTxns.length,
         spent: menSpent,
-        giftsSent: enrichedGifts.length
+        giftsSent: menGiftsSent
       });
 
       // Calculate women stats (earnings)
@@ -343,10 +348,10 @@ const AdminTransactionHistory = () => {
       // Men deposit money, women withdraw money
       // Profit = Total Deposits - Total Withdrawals
       setStats({
-        totalRevenue: totalCredits, // Men's deposits
+        totalRevenue, // Men's recharge deposits only
         totalEarningsPaid: totalEarningsPaid,
         totalWithdrawals: completedWithdrawals, // Women's withdrawals
-        platformProfit: totalCredits - completedWithdrawals, // Deposits - Withdrawals
+        platformProfit: totalRevenue - completedWithdrawals, // Deposits - Withdrawals
         totalTransactions: enrichedWalletTxns.length,
         totalChatSessions: enrichedChatSessions.length,
         totalVideoCalls: enrichedVideoCalls.length,

@@ -101,7 +101,12 @@ const AdminMessaging = () => {
         if (selectedThreadRef.current) fetchThreadMessages(selectedThreadRef.current.user_id);
         if (selectedUserRef.current) fetchChatMessages(selectedUserRef.current.user_id);
       })
-      .subscribe();
+      .subscribe((status) => {
+        // FIX #17: Error handler for channel
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[AdminMessaging] Realtime channel error, will auto-reconnect');
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
   }, []);

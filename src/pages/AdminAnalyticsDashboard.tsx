@@ -195,15 +195,16 @@ const AdminAnalyticsDashboard = () => {
         const totalUsers = gc(usersRes);
         const totalMatches = gc(matchesRes);
 
+        // FIX #8: Show NaN-safe values; adminProfit = -1 signals "N/A" in fallback
         setAnalytics({
           totalUsers,
           activeUsers: gc(activeRes),
           totalMatches,
-          adminProfit: 0,
-          menRecharges: 0,
-          menSpent: 0,
-          womenEarnings: 0,
-          womenWithdrawals: 0,
+          adminProfit: -1, // signals N/A — RPC failed
+          menRecharges: -1,
+          menSpent: -1,
+          womenEarnings: -1,
+          womenWithdrawals: -1,
           newUsersToday: 0,
           messagesCount: gc(msgsRes),
           avgSessionTime: 0,
@@ -371,7 +372,7 @@ const AdminAnalyticsDashboard = () => {
               <SelectValue placeholder="Select range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="all">All Time (last 365 days)</SelectItem>
               <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="14">Last 14 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>
@@ -399,31 +400,31 @@ const AdminAnalyticsDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             title="Total Deposits (Men)"
-            value={`₹${analytics.menRecharges.toLocaleString()}`}
+            value={analytics.menRecharges < 0 ? "N/A" : `₹${analytics.menRecharges.toLocaleString()}`}
             icon={IndianRupee}
             color="success"
           />
           <StatCard
             title="Men Spent"
-            value={`₹${analytics.menSpent.toLocaleString()}`}
+            value={analytics.menSpent < 0 ? "N/A" : `₹${analytics.menSpent.toLocaleString()}`}
             icon={IndianRupee}
             color="warning"
           />
           <StatCard
             title="Women Earnings"
-            value={`₹${analytics.womenEarnings.toLocaleString()}`}
+            value={analytics.womenEarnings < 0 ? "N/A" : `₹${analytics.womenEarnings.toLocaleString()}`}
             icon={IndianRupee}
             color="danger"
           />
           <StatCard
             title="Total Withdrawals (Women)"
-            value={`₹${analytics.womenWithdrawals.toLocaleString()}`}
+            value={analytics.womenWithdrawals < 0 ? "N/A" : `₹${analytics.womenWithdrawals.toLocaleString()}`}
             icon={Wallet}
             color="warning"
           />
           <StatCard
             title="Total Profit (Deposits − Withdrawals)"
-            value={`₹${analytics.adminProfit.toLocaleString()}`}
+            value={analytics.adminProfit < 0 ? "N/A" : `₹${analytics.adminProfit.toLocaleString()}`}
             icon={TrendingUp}
             color={analytics.adminProfit > 0 ? "success" : "danger"}
           />
