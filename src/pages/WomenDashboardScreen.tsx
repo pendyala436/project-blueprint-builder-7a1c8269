@@ -957,25 +957,14 @@ const WomenDashboardScreen = () => {
   };
 
 
-  // Women cannot initiate chats - UNLESS they have Golden Badge
+  // Women can initiate chats freely
   const handleStartChatWithUser = async (userId: string) => {
-    if (!hasGoldenBadge) {
-      toast({
-        title: t('actionNotAllowed', 'Action Not Allowed'),
-        description: t('womenCannotInitiateChat', 'Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.'),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Golden badge holder - initiate chat
     try {
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: userId,
           woman_user_id: currentUserId,
-          golden_badge_override: true
         }
       });
 
@@ -995,7 +984,7 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      // Send initial message so the incoming chat hook doesn't treat it as "incoming" for the woman
+      // Send initial message
       if (data.chat_id) {
         await supabase.from("chat_messages").insert({
           chat_id: data.chat_id,
@@ -1005,7 +994,6 @@ const WomenDashboardScreen = () => {
         });
       }
 
-      // Navigate to full-screen WhatsApp-style chat view
       navigate(`/chat/${userId}`);
 
       toast({
@@ -1021,49 +1009,10 @@ const WomenDashboardScreen = () => {
     }
   };
 
-  const handlePurchaseGoldenBadge = async () => {
-    setIsPurchasingBadge(true);
-    try {
-      const { data, error } = await supabase.rpc('purchase_golden_badge', {
-        p_user_id: currentUserId
-      });
-
-      if (error) throw error;
-
-      const result = data as any;
-      if (result?.success) {
-        setHasGoldenBadge(true);
-        setGoldenBadgeExpiry(result.expires_at);
-        toast({
-          title: "🌟 Golden Badge Activated!",
-          description: "You can now initiate chats with men for 30 days!",
-        });
-        // Refresh only wallet balance — badge state already updated above
-        fetchWalletBalance(currentUserId);
-      } else {
-        toast({
-          title: "Purchase Failed",
-          description: result?.error || "Could not purchase badge",
-          variant: "destructive",
-        });
-      }
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to purchase badge",
-        variant: "destructive",
-      });
-    } finally {
-      setIsPurchasingBadge(false);
-    }
-  };
-
   const handleViewProfile = (userId: string) => {
     toast({
       title: t('viewingProfile', 'Profile'),
-      description: hasGoldenBadge 
-        ? t('useButtonsToChat', 'Use the Chat or Video buttons to connect')
-        : t('waitForChatRequest', 'Wait for this user to send you a chat request'),
+      description: t('useButtonsToChat', 'Use the Chat or Video buttons to connect'),
     });
   };
 
