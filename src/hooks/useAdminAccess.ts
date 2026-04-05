@@ -65,7 +65,7 @@ export const useAdminAccess = () => {
 
     const check = async () => {
       // Fast path: use cached result from another component's check
-      if (cachedResult) {
+      if (cachedResult && (Date.now() - cachedResult.timestamp) < CACHE_TTL) {
         if (!mounted) return;
         if (!cachedResult.isAdmin) {
           toast.error("Access Denied", { description: "You don't have admin privileges" });
