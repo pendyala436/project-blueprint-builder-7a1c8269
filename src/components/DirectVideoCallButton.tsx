@@ -40,6 +40,7 @@ const DirectVideoCallButton = ({
   targetPhoto,
   walletBalance,
   onBalanceChange,
+  currentUserGender,
   size = "sm",
   variant = "auroraOutline",
   iconOnly = true,
