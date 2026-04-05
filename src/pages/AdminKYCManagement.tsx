@@ -178,7 +178,7 @@ const AdminKYCManagement = () => {
 
   useEffect(() => {
     filterWomen();
-  }, [searchQuery, indianWomen]);
+  }, [searchQuery, statusFilter, indianWomen]);
 
   const loadStats = async () => {
     const { data } = await supabase.from("women_kyc").select("verification_status");

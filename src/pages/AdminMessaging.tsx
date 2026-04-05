@@ -92,14 +92,14 @@ const AdminMessaging = () => {
     fetchBroadcastMessages();
     fetchInboxThreads();
 
-    // #4: Realtime subscription instead of polling
+    // #4: Realtime subscription instead of polling — use refs to avoid stale closures
     const channel = supabase
       .channel('admin-messaging-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_user_messages' }, () => {
         fetchBroadcastMessages();
         fetchInboxThreads();
-        if (selectedThread) fetchThreadMessages(selectedThread.user_id);
-        if (selectedUser) fetchChatMessages(selectedUser.user_id);
+        if (selectedThreadRef.current) fetchThreadMessages(selectedThreadRef.current.user_id);
+        if (selectedUserRef.current) fetchChatMessages(selectedUserRef.current.user_id);
       })
       .subscribe();
 
