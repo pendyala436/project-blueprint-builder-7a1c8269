@@ -1532,9 +1532,9 @@ const WomenDashboardScreen = () => {
   );
 
   const renderCommunityTab = () => (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-hidden">
       {currentUserId && currentWomanLanguage ? (
-        <div className="px-4 py-3">
+        <div className="h-full">
           <LanguageGroupChat
             currentUserId={currentUserId}
             languageCode={currentWomanLanguageCode || "eng_Latn"}
