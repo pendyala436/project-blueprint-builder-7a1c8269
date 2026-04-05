@@ -1267,27 +1267,6 @@ const WomenDashboardScreen = () => {
         </div>
       </div>
 
-      {/* Chat Mode Switcher */}
-      <div className="px-4 py-2 border-b border-border/30">
-        <WomenChatModeSwitcher
-          currentMode={chatMode.currentMode}
-          freeMinutesUsed={chatMode.freeMinutesUsed}
-          freeMinutesLimit={chatMode.freeMinutesLimit}
-          freeTimeRemaining={chatMode.freeTimeRemaining}
-          exclusiveFreeLockedUntil={chatMode.exclusiveFreeLockedUntil}
-          canSwitchToPaid={chatMode.canSwitchToPaid}
-          canSwitchToFree={chatMode.canSwitchToFree}
-          canSwitchToExclusiveFree={chatMode.canSwitchToExclusiveFree}
-          isLoading={chatMode.isLoading}
-          isIndian={chatMode.isIndian}
-          onSwitchMode={chatMode.switchMode}
-          isForceFreeActive={chatMode.isForceFreeActive}
-          forceFreeMinutesUsed={chatMode.forceFreeMinutesUsed}
-          forceFreeMinutesLimit={chatMode.forceFreeMinutesLimit}
-          forceFreeTimeRemaining={chatMode.forceFreeTimeRemaining}
-          onToggleForceFree={chatMode.toggleForceFree}
-        />
-      </div>
 
       {/* Notifications */}
       {notifications.length > 0 && (
