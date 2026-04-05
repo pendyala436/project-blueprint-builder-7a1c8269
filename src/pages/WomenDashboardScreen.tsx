@@ -805,7 +805,7 @@ const WomenDashboardScreen = () => {
       console.log("[WomenDashboard] Hidden men (no balance):", menWithoutBalance.length);
 
       setRechargedMen(sortedRecharged);
-      setNonRechargedMen([]); // No longer showing men without balance
+      setNonRechargedMen(menWithoutBalance); // Show men without balance in separate tab
       setSameLanguageMen(sameLanguage);
       setOtherLanguageMen(otherLanguage);
       setStats(prev => ({
