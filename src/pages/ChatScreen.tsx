@@ -270,6 +270,9 @@ const ChatScreen = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // Map temp message IDs to real DB IDs for translation resolution
+  const tempToRealIdRef = useRef<Map<string, string>>(new Map());
 
   // Cleanup camera stream on unmount
   useEffect(() => {
