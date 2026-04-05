@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Phone, PhoneOff, Video, PauseCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { stopRingLoop as stopHookRingLoop } from "@/hooks/useIncomingCalls";
 import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { cn } from "@/lib/utils";
 import { useChatPricing } from "@/hooks/useChatPricing";
@@ -181,6 +182,7 @@ const IncomingVideoCallWindow = ({
 
   const stopRing = () => {
     stopRingSound();
+    stopHookRingLoop();
   };
 
   const handleAnswer = async () => {

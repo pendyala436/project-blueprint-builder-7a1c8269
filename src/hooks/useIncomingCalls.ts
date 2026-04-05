@@ -59,7 +59,7 @@ const startRingLoop = () => {
   ringIntervalId = setInterval(playRingSound, 1500); // Repeat every 1.5s
 };
 
-const stopRingLoop = () => {
+export const stopRingLoop = () => {
   if (ringIntervalId) {
     clearInterval(ringIntervalId);
     ringIntervalId = null;
