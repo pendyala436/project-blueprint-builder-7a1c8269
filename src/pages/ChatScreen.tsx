@@ -2089,8 +2089,7 @@ const ChatScreen = () => {
           <input 
             ref={imageInputRef}
             type="file" 
-            accept="image/*" 
-            capture={undefined}
+            accept="image/*,video/*"
             className="hidden"
             onChange={handleImageSelect}
           />
