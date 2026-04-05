@@ -579,14 +579,16 @@ const AdminChatPricing = () => {
                     <Input
                       id="groupWomenRate"
                       type="number"
-                      className="pl-10 bg-muted cursor-not-allowed"
-                      value={groupWomenRate.toFixed(2)}
-                      readOnly
-                      tabIndex={-1}
+                      step="0.01"
+                      min="0.01"
+                      className="pl-10"
+                      value={formData.group_call_women_earning_rate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, group_call_women_earning_rate: e.target.value }))}
+                      placeholder="0.50"
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Automatically half of men's rate. With N active men: host earns ₹{groupWomenRate.toFixed(2)} × N/min.
+                    With N active men: host earns ₹{groupWomenRate.toFixed(2)} × N/min.
                   </p>
                 </div>
 
