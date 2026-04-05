@@ -887,7 +887,7 @@ const AdminTransactionHistory = () => {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <TrendingUp className="h-4 w-4 text-success" />
                     Women's Session Earnings
                     <Badge variant="outline" className="text-xs ml-auto">
                       {womenEarnings.length} records
@@ -905,7 +905,7 @@ const AdminTransactionHistory = () => {
                         <TableHead className="text-xs">Woman</TableHead>
                         <TableHead className="text-xs">Session Type</TableHead>
                         <TableHead className="text-xs">Session ID</TableHead>
-                        <TableHead className="text-xs text-right text-green-600">Earned (₹)</TableHead>
+                        <TableHead className="text-xs text-right text-success">Earned (₹)</TableHead>
                         <TableHead className="text-xs">Description</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -924,7 +924,7 @@ const AdminTransactionHistory = () => {
                           <TableCell className="text-xs font-mono text-muted-foreground">
                             {e.chat_id ? String(e.chat_id).slice(0, 8) + "…" : "—"}
                           </TableCell>
-                          <TableCell className="text-xs text-right font-semibold text-green-600">
+                          <TableCell className="text-xs text-right font-semibold text-success">
                             ₹{Number(e.amount).toFixed(2)}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground max-w-56 truncate">
