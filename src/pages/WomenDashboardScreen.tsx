@@ -467,14 +467,40 @@ const WomenDashboardScreen = () => {
     if (!currentUserId) return;
     setLoadingWomenChats(true);
     try {
-      const { data: sessions } = await supabase
-        .from("active_chat_sessions")
-        .select("chat_id, man_user_id, started_at, last_activity_at, status, total_earned")
-        .eq("woman_user_id", currentUserId)
-        .in("status", ["active", "pending"])
-        .order("last_activity_at", { ascending: false });
+      // Fetch active/pending sessions AND ended sessions with unread messages
+      const [activeRes, unreadChatIdsRes] = await Promise.all([
+        supabase
+          .from("active_chat_sessions")
+          .select("chat_id, man_user_id, started_at, last_activity_at, status, total_earned")
+          .eq("woman_user_id", currentUserId)
+          .in("status", ["active", "pending"])
+          .order("last_activity_at", { ascending: false }),
+        supabase
+          .from("chat_messages")
+          .select("chat_id")
+          .eq("receiver_id", currentUserId)
+          .eq("is_read", false),
+      ]);
 
-      if (!sessions || sessions.length === 0) {
+      const unreadChatIds = new Set((unreadChatIdsRes.data || []).map((r: any) => r.chat_id));
+      let sessions = activeRes.data || [];
+
+      // Include ended sessions that still have unread messages
+      if (unreadChatIds.size > 0) {
+        const activeChatIds = new Set(sessions.map(s => s.chat_id));
+        const missingChatIds = [...unreadChatIds].filter(id => !activeChatIds.has(id));
+        if (missingChatIds.length > 0) {
+          const { data: endedSessions } = await supabase
+            .from("active_chat_sessions")
+            .select("chat_id, man_user_id, started_at, last_activity_at, status, total_earned")
+            .eq("woman_user_id", currentUserId)
+            .in("chat_id", missingChatIds)
+            .order("last_activity_at", { ascending: false });
+          if (endedSessions) sessions = [...sessions, ...endedSessions];
+        }
+      }
+
+      if (sessions.length === 0) {
         setWomenActiveChats([]);
         setLoadingWomenChats(false);
         return;
