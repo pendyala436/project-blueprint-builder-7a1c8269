@@ -75,6 +75,7 @@ const DraggableVideoCallWindow = ({
   onFocus,
   ratePerMinute = 8,
   preAcquiredStream = null,
+  audioOnly = false,
 }: DraggableVideoCallWindowProps) => {
   const { toast } = useToast();
   const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
