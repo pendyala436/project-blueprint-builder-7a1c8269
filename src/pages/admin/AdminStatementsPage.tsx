@@ -99,6 +99,13 @@ const AdminStatementsPage = () => {
   const [detailLoad,  setDetailLoad]  = useState(false);
   const [generating,  setGenerating]  = useState(false);
 
+  // FIX #1/#17: Realtime subscription for statements
+  useRealtimeSubscription({
+    table: "monthly_statements",
+    onUpdate: search,
+    enabled: isAdmin,
+  });
+
   // ── Auth guard
   useEffect(() => {
     if (!adminLoading && !isAdmin) navigate('/admin');

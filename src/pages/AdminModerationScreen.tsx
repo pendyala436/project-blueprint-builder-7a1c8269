@@ -210,12 +210,12 @@ const AdminModerationScreen = () => {
    * 
    * Loads all moderation data in parallel.
    */
-  const loadData = async () => {
+  // FIX #37: Wrap loadData in useCallback
+  const loadData = useCallback(async () => {
     setLoading(true);
-    // Load all data types concurrently
     await Promise.all([loadReports(), loadFlaggedMessages(), loadBlockedUsers()]);
     setLoading(false);
-  };
+  }, []);
 
   /**
    * loadReports Function
