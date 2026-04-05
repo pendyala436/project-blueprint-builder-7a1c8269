@@ -1097,44 +1097,26 @@ const WomenDashboardScreen = () => {
 
             {/* Action buttons */}
             <div className="flex items-center gap-1 sm:gap-1.5 mt-2 flex-wrap">
-              {hasGoldenBadge && (
-                <>
-                  <Button 
-                    size="sm" 
-                    variant="aurora"
-                    className="h-7 text-xs gap-1 px-2"
-                    onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
-                    title="Start Chat (Golden Badge)"
-                  >
-                    <MessageCircleIcon className="h-3.5 w-3.5" />
-                    Chat
-                  </Button>
-                  {/* Video call: Golden Badge + Indian woman + Indian man + same language */}
-                  {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                    <DirectVideoCallButton
-                      currentUserId={currentUserId}
-                      targetUserId={user.userId}
-                      targetName={user.fullName}
-                      targetPhoto={user.photoUrl}
-                      walletBalance={myWalletBalance}
-                      onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
-                      iconOnly={true}
-                    />
-                  )}
-                </>
-              )}
-              {/* Show disabled video call hint for women without golden badge */}
-              {!hasGoldenBadge && isIndianWoman && user.isSameLanguage && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled
-                  className="opacity-50 gap-1 text-[10px] h-7 px-2"
-                  title="Purchase Golden Badge to enable video calls"
-                >
-                  <Video className="h-3 w-3" />
-                  🔒
-                </Button>
+              <Button 
+                size="sm" 
+                variant="aurora"
+                className="h-7 text-xs gap-1 px-2"
+                onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
+                title="Start Chat"
+              >
+                <MessageCircleIcon className="h-3.5 w-3.5" />
+                Chat
+              </Button>
+              {user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                <DirectVideoCallButton
+                  currentUserId={currentUserId}
+                  targetUserId={user.userId}
+                  targetName={user.fullName}
+                  targetPhoto={user.photoUrl}
+                  walletBalance={myWalletBalance}
+                  onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)}
+                  iconOnly={true}
+                />
               )}
               <Button 
                 size="sm" 
