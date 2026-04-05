@@ -492,7 +492,34 @@ const ChatScreen = () => {
           }
         }
       )
-      .subscribe(); // Start listening
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `chat_id=eq.${chatId.current}`
+        },
+        (payload: any) => {
+          const updated = payload.new;
+          const userId = currentUserIdRef.current;
+          // Handle delete for everyone
+          if (updated.deleted_for_everyone) {
+            setMessages(prev => prev.filter(m => m.id !== updated.id));
+            return;
+          }
+          // Handle delete for me
+          if (updated.sender_id === userId && updated.deleted_for_sender) {
+            setMessages(prev => prev.filter(m => m.id !== updated.id));
+            return;
+          }
+          if (updated.receiver_id === userId && updated.deleted_for_receiver) {
+            setMessages(prev => prev.filter(m => m.id !== updated.id));
+            return;
+          }
+        }
+      )
+      .subscribe();
 
     // Cleanup function: remove channel on unmount
     return () => {
