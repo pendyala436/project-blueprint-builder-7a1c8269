@@ -238,6 +238,7 @@ const DashboardScreen = () => {
   const [customAmount, setCustomAmount] = useState("");
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("online");
+  const matchesFetchedRef = useRef(false);
   const [activeChats, setActiveChats] = useState<Array<{
     chatId: string;
     partnerId: string;
@@ -457,6 +458,11 @@ const DashboardScreen = () => {
       // the man's language filter - which is recalculated on user_status changes
       .on(
         'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
+        () => { fetchActiveChats(); }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'video_call_sessions' },
         () => { loadActiveChatCount(); }
       )
@@ -620,15 +626,21 @@ const DashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    return t('available', 'Available');
+    if (isManuallyOffline) return 'Offline';
+    if (!isOnline) return 'Away';
+    return 'Available';
   };
 
   const getStatusColor = () => {
-    return "bg-online";
+    if (isManuallyOffline) return 'bg-muted-foreground';
+    if (!isOnline) return 'bg-amber-500';
+    return 'bg-online';
   };
 
   const getStatusDotColor = () => {
-    return "bg-online";
+    if (isManuallyOffline) return 'bg-muted-foreground';
+    if (!isOnline) return 'bg-amber-500';
+    return 'bg-online';
   };
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
@@ -1706,7 +1718,7 @@ const DashboardScreen = () => {
         { icon: <UserCircle className="w-5 h-5 text-primary" />, label: "Edit Profile", onClick: () => setProfileEditOpen(true) },
         { icon: <Compass className="w-5 h-5 text-primary" />, label: "Discover Matches", onClick: () => navigate("/match-discovery") },
         { icon: <Eye className="w-5 h-5 text-primary" />, label: "Online Users", onClick: () => navigate("/online-users") },
-        { icon: <Gift className="w-5 h-5 text-primary" />, label: "Send Gift", onClick: () => navigate("/gift-sending") },
+        { icon: <Gift className="w-5 h-5 text-primary" />, label: "Send Gift", onClick: () => navigate("/match-discovery") },
         { icon: <Settings className="w-5 h-5 text-primary" />, label: "Settings", onClick: () => navigate("/settings") },
       ].map((item, i) => (
         <div key={i} className="px-4 py-3 flex items-center gap-3 border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={item.onClick}>

@@ -231,6 +231,7 @@ const WomenDashboardScreen = () => {
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
   const [activeTab, setActiveTab] = useState("online");
+  const matchesFetchedRef = useRef(false);
   const [onlineSubTab, setOnlineSubTab] = useState<"recharged" | "nobalance">("recharged");
   const [womenActiveChats, setWomenActiveChats] = useState<Array<{
     chatId: string;
@@ -437,6 +438,11 @@ const WomenDashboardScreen = () => {
       )
       .on(
         'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
+        () => { fetchWomenActiveChats(); }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'women_earnings' },
         // Only refresh wallet/earnings, not full dashboard reload
         () => { if (currentUserId) { fetchWalletBalance(currentUserId); fetchTopEarnerLeaderboard(currentUserId); } }
@@ -598,11 +604,15 @@ const WomenDashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    return t('available', 'Available');
+    if (isManuallyOffline) return 'Offline';
+    if (!isOnline) return 'Away';
+    return 'Available';
   };
 
   const getStatusColor = () => {
-    return "bg-online";
+    if (isManuallyOffline) return 'bg-muted-foreground';
+    if (!isOnline) return 'bg-amber-500';
+    return 'bg-online';
   };
 
   const loadDashboardData = async () => {
@@ -626,8 +636,8 @@ const WomenDashboardScreen = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       
-      const profileTimeout = new Promise<{ data: null, error: Error }>((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      const profileTimeout = new Promise<{ data: null, error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
       );
       
       let mainProfile: { gender?: string | null; approval_status?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; is_indian?: boolean | null } | null = null;
@@ -1094,10 +1104,7 @@ const WomenDashboardScreen = () => {
   };
 
   const handleViewProfile = (userId: string) => {
-    toast({
-      title: t('viewingProfile', 'Profile'),
-      description: t('useButtonsToChat', 'Use the Chat or Video buttons to connect'),
-    });
+    navigate(`/profile/${userId}`);
   };
 
   // ScrollableUserList extracted to top-level component to avoid Hooks violation
