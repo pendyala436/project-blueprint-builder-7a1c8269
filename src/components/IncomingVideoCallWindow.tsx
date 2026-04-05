@@ -189,8 +189,28 @@ const IncomingVideoCallWindow = ({
     if (isProcessing) return;
     setIsProcessing(true);
     stopRing();
+
+    // CRITICAL: Pre-acquire media in user gesture context (iOS Safari requirement)
+    let preStream: MediaStream | null = null;
     try {
-      // First, pause all active chats - VIDEO CALL HAS PRIORITY
+      const isAudio = callType === 'audio';
+      preStream = await navigator.mediaDevices.getUserMedia({
+        video: isAudio ? false : { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
+    } catch (mediaErr) {
+      console.error('[IncomingCall] Pre-acquire media failed:', mediaErr);
+      toast({
+        title: callType === 'audio' ? "Microphone Error" : "Camera/Mic Error",
+        description: `Please allow ${callType === 'audio' ? 'microphone' : 'camera and microphone'} access.`,
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      // Pause all active chats - CALL HAS PRIORITY
       await pauseActiveChats();
 
       // Update call status to active
@@ -204,6 +224,7 @@ const IncomingVideoCallWindow = ({
 
       if (error) {
         console.error('Error updating call status:', error);
+        preStream?.getTracks().forEach(t => t.stop());
         toast({
           title: "Error",
           description: "Failed to answer call. Please try again.",
@@ -214,6 +235,7 @@ const IncomingVideoCallWindow = ({
       }
 
       setIsAnswered(true);
+      setPreAcquiredStream(preStream);
       const sessionType = callType === 'audio' ? 'audio_call' : 'video_call';
       registerSession(sessionType as any, callId);
       
@@ -225,6 +247,7 @@ const IncomingVideoCallWindow = ({
       });
     } catch (error) {
       console.error('Error answering call:', error);
+      preStream?.getTracks().forEach(t => t.stop());
       toast({
         title: "Error",
         description: "Failed to answer call",

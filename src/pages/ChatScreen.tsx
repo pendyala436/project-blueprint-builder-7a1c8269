@@ -1890,6 +1890,8 @@ const ChatScreen = () => {
               targetName={chatPartner.fullName}
               targetPhoto={chatPartner.avatar}
               walletBalance={walletBalance}
+              onBalanceChange={(nb) => setWalletBalance(nb)}
+              currentUserGender={currentUserGender}
               size="icon"
               variant="ghost"
               iconOnly={true}
@@ -1900,6 +1902,8 @@ const ChatScreen = () => {
               targetName={chatPartner.fullName}
               targetPhoto={chatPartner.avatar}
               walletBalance={walletBalance}
+              onBalanceChange={(nb) => setWalletBalance(nb)}
+              currentUserGender={currentUserGender}
               size="icon"
               variant="ghost"
               iconOnly={true}
