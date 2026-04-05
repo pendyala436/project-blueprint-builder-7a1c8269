@@ -1167,8 +1167,7 @@ const WomenDashboardScreen = () => {
                   isPremium={user.hasRecharged}
                   walletBalance={user.walletBalance}
                   activeChatCount={user.activeChatCount}
-                  onClick={() => handleViewProfile(user.userId)}
-                  onDoubleClick={() => handleStartChatWithUser(user.userId)}
+                  onClick={() => handleStartChatWithUser(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
@@ -1200,8 +1199,7 @@ const WomenDashboardScreen = () => {
                   walletBalance={user.walletBalance}
                   activeChatCount={user.activeChatCount}
                   subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
-                  onClick={() => handleViewProfile(user.userId)}
-                  onDoubleClick={() => handleStartChatWithUser(user.userId)}
+                  onClick={() => handleStartChatWithUser(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
@@ -1238,8 +1236,7 @@ const WomenDashboardScreen = () => {
                 country={user.country}
                 state={user.state}
                 activeChatCount={user.activeChatCount}
-                onClick={() => handleViewProfile(user.userId)}
-                onDoubleClick={() => handleStartChatWithUser(user.userId)}
+                onClick={() => handleStartChatWithUser(user.userId)}
                 actions={
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
@@ -1365,8 +1362,7 @@ const WomenDashboardScreen = () => {
             language={man.primaryLanguage}
             country={man.country}
             isOnline={man.isOnline}
-            onClick={() => navigate(`/profile/${man.userId}`)}
-            onDoubleClick={() => handleStartChatWithUser(man.userId)}
+            onClick={() => handleStartChatWithUser(man.userId)}
             actions={
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
