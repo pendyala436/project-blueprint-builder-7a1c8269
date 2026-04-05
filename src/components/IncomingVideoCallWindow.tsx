@@ -10,31 +10,54 @@ import DraggableVideoCallWindow from "./DraggableVideoCallWindow";
 import { cn } from "@/lib/utils";
 import { useChatPricing } from "@/hooks/useChatPricing";
 
-// Audio context for ringtone
+// Audio context for ringtone — old-school telephone "tring tring"
 let ringCtx: AudioContext | null = null;
+let ringLoopId: NodeJS.Timeout | null = null;
 
 const playRingTone = () => {
   try {
     if (!ringCtx || ringCtx.state === 'closed') {
       ringCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    const osc = ringCtx.createOscillator();
-    const gain = ringCtx.createGain();
-    osc.connect(gain);
-    gain.connect(ringCtx.destination);
-    osc.frequency.setValueAtTime(440, ringCtx.currentTime);
-    osc.frequency.setValueAtTime(520, ringCtx.currentTime + 0.15);
-    osc.type = "sine";
-    gain.gain.setValueAtTime(0.3, ringCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ringCtx.currentTime + 0.4);
-    osc.start(ringCtx.currentTime);
-    osc.stop(ringCtx.currentTime + 0.4);
+    const ctx = ringCtx;
+    const now = ctx.currentTime;
+
+    const bellFreqs = [2000, 2500];
+    const strikeGap = 0.08;
+
+    for (let burst = 0; burst < 2; burst++) {
+      const burstStart = now + burst * 0.35;
+      for (let i = 0; i < 6; i++) {
+        const t = burstStart + i * strikeGap;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(bellFreqs[i % 2], t);
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.15, t + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + strikeGap - 0.01);
+        osc.start(t);
+        osc.stop(t + strikeGap);
+      }
+    }
   } catch (e) {
     console.error("Ring tone error:", e);
   }
 };
 
+const startRingToneLoop = () => {
+  if (ringLoopId) return;
+  playRingTone();
+  ringLoopId = setInterval(playRingTone, 1500);
+};
+
 const stopRingSound = () => {
+  if (ringLoopId) {
+    clearInterval(ringLoopId);
+    ringLoopId = null;
+  }
   if (ringCtx && ringCtx.state !== 'closed') {
     try { ringCtx.close(); } catch (_) {}
     ringCtx = null;
