@@ -238,7 +238,7 @@ const AdminDashboard = () => {
     {
       title: "Audit Logs",
       description: "View admin activity logs",
-      icon: <Clock className="h-6 w-6" />,
+      icon: <FileText className="h-6 w-6" />,
       path: "/admin/audit-logs",
     },
     {
