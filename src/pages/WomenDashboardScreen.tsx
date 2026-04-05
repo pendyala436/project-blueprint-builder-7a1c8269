@@ -1458,18 +1458,6 @@ const WomenDashboardScreen = () => {
         </div>
       )}
 
-      {/* Language Group Chat */}
-      {currentUserId && currentWomanLanguage && (
-        <div className="px-4 py-3 border-t border-border/30">
-          <LanguageGroupChat
-            currentUserId={currentUserId}
-            languageCode={currentWomanLanguageCode || "eng_Latn"}
-            languageName={currentWomanLanguage}
-            userName={userName || 'User'}
-            userPhoto={userPhoto}
-          />
-        </div>
-      )}
     </div>
   );
 
