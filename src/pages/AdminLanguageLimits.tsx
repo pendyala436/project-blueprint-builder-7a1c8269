@@ -60,6 +60,8 @@ const AdminLanguageLimits = () => {
     loadLimits();
     
     // Set up real-time subscription
+    // FIX #19: Guard channel behind isAdmin and add error handler
+    if (!isAdmin) return;
     const channel = supabase
       .channel('language-limits-changes')
       .on(
@@ -69,7 +71,11 @@ const AdminLanguageLimits = () => {
           loadLimits();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[LanguageLimits] Realtime channel error');
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
