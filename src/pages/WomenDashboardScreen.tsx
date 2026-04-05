@@ -1567,6 +1567,27 @@ const WomenDashboardScreen = () => {
     </div>
   );
 
+  const renderGroupsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+          <Video className="h-4 w-4 text-primary" />
+          Private Groups
+        </span>
+      </div>
+      {currentUserId ? (
+        <div className="px-4 py-3">
+          <PrivateGroupsSection currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
+        </div>
+      ) : (
+        <div className="text-center py-10">
+          <Video className="w-10 h-10 text-muted-foreground/20 mx-auto mb-2" />
+          <p className="text-xs text-muted-foreground">Loading groups...</p>
+        </div>
+      )}
+    </div>
+  );
+
   const renderEarningsTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Wallet Balance */}
