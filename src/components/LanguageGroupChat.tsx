@@ -428,7 +428,7 @@ export const LanguageGroupChat = ({
 
   if (isLoading) {
     return (
-      <Card className="h-[600px]">
+      <Card className="h-[calc(100vh-180px)] min-h-[400px]">
         <CardHeader className="pb-3">
           <Skeleton className="h-6 w-48" />
         </CardHeader>
@@ -448,7 +448,7 @@ export const LanguageGroupChat = ({
   }
 
   return (
-    <Card className="h-[600px] flex flex-col">
+    <Card className="h-[calc(100vh-180px)] min-h-[400px] flex flex-col">
       {/* Header */}
       <CardHeader className="pb-3 border-b">
         <div className="flex items-center justify-between">
