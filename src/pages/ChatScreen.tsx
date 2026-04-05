@@ -1670,10 +1670,15 @@ const ChatScreen = () => {
    * Extract Attachment from Message
    */
   const extractAttachment = (message: string): { text: string; attachmentUrl?: string; voiceUrl?: string } => {
-    // Check for voice message
-    const voiceMatch = message.match(/\[VOICE:(.*?)\]/);
+    // Check for voice message — supports both 🎤voice:path and [VOICE:url] formats
+    const voiceMatch = message.match(/🎤voice:(.+)/) || message.match(/\[VOICE:(.*?)\]/);
     if (voiceMatch) {
-      return { text: '', voiceUrl: voiceMatch[1] };
+      const voicePath = voiceMatch[1];
+      // If it's a storage path (not a full URL), generate public URL
+      const voiceUrl = voicePath.startsWith('http')
+        ? voicePath
+        : supabase.storage.from('chat-attachments').getPublicUrl(voicePath).data.publicUrl;
+      return { text: '', voiceUrl };
     }
     
     // Check for regular attachment
@@ -2070,8 +2075,8 @@ const ChatScreen = () => {
                 // English subtitle shown below EVERY bubble (per spec)
                 const englishSubtitle = message.englishText;
                 
-                // Skip empty voice message placeholders (the actual voice URL comes in the next message)
-                if (message.message === '🎤 Voice message') {
+                // Skip empty voice message placeholders
+                if (message.message === '🎤 Voice message' || message.message.startsWith('🎤voice:') && !extractAttachment(message.message).voiceUrl) {
                   return null;
                 }
 
