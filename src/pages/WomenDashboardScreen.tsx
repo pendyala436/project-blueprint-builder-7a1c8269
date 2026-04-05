@@ -68,7 +68,10 @@ import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
-
+import { WhatsAppHeader } from "@/components/WhatsAppHeader";
+import { WhatsAppBottomTabs, getWomenTabs } from "@/components/WhatsAppBottomTabs";
+import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
+import { WhatsAppFAB } from "@/components/WhatsAppFAB";
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 
 interface Notification {
