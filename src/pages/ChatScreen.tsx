@@ -1967,6 +1967,14 @@ const ChatScreen = () => {
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </div>
+              <button
+                onClick={handleSendWithAttachment}
+                disabled={isSending || isUploading}
+                className="p-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                title="Send"
+              >
+                {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
               <button 
                 onClick={cancelSelectedFile}
                 className="p-1.5 hover:bg-muted-foreground/10 rounded-full"
