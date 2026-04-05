@@ -58,17 +58,15 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
 };
 
 // Preset tab configs
-export const getMenTabs = (chatBadge?: number, usersBadge?: number, matchBadge?: number): TabItem[] => [
+export const getMenTabs = (chatBadge?: number, matchBadge?: number): TabItem[] => [
   { id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge },
-  { id: "users", label: "Women", icon: <Users className="w-5 h-5" />, badge: usersBadge },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
   { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchBadge },
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
 ];
 
-export const getWomenTabs = (chatBadge?: number, usersBadge?: number, earningsBadge?: number): TabItem[] => [
+export const getWomenTabs = (chatBadge?: number, earningsBadge?: number): TabItem[] => [
   { id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge },
-  { id: "users", label: "Men", icon: <Users className="w-5 h-5" />, badge: usersBadge },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
   { id: "earnings", label: "Earnings", icon: <Wallet className="w-5 h-5" /> },
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
