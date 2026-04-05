@@ -541,6 +541,82 @@ const DashboardScreen = () => {
       .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
+    
+    // Also fetch active chat details for the Chats tab
+    fetchActiveChats();
+  };
+
+  const fetchActiveChats = async () => {
+    if (!currentUserId) return;
+    setLoadingChats(true);
+    try {
+      const { data: sessions } = await supabase
+        .from("active_chat_sessions")
+        .select("chat_id, woman_user_id, started_at, last_activity_at, status")
+        .eq("man_user_id", currentUserId)
+        .in("status", ["active", "pending"])
+        .order("last_activity_at", { ascending: false });
+
+      if (!sessions || sessions.length === 0) {
+        setActiveChats([]);
+        setLoadingChats(false);
+        return;
+      }
+
+      const partnerIds = sessions.map(s => s.woman_user_id);
+      
+      // Fetch partner profiles and last messages in parallel
+      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+      const [profiles, lastMessages] = await Promise.all([
+        fetchPublicProfiles(partnerIds),
+        Promise.all(sessions.map(async (s) => {
+          const { data } = await supabase
+            .from("chat_messages")
+            .select("message, created_at, sender_id, is_read")
+            .eq("chat_id", s.chat_id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          
+          // Count unread
+          const { count } = await supabase
+            .from("chat_messages")
+            .select("*", { count: "exact", head: true })
+            .eq("chat_id", s.chat_id)
+            .eq("receiver_id", currentUserId)
+            .eq("is_read", false);
+          
+          return {
+            chatId: s.chat_id,
+            lastMessage: data?.[0]?.message || "",
+            lastMessageAt: data?.[0]?.created_at || s.last_activity_at,
+            unreadCount: count || 0,
+          };
+        }))
+      ]);
+
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+      const messageMap = new Map(lastMessages.map(m => [m.chatId, m]));
+
+      const chats = sessions.map(s => {
+        const profile = profileMap.get(s.woman_user_id);
+        const msg = messageMap.get(s.chat_id);
+        return {
+          chatId: s.chat_id,
+          partnerId: s.woman_user_id,
+          partnerName: profile?.full_name || "User",
+          partnerPhoto: profile?.photo_url || null,
+          lastMessage: msg?.lastMessage || "",
+          lastMessageAt: msg?.lastMessageAt || s.last_activity_at,
+          unreadCount: msg?.unreadCount || 0,
+        };
+      });
+
+      setActiveChats(chats);
+    } catch (error) {
+      console.error("[Dashboard] Error fetching active chats:", error);
+    } finally {
+      setLoadingChats(false);
+    }
   };
 
   const getStatusText = () => {
