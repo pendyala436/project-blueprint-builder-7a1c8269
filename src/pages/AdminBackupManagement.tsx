@@ -47,25 +47,17 @@ const AdminBackupManagement = () => {
   const [triggeringBackup, setTriggeringBackup] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const fetchBackupsCb = useCallback(() => { fetchBackups(); }, []);
+
   useEffect(() => {
     fetchBackups();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('backup-logs-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'backup_logs' },
-        () => {
-          fetchBackups();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
+
+  // Real-time subscription using standardized hook
+  useRealtimeSubscription({
+    table: "backup_logs",
+    onUpdate: fetchBackupsCb,
+  });
 
   const fetchBackups = async () => {
     try {
