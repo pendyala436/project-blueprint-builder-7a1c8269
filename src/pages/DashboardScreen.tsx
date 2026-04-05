@@ -65,6 +65,7 @@ import { cn } from "@/lib/utils";
 import { RandomChatButton } from "@/components/RandomChatButton";
 import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
+import DirectAudioCallButton from "@/components/DirectAudioCallButton";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
