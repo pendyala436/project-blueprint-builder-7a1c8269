@@ -250,13 +250,22 @@ export const useP2PCall = ({
   // If preAcquiredStream is available, use it directly instead of calling getUserMedia
   const initLocalMedia = useCallback(async () => {
     try {
-      console.log('[P2P] Initializing local media...');
+      console.log('[P2P] Initializing local media...', audioOnly ? '(audio-only)' : '(video+audio)');
       
       // Use pre-acquired stream if available (acquired in user gesture context)
       let stream: MediaStream;
       if (preAcquiredStream && preAcquiredStream.active && preAcquiredStream.getTracks().length > 0) {
         console.log('[P2P] Using pre-acquired media stream');
         stream = preAcquiredStream;
+      } else if (audioOnly) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
       } else {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
@@ -283,13 +292,13 @@ export const useP2PCall = ({
     } catch (error) {
       console.error('[P2P] Error getting local media:', error);
       toast({
-        title: "Camera/Microphone Error",
-        description: "Please allow access to camera and microphone",
+        title: audioOnly ? "Microphone Error" : "Camera/Microphone Error",
+        description: audioOnly ? "Please allow access to microphone" : "Please allow access to camera and microphone",
         variant: "destructive",
       });
       throw error;
     }
-  }, [toast, preAcquiredStream]);
+  }, [toast, preAcquiredStream, audioOnly]);
 
   // Process queued ICE candidates after remote description is set
   const processIceCandidateQueue = useCallback(async () => {
