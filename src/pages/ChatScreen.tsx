@@ -763,7 +763,18 @@ const ChatScreen = () => {
                           "English";
       
       setCurrentUserLanguage(motherTongue);
-      setCurrentUserGender(currentProfile?.gender === "female" || currentProfile?.gender === "Female" ? "female" : "male");
+      const userGender = currentProfile?.gender === "female" || currentProfile?.gender === "Female" ? "female" : "male";
+      setCurrentUserGender(userGender);
+
+      // Fetch wallet balance for call buttons
+      if (userGender === "male") {
+        const { data: walletData } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setWalletBalance(Number(walletData?.balance) || 0);
+      }
 
       // ============= FETCH PARTNER PROFILE =============
       
