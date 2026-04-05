@@ -72,10 +72,12 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
   const fetchGroups = async () => {
     try {
+      // Only fetch live groups - non-live groups are hidden
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
+        .eq('is_live', true)
         .order('name', { ascending: true });
 
       if (error) throw error;
