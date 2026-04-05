@@ -384,14 +384,7 @@ const DraggableVideoCallWindow = ({
   const handleEndCall = async () => {
     console.log('[VideoCall] handleEndCall triggered');
     try {
-      await supabase
-        .from('video_call_sessions')
-        .update({
-          status: 'ended',
-          ended_at: new Date().toISOString(),
-          end_reason: 'user_ended'
-        })
-        .eq('call_id', callId);
+      await endCall();
 
       await supabase
         .from('active_chat_sessions')
@@ -402,8 +395,6 @@ const DraggableVideoCallWindow = ({
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .eq('status', 'paused')
         .eq('end_reason', 'video_call_priority');
-
-      await endCall();
     } catch (error) {
       console.error("[VideoCall] Error ending call:", error);
       toast.error("Call not ended", { description: "Unable to end the call properly. Please refresh if the call appears stuck." });

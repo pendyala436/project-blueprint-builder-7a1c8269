@@ -210,17 +210,9 @@ const DirectAudioCallButton = ({
     }
   };
 
-  const handleEndCall = async () => {
+  const handleCallWindowClosed = () => {
     if (activeCall) {
       activeCall.stream?.getTracks().forEach(t => t.stop());
-      await supabase
-        .from('video_call_sessions')
-        .update({
-          status: 'ended',
-          ended_at: new Date().toISOString(),
-          end_reason: 'user_ended',
-        })
-        .eq('call_id', activeCall.callId);
       unregisterSession('audio_call', activeCall.callId);
     }
     setActiveCall(null);
@@ -256,7 +248,7 @@ const DirectAudioCallButton = ({
           remotePhoto={targetPhoto}
           isInitiator={true}
           currentUserId={currentUserId}
-          onClose={handleEndCall}
+          onClose={handleCallWindowClosed}
           initialPosition={{ x: window.innerWidth - 400, y: 80 }}
           zIndex={130}
           ratePerMinute={audioRate}
