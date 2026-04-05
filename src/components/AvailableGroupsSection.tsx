@@ -96,12 +96,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchGroups = async () => {
     try {
-      // Fetch ALL active groups (both live and not live) so men can see status
+      // Only fetch live groups - non-live groups are hidden from men
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
-        .order('is_live', { ascending: false }) // live groups first
+        .eq('is_live', true)
         .order('name', { ascending: true });
 
       if (error) throw error;

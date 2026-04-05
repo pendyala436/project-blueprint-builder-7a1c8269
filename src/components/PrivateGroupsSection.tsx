@@ -72,10 +72,12 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
   const fetchGroups = async () => {
     try {
+      // Fetch own groups (for Go Live) and other live groups
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
+        .or(`owner_id.eq.${currentUserId},is_live.eq.true`)
         .order('name', { ascending: true });
 
       if (error) throw error;
