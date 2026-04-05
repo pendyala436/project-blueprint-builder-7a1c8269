@@ -1007,6 +1007,10 @@ const WomenDashboardScreen = () => {
 
   // Women can initiate chats freely
   const handleStartChatWithUser = async (userId: string) => {
+    // Navigate immediately so the chat window opens on single click
+    navigate(`/chat/${userId}`);
+
+    // Start the chat session in the background
     try {
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
@@ -1016,17 +1020,21 @@ const WomenDashboardScreen = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Chat manager error:", error);
+        return;
+      }
 
       // Mark as self-initiated to prevent incoming chat popup
       if (data?.session_id || data?.chat_id) {
         const { markChatAsSelfInitiated } = await import("@/hooks/useIncomingChats");
         markChatAsSelfInitiated(data.session_id, data.chat_id);
       }
-      if (!data.success) {
+
+      if (!data?.success) {
         toast({
-          title: 'Cannot Start Chat',
-          description: data.message || "Unable to start chat",
+          title: 'Chat Notice',
+          description: data?.message || "Chat session may not have started properly",
           variant: "destructive",
         });
         return;
@@ -1041,19 +1049,8 @@ const WomenDashboardScreen = () => {
           message: "👋 Hi!"
         });
       }
-
-      navigate(`/chat/${userId}`);
-
-      toast({
-        title: 'Chat Started!',
-        description: 'Chat session started successfully',
-      });
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to start chat",
-        variant: "destructive",
-      });
+      console.error("Failed to start chat session:", err);
     }
   };
 
