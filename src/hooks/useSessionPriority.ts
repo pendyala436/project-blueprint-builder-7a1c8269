@@ -89,8 +89,22 @@ export const shouldBlockIncoming = (incomingType: SessionType): boolean => {
   // Chat (P1) is never blocked
   if (incomingPriority === 1) return false;
   
+  // Clean up stale P3 sessions older than 3 hours before checking
+  const now = Date.now();
+  const maxAge = 3 * 60 * 60 * 1000;
+  const before = activeSessions.length;
+  activeSessions = activeSessions.filter((s) => s.priority < 3 || (now - s.startedAt) < maxAge);
+  if (activeSessions.length !== before) {
+    console.warn('[SessionPriority] Cleaned stale P3 sessions during block check');
+    notify();
+  }
+  
   // P3 incoming (audio/video/group call) — block if ANY P3 session is active
   const hasActiveP3 = activeSessions.some((s) => s.priority >= 3);
+  if (hasActiveP3) {
+    console.log('[SessionPriority] Blocking incoming', incomingType, '— active P3 sessions:', 
+      activeSessions.filter(s => s.priority >= 3).map(s => `${s.type}:${s.id}`));
+  }
   return hasActiveP3;
 };
 
