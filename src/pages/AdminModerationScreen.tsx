@@ -23,7 +23,7 @@
  */
 
 // ============= IMPORTS SECTION =============
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminNav from "@/components/AdminNav";
 // Navigation hook for page redirects
 import { useNavigate } from 'react-router-dom';

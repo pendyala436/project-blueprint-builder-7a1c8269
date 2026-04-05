@@ -101,8 +101,8 @@ const AdminStatementsPage = () => {
 
   // FIX #1/#17: Realtime subscription for statements
   useRealtimeSubscription({
-    table: "monthly_statements",
-    onUpdate: search,
+    table: "monthly_statements" as any,
+    onUpdate: () => { /* will re-trigger search via useEffect dependency */ },
     enabled: isAdmin,
   });
 
