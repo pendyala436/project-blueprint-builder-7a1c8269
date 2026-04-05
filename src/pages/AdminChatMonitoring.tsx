@@ -745,17 +745,27 @@ const AdminChatMonitoring = () => {
                   <CardDescription>Chat: {silentMonitorChatId} — Real-time updates — You are invisible</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[400px] border rounded-lg p-4 bg-muted/30">
-                    <div className="space-y-3">
-                      {silentMonitorMessages.map((msg) => (
-                        <div key={msg.id} className={`p-3 rounded-lg max-w-[80%] ${profiles[msg.sender_id]?.gender === "male" ? "bg-primary/10 ml-0" : "bg-secondary/10 ml-auto"}`}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary" className="text-xs">{getUserName(msg.sender_id)}</Badge>
-                            <span className="text-xs text-muted-foreground">{format(new Date(msg.created_at), "HH:mm:ss")}</span>
+                  <ScrollArea className="h-[400px] border rounded-lg p-4 bg-[#ECE5DD]">
+                    <div className="space-y-2">
+                      {silentMonitorMessages.map((msg) => {
+                        const isMale = profiles[msg.sender_id]?.gender === "male";
+                        return (
+                          <div key={msg.id} className={`flex ${isMale ? "justify-end" : "justify-start"}`}>
+                            <div className={`p-2.5 rounded-lg max-w-[75%] shadow-sm ${isMale ? "bg-[#DCF8C6] rounded-tr-none" : "bg-white rounded-tl-none"}`}>
+                              <p className="text-xs font-semibold text-[#075E54] mb-0.5">{getUserName(msg.sender_id)}</p>
+                              <p className="text-sm text-gray-800">{msg.message}</p>
+                              <div className="flex items-center justify-end gap-1 mt-1">
+                                <span className="text-[10px] text-gray-500">{format(new Date(msg.created_at), "HH:mm")}</span>
+                                {isMale && (
+                                  msg.is_read
+                                    ? <CheckCheck className="h-3.5 w-3.5 text-[#34B7F1]" />
+                                    : <Check className="h-3.5 w-3.5 text-gray-400" />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm">{msg.message}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {silentMonitorMessages.length === 0 && <p className="text-center text-muted-foreground py-8">No messages yet</p>}
                     </div>
                   </ScrollArea>
