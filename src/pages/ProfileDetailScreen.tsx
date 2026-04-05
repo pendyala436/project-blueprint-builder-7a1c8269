@@ -317,28 +317,11 @@ const ProfileDetailScreen = () => {
         }
       }
 
-      // Women without golden badge cannot initiate chats
-      if (isFemale) {
-        const badgeActive = currentProfile?.has_golden_badge === true && 
-          currentProfile?.golden_badge_expires_at && 
-          new Date(currentProfile.golden_badge_expires_at) > new Date();
-        
-        if (!badgeActive) {
-          toast({
-            title: "Action Not Allowed",
-            description: "Wait for men to send you a chat request, or purchase a Golden Badge to initiate chats.",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
       const { data, error } = await supabase.functions.invoke("chat-manager", {
         body: {
           action: "start_chat",
           man_user_id: isMale ? currentUserId : profile.userId,
           woman_user_id: isMale ? profile.userId : currentUserId,
-          golden_badge_override: isFemale,
         }
       });
 
