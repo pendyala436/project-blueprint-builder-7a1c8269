@@ -274,6 +274,11 @@ const ChatScreen = () => {
   const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
+
+  // Reply, Forward, Edit state
+  const [replyTo, setReplyTo] = useState<{ id: string; text: string; senderName: string } | null>(null);
+  const [forwardMsg, setForwardMsg] = useState<{ id: string; text: string } | null>(null);
+  const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
   
   // ============= REFS =============
   
