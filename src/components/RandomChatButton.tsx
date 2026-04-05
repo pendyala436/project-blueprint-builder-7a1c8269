@@ -67,15 +67,6 @@ export const RandomChatButton = ({
   } | null>(null);
 
   const findRandomPartner = async () => {
-    // SECURITY: Women cannot initiate chats - UNLESS they have Golden Badge
-    if (userGender === "female" && !hasGoldenBadge) {
-      toast({
-        title: "Action Not Allowed",
-        description: "Women cannot initiate chats. Purchase a Golden Badge to unlock this feature.",
-        variant: "destructive"
-      });
-      return;
-    }
 
     // Check wallet balance for men - need at least ₹8 to start chat
     if (userGender === "male") {
