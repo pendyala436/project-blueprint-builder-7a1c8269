@@ -1746,6 +1746,7 @@ const DashboardScreen = () => {
       {/* Tab Content */}
       {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "profile" && renderProfileTab()}

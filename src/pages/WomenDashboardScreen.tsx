@@ -1714,6 +1714,7 @@ const WomenDashboardScreen = () => {
 
       {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="female" />}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
