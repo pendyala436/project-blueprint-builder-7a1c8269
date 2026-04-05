@@ -371,10 +371,12 @@ const AdminDashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <Card className="p-2.5 sm:p-4 bg-gradient-to-br from-[#25D366]/10 to-[#25D366]/5 border-[#25D366]/20">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/20">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-[#25D366]/20 relative">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-[#25D366]" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#25D366] rounded-full animate-ping" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#25D366] rounded-full" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold">{stats.onlineUsers}</p>
