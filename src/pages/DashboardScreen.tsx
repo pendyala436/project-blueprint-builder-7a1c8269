@@ -1283,16 +1283,6 @@ const DashboardScreen = () => {
         </div>
       </div>
 
-      {/* Free Minutes Badge */}
-      <div className="px-4 py-2">
-        <MenFreeMinutesBadge 
-          hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
-          freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
-          freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
-          nextResetDate={menFreeMinutes.nextResetDate}
-          isLoading={menFreeMinutes.isLoading}
-        />
-      </div>
 
       {/* Notifications */}
       {notifications.length > 0 && (
