@@ -546,7 +546,7 @@ const WomenDashboardScreen = () => {
         setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       );
       
-      let mainProfile: { gender?: string | null; approval_status?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; is_indian?: boolean | null; has_golden_badge?: boolean | null; golden_badge_expires_at?: string | null } | null = null;
+      let mainProfile: { gender?: string | null; approval_status?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; is_indian?: boolean | null } | null = null;
       try {
         const result = await Promise.race([profilePromise, profileTimeout]);
         mainProfile = result.data;
