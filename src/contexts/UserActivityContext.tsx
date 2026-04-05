@@ -15,7 +15,9 @@ const THROTTLE_MS = 5000; // 5s throttle — matches both existing implementatio
 export const UserActivityProvider = ({ children }: { children: React.ReactNode }) => {
   const subscribersRef = useRef<Set<() => void>>(new Set());
   const lastActivityRef = useRef(Date.now());
-  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  // Use ref instead of state to avoid tree-wide re-renders every 5s
+  const [lastActivityTime] = useState(() => Date.now());
+  const lastActivityTimeRef = useRef(lastActivityTime);
 
   const subscribe = useCallback((callback: () => void) => {
     subscribersRef.current.add(callback);
