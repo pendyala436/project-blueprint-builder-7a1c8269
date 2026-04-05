@@ -182,6 +182,7 @@ const IncomingVideoCallWindow = ({
 
   const stopRing = () => {
     stopRingSound();
+    stopHookRingLoop();
   };
 
   const handleAnswer = async () => {
