@@ -550,9 +550,7 @@ export function PrivateGroupCallWindow({
               {formatTime(remainingTime)}
             </Badge>
           )}
-          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={() => setIsFullscreen(!isFullscreen)}>
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
+          {/* Fullscreen toggle removed — always fullscreen */}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>
