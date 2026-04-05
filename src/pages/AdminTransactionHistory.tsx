@@ -11,7 +11,7 @@ import { toast } from "sonner";
  * - Uses atomic transaction functions for any operations
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
