@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AdminNav from "@/components/AdminNav";
+import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 
 import { 
   ArrowLeft, 
