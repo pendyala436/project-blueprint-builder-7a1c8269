@@ -511,8 +511,10 @@ const DashboardScreen = () => {
     
     setActiveChatCount(count || 0);
     
-    // Also fetch active chat details for the Chats tab
-    fetchActiveChats();
+    // Only fetch chat details if chats tab has been opened
+    if (chatsFetchedRef.current) {
+      fetchActiveChats();
+    }
   };
 
   const fetchActiveChats = async () => {
