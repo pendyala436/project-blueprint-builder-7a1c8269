@@ -49,7 +49,8 @@ import { useAdminAccess } from "@/hooks/useAdminAccess";
  *   - Host (Indian woman) earns ₹0.50/min per active male participant
  *   - Any man can join (Indian or non-Indian)
  *
- * All sessions: women earn exactly half what men pay.
+ * All chat/video/audio: women earn exactly half what men pay.
+ * Group calls: women earn ₹0.50/min per man (admin-configurable).
  * Minimum withdrawal: ₹5,000 (Indian women only).
  * All records retained for 6 months in admin.
  */
