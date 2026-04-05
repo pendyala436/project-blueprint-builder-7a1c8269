@@ -1047,9 +1047,7 @@ const DashboardScreen = () => {
       .eq("status", "accepted");
 
     setStats(prev => ({ ...prev, matchCount: count || 0 }));
-    
-    // Also fetch matched women profiles
-    await fetchMatchedWomen(userId);
+    // Matches profiles loaded lazily when Matches tab is opened
   };
 
   const fetchMatchedWomen = async (userId: string) => {
