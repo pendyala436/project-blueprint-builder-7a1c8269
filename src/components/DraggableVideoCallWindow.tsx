@@ -112,6 +112,7 @@ const DraggableVideoCallWindow = ({
     ratePerMinute,
     onCallEnded: onClose,
     preAcquiredStream,
+    audioOnly,
   });
 
   // Check block status
