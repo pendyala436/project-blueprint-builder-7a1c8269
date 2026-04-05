@@ -349,13 +349,15 @@ export async function translateForViewer(
       }
 
       // Strategy C: Sender Language Bridge (for transliteration)
+      // Also fires when current result is mixed (partial translation)
+      const needsBridge = isLatinScript(nativeText) || isMixedScript(nativeText) || nativeText === message;
       const bridgeLang = (senderLang && senderLang !== 'english' && !senderUsesLatin) 
         ? senderLang 
         : (!viewerUsesLatin && viewerLang !== 'english') ? viewerLang : '';
       const bridgeLangFull = bridgeLang ? (senderLang && senderLang !== 'english' ? senderLangOriginal : viewerLangOriginal) : '';
-      if (bridgeLang) {
+      if (bridgeLang && needsBridge) {
         const bridgeNative = await translateText(message, 'English', bridgeLangFull || viewerLangOriginal);
-        if (bridgeNative && !isLatinScript(bridgeNative) && bridgeNative !== message) {
+        if (bridgeNative && !isLatinScript(bridgeNative) && !isMixedScript(bridgeNative) && bridgeNative !== message) {
           if (bridgeLang !== viewerLang) {
             // Cross-language: translate sender's native to viewer's language
             const crossTranslated = await translateText(bridgeNative, bridgeLangFull || 'auto', viewerLangOriginal);
