@@ -1161,12 +1161,12 @@ serve(async (req) => {
           }
         }
 
-        // NOTE: Woman's availability count is NOT updated here.
-        // It will be updated by the DB trigger when the session transitions from 'pending' to 'active'
-        // (i.e., when the woman accepts the chat).
-
-        // Update man's status only (woman's status stays unchanged until she accepts)
-        await updateUserStatus(man_user_id);
+        // Chat is now async (WhatsApp-style) — session starts as 'active' immediately
+        // Update both users' status
+        await Promise.all([
+          updateUserStatus(man_user_id),
+          updateUserStatus(woman_user_id)
+        ]);
 
         console.log(`Chat started: ${chatId}`);
 
