@@ -196,16 +196,16 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
       case "chat": return "bg-primary/10 text-primary";
-      case "video": return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-      case "group": return "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+      case "video": return "bg-accent/20 text-accent-foreground";
+      case "group": return "bg-secondary/30 text-secondary-foreground";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getStatusColor = (status: string) => {
-    if (status === "active") return "text-green-600 dark:text-green-400";
+    if (status === "active") return "text-primary";
     if (status === "ended" || status === "completed") return "text-muted-foreground";
-    return "text-yellow-600 dark:text-yellow-400";
+    return "text-foreground";
   };
 
   const filterButtons: { id: HistoryType; label: string; icon: React.ReactNode }[] = [
