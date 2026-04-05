@@ -1706,11 +1706,12 @@ const WomenDashboardScreen = () => {
         onSettings={() => navigate('/settings')}
         onLogout={handleLogout}
         unreadNotifications={stats.unreadNotifications}
-        onNotifications={() => setActiveTab("chats")}
+        onNotifications={() => setActiveTab("online")}
         showKYC={isIndianWoman}
         onKYC={() => setShowKYCForm(true)}
       />
 
+      {activeTab === "online" && renderOnlineUsersTab()}
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "community" && renderCommunityTab()}
