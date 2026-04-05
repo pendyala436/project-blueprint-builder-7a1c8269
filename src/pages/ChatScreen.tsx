@@ -1572,23 +1572,18 @@ const ChatScreen = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* ============= HEADER SECTION ============= */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
-          {/* Back & Home buttons */}
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/dashboard")}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
-            </button>
-            <button 
-              onClick={() => navigate(currentUserGender === "female" ? "/women-dashboard" : "/dashboard")}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Home className="w-5 h-5 text-foreground" />
-            </button>
-          </div>
+      <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
+        <div className="px-3 py-2.5 flex items-center gap-3">
+          {/* Back button */}
+          <button 
+            onClick={() => {
+              const dashboardPath = currentUserGender === "female" ? "/women-dashboard" : "/dashboard";
+              window.history.length > 1 ? navigate(-1) : navigate(dashboardPath);
+            }}
+            className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-primary-foreground" />
+          </button>
           
           {/* Chat partner info - clickable to view profile */}
           {chatPartner && (
