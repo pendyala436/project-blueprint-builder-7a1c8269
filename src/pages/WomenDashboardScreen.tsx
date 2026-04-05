@@ -57,8 +57,7 @@ import { cn } from "@/lib/utils";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
-import WomenChatModeSwitcher from "@/components/WomenChatModeSwitcher";
-import { useWomenChatMode } from "@/hooks/useWomenChatMode";
+// Chat mode removed - all women are in paid mode by default
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
