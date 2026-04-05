@@ -5,8 +5,7 @@ import { toast } from 'sonner';
 import { useAuthReady } from '@/hooks/useAuthReady';
 import { useUserActivity } from '@/contexts/UserActivityContext';
 
-const MEN_IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
-const WOMEN_IDLE_TIMEOUT = 45 * 60 * 1000; // 45 minutes
+const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes for all users
 
 interface AutoLogoutWrapperProps {
   children: React.ReactNode;
