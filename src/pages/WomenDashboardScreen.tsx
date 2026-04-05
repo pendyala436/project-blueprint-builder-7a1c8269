@@ -1236,17 +1236,15 @@ const WomenDashboardScreen = () => {
                   onClick={() => handleViewProfile(user.userId)}
                   actions={
                     <div className="flex items-center gap-1">
-                      {hasGoldenBadge && (
-                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
-                          <MessageCircle className="w-3 h-3 mr-0.5" />Chat
-                        </Button>
-                      )}
-                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                      <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}>
+                        <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                      </Button>
+                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" }); }}>
                           <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
-                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                      {isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <DirectVideoCallButton currentUserId={currentUserId} targetUserId={user.userId} targetName={user.fullName} targetPhoto={user.photoUrl} walletBalance={myWalletBalance} onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)} iconOnly={true} />
                       )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
