@@ -414,9 +414,25 @@ const ChatScreen = () => {
           const userId = currentUserIdRef.current;
           const partner = chatPartnerRef.current;
           
+          // For PARTNER messages: translate fully BEFORE adding to state (no spinner)
+          // For OWN messages: preserve optimistic data
+          let translatedMessage: string | undefined;
+          let englishText: string | undefined;
+          let isTranslated = false;
+
+          if (newMsg.sender_id !== userId && langToUse) {
+            const senderLang = partner?.preferredLanguage;
+            try {
+              const result = await translateForViewer(newMsg.message, langToUse, senderLang);
+              translatedMessage = result.nativeText;
+              englishText = result.englishText;
+              isTranslated = translatedMessage !== newMsg.message;
+            } catch {
+              // Fallback: show original message
+            }
+          }
+
           // BUG-02 FIX: Add message to state with robust deduplication
-          // For OWN messages: preserve optimistic data immediately
-          // For PARTNER messages: show spinner immediately, translate async
           setMessages(prev => {
             // Skip if already in state (exact ID match)
             if (prev.some(m => m.id === newMsg.id)) return prev;
@@ -451,44 +467,17 @@ const ChatScreen = () => {
               !(m.id.startsWith('temp-') && m.senderId === newMsg.sender_id &&
                 Math.abs(new Date(m.createdAt).getTime() - new Date(newMsg.created_at).getTime()) < 10000)
             );
-            
-            // For partner messages: add with isTranslating=true (preview spinner)
-            // For own messages without a temp match: add as-is
-            const isPartnerMsg = newMsg.sender_id !== userId;
             return [...filtered, {
               id: newMsg.id,
               senderId: newMsg.sender_id,
               message: newMsg.message,
-              translatedMessage: undefined,
-              englishText: undefined,
-              isTranslated: false,
-              isTranslating: isPartnerMsg, // show spinner for partner messages
+              translatedMessage,
+              englishText,
+              isTranslated,
               isRead: newMsg.is_read,
               createdAt: newMsg.created_at,
             }];
           });
-
-          // For partner messages: translate async then update bubble
-          if (newMsg.sender_id !== userId && langToUse) {
-            const senderLang = partner?.preferredLanguage;
-            try {
-              const result = await translateForViewer(newMsg.message, langToUse, senderLang);
-              setMessages(prev => prev.map(m =>
-                m.id === newMsg.id ? {
-                  ...m,
-                  translatedMessage: result.nativeText,
-                  englishText: result.englishText,
-                  isTranslated: result.nativeText !== newMsg.message,
-                  isTranslating: false,
-                } : m
-              ));
-            } catch {
-              // Translation failed — show original, remove spinner
-              setMessages(prev => prev.map(m =>
-                m.id === newMsg.id ? { ...m, isTranslating: false } : m
-              ));
-            }
-          }
 
           // Mark received messages as read automatically
           if (newMsg.sender_id !== userId) {
