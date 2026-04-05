@@ -534,22 +534,16 @@ const DashboardScreen = () => {
   };
 
   const getStatusText = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return t('busy', 'Busy') + `(${MAX_PARALLEL_CHATS})`;
     return t('available', 'Available');
   };
 
   const getStatusColor = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
 
   const getStatusDotColor = () => {
-    if (activeChatCount >= MAX_PARALLEL_CHATS) return "bg-destructive";
     return "bg-online";
   };
-
-  const MAX_PARALLEL_CHATS = settings?.maxParallelChats || 3;
-  const canStartNewChat = activeChatCount < MAX_PARALLEL_CHATS;
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {
@@ -927,16 +921,6 @@ const DashboardScreen = () => {
         variant: "destructive",
       });
       setRechargeDialogOpen(true);
-      return;
-    }
-
-    // Guard: check parallel chat limit before connecting
-    if (!canStartNewChat) {
-      toast({
-        title: t('maxChatsReached', 'Max Chats Reached'),
-        description: t('canOnlyHave3Chats', 'You can only have 3 active chats at a time'),
-        variant: "destructive",
-      });
       return;
     }
 
@@ -1563,7 +1547,7 @@ const DashboardScreen = () => {
           <p className="text-[10px] text-muted-foreground">Matches</p>
         </div>
         <div className="text-center py-4">
-          <p className="text-xl font-bold text-foreground">{activeChatCount}/{MAX_PARALLEL_CHATS}</p>
+          <p className="text-xl font-bold text-foreground">{activeChatCount}</p>
           <p className="text-[10px] text-muted-foreground">Active Chats</p>
         </div>
       </div>
