@@ -57,6 +57,7 @@ const AdminLanguageLimits = () => {
   const [formIsActive, setFormIsActive] = useState(true);
 
   useEffect(() => {
+    if (adminLoading || !isAdmin) return;
     loadLimits();
     
     // Set up real-time subscription
