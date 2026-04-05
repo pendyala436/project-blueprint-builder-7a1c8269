@@ -163,11 +163,12 @@ const AdminKYCManagement = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
+  // FIX #6: Guard data fetching behind isAdmin check
   useEffect(() => {
+    if (adminLoading || !isAdmin) return;
     loadIndianWomen();
     loadStats();
 
-    // #1: Add realtime subscription for KYC updates
     const channel = supabase
       .channel('kyc-management-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, () => {
@@ -176,7 +177,7 @@ const AdminKYCManagement = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [isAdmin, adminLoading]);
 
   useEffect(() => {
     filterWomen();
