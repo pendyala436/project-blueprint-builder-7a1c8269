@@ -1423,7 +1423,8 @@ const ChatScreen = () => {
       return `chat-attachment://${storagePath}`;
     } catch (error) {
       console.error("Upload error:", error);
-        toast({ title: "Upload failed", description: ERROR_MESSAGES.upload.failed, variant: "destructive" });
+      const classified = classifyError(error);
+      toast({ title: classified.title, description: classified.message, variant: "destructive" });
       return null;
     }
   };
