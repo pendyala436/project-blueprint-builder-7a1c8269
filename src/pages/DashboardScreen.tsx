@@ -1422,8 +1422,7 @@ const DashboardScreen = () => {
                   language={woman.primary_language}
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
-                  onClick={() => navigate(`/profile/${woman.user_id}`)}
-                  onDoubleClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
