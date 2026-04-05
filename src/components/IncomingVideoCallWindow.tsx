@@ -102,13 +102,9 @@ const IncomingVideoCallWindow = ({
   // Continuous ring sound until answered/declined
   useEffect(() => {
     if (isAnswered) return;
-    playRingTone();
-    ringIntervalRef.current = setInterval(playRingTone, 2000);
+    startRingToneLoop();
     return () => {
-      if (ringIntervalRef.current) {
-        clearInterval(ringIntervalRef.current);
-        ringIntervalRef.current = null;
-      }
+      stopRingSound();
     };
   }, [isAnswered]);
 
