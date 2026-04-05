@@ -186,6 +186,7 @@ const DashboardScreen = () => {
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState("online");
   const matchesFetchedRef = useRef(false);
+  const chatsFetchedRef = useRef(false);
   const [activeChats, setActiveChats] = useState<Array<{
     chatId: string;
     partnerId: string;

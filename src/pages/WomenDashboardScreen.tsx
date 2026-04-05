@@ -108,8 +108,7 @@ interface BiggestEarner {
   photoUrl?: string;
 }
 
-// ScrollableUserList extracted to shared component
-import ScrollableUserList from "@/components/ScrollableUserList";
+// ScrollableUserList removed — not used in WhatsApp tab layout
 
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
