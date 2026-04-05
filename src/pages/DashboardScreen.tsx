@@ -56,7 +56,8 @@ import {
   ChevronUp,
   ChevronDown,
   Phone,
-  User
+  User,
+  Loader2
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
@@ -147,54 +148,8 @@ const INTERNATIONAL_GATEWAYS: PaymentGateway[] = [];
 
 const ALL_PAYMENT_GATEWAYS: PaymentGateway[] = [...INDIAN_GATEWAYS, ...INTERNATIONAL_GATEWAYS];
 
-// Extracted outside to avoid hooks-in-render violations
-const ScrollableUserList = ({ children }: { children: React.ReactNode }) => {
-  const listScrollRef = useRef<HTMLDivElement>(null);
-  const [canUp, setCanUp] = useState(false);
-  const [canDown, setCanDown] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = listScrollRef.current;
-    if (!el) return;
-    setCanUp(el.scrollTop > 10);
-    setCanDown(el.scrollTop + el.clientHeight < el.scrollHeight - 10);
-  }, []);
-
-  useEffect(() => {
-    const el = listScrollRef.current;
-    if (!el) return;
-    checkScroll();
-    el.addEventListener('scroll', checkScroll, { passive: true });
-    const observer = new ResizeObserver(() => checkScroll());
-    observer.observe(el);
-    return () => {
-      el.removeEventListener('scroll', checkScroll);
-      observer.disconnect();
-    };
-  }, [checkScroll]);
-
-  return (
-    <div className="relative">
-      {canUp && (
-        <div className="sticky top-0 z-10 flex justify-center pb-1">
-          <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => listScrollRef.current?.scrollBy({ top: -200, behavior: 'smooth' })}>
-            <ChevronUp className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-      <div ref={listScrollRef} className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scroll-smooth" onScroll={checkScroll}>
-        {children}
-      </div>
-      {canDown && (
-        <div className="sticky bottom-0 z-10 flex justify-center pt-1">
-          <Button size="sm" variant="secondary" className="h-7 w-7 rounded-full shadow-md p-0" onClick={() => listScrollRef.current?.scrollBy({ top: 200, behavior: 'smooth' })}>
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
+// ScrollableUserList extracted to shared component
+import ScrollableUserList from "@/components/ScrollableUserList";
 
 const DashboardScreen = () => {
   const navigate = useNavigate();
@@ -223,6 +178,7 @@ const DashboardScreen = () => {
   const [isNonIndianUser, setIsNonIndianUser] = useState(false); // Is man's language non-Indian but Language supported
   const [activeChatCount, setActiveChatCount] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingUserId, setConnectingUserId] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
@@ -795,6 +751,7 @@ const DashboardScreen = () => {
   const handleStartChatWithWoman = async (womanUserId: string, womanName: string, _reconnectDepth = 0) => {
     if (isConnecting) return;
     setIsConnecting(true);
+    setConnectingUserId(womanUserId);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -892,6 +849,7 @@ const DashboardScreen = () => {
       }
     } finally {
       setIsConnecting(false);
+      setConnectingUserId(null);
     }
   };
 
@@ -997,12 +955,27 @@ const DashboardScreen = () => {
         return a.active_chat_count - b.active_chat_count;
       };
 
+      // Apply match filters client-side
+      const filteredWomen = womenWithChatCount.filter(w => {
+        if (matchFilters.ageRange && w.age != null) {
+          if (w.age < matchFilters.ageRange[0] || w.age > matchFilters.ageRange[1]) return false;
+        }
+        if (matchFilters.country && matchFilters.country !== "all" && w.country) {
+          if (w.country.toLowerCase() !== matchFilters.country.toLowerCase()) return false;
+        }
+        if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
+          if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
+        }
+        if (matchFilters.verifiedOnly) return true; // verified field not in RPC result
+        return true;
+      });
+
       // Split: same language first, others second
-      const sameLanguage = womenWithChatCount
+      const sameLanguage = filteredWomen
         .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
         .sort(sortByBadgeAndLoad);
 
-      const otherWomen = womenWithChatCount
+      const otherWomen = filteredWomen
         .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
         .sort(sortByBadgeAndLoad);
 
@@ -1450,12 +1423,13 @@ const DashboardScreen = () => {
                         variant="aurora"
                         size="sm"
                         className="h-7 px-2 text-[10px]"
+                        disabled={isConnecting}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                         }}
                       >
-                        <MessageCircle className="w-3 h-3 mr-0.5" />
+                        {connectingUserId === woman.user_id ? <Loader2 className="w-3 h-3 mr-0.5 animate-spin" /> : <MessageCircle className="w-3 h-3 mr-0.5" />}
                         Chat
                       </Button>
                     </div>
@@ -1492,12 +1466,13 @@ const DashboardScreen = () => {
                         variant="aurora"
                         size="sm"
                         className="h-7 px-2 text-[10px]"
+                        disabled={isConnecting}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
                         }}
                       >
-                        <MessageCircle className="w-3 h-3 mr-0.5" />
+                        {connectingUserId === woman.user_id ? <Loader2 className="w-3 h-3 mr-0.5 animate-spin" /> : <MessageCircle className="w-3 h-3 mr-0.5" />}
                         Chat
                       </Button>
                     </div>
