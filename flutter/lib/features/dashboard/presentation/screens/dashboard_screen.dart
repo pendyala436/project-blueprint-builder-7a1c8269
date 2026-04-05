@@ -18,6 +18,7 @@ import 'men_home_tab.dart';
 import 'men_matches_tab.dart';
 import 'men_chats_tab.dart';
 import 'men_profile_tab.dart';
+import 'men_groups_tab.dart';
 
 /// Men's Dashboard Screen - Synced with React DashboardScreen
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         children: const [
           MenHomeTab(),
           MenMatchesTab(),
+          MenGroupsTab(),
           MenChatsTab(),
           MenProfileTab(),
         ],
@@ -49,6 +51,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Matches'),
+          BottomNavigationBarItem(icon: Icon(Icons.videocam), label: 'Groups'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chats'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
