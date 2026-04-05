@@ -27,6 +27,7 @@ interface DirectAudioCallButtonProps {
   targetPhoto: string | null;
   walletBalance: number;
   onBalanceChange?: (newBalance: number) => void;
+  currentUserGender?: "male" | "female";
   size?: "sm" | "default" | "lg" | "icon";
   variant?: "aurora" | "auroraOutline" | "ghost" | "outline";
   iconOnly?: boolean;
@@ -39,6 +40,7 @@ const DirectAudioCallButton = ({
   targetPhoto,
   walletBalance,
   onBalanceChange,
+  currentUserGender,
   size = "sm",
   variant = "auroraOutline",
   iconOnly = true,
@@ -145,13 +147,16 @@ const DirectAudioCallButton = ({
       const callId = `call_${currentUserId}_${targetUserId}_${Date.now()}`;
       registerOutgoingCall(callId);
       
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('gender')
-        .eq('user_id', currentUserId)
-        .maybeSingle();
-
-      const isMale = currentProfile?.gender?.toLowerCase() === 'male';
+      // Use prop if available, else fetch (fallback)
+      let isMale = currentUserGender === 'male';
+      if (!currentUserGender) {
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('gender')
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+        isMale = currentProfile?.gender?.toLowerCase() === 'male';
+      }
       
       const { error: sessionError } = await supabase.functions.invoke('ai-women-manager', {
         body: {
