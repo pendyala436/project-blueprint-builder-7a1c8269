@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchPublicProfiles } from "@/lib/profile-queries";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+// Skeleton removed — using spinner for WhatsApp-style consistency
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
