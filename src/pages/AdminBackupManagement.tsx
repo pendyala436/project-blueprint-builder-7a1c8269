@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { 
   ArrowLeft, 
   Database, 
