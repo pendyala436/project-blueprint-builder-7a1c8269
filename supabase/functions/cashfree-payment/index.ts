@@ -59,19 +59,19 @@ Deno.serve(async (req) => {
 
       const orderId = `MEOW_${userId.substring(0, 8)}_${Date.now()}`;
 
-      // Create pending recharge record
+      // Create pending recharge record (store wallet credit amount, not total charged)
       await supabase.from("pending_recharges").insert({
         txn_id: orderId,
         user_id: userId,
-        amount: Number(amount),
+        amount: Number(amount),  // Only the wallet credit amount
         gateway: "cashfree",
         status: "pending",
       });
 
-      // Create Cashfree order via API
+      // Create Cashfree order with total amount (recharge + 3% fee)
       const orderPayload = {
         order_id: orderId,
-        order_amount: Number(amount).toFixed(2),
+        order_amount: totalCharged.toFixed(2),  // Men pay amount + 3% fee
         order_currency: "INR",
         customer_details: {
           customer_id: userId.substring(0, 50),
