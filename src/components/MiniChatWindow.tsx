@@ -110,6 +110,7 @@ const MiniChatWindow = ({
   
   const sessionStartedRef = useRef(false);
   const billingStartedRef = useRef(false);
+  const tempToRealIdRef = useRef<Map<string, string>>(new Map());
   
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
