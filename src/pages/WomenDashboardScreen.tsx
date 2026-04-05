@@ -43,6 +43,7 @@ import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useMessageSound } from "@/hooks/useMessageSound";
 import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 // DirectVideoCallButton removed - women cannot initiate calls
 
