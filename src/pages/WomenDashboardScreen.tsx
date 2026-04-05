@@ -1033,9 +1033,8 @@ const WomenDashboardScreen = () => {
         });
       }
 
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('force-reload-chats'));
-      }, 300);
+      // Navigate to full-screen WhatsApp-style chat view
+      navigate(`/chat/${userId}`);
 
       toast({
         title: t('chatStarted', 'Chat Started!'),

@@ -54,7 +54,9 @@ import {
   AlertTriangle, // Warning icon
   PhoneOff,     // Stop chat icon
   LogOut,       // Leave chat icon
-  Home          // Home navigation icon
+  Home,         // Home navigation icon
+  Phone,        // Audio call icon
+  Video         // Video call icon
 } from "lucide-react";
 import {
   Popover,
@@ -1579,8 +1581,33 @@ const ChatScreen = () => {
             </div>
           )}
 
+          {/* Audio & Video Call Buttons - WhatsApp style */}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => {
+                toast({
+                  title: "Audio Call",
+                  description: "₹6/min • Coming soon",
+                });
+              }}
+              className="p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <Phone className="w-5 h-5 text-foreground" />
+            </button>
+            <button
+              onClick={() => {
+                toast({
+                  title: "Video Call", 
+                  description: "₹8/min • Coming soon",
+                });
+              }}
+              className="p-2 rounded-full hover:bg-muted transition-colors"
+            >
+              <Video className="w-5 h-5 text-foreground" />
+            </button>
+          </div>
 
-          {/* Friend/Block Menu */}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-2 rounded-full hover:bg-muted transition-colors">
