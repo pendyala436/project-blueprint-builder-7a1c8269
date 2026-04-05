@@ -333,7 +333,7 @@ const WomenDashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
-        () => { fetchWomenActiveChats(); }
+        () => { fetchWomenActiveChats(); playMessageSound(); }
       )
       .on(
         'postgres_changes',
