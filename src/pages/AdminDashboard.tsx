@@ -413,37 +413,33 @@ const AdminDashboard = () => {
         {/* Admin Modules Grid */}
         <div className="animate-fade-in" style={{ animationDelay: "0.2s" }}>
           <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">Admin Modules</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <div className="space-y-1">
             {adminModules.map((module) => (
-              <Card
+              <button
                 key={module.path}
-                className="group cursor-pointer hover:shadow-lg transition-all duration-300 hover:border-primary/30"
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-muted/50 transition-colors group"
                 onClick={() => navigate(module.path)}
               >
-                <CardContent className="p-3 sm:p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg group-hover:scale-110 transition-transform">
-                      {module.icon}
-                    </div>
-                    {module.badge && (
-                      <Badge variant="destructive" className="text-[10px] sm:text-xs">
-                        {module.badge}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="mt-2.5 sm:mt-4">
-                    <h3 className="font-semibold text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors leading-tight">
-                      {module.title}
-                    </h3>
-                    <p className="text-[10px] sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 hidden sm:block">
-                      {module.description}
-                    </p>
-                  </div>
-                  <div className="mt-2 sm:mt-4 hidden sm:flex items-center text-sm text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    Open <ChevronRight className="w-4 h-4 ml-1" />
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="p-2 rounded-full bg-[#25D366]/15 text-[#075E54] shrink-0">
+                  {module.icon}
+                </div>
+                <div className="flex-1 text-left min-w-0">
+                  <h3 className="font-semibold text-sm text-foreground leading-tight">
+                    {module.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate hidden sm:block">
+                    {module.description}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {module.badge && (
+                    <Badge className="text-[10px] bg-[#25D366] text-white border-0">
+                      {module.badge}
+                    </Badge>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </div>
+              </button>
             ))}
           </div>
         </div>
