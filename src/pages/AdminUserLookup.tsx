@@ -116,6 +116,13 @@ const AdminUserLookup = () => {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [genderFilter, setGenderFilter] = useState<string>("all");
+  const loadAllUsersRef = useRef<() => void>(() => {});
+
+  // Real-time subscription for profiles updates
+  useRealtimeSubscription({
+    table: "profiles",
+    onUpdate: () => loadAllUsersRef.current(),
+  });
 
   useEffect(() => {
     loadAllUsers();
