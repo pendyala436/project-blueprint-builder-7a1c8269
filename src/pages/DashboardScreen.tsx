@@ -1480,24 +1480,7 @@ const DashboardScreen = () => {
             </div>
           )}
 
-          {/* Private Groups */}
-          <div id="private-groups-section" className="px-4 py-3 border-t border-border/30">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <Video className="h-4 w-4 text-primary" />
-                Private Groups
-              </h3>
-              <Button variant="outline" size="sm" onClick={() => setPrivateGroupsRefreshKey(prev => prev + 1)} className="h-7 text-xs px-2">
-                <RefreshCw className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            <AvailableGroupsSection
-              key={privateGroupsRefreshKey}
-              currentUserId={currentUserId}
-              userName={userName || 'User'}
-              userPhoto={userPhoto}
-            />
-          </div>
+          {/* Private Groups moved to dedicated Groups tab */}
         </>
       )}
     </div>
