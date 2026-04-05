@@ -324,10 +324,16 @@ const AdminTransactionHistory = () => {
       const menDebitTxns = menTxns.filter(t => t.debit > 0);
       const menSpent = menDebitTxns.reduce((sum, t) => sum + (Number(t.debit) || 0), 0);
       
+      // FIX #14: Only count gifts sent by men
+      const menGiftsSent = enrichedGifts.filter(g => {
+        const senderProfile = profileMap.get(g.sender_id);
+        return senderProfile?.gender?.toLowerCase() === "male";
+      }).length;
+
       setMenStats({
         transactions: menTxns.length,
         spent: menSpent,
-        giftsSent: enrichedGifts.length
+        giftsSent: menGiftsSent
       });
 
       // Calculate women stats (earnings)
