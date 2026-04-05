@@ -486,16 +486,21 @@ const DashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
+  // Eager-load active chats on mount for unread badge
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (!chatsFetchedRef.current) {
+      chatsFetchedRef.current = true;
+      fetchActiveChats();
+    }
+  }, [currentUserId]);
+
   // Lazy-load data on tab switch
   useEffect(() => {
     if (!currentUserId) return;
     if (activeTab === "matches" && !matchesFetchedRef.current) {
       matchesFetchedRef.current = true;
       fetchMatchedWomen(currentUserId);
-    }
-    if (activeTab === "chats" && !chatsFetchedRef.current) {
-      chatsFetchedRef.current = true;
-      fetchActiveChats();
     }
   }, [activeTab, currentUserId]);
 
