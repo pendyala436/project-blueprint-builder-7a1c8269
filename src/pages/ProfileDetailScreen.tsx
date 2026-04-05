@@ -75,7 +75,7 @@ const ProfileDetailScreen = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
-  const [hasGoldenBadge, setHasGoldenBadge] = useState(false);
+  
   const [currentUserGender, setCurrentUserGender] = useState("");
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
