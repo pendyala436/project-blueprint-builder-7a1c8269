@@ -669,12 +669,6 @@ const DashboardScreen = () => {
       }
 
       const userLanguages = userLangsResult.data;
-      // Fetch user's languages
-      const { data: userLanguages } = await supabase
-        .from("user_languages")
-        .select("language_name, language_code")
-        .eq("user_id", user.id)
-        .limit(1);
 
       // Use main profiles table (single source of truth)
       const motherTongue = userLanguages?.[0]?.language_name || 
