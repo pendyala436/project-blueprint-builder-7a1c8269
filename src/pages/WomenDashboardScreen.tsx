@@ -1542,7 +1542,7 @@ const WomenDashboardScreen = () => {
         <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
           {getStatusText()}
         </Badge>
-        {hasGoldenBadge && <Badge className="mt-1 bg-primary text-primary-foreground text-[10px]">🌟 Golden Badge</Badge>}
+        
       </div>
 
       {[
