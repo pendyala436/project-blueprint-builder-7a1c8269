@@ -1661,8 +1661,8 @@ const ChatScreen = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-2 rounded-full hover:bg-muted transition-colors">
-                <MoreVertical className="w-5 h-5 text-foreground" />
+              <button className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors">
+                <MoreVertical className="w-5 h-5 text-primary-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
