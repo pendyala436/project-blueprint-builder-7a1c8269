@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +73,7 @@ const WomenWalletScreen = () => {
   const [withdrawAmount,     setWithdrawAmount]     = useState("");
   const [paymentMethod,      setPaymentMethod]      = useState("");
   const [isSubmitting,       setIsSubmitting]       = useState(false);
+  const [withdrawConsent,    setWithdrawConsent]    = useState(false);
 
   // ── Load balance (no transaction list) ──────────────────────────────────
   const loadData = async () => {
@@ -168,6 +170,7 @@ const WomenWalletScreen = () => {
       setWithdrawDialogOpen(false);
       setWithdrawAmount("");
       setPaymentMethod("");
+      setWithdrawConsent(false);
       loadData();
     } catch (err) {
       toast.error(t("error", "Error"), { description: classifyError(err).message });
@@ -387,9 +390,22 @@ const WomenWalletScreen = () => {
               </Card>
             )}
 
+            {/* Consent checkbox */}
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
+              <Checkbox
+                id="withdraw-consent"
+                checked={withdrawConsent}
+                onCheckedChange={(v) => setWithdrawConsent(v === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="withdraw-consent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                I confirm this withdrawal request. A 5% platform fee will be deducted. Payouts are processed within 3-5 business days. I have read and accept the <a href="/legal-documents/payments-and-payouts" className="text-primary underline">Payout Policy</a>.
+              </label>
+            </div>
+
             <Button
               onClick={handleWithdraw}
-              disabled={isSubmitting || !withdrawAmount || !paymentMethod}
+              disabled={isSubmitting || !withdrawAmount || !paymentMethod || !withdrawConsent}
               className="w-full gap-2"
             >
               {isSubmitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <ArrowDownToLine className="h-4 w-4" />}

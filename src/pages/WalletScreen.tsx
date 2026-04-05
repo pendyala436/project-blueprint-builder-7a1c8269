@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
   import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
@@ -65,6 +66,7 @@ const WalletScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [customAmount, setCustomAmount] = useState("");
+  const [rechargeConsent, setRechargeConsent] = useState(false);
 
   const RECHARGE_AMOUNTS = settings.rechargeAmounts;
 
@@ -275,6 +277,19 @@ const WalletScreen = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Consent checkbox */}
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30 mb-4">
+              <Checkbox
+                id="recharge-consent"
+                checked={rechargeConsent}
+                onCheckedChange={(v) => setRechargeConsent(v === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="recharge-consent" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+                I agree that wallet recharges are non-refundable. A 3% transaction fee applies. Balance can only be used for in-app services (chat, calls, gifts). I have read and accept the <a href="/legal-documents/terms-of-service" className="text-primary underline">Terms of Service</a>.
+              </label>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {RECHARGE_AMOUNTS.map((amount) => (
                 <Button
@@ -285,7 +300,7 @@ const WalletScreen = () => {
                     selectedAmount === amount && !customAmount && "scale-95"
                   )}
                   onClick={() => { setCustomAmount(""); handleRecharge(amount); }}
-                  disabled={processingPayment}
+                  disabled={processingPayment || !rechargeConsent}
                 >
                   {processingPayment && selectedAmount === amount ? (
                     <RefreshCw className="h-5 w-5 animate-spin" />
@@ -319,7 +334,7 @@ const WalletScreen = () => {
                     if (val >= 10) handleRecharge(val);
                     else toast.error("Minimum amount is ₹10");
                   }}
-                  disabled={processingPayment || !customAmount || Number(customAmount) < 10}
+                  disabled={processingPayment || !customAmount || Number(customAmount) < 10 || !rechargeConsent}
                 >
                   {processingPayment && customAmount ? <RefreshCw className="h-4 w-4 animate-spin" /> : "Pay"}
                 </Button>
