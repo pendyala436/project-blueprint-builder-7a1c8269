@@ -273,32 +273,10 @@ const WomenDashboardScreen = () => {
     hasBio: false,
   });
 
-  const quickActions = [
-    { 
-      icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Chats'), 
-      color: "from-primary to-primary/80",
-      action: () => navigate("/match-discovery")
-    },
-    { 
-      icon: <Wallet className="w-6 h-6" />, 
-      label: t('withdraw', 'Earnings'), 
-      color: "from-primary/90 to-primary/70",
-      action: () => navigate("/women-wallet")
-    },
-    { 
-      icon: <Heart className="w-6 h-6" />, 
-      label: t('matches', 'Matches'), 
-      color: "from-primary/80 to-primary/60",
-      action: () => navigate("/match-discovery")
-    },
-    { 
-      icon: <User className="w-6 h-6" />, 
-      label: t('profile', 'My Profile'), 
-      color: "from-primary/70 to-primary/50",
-      action: () => setProfileEditOpen(true)
-    },
-  ];
+  // Format currency display (dynamic, not hardcoded ₹)
+  const formatLocalCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  };
 
   useEffect(() => {
     let mounted = true;
