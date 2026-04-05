@@ -42,7 +42,8 @@ import {
   Shield,
   ChevronUp,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  Phone
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
@@ -1252,7 +1253,7 @@ const WomenDashboardScreen = () => {
     );
   }
 
-  const womenTabs = getWomenTabs(activeChatCount || undefined, sameLanguageMen.length + otherLanguageMen.length || undefined);
+  const womenTabs = getWomenTabs(activeChatCount || undefined);
 
   const renderChatsTab = () => (
     <div className="flex-1 overflow-y-auto">
@@ -1265,22 +1266,10 @@ const WomenDashboardScreen = () => {
           <span className="text-xs text-muted-foreground">₹{myWalletBalance.toLocaleString()}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {hasGoldenBadge ? (
-            <RandomChatButton
-              userGender="female"
-              userLanguage={currentWomanLanguage}
-              userCountry={currentWomanCountry}
-              variant="aurora"
-              size="sm"
-              hasGoldenBadge={true}
-              chatMode={chatMode.currentMode}
-              className="text-[10px] h-7 !px-2"
-            />
-          ) : (
-            <Button variant="aurora" size="sm" className="h-7 text-[10px] px-2 gap-1" onClick={handlePurchaseGoldenBadge} disabled={isPurchasingBadge}>
-              {isPurchasingBadge ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Star className="h-3 w-3" />Badge</>}
-            </Button>
-          )}
+          <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={currentWomanCountry} />
+          <Button variant="ghost" size="sm" onClick={() => fetchOnlineMen(currentWomanLanguage, currentWomanCountry)} className="h-7 w-7 p-0">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
@@ -1307,7 +1296,7 @@ const WomenDashboardScreen = () => {
       </div>
 
       {/* Notifications */}
-      {notifications.length > 0 ? (
+      {notifications.length > 0 && (
         <div>
           {notifications.map((notification) => (
             <div
@@ -1335,30 +1324,7 @@ const WomenDashboardScreen = () => {
             </div>
           ))}
         </div>
-      ) : (
-        <div className="text-center py-16">
-          <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No recent activity</p>
-          <p className="text-muted-foreground/60 text-xs mt-1">Chat requests will appear here</p>
-        </div>
       )}
-    </div>
-  );
-
-  const renderUsersTab = () => (
-    <div className="flex-1 overflow-y-auto">
-      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">Men Online</span>
-          <Badge variant="outline" className="text-[9px]">{sameLanguageMen.length + otherLanguageMen.length}</Badge>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={currentWomanCountry} />
-          <Button variant="ghost" size="sm" onClick={() => fetchOnlineMen(currentWomanLanguage, currentWomanCountry)} className="h-7 w-7 p-0">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </Button>
-        </div>
-      </div>
 
       {/* Same Language Men */}
       {sameLanguageMen.length > 0 && (
@@ -1370,7 +1336,7 @@ const WomenDashboardScreen = () => {
           {/* Premium */}
           {sameLanguageMen.filter(m => m.hasRecharged).length > 0 && (
             <>
-              <div className="px-4 py-1.5 bg-primary/3 flex items-center gap-1.5">
+              <div className="px-4 py-1.5 bg-primary/5 flex items-center gap-1.5">
                 <Crown className="h-3.5 w-3.5 text-primary" />
                 <span className="text-[10px] font-semibold text-foreground">Premium</span>
               </div>
@@ -1394,7 +1360,14 @@ const WomenDashboardScreen = () => {
                           <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                         </Button>
                       )}
-                      {hasGoldenBadge && user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                      {/* Audio call - same language Indian users only */}
+                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" })}>
+                          <Phone className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      )}
+                      {/* Video call - same language Indian users only */}
+                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
                         <DirectVideoCallButton currentUserId={currentUserId} targetUserId={user.userId} targetName={user.fullName} targetPhoto={user.photoUrl} walletBalance={myWalletBalance} onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)} iconOnly={true} />
                       )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
@@ -1431,6 +1404,12 @@ const WomenDashboardScreen = () => {
                           <MessageCircle className="w-3 h-3 mr-0.5" />Chat
                         </Button>
                       )}
+                      {/* Audio call for same language */}
+                      {hasGoldenBadge && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast({ title: "Audio Call", description: "₹3/min earning • Coming soon" })}>
+                          <Phone className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
@@ -1443,7 +1422,7 @@ const WomenDashboardScreen = () => {
         </>
       )}
 
-      {/* Other Language Men */}
+      {/* Other Language Men - chat only, no audio/video */}
       {otherLanguageMen.length > 0 && (
         <>
           <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
@@ -1500,26 +1479,19 @@ const WomenDashboardScreen = () => {
         </>
       )}
 
-      {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && (
-        <div className="text-center py-16">
-          <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No men online right now</p>
-        </div>
-      )}
-
       {/* Matches */}
-      <div className="px-4 py-3 border-t border-border/30">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <Heart className="h-4 w-4 text-primary" />
-            Matches ({matchedMen.length})
-          </h3>
-          <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedMen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
-            <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
-          </Button>
-        </div>
-        {matchedMen.length > 0 ? (
-          matchedMen.map((man) => (
+      {matchedMen.length > 0 && (
+        <div className="px-4 py-3 border-t border-border/30">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Heart className="h-4 w-4 text-primary" />
+              Matches ({matchedMen.length})
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedMen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
+              <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
+            </Button>
+          </div>
+          {matchedMen.map((man) => (
             <WhatsAppUserCard
               key={man.matchId}
               name={man.fullName || "User"}
@@ -1541,16 +1513,17 @@ const WomenDashboardScreen = () => {
                 )
               }
             />
-          ))
-        ) : (
-          <div className="text-center py-6">
-            <Heart className="w-10 h-10 text-muted-foreground/20 mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">No matches yet</p>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Private Groups moved to dedicated Groups tab */}
+      {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && notifications.length === 0 && (
+        <div className="text-center py-16">
+          <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">No men online right now</p>
+          <p className="text-muted-foreground/60 text-xs mt-1">Chat requests will appear here</p>
+        </div>
+      )}
 
       {/* Language Group Chat */}
       {currentUserId && currentWomanLanguage && (
@@ -1746,16 +1719,11 @@ const WomenDashboardScreen = () => {
       />
 
       {activeTab === "chats" && renderChatsTab()}
-      {activeTab === "users" && renderUsersTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {activeTab === "chats" && (
-        <WhatsAppFAB onClick={() => setActiveTab("groups")} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
-      )}
 
       {/* Profile Edit Dialog */}
       <ProfileEditDialog open={profileEditOpen} onOpenChange={setProfileEditOpen} onProfileUpdated={() => loadDashboardData()} />
