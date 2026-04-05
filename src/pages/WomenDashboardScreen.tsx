@@ -30,7 +30,7 @@ import ProfileEditDialog from "@/components/ProfileEditDialog";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatChatTime } from "@/lib/utils";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
@@ -50,7 +50,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { WhatsAppHeader } from "@/components/WhatsAppHeader";
 import { WhatsAppBottomTabs, getWomenTabs } from "@/components/WhatsAppBottomTabs";
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
-import { WhatsAppFAB } from "@/components/WhatsAppFAB";
+// WhatsAppFAB removed — unused in current layout
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
 
@@ -187,19 +187,7 @@ const WomenDashboardScreen = () => {
     hasBio: false,
   });
 
-  // Format chat timestamps with date context
-  const formatChatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const dayMs = 86400000;
-    if (diff < dayMs && now.getDate() === date.getDate()) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    if (diff < 2 * dayMs && now.getDate() - date.getDate() === 1) return 'Yesterday';
-    if (diff < 7 * dayMs) return date.toLocaleDateString([], { weekday: 'short' });
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
+  // formatChatTime now imported from @/lib/utils
 
   // Format currency display (dynamic, not hardcoded ₹)
   const formatLocalCurrency = (amount: number) => {
@@ -448,7 +436,10 @@ const WomenDashboardScreen = () => {
       .in("status", ["active", "pending"]);
     
     setActiveChatCount(count || 0);
-    fetchWomenActiveChats();
+    // Only fetch chat details if chats tab has been opened
+    if (chatsFetchedRef.current) {
+      fetchWomenActiveChats();
+    }
   };
 
   const fetchWomenActiveChats = async () => {
@@ -765,9 +756,7 @@ const WomenDashboardScreen = () => {
         .eq("status", "accepted");
 
       setStats(prev => ({ ...prev, matchCount: count || 0 }));
-      
-      // Also fetch matched men profiles
-      await fetchMatchedMen(userId);
+      // Matches profiles loaded lazily when Matches tab is opened
     } catch (error) {
       console.error('[WomenDashboard] fetchMatchCount error:', error);
     }
@@ -1074,7 +1063,7 @@ const WomenDashboardScreen = () => {
           className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "nobalance" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
           onClick={() => setOnlineSubTab("nobalance")}
         >
-          No Balance ({nonRechargedMen.length})
+          Free Users ({nonRechargedMen.length})
         </button>
       </div>
 

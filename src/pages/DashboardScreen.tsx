@@ -54,7 +54,7 @@ import {
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
+import { cn, formatChatTime } from "@/lib/utils";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed — not used in WhatsApp-style layout
 import VideoCallMiniButton from "@/components/VideoCallMiniButton";
@@ -79,7 +79,7 @@ import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel"
 import { WhatsAppHeader } from "@/components/WhatsAppHeader";
 import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
-import { WhatsAppFAB } from "@/components/WhatsAppFAB";
+// WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
 interface Notification {
   id: string;
@@ -281,19 +281,7 @@ const DashboardScreen = () => {
     return Math.round(converted * 100) / 100;
   };
 
-  // Format chat timestamps with date context
-  const formatChatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const dayMs = 86400000;
-    if (diff < dayMs && now.getDate() === date.getDate()) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    if (diff < 2 * dayMs && now.getDate() - date.getDate() === 1) return 'Yesterday';
-    if (diff < 7 * dayMs) return date.toLocaleDateString([], { weekday: 'short' });
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
+  // formatChatTime now imported from @/lib/utils
 
   // Format currency display
   const formatLocalCurrency = (amountINR: number) => {
@@ -523,8 +511,10 @@ const DashboardScreen = () => {
     
     setActiveChatCount(count || 0);
     
-    // Also fetch active chat details for the Chats tab
-    fetchActiveChats();
+    // Only fetch chat details if chats tab has been opened
+    if (chatsFetchedRef.current) {
+      fetchActiveChats();
+    }
   };
 
   const fetchActiveChats = async () => {
@@ -612,7 +602,7 @@ const DashboardScreen = () => {
     return 'bg-online';
   };
 
-  const getStatusDotColor = getStatusColor;
+  // getStatusDotColor removed — use getStatusColor directly
 
   const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
     try {

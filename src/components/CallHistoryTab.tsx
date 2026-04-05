@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchPublicProfiles } from "@/lib/profile-queries";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+// Skeleton removed — using spinner for WhatsApp-style consistency
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -66,7 +66,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .select("*")
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(50);
 
       // 2. Video call sessions
       const { data: videoSessions } = await supabase
@@ -74,7 +74,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .select("*")
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(30);
 
       // 3. Group call participation (via group_video_access)
       const { data: groupAccess } = await supabase
@@ -82,7 +82,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .select("*, private_groups(name, owner_id)")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(20);
 
       // Collect all partner IDs for batch profile fetch
       const partnerIds = new Set<string>();
@@ -196,16 +196,16 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
       case "chat": return "bg-primary/10 text-primary";
-      case "video": return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-      case "group": return "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+      case "video": return "bg-accent/20 text-accent-foreground";
+      case "group": return "bg-secondary/30 text-secondary-foreground";
       default: return "bg-muted text-muted-foreground";
     }
   };
 
   const getStatusColor = (status: string) => {
-    if (status === "active") return "text-green-600 dark:text-green-400";
+    if (status === "active") return "text-primary";
     if (status === "ended" || status === "completed") return "text-muted-foreground";
-    return "text-yellow-600 dark:text-yellow-400";
+    return "text-foreground";
   };
 
   const filterButtons: { id: HistoryType; label: string; icon: React.ReactNode }[] = [
@@ -247,16 +247,8 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
 
       {/* Loading */}
       {loading && (
-        <div className="px-4 py-2 space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="w-12 h-12 rounded-full" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-48" />
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       )}
 
@@ -303,7 +295,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                     {item.type === "group" ? item.groupName : item.partnerName}
                   </span>
                   {item.status === "active" && (
-                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-green-500/10 text-green-600 border-green-500/30">
+                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-primary/10 text-primary border-primary/30">
                       LIVE
                     </Badge>
                   )}
@@ -311,8 +303,8 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                   {item.isIncoming !== undefined && (
                     item.isIncoming
-                      ? <ArrowDownLeft className="w-3 h-3 text-green-500" />
-                      : <ArrowUpRight className="w-3 h-3 text-blue-500" />
+                      ? <ArrowDownLeft className="w-3 h-3 text-primary" />
+                      : <ArrowUpRight className="w-3 h-3 text-accent-foreground" />
                   )}
                   <span className={getStatusColor(item.status)}>
                     {item.status === "active" ? "Ongoing" : item.endReason || "Ended"}
