@@ -98,11 +98,12 @@ const AdminStatementsPage = () => {
   const [loading,     setLoading]     = useState(false);
   const [detailLoad,  setDetailLoad]  = useState(false);
   const [generating,  setGenerating]  = useState(false);
+  const [realtimeTick, setRealtimeTick] = useState(0);
 
-  // FIX #1/#17: Realtime subscription for statements
+  // FIX #1: Realtime subscription for statements — triggers re-search
   useRealtimeSubscription({
     table: "monthly_statements" as any,
-    onUpdate: () => { /* will re-trigger search via useEffect dependency */ },
+    onUpdate: () => setRealtimeTick(t => t + 1),
     enabled: isAdmin,
   });
 
