@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -114,6 +114,44 @@ const DraggableVideoCallWindow = ({
     preAcquiredStream,
     audioOnly,
   });
+
+  // Ring-back tone for caller while waiting for callee to answer
+  useEffect(() => {
+    if (!isInitiator) return;
+    if (callStatus !== 'ringing' && callStatus !== 'connecting' && callStatus !== 'idle') return;
+
+    let ctx: AudioContext | null = null;
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const playTone = () => {
+      try {
+        if (!ctx || ctx.state === 'closed') {
+          ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(400, ctx.currentTime);
+        osc.frequency.setValueAtTime(450, ctx.currentTime + 0.2);
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.5);
+      } catch (_) {}
+    };
+
+    playTone();
+    intervalId = setInterval(playTone, 3000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (ctx && ctx.state !== 'closed') {
+        try { ctx.close(); } catch (_) {}
+      }
+    };
+  }, [isInitiator, callStatus]);
 
   // Check block status
   const { isBlocked: isBlockedByEither, isBlockedByThem } = useBlockCheck(currentUserId, remoteUserId);
