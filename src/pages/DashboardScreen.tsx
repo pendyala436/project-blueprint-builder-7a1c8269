@@ -987,7 +987,7 @@ const DashboardScreen = () => {
       // Get unique other user IDs from each match (deduplicate)
       const otherUserIds = [...new Set(matches.map(m => 
         m.user_id === userId ? m.matched_user_id : m.user_id
-      ))];
+      ))] as string[];
 
       // Fetch profiles for matched users via secure RPC
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
