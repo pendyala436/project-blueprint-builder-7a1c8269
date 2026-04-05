@@ -43,7 +43,6 @@ Deno.serve(async (req) => {
 
       // Men pay totalCharged (amount + 3% fee), but only 'amount' is credited to wallet
       console.log(`[Cashfree] Recharge ₹${amount} + 3% fee ₹${feeAmount} = Total ₹${totalCharged}`);
-      }
 
       // Get user details
       const { data: profile } = await supabase
