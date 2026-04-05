@@ -372,7 +372,24 @@ const DraggableMiniChatWindow = ({
       const fileName = `${currentUserId}/${chatId}/${Date.now()}-${randomSuffix}.${fileExt}`;
       const bucket = "chat-attachments";
 
-      const { error: uploadError } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: "3600", upsert: false });
+      // Infer content type from extension when browser doesn't provide one
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+        webp: "image/webp", heic: "image/heic", heif: "image/heif", bmp: "image/bmp",
+        mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+        mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/x-m4a",
+        pdf: "application/pdf", doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ppt: "application/vnd.ms-powerpoint",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        txt: "text/plain", csv: "text/csv", zip: "application/zip",
+      };
+      const extLower = (fileExt || "").toLowerCase();
+      const contentType = file.type || mimeMap[extLower] || "application/octet-stream";
+
+      const { error: uploadError } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: "3600", upsert: false, contentType });
       if (uploadError) throw uploadError;
 
       const messageUrl = `chat-attachment://${fileName}`;
