@@ -478,6 +478,8 @@ export type Database = {
       }
       chat_pricing: {
         Row: {
+          audio_rate_per_minute: number
+          audio_women_earning_rate: number
           created_at: string
           currency: string
           group_call_rate_per_minute: number
@@ -492,6 +494,8 @@ export type Database = {
           women_earning_rate: number
         }
         Insert: {
+          audio_rate_per_minute?: number
+          audio_women_earning_rate?: number
           created_at?: string
           currency?: string
           group_call_rate_per_minute?: number
@@ -506,6 +510,8 @@ export type Database = {
           women_earning_rate?: number
         }
         Update: {
+          audio_rate_per_minute?: number
+          audio_women_earning_rate?: number
           created_at?: string
           currency?: string
           group_call_rate_per_minute?: number
