@@ -1586,7 +1586,7 @@ const WomenDashboardScreen = () => {
           </div>
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">Wallet Balance</p>
-            <p className="text-2xl font-bold text-primary">₹{myWalletBalance.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-primary">{formatLocalCurrency(myWalletBalance)}</p>
           </div>
           <Button variant="outline" size="sm" className="gap-1 text-primary border-primary/30" onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}>
             <IndianRupee className="w-3.5 h-3.5" />Withdraw
