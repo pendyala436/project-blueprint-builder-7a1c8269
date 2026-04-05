@@ -24,6 +24,7 @@ export function getNativeLabels(language?: string) {
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
   onTyping?: (isTyping: boolean) => void;
+  onInputChange?: (text: string) => void;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
