@@ -123,6 +123,18 @@ export const getActiveSessions = (): ActiveSession[] => {
 };
 
 /**
+ * Clear all P3 sessions (safety reset). Call on logout or major navigation.
+ */
+export const clearAllP3Sessions = () => {
+  const before = activeSessions.length;
+  activeSessions = activeSessions.filter((s) => s.priority < 3);
+  if (activeSessions.length !== before) {
+    console.log('[SessionPriority] Cleared all P3 sessions');
+    notify();
+  }
+};
+
+/**
  * React hook that subscribes to session priority changes.
  */
 import { useState, useEffect, useSyncExternalStore, useCallback } from 'react';
