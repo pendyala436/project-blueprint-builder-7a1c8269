@@ -1,9 +1,18 @@
-import React, { memo, useRef, useEffect } from 'react';
+import React, { memo, useRef, useEffect, useState, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Check, CheckCheck, MessageCircle, Loader2 } from 'lucide-react';
+import { Check, CheckCheck, MessageCircle, Loader2, Trash2, Ban } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
 
 export interface ChatMessage {
   id: string;
@@ -18,12 +27,14 @@ export interface ChatMessage {
   isTranslating?: boolean;
   englishText?: string;
   translatedContent?: string;
+  deletedForEveryone?: boolean;
 }
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
   currentUserId: string;
   className?: string;
+  onMessageDeleted?: (messageId: string, deleteType: 'for_me' | 'for_everyone') => void;
 }
 
 const formatMessageTime = (timestamp: string) => {
@@ -52,18 +63,122 @@ MessageStatus.displayName = 'MessageStatus';
 const MessageBubble = memo(({
   message,
   isOwn,
+  currentUserId,
+  onMessageDeleted,
 }: {
   message: ChatMessage;
   isOwn: boolean;
+  currentUserId: string;
+  onMessageDeleted?: (messageId: string, deleteType: 'for_me' | 'for_everyone') => void;
 }) => {
-  return (
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
+  // Long-press support for mobile
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  const handleDeleteForMe = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const updateField = isOwn ? 'deleted_for_sender' : 'deleted_for_receiver';
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ [updateField]: true, deleted_at: new Date().toISOString() } as any)
+        .eq('id', message.id);
+
+      if (error) throw error;
+      onMessageDeleted?.(message.id, 'for_me');
+      toast({ title: 'Message deleted', description: 'Deleted for you' });
+    } catch (err) {
+      console.error('Delete for me error:', err);
+      toast({ title: 'Error', description: 'Failed to delete message', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+      setShowMobileMenu(false);
+    }
+  }, [message.id, isOwn, onMessageDeleted, toast]);
+
+  const handleDeleteForEveryone = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({
+          deleted_for_everyone: true,
+          deleted_for_sender: true,
+          deleted_for_receiver: true,
+          deleted_at: new Date().toISOString(),
+        } as any)
+        .eq('id', message.id);
+
+      if (error) throw error;
+      onMessageDeleted?.(message.id, 'for_everyone');
+      toast({ title: 'Message deleted', description: 'Deleted for everyone' });
+    } catch (err) {
+      console.error('Delete for everyone error:', err);
+      toast({ title: 'Error', description: 'Failed to delete message', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+      setShowMobileMenu(false);
+    }
+  }, [message.id, onMessageDeleted, toast]);
+
+  // Handle long press for mobile
+  const handleTouchStart = useCallback(() => {
+    longPressTimer.current = setTimeout(() => {
+      setShowMobileMenu(true);
+    }, 600);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  // If deleted for everyone, show placeholder
+  if (message.deletedForEveryone) {
+    return (
+      <div
+        className={cn(
+          'flex gap-2 max-w-[85%] sm:max-w-[75%] animate-fade-in',
+          isOwn ? 'ms-auto flex-row-reverse' : 'me-auto'
+        )}
+      >
+        {!isOwn && (
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarImage src={message.senderAvatar || undefined} alt={message.senderName} />
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              {message.senderName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        )}
+        <div className={cn('flex flex-col', isOwn ? 'items-end' : 'items-start')}>
+          <div className="rounded-2xl px-4 py-2.5 bg-muted/30 border border-dashed border-muted-foreground/20 rounded-br-md">
+            <p className="text-sm text-muted-foreground italic flex items-center gap-1.5">
+              <Ban className="h-3.5 w-3.5" />
+              This message was deleted
+            </p>
+          </div>
+          <span className="text-[10px] text-muted-foreground mt-0.5 px-1">
+            {formatMessageTime(message.timestamp)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const bubbleContent = (
     <div
       className={cn(
-        'flex gap-2 max-w-[85%] sm:max-w-[75%] animate-fade-in',
+        'flex gap-2 max-w-[85%] sm:max-w-[75%] animate-fade-in relative',
         isOwn ? 'ms-auto flex-row-reverse' : 'me-auto'
       )}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
-      {/* Avatar for received messages */}
       {!isOwn && (
         <Avatar className="h-8 w-8 flex-shrink-0">
           <AvatarImage src={message.senderAvatar || undefined} alt={message.senderName} />
@@ -74,12 +189,11 @@ const MessageBubble = memo(({
       )}
 
       <div className={cn('flex flex-col', isOwn ? 'items-end' : 'items-start')}>
-        {/* Sender/Receiver name — always shown with distinct colors */}
         <span className={cn(
           'text-xs font-semibold mb-1 px-1',
           isOwn
-            ? 'text-primary'           /* Sender: theme primary (blue/pink etc.) */
-            : 'text-emerald-600 dark:text-emerald-400' /* Receiver: green */
+            ? 'text-primary'
+            : 'text-emerald-600 dark:text-emerald-400'
         )}>
           {message.senderName}
           {message.senderLanguage && (
@@ -87,7 +201,6 @@ const MessageBubble = memo(({
           )}
         </span>
 
-        {/* Message bubble — white/light background with colored text */}
         <div
           className={cn(
             'rounded-2xl px-4 py-2.5 unicode-text shadow-sm border',
@@ -112,7 +225,6 @@ const MessageBubble = memo(({
               )}>
                 {message.translatedContent || message.content}
               </p>
-              {/* English translation below every message */}
               {message.englishText && message.englishText.toLowerCase() !== (message.translatedContent || message.content).toLowerCase() && (
                 <p className="text-[10px] text-muted-foreground/70 italic mt-1" dir="ltr">
                   english: {message.englishText.toLowerCase()}
@@ -122,7 +234,6 @@ const MessageBubble = memo(({
           )}
         </div>
 
-        {/* Timestamp and status */}
         <div className={cn(
           'flex items-center gap-1 mt-0.5 px-1',
           isOwn ? 'flex-row-reverse' : ''
@@ -135,7 +246,76 @@ const MessageBubble = memo(({
           )}
         </div>
       </div>
+
+      {/* Mobile long-press menu */}
+      {showMobileMenu && (
+        <div
+          className="fixed inset-0 z-[200] bg-black/20"
+          onClick={() => setShowMobileMenu(false)}
+        >
+          <div
+            className="absolute bg-popover border border-border rounded-lg shadow-xl p-1 min-w-[200px]"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+              onClick={handleDeleteForMe}
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+              Delete for me
+            </button>
+            {isOwn && (
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                onClick={handleDeleteForEveryone}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete for everyone
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+
+  // Desktop: right-click context menu
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        {bubbleContent}
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-52">
+        <ContextMenuItem
+          onClick={handleDeleteForMe}
+          disabled={isDeleting}
+          className="gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete for me
+        </ContextMenuItem>
+        {isOwn && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={handleDeleteForEveryone}
+              disabled={isDeleting}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete for everyone
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
 MessageBubble.displayName = 'MessageBubble';
@@ -144,6 +324,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
   messages,
   currentUserId,
   className,
+  onMessageDeleted,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -168,7 +349,6 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
       <div className="p-4 space-y-4">
         {Object.entries(groupedMessages).map(([date, dateMessages]) => (
           <div key={date}>
-            {/* Date separator */}
             <div className="flex items-center justify-center my-4" role="separator">
               <div className="bg-muted/50 px-3 py-1 rounded-full">
                 <span className="text-xs text-muted-foreground font-medium">
@@ -177,13 +357,14 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
               </div>
             </div>
 
-            {/* Messages for this date */}
             <div className="space-y-3">
               {dateMessages.map((message) => (
                 <MessageBubble
                   key={message.id}
                   message={message}
                   isOwn={message.senderId === currentUserId}
+                  currentUserId={currentUserId}
+                  onMessageDeleted={onMessageDeleted}
                 />
               ))}
             </div>
@@ -204,7 +385,6 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = memo(({
           </div>
         )}
 
-        {/* Scroll anchor */}
         <div ref={bottomRef} />
       </div>
     </ScrollArea>
