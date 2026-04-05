@@ -1198,77 +1198,52 @@ const ChatScreen = () => {
 
     setIsSending(true);
 
-    // Use preview's native text as the actual sent message so bubble matches preview exactly
     const tempId = `temp-${Date.now()}`;
     const senderLang = currentUserLanguageRef.current || 'English';
-    const canReusePreview =
-      typingText.trim() === messageText &&
-      !isPreviewLoading &&
-      (!!previewNative.trim() || !!previewEnglish.trim());
 
-    // The message to store in DB: use native script from preview if available
-    const actualMessage = canReusePreview && previewNative.trim()
-      ? previewNative.trim()
-      : messageText;
-
-    const optimisticEnglishText = canReusePreview ? (previewEnglish.trim() || undefined) : undefined;
-
+    // Show a pending bubble, but only send after full async translation resolves
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: actualMessage,
+      message: messageText,
       translatedMessage: undefined,
-      englishText: optimisticEnglishText,
+      englishText: undefined,
       isTranslated: false,
       isRead: false,
-      isTranslating: !canReusePreview,
+      isTranslating: true,
       createdAt: new Date().toISOString(),
     }]);
 
-    // If preview wasn't available, translate async to populate english subtitle
-    if (!canReusePreview) {
-      translateForViewer(messageText, senderLang, senderLang).then(result => {
-        setMessages(prev => prev.map(m => {
-          const realId = tempToRealIdRef.current.get(tempId);
-          if (m.id === tempId || (realId && m.id === realId)) {
-            return {
-              ...m,
-              // Replace message with native script, show english subtitle
-              message: result.nativeText || m.message,
-              englishText: result.englishText,
-              isTranslating: false,
-            };
-          }
-          return m;
-        }));
-        tempToRealIdRef.current.delete(tempId);
-      }).catch(() => {
-        import("@/lib/translation-service").then(({ getEnglishTranslation }) => {
-          getEnglishTranslation(messageText, 'auto').then(eng => {
-            setMessages(prev => prev.map(m => {
-              const realId = tempToRealIdRef.current.get(tempId);
-              if (m.id === tempId || (realId && m.id === realId)) {
-                return { ...m, englishText: eng, isTranslating: false };
-              }
-              return m;
-            }));
-            tempToRealIdRef.current.delete(tempId);
-          }).catch(() => {
-            setMessages(prev => prev.map(m => {
-              const realId = tempToRealIdRef.current.get(tempId);
-              if (m.id === tempId || (realId && m.id === realId)) {
-                return { ...m, isTranslating: false };
-              }
-              return m;
-            }));
-            tempToRealIdRef.current.delete(tempId);
-          });
-        });
-      });
-    }
-
     try {
-      // Store the native script (from preview) in DB so receiver also sees native text
+      let actualMessage = messageText;
+      let englishSubtitle: string | undefined;
+
+      try {
+        const result = await translateForViewer(messageText, senderLang, senderLang);
+        actualMessage = result.nativeText?.trim() || messageText;
+        englishSubtitle = result.englishText?.trim() || undefined;
+      } catch {
+        try {
+          const { getEnglishTranslation } = await import("@/lib/translation-service");
+          englishSubtitle = (await getEnglishTranslation(messageText, 'auto'))?.trim() || undefined;
+        } catch {
+          englishSubtitle = undefined;
+        }
+      }
+
+      setMessages(prev => prev.map(m => {
+        const realId = tempToRealIdRef.current.get(tempId);
+        if (m.id === tempId || (realId && m.id === realId)) {
+          return {
+            ...m,
+            message: actualMessage,
+            englishText: englishSubtitle,
+            isTranslating: false,
+          };
+        }
+        return m;
+      }));
+
       const { error } = await supabase
         .from("chat_messages")
         .insert({
