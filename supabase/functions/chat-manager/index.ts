@@ -1082,10 +1082,11 @@ serve(async (req) => {
             session = existingSession;
             console.log(`[START_CHAT] Reusing existing active session ${existingSession.id} for chat ${chatId}`);
           } else if (existingSession.status === "pending") {
-            // Touch the pending session so realtime UPDATE fires and women see the popup
+            // Activate the pending session (chat is async now)
             const { data: touchedSession, error: touchError } = await supabase
               .from("active_chat_sessions")
               .update({
+                status: "active",
                 started_at: new Date().toISOString(),
                 last_activity_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -1094,7 +1095,7 @@ serve(async (req) => {
               .select()
               .single();
             session = touchError ? existingSession : touchedSession;
-            console.log(`[START_CHAT] Touched pending session ${existingSession.id} for chat ${chatId}`);
+            console.log(`[START_CHAT] Activated pending session ${existingSession.id} for chat ${chatId}`);
           } else {
             // Session exists but is ended/inactive — recycle it by updating in-place
             // This avoids FK constraint violations from women_earnings references
