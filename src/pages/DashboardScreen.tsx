@@ -1351,8 +1351,8 @@ const DashboardScreen = () => {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0"
-                          disabled={(woman.active_chat_count || 0) >= 3}
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             toast({ title: "Audio Call", description: "₹6/min • Coming soon" });
                           }}
                         >
