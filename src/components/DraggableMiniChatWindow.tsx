@@ -385,7 +385,8 @@ const DraggableMiniChatWindow = ({
       toast({ title: "File sent", description: `${file.name} has been sent` });
     } catch (error) {
       console.error("Error uploading file:", error);
-      toast({ title: "Upload failed", description: "Failed to send file. Please try again.", variant: "destructive" });
+      const classified = classifyError(error);
+      toast({ title: classified.title, description: classified.message, variant: "destructive" });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
