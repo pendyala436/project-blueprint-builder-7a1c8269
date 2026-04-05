@@ -91,6 +91,7 @@ import DirectAudioCallButton from "@/components/DirectAudioCallButton";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
+import { useMessageSound } from "@/hooks/useMessageSound";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
