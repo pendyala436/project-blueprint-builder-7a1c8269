@@ -241,6 +241,7 @@ const ChatScreen = () => {
   const [partnerDisconnected, setPartnerDisconnected] = useState(false);
   const [showStopChatDialog, setShowStopChatDialog] = useState(false);
   const [isStoppingChat, setIsStoppingChat] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
   
   // Typing preview state (native + English subtitle while typing)
   const [previewNative, setPreviewNative] = useState("");
