@@ -2885,6 +2885,33 @@ export type Database = {
         }
         Relationships: []
       }
+      women_auto_ping_log: {
+        Row: {
+          created_at: string
+          id: string
+          last_sent_at: string
+          man_user_id: string
+          ping_type: string
+          woman_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sent_at?: string
+          man_user_id: string
+          ping_type?: string
+          woman_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sent_at?: string
+          man_user_id?: string
+          ping_type?: string
+          woman_user_id?: string
+        }
+        Relationships: []
+      }
       women_availability: {
         Row: {
           created_at: string
@@ -3377,6 +3404,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_offline_women_for_daily_ping: {
+        Args: never
+        Returns: {
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_online_men_dashboard: {
         Args: never
         Returns: {
@@ -3392,6 +3426,13 @@ export type Database = {
           state: string
           user_id: string
           wallet_balance: number
+        }[]
+      }
+      get_online_women_for_ping: {
+        Args: never
+        Returns: {
+          full_name: string
+          user_id: string
         }[]
       }
       get_public_profiles: {
@@ -3445,6 +3486,13 @@ export type Database = {
         Returns: {
           full_name: string
           total_amount: number
+          user_id: string
+        }[]
+      }
+      get_unrecharged_men: {
+        Args: never
+        Returns: {
+          full_name: string
           user_id: string
         }[]
       }
