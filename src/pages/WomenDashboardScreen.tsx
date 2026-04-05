@@ -533,8 +533,6 @@ const WomenDashboardScreen = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
-        // Don't redirect — ProtectedRoute handles auth guard.
-        // Just stop loading to avoid stuck spinner on token refresh race.
         setIsLoading(false);
         return;
       }
@@ -542,51 +540,52 @@ const WomenDashboardScreen = () => {
 
       setCurrentUserId(user.id);
 
-      // Wrap profile fetch in timeout to prevent hang
+      // Fetch profile and user languages in PARALLEL
       const profilePromise = supabase
         .from("profiles")
         .select("gender, approval_status, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, is_indian")
         .eq("user_id", user.id)
         .maybeSingle();
       
+      const languagePromise = supabase
+        .from("user_languages")
+        .select("language_name, language_code")
+        .eq("user_id", user.id)
+        .limit(1);
+
       const profileTimeout = new Promise<{ data: null, error: Error }>((resolve) =>
         setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
       );
       
       let mainProfile: { gender?: string | null; approval_status?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; is_indian?: boolean | null } | null = null;
+      let womanLanguages: { language_name: string; language_code: string }[] | null = null;
+      
       try {
-        const result = await Promise.race([profilePromise, profileTimeout]);
-        mainProfile = result.data;
+        const [profileResult, langResult] = await Promise.all([
+          Promise.race([profilePromise, profileTimeout]),
+          languagePromise,
+        ]);
+        mainProfile = profileResult.data;
+        womanLanguages = langResult.data;
       } catch {
-        console.warn('[WomenDashboard] Profile fetch timed out or failed');
+        console.warn('[WomenDashboard] Profile/language fetch failed');
       }
         
-      // Store user's photo for chat validation
       setUserPhoto(mainProfile?.photo_url || null);
       
-      // Check if Indian woman
       const isIndian = mainProfile?.is_indian === true || 
         mainProfile?.country?.toLowerCase().includes('india');
       setIsIndianWoman(isIndian && mainProfile?.gender?.toLowerCase() === 'female');
 
-      // Check if female user needs approval (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female" && mainProfile?.approval_status !== "approved") {
         navigate("/approval-pending");
         return;
       }
 
-      // Use name from main profiles table
       const fullName = mainProfile?.full_name;
       if (fullName) {
         setUserName(fullName.split(" ")[0]);
       }
-
-      // Get woman's mother tongue - use main profiles table first
-      const { data: womanLanguages } = await supabase
-        .from("user_languages")
-        .select("language_name, language_code")
-        .eq("user_id", user.id)
-        .limit(1);
 
       const womanLanguage = womanLanguages?.[0]?.language_name || 
                            mainProfile?.primary_language ||
@@ -596,13 +595,14 @@ const WomenDashboardScreen = () => {
       setCurrentWomanLanguage(womanLanguage);
       setCurrentWomanLanguageCode(womanLanguageCode);
       
-      // Use country from main profiles table
       const userCountryValue = mainProfile?.country || "";
       setCurrentWomanCountry(userCountryValue);
       
-      // Set all supported NLLB languages for women
-      const { ALL_SUPPORTED_LANGUAGES } = await import("@/data/supportedLanguages");
-      setSupportedLanguages(ALL_SUPPORTED_LANGUAGES.map(l => l.name));
+      // Load supported languages and dashboard data in parallel
+      const [langModule] = await Promise.all([
+        import("@/data/supportedLanguages"),
+      ]);
+      setSupportedLanguages(langModule.ALL_SUPPORTED_LANGUAGES.map(l => l.name));
 
       // Fetch all data with woman's language context - using allSettled for resilience
       await Promise.allSettled([
