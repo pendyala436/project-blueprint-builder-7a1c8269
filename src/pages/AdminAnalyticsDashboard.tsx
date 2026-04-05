@@ -709,7 +709,7 @@ const AdminAnalyticsDashboard = () => {
               <Button
                 variant="outline"
                 className="h-auto p-4 flex flex-col items-center gap-2"
-                onClick={() => navigate("/admin/chat-monitoring")}
+                onClick={() => navigate("/admin/messaging")}
               >
                 <Bell className="h-6 w-6 text-primary" />
                 <span className="text-sm font-medium">Broadcast</span>
