@@ -1625,7 +1625,8 @@ const ChatScreen = () => {
             </div>
           )}
 
-          {/* Audio & Video Call Buttons - WhatsApp style */}
+          {/* Audio & Video Call Buttons - Only men can initiate calls */}
+          {currentUserGender === "male" && (
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => {
@@ -1650,6 +1651,7 @@ const ChatScreen = () => {
               <Video className="w-5 h-5 text-foreground" />
             </button>
           </div>
+          )}
 
 
           <DropdownMenu>
