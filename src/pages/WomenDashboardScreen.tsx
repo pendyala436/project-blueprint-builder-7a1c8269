@@ -1458,18 +1458,6 @@ const WomenDashboardScreen = () => {
         </div>
       )}
 
-      {/* Language Group Chat */}
-      {currentUserId && currentWomanLanguage && (
-        <div className="px-4 py-3 border-t border-border/30">
-          <LanguageGroupChat
-            currentUserId={currentUserId}
-            languageCode={currentWomanLanguageCode || "eng_Latn"}
-            languageName={currentWomanLanguage}
-            userName={userName || 'User'}
-            userPhoto={userPhoto}
-          />
-        </div>
-      )}
     </div>
   );
 
@@ -1538,6 +1526,27 @@ const WomenDashboardScreen = () => {
           <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">No matches yet</p>
           <p className="text-muted-foreground/60 text-xs mt-1">Matches will appear here when men connect with you</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderCommunityTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {currentUserId && currentWomanLanguage ? (
+        <div className="px-4 py-3">
+          <LanguageGroupChat
+            currentUserId={currentUserId}
+            languageCode={currentWomanLanguageCode || "eng_Latn"}
+            languageName={currentWomanLanguage}
+            userName={userName || 'User'}
+            userPhoto={userPhoto}
+          />
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading community...</p>
         </div>
       )}
     </div>
@@ -1702,6 +1711,7 @@ const WomenDashboardScreen = () => {
 
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "matches" && renderMatchesTab()}
+      {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
