@@ -1063,7 +1063,7 @@ const WomenDashboardScreen = () => {
           className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "nobalance" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
           onClick={() => setOnlineSubTab("nobalance")}
         >
-          No Balance ({nonRechargedMen.length})
+          Free Users ({nonRechargedMen.length})
         </button>
       </div>
 
