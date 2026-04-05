@@ -1564,7 +1564,7 @@ const DashboardScreen = () => {
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-sm text-foreground truncate">{chat.partnerName}</span>
                 <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                  {new Date(chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatChatTime(chat.lastMessageAt)}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-0.5">
