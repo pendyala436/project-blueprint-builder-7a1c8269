@@ -73,6 +73,7 @@ import { WhatsAppBottomTabs, getWomenTabs } from "@/components/WhatsAppBottomTab
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 import { WhatsAppFAB } from "@/components/WhatsAppFAB";
 import { WomenKYCForm } from "@/components/WomenKYCForm";
+import { CallHistoryTab } from "@/components/CallHistoryTab";
 
 interface Notification {
   id: string;
