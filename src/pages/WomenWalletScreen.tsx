@@ -170,6 +170,7 @@ const WomenWalletScreen = () => {
       setWithdrawDialogOpen(false);
       setWithdrawAmount("");
       setPaymentMethod("");
+      setWithdrawConsent(false);
       loadData();
     } catch (err) {
       toast.error(t("error", "Error"), { description: classifyError(err).message });
