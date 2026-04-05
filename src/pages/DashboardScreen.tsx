@@ -177,6 +177,7 @@ const DashboardScreen = () => {
   const [isNonIndianUser, setIsNonIndianUser] = useState(false); // Is man's language non-Indian but Language supported
   const [activeChatCount, setActiveChatCount] = useState(0);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingUserId, setConnectingUserId] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     onlineUsersCount: 0,
     matchCount: 0,
