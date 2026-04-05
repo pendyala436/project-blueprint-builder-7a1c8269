@@ -1690,6 +1690,7 @@ const WomenDashboardScreen = () => {
 
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "matches" && renderMatchesTab()}
+      {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
