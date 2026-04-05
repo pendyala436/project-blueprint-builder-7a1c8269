@@ -45,6 +45,7 @@ const performAdminCheck = async (): Promise<{ isAdmin: boolean; email: string; u
     isAdmin: !!roleData,
     email: user.email || "",
     userId: user.id,
+    timestamp: Date.now(),
   };
 };
 
