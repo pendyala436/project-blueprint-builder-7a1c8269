@@ -130,6 +130,7 @@ const VideoCallMiniButton = ({
         womanPhoto: result.woman.photo_url,
         stream: preStream
       });
+      registerSession('video_call', callId);
 
       toast({
         title: "Calling...",
