@@ -1047,10 +1047,6 @@ const AdminUserManagement = () => {
                                       <DropdownMenuItem onClick={() => handleViewKYC(user)}>
                                         <FileText className="h-4 w-4 mr-2" /> View KYC
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleToggleGoldenBadge(user)} disabled={assigningBadge === user.user_id}>
-                                        <Crown className="h-4 w-4 mr-2 text-primary" />
-                                        {assigningBadge === user.user_id ? 'Processing...' : 'Toggle Golden Badge'}
-                                      </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => handleOpenForceFree(user)}>
                                         <TimerOff className="h-4 w-4 mr-2 text-warning" /> Force Free Mode
                                       </DropdownMenuItem>
