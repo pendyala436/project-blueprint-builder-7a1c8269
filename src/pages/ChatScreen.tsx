@@ -478,7 +478,6 @@ const ChatScreen = () => {
               createdAt: newMsg.created_at,
             }];
           });
-          }
 
           // Mark received messages as read automatically
           if (newMsg.sender_id !== userId) {
