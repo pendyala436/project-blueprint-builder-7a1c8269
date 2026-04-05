@@ -191,6 +191,7 @@ const DirectAudioCallButton = ({
       }
 
       setActiveCall({ callId, stream: preStream });
+      registerSession('audio_call', callId);
 
       toast({
         title: "Calling...",
