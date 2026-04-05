@@ -840,6 +840,26 @@ const ChatScreen = () => {
         } catch {
           console.warn('[Chat] Wallet balance fetch failed');
         }
+
+        // Subscribe to wallet balance changes in realtime
+        const walletChannel = supabase
+          .channel(`wallet-balance-${user.id}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'wallets',
+            filter: `user_id=eq.${user.id}`,
+          }, (payload: any) => {
+            if (payload.new?.balance !== undefined) {
+              setWalletBalance(Number(payload.new.balance) || 0);
+            }
+          })
+          .subscribe();
+
+        // Cleanup wallet subscription when component unmounts
+        return () => {
+          supabase.removeChannel(walletChannel);
+        };
       }
 
       // ============= FETCH PARTNER PROFILE =============
