@@ -282,7 +282,7 @@ const IncomingVideoCallWindow = ({
 
   // Incoming call UI
   return (
-    <Card className="fixed bottom-20 right-4 w-72 sm:w-80 p-4 bg-gradient-to-br from-card to-muted border-border shadow-2xl z-[80] animate-in slide-in-from-right-5">
+    <Card className="fixed bottom-20 right-4 w-72 sm:w-80 p-4 bg-gradient-to-br from-card to-muted border-border shadow-2xl z-[130] animate-in slide-in-from-right-5">
       <div className="flex flex-col items-center text-center">
         {/* Animated ring effect */}
         <div className="relative mb-4">

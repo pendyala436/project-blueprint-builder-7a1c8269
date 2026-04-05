@@ -105,6 +105,8 @@ import { ForwardDialog } from "@/components/chat/ForwardDialog";
 import { PinnedMessages } from "@/components/chat/PinnedMessages";
 import { MessageReactions } from "@/components/chat/MessageReactions";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
+import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -324,6 +326,9 @@ const ChatScreen = () => {
   
   // Track user activity and update online status
   const { setOnlineStatus } = useActivityStatus(currentUserId || null);
+  
+  // ============= INCOMING CALLS =============
+  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, currentUserGender);
   
   // ============= AUTO-RECONNECT HANDLER =============
   
@@ -1786,6 +1791,17 @@ const ChatScreen = () => {
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* ============= INCOMING CALL POPUP ============= */}
+      {incomingCall && (
+        <IncomingVideoCallWindow
+          callId={incomingCall.callId}
+          callerUserId={incomingCall.callerUserId}
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          currentUserId={currentUserId}
+          onClose={clearIncomingCall}
+        />
+      )}
       {/* ============= HEADER SECTION ============= */}
       <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
         <div className="px-3 py-2.5 flex items-center gap-3">
