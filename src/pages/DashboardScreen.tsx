@@ -236,7 +236,17 @@ const DashboardScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("chats");
+  const [activeTab, setActiveTab] = useState("online");
+  const [activeChats, setActiveChats] = useState<Array<{
+    chatId: string;
+    partnerId: string;
+    partnerName: string;
+    partnerPhoto: string | null;
+    lastMessage: string;
+    lastMessageAt: string;
+    unreadCount: number;
+  }>>([]);
+  const [loadingChats, setLoadingChats] = useState(false);
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
