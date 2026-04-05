@@ -86,7 +86,7 @@ const WomenWalletScreen = () => {
         .select("min_withdrawal_balance")
         .eq("is_active", true)
         .maybeSingle();
-      if (pricing) setMinWithdrawal(Number(pricing.min_withdrawal_balance) || 5000);
+      if (pricing) setMinWithdrawal(Number(pricing.min_withdrawal_balance) || 100);
 
       // users_wallet.balance is the single source of truth for women's wallet.
       // It is incremented directly on every session earning credit (chat, video, group call).
@@ -126,7 +126,7 @@ const WomenWalletScreen = () => {
       toast.error(t("invalidAmount", "Invalid Amount"), { description: t("pleaseEnterValidAmount", "Please enter a valid amount") });
       return;
     }
-    const minW = minWithdrawal ?? 5000;
+    const minW = minWithdrawal ?? 100;
     if (availableBalance < minW) {
       toast.error(t("minimumNotMet", "Minimum Not Met"), { description: `Minimum withdrawal is ₹${minW.toLocaleString()}` });
       return;
@@ -176,7 +176,7 @@ const WomenWalletScreen = () => {
     }
   };
 
-  const effectiveMin = minWithdrawal ?? 5000;
+  const effectiveMin = minWithdrawal ?? 100;
   const canWithdraw = availableBalance >= effectiveMin;
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -247,10 +247,14 @@ const WomenWalletScreen = () => {
 
         {/* Earning rates info */}
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-4 pb-3">
+          <CardContent className="pt-4 pb-3 space-y-1">
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               <IndianRupee className="h-3.5 w-3.5 text-primary shrink-0" />
               {t("earningRates", "Earnings are calculated per minute for text chats, video calls, and group calls.")}
+            </p>
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" />
+              5% platform fee is deducted on all withdrawals. Min withdrawal: ₹{effectiveMin.toLocaleString()}.
             </p>
           </CardContent>
         </Card>
@@ -362,6 +366,26 @@ const WomenWalletScreen = () => {
                 ))}
               </RadioGroup>
             </div>
+
+            {/* Fee breakdown */}
+            {withdrawAmount && Number(withdrawAmount) > 0 && (
+              <Card className="p-3 bg-muted/50 border-muted">
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Withdrawal Amount</span>
+                    <span>₹{Number(withdrawAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-warning">
+                    <span>Platform Fee (5%)</span>
+                    <span>-₹{(Number(withdrawAmount) * 0.05).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold border-t pt-1">
+                    <span>You Receive</span>
+                    <span className="text-success">₹{(Number(withdrawAmount) * 0.95).toFixed(2)}</span>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             <Button
               onClick={handleWithdraw}

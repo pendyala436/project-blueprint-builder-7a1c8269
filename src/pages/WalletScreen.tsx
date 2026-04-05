@@ -330,6 +330,10 @@ const WalletScreen = () => {
               <CreditCard className="h-3 w-3" />
               {t("payingVia", "Paying via")} {PAYMENT_GATEWAYS.find(g => g.id === selectedGateway)?.name ?? 'Cashfree'} — Secure Payment
             </p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+              <IndianRupee className="h-3 w-3" />
+              3% transaction fee applies on all recharges
+            </p>
           </CardContent>
         </Card>
 

@@ -69,7 +69,7 @@ class AppConfig {
   static const double nonIndianWomenEarningRate = 0.0;      // Non-Indian women earn ₹0/min
   static const double defaultVideoRatePerMinute = 8.0;      // Men pay ₹8/min video
   static const double defaultVideoWomenEarningRate = 4.0;   // Women earn ₹4/min video
-  static const double minWithdrawalBalance = 10000.0;       // Minimum ₹10,000 to withdraw
+  static const double minWithdrawalBalance = 100.0;          // Minimum ₹100 to withdraw (5% fee deducted)
 
   /// Platform Support
   static const bool enablePWA = true;
