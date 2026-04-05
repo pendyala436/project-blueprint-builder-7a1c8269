@@ -57,8 +57,7 @@ import { cn } from "@/lib/utils";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
-import WomenChatModeSwitcher from "@/components/WomenChatModeSwitcher";
-import { useWomenChatMode } from "@/hooks/useWomenChatMode";
+// Chat mode removed - all women are in paid mode by default
 import { useIncomingCalls } from "@/hooks/useIncomingCalls";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
@@ -236,8 +235,7 @@ const WomenDashboardScreen = () => {
   const [showKYCForm, setShowKYCForm] = useState(false);
   const [activeTab, setActiveTab] = useState("chats");
   
-  // Women Chat Mode (paid/free/exclusive_free)
-  const chatMode = useWomenChatMode(currentUserId || null, isIndianWoman);
+  // All women are in paid mode by default - no mode switching needed
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
     ageRange: [18, 60],
     heightRange: [140, 200],
@@ -1269,27 +1267,6 @@ const WomenDashboardScreen = () => {
         </div>
       </div>
 
-      {/* Chat Mode Switcher */}
-      <div className="px-4 py-2 border-b border-border/30">
-        <WomenChatModeSwitcher
-          currentMode={chatMode.currentMode}
-          freeMinutesUsed={chatMode.freeMinutesUsed}
-          freeMinutesLimit={chatMode.freeMinutesLimit}
-          freeTimeRemaining={chatMode.freeTimeRemaining}
-          exclusiveFreeLockedUntil={chatMode.exclusiveFreeLockedUntil}
-          canSwitchToPaid={chatMode.canSwitchToPaid}
-          canSwitchToFree={chatMode.canSwitchToFree}
-          canSwitchToExclusiveFree={chatMode.canSwitchToExclusiveFree}
-          isLoading={chatMode.isLoading}
-          isIndian={chatMode.isIndian}
-          onSwitchMode={chatMode.switchMode}
-          isForceFreeActive={chatMode.isForceFreeActive}
-          forceFreeMinutesUsed={chatMode.forceFreeMinutesUsed}
-          forceFreeMinutesLimit={chatMode.forceFreeMinutesLimit}
-          forceFreeTimeRemaining={chatMode.forceFreeTimeRemaining}
-          onToggleForceFree={chatMode.toggleForceFree}
-        />
-      </div>
 
       {/* Notifications */}
       {notifications.length > 0 && (
