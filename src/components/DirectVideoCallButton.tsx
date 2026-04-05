@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { registerOutgoingCall } from "@/hooks/useIncomingCalls";
+import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Video, Loader2, Wallet, ShieldAlert } from "lucide-react";
