@@ -1269,7 +1269,73 @@ const ChatScreen = () => {
     }
   };
 
-  /**
+  // === Reaction handler ===
+  const handleReaction = async (messageId: string, emoji: string) => {
+    try {
+      const { data: existing } = await supabase
+        .from('message_reactions')
+        .select('id')
+        .eq('message_id', messageId)
+        .eq('user_id', currentUserId)
+        .eq('emoji', emoji)
+        .maybeSingle();
+      if (existing) {
+        await supabase.from('message_reactions').delete().eq('id', existing.id);
+      } else {
+        await supabase.from('message_reactions').insert({ message_id: messageId, user_id: currentUserId, emoji } as any);
+      }
+    } catch (err) { console.error('Reaction error:', err); }
+  };
+
+  // === Reply handler ===
+  const handleReply = (messageId: string, text: string, senderName: string) => {
+    setReplyTo({ id: messageId, text, senderName });
+  };
+
+  // === Forward handler ===
+  const handleForward = (messageId: string, text: string) => {
+    setForwardMsg({ id: messageId, text });
+  };
+
+  // === Edit handler ===
+  const handleStartEdit = (messageId: string, currentText: string) => {
+    setEditingMsg({ id: messageId, text: currentText });
+  };
+
+  const handleSaveEdit = async (newText: string) => {
+    if (!editingMsg) return;
+    try {
+      await supabase.from('chat_messages').update({
+        message: newText,
+        is_edited: true,
+        edited_at: new Date().toISOString(),
+        original_message: editingMsg.text,
+      } as any).eq('id', editingMsg.id);
+      setMessages(prev => prev.map(m => m.id === editingMsg.id ? { ...m, message: newText, isEdited: true } : m));
+      setEditingMsg(null);
+      toast({ title: 'Message edited' });
+    } catch (err) {
+      console.error('Edit error:', err);
+      toast({ title: 'Error', description: 'Failed to edit message', variant: 'destructive' });
+    }
+  };
+
+  // === Pin handler ===
+  const handlePinToggle = async (messageId: string, isPinned: boolean) => {
+    try {
+      await supabase.from('chat_messages').update({
+        is_pinned: !isPinned,
+        pinned_at: !isPinned ? new Date().toISOString() : null,
+        pinned_by: !isPinned ? currentUserId : null,
+      } as any).eq('id', messageId);
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, isPinned: !isPinned } : m));
+      toast({ title: isPinned ? 'Message unpinned' : 'Message pinned' });
+    } catch (err) {
+      console.error('Pin error:', err);
+    }
+  };
+
+
    * handleSendMessage Function
    * 
    * Sends a new message to the chat partner.
