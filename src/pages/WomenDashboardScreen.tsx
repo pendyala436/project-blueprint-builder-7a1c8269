@@ -801,9 +801,9 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      const otherUserIds = matches.map(m => 
+      const otherUserIds = [...new Set(matches.map(m => 
         m.user_id === userId ? m.matched_user_id : m.user_id
-      );
+      ))] as string[];
 
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
       const [profiles, statusesRes] = await Promise.all([
