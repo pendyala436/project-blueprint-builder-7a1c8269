@@ -148,7 +148,6 @@ export const useMiniChatBilling = ({
     return () => {
       stopBillingTimers();
       if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
-      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current);
     };
   }, [stopBillingTimers]);
 
