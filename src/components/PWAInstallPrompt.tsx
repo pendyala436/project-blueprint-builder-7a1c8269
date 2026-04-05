@@ -23,9 +23,11 @@ export function PWAInstallPrompt() {
     (window.navigator as any).standalone === true
   );
 
-  // Log PWA state for debugging
+  // Log PWA state for debugging (dev only)
   useEffect(() => {
-    console.log('[PWA] State:', { isInstallable, isInstalled, isInStandaloneMode, isIOS, isIPadOS, isAndroid });
+    if (import.meta.env.DEV) {
+      console.log('[PWA] State:', { isInstallable, isInstalled, isInStandaloneMode, isIOS, isIPadOS, isAndroid });
+    }
   }, [isInstallable, isInstalled, isInStandaloneMode, isIOS, isIPadOS, isAndroid]);
 
   // Auto-trigger native install prompt when available (Android, Windows, Linux, macOS Chrome/Edge)

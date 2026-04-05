@@ -55,8 +55,12 @@ export const UserActivityProvider = ({ children }: { children: React.ReactNode }
     };
   }, []);
 
+  // Stable context value — never changes identity, avoids consumer re-renders
+  const valueRef = useRef({ lastActivityTime, subscribe });
+  valueRef.current.lastActivityTime = lastActivityTimeRef.current;
+
   return (
-    <UserActivityContext.Provider value={{ lastActivityTime, subscribe }}>
+    <UserActivityContext.Provider value={valueRef.current}>
       {children}
     </UserActivityContext.Provider>
   );

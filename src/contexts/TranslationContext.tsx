@@ -89,7 +89,8 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     // Could fetch from user profile in future
   }, []);
 
-  const value: TranslationContextType = {
+  // Memoize context value to prevent consumer re-renders
+  const value = React.useMemo<TranslationContextType>(() => ({
     t,
     translateDynamic,
     translateDynamicBatch,
@@ -97,7 +98,7 @@ export function TranslationProvider({ children }: { children: React.ReactNode })
     setLanguage,
     isLoading,
     syncUserLanguage,
-  };
+  }), [t, translateDynamic, translateDynamicBatch, currentLanguage, setLanguage, isLoading, syncUserLanguage]);
 
   return (
     <TranslationContext.Provider value={value}>

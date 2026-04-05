@@ -1082,6 +1082,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     root.classList.toggle('dark', resolvedMode === 'dark');
 
+    // Batch style updates to avoid layout thrashing
+    const cssText = Object.entries(colors).map(([key, value]) => {
+      const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+      return `--${cssKey}: ${value}`;
+    }).join(';');
+    
+    // Apply all CSS vars at once via cssText append
     Object.entries(colors).forEach(([key, value]) => {
       const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
       root.style.setProperty(`--${cssKey}`, value);
