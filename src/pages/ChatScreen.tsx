@@ -1294,7 +1294,11 @@ const ChatScreen = () => {
    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
+      // Accept by MIME type OR by common image extension (some devices report empty/wrong MIME)
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "avif", "svg"];
+      const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
+      if (!isImage) {
         toast({
           title: "Invalid file",
           description: "Please select an image file",
