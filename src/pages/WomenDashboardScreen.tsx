@@ -1719,16 +1719,11 @@ const WomenDashboardScreen = () => {
       />
 
       {activeTab === "chats" && renderChatsTab()}
-      {activeTab === "users" && renderUsersTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {activeTab === "chats" && (
-        <WhatsAppFAB onClick={() => setActiveTab("groups")} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
-      )}
 
       {/* Profile Edit Dialog */}
       <ProfileEditDialog open={profileEditOpen} onOpenChange={setProfileEditOpen} onProfileUpdated={() => loadDashboardData()} />
