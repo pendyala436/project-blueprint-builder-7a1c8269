@@ -245,7 +245,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     );
   }
 
-  const liveCount = groups.filter(g => g.is_live && g.current_host_id).length;
+  const liveCount = groups.length;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
