@@ -293,11 +293,12 @@ const AdminChatPricing = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
-            <p>• <strong>Chat:</strong> Men (Indian &amp; non-Indian) pay per minute. Women earn half per active chat. Max 3 simultaneous chats per woman.</p>
-            <p>• <strong>Video Call:</strong> 1-to-1, same language only. Men pay double what women earn.</p>
-            <p>• <strong>Group Call:</strong> Hosted by Indian women only. Each man charged individually. Host earns half per active man per minute.</p>
-            <p>• <strong>Gifts:</strong> 100% of gift price deducted from man's wallet. No balance = no gift. Women receive exactly half the gift price as earnings. Platform keeps the other half.</p>
-            <p>• <strong>All sessions:</strong> No duplicate billing. Indian women only earn. Min withdrawal ₹5,000. Records stored 6 months.</p>
+            <p>• <strong>Chat:</strong> Men pay ₹4/min. Women earn ₹2/min (half). Billing starts only when both reply. 2 min idle → auto-close.</p>
+            <p>• <strong>Video Call:</strong> 1-to-1, P2P. Men pay ₹8/min, women earn ₹4/min (half).</p>
+            <p>• <strong>Audio Call:</strong> 1-to-1, P2P. Men pay ₹6/min, women earn ₹3/min (half).</p>
+            <p>• <strong>Group Call:</strong> Each man pays ₹4/min. Host earns ₹0.50/min per man.</p>
+            <p>• <strong>Gifts:</strong> 100% deducted from man. Women receive 50%. Platform keeps 50%.</p>
+            <p>• <strong>All sessions:</strong> No duplicate billing. Min withdrawal ₹5,000.</p>
           </CardContent>
         </Card>
 
