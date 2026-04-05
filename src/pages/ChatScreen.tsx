@@ -2012,7 +2012,7 @@ const ChatScreen = () => {
       )}
 
       {/* ============= MESSAGE INPUT AREA ============= */}
-      <footer className="sticky bottom-0 bg-background">
+      <footer className="sticky bottom-0 bg-background pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-4xl mx-auto">
           {/* Selected file preview */}
           {selectedFile && (
