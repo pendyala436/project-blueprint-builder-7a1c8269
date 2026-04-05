@@ -1754,11 +1754,7 @@ const WomenDashboardScreen = () => {
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "chats" && (
-        <WhatsAppFAB onClick={() => {
-          const el = document.getElementById('women-private-groups-section');
-          if (el) { setActiveTab("users"); setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 100); }
-          else setActiveTab("users");
-        }} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
+        <WhatsAppFAB onClick={() => setActiveTab("groups")} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
       )}
 
       {/* Profile Edit Dialog */}
