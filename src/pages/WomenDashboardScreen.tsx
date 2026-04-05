@@ -1252,780 +1252,537 @@ const WomenDashboardScreen = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/40 shadow-sm pt-[env(safe-area-inset-top)]">
-        <div className="max-w-2xl mx-auto px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <MeowLogo size="sm" />
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-foreground leading-tight">Meow Meow</p>
-              <p className="text-[10px] text-muted-foreground">Connect & Earn</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide max-w-[60vw] sm:max-w-none">
-            {/* Online/Offline Toggle for Women */}
-            <div className="flex items-center gap-1 mr-1 px-1.5 sm:px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
-              <Switch
-                checked={isOnline}
-                onCheckedChange={(checked) => {
-                  toggleOnlineStatus(checked);
-                  toast({
-                    title: checked ? t('youAreOnline', 'You are now Online') : t('youAreOffline', 'You are now Offline'),
-                    description: checked ? t('usersCanSeeYou', 'Men can see you') : t('usersCannotSeeYou', 'You are hidden from others'),
-                  });
-                }}
-                className="data-[state=checked]:bg-primary scale-75"
-              />
-              <span className={`text-[10px] font-medium ${isOnline ? 'text-primary' : 'text-muted-foreground'}`}>
-                {isOnline ? 'On' : 'Off'}
-              </span>
-            </div>
-            {/* Admin Messages */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => setShowAdminMessages(true)}
-              aria-label="Admin Messages"
-            >
-              <Mail className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
+  const womenTabs = getWomenTabs(activeChatCount || undefined, sameLanguageMen.length + otherLanguageMen.length || undefined);
 
-            {/* Admin Chat */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => setShowAdminChat(true)}
-              aria-label="Chat with Admin"
-            >
-              <Shield className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
-
-            {/* KYC - Indian Women Only */}
-            {isIndianWoman && (
-              <button 
-                className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-                onClick={() => setShowKYCForm(true)}
-                aria-label="Bank KYC for Payouts"
-              >
-                <FileCheck className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-              </button>
-            )}
-
-            {/* Friends & Blocked */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => setShowFriendsPanel(true)}
-              aria-label="Friends and Blocked Users"
-            >
-              <Users2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
-
-            <button 
-              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => navigate("/settings")}
-              aria-label="Settings"
-            >
-              <Settings className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
-
-            <button 
-              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200 flex-shrink-0"
-              onClick={handleLogout}
-              aria-label="Log out"
-            >
-              <LogOut className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-destructive/70" />
-            </button>
-          </div>
+  const renderChatsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {/* Status bar */}
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge className={cn("text-[10px] text-primary-foreground", getStatusColor())}>
+            {getStatusText()}
+          </Badge>
+          <span className="text-xs text-muted-foreground">₹{myWalletBalance.toLocaleString()}</span>
         </div>
-      </header>
-
-
-      <main className="max-w-2xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Section 1: Welcome & Status */}
-        <div className="animate-fade-in">
-          <div className="flex flex-col gap-3 mb-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <Badge className={cn("text-[10px] sm:text-xs text-primary-foreground flex items-center gap-1", getStatusColor())}>
-                    <span className={cn("w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-pulse", 
-                      activeChatCount >= 3 ? "bg-destructive-foreground/60" : "bg-online/60"
-                    )} />
-                    {getStatusText()}
-                  </Badge>
-                </div>
-                <h1 className="text-lg sm:text-2xl font-bold text-foreground leading-tight">
-                  {t('welcome', 'Welcome back')}{userName ? `, ${userName}` : ""}! 👋
-                </h1>
-                <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                  {stats.totalOnlineMen} {t('onlineMen', 'men online right now')}
-                </p>
-              </div>
-              <MatchFiltersPanel 
-                filters={matchFilters} 
-                onFiltersChange={setMatchFilters}
-                userCountry={currentWomanCountry}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions: Chat & Private Groups */}
-        <div className="grid grid-cols-2 gap-2 animate-fade-in" style={{ animationDelay: "0.025s" }}>
+        <div className="flex items-center gap-1.5">
           {hasGoldenBadge ? (
             <RandomChatButton
               userGender="female"
               userLanguage={currentWomanLanguage}
               userCountry={currentWomanCountry}
               variant="aurora"
-              size="lg"
+              size="sm"
               hasGoldenBadge={true}
               chatMode={chatMode.currentMode}
-              className="w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3 gap-1 sm:gap-2"
+              className="text-[10px] h-7 !px-2"
             />
           ) : (
-            <Button
-              variant="aurora"
-              size="lg"
-              className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
-              onClick={handlePurchaseGoldenBadge}
-              disabled={isPurchasingBadge}
-            >
-              {isPurchasingBadge ? (
-                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin shrink-0" />
-              ) : (
-                <>
-                  <Star className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                  <span className="truncate">Get Badge</span>
-                </>
-              )}
+            <Button variant="aurora" size="sm" className="h-7 text-[10px] px-2 gap-1" onClick={handlePurchaseGoldenBadge} disabled={isPurchasingBadge}>
+              {isPurchasingBadge ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Star className="h-3 w-3" />Badge</>}
             </Button>
           )}
-          <Button
-            variant="aurora"
-            size="lg"
-            className="gap-1 sm:gap-2 w-full text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
-            onClick={() => {
-              const el = document.getElementById('women-private-groups-section');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-            <span className="truncate">Private Groups</span>
+        </div>
+      </div>
+
+      {/* Chat Mode Switcher */}
+      <div className="px-4 py-2 border-b border-border/30">
+        <WomenChatModeSwitcher
+          currentMode={chatMode.currentMode}
+          freeMinutesUsed={chatMode.freeMinutesUsed}
+          freeMinutesLimit={chatMode.freeMinutesLimit}
+          freeTimeRemaining={chatMode.freeTimeRemaining}
+          exclusiveFreeLockedUntil={chatMode.exclusiveFreeLockedUntil}
+          canSwitchToPaid={chatMode.canSwitchToPaid}
+          canSwitchToFree={chatMode.canSwitchToFree}
+          canSwitchToExclusiveFree={chatMode.canSwitchToExclusiveFree}
+          isLoading={chatMode.isLoading}
+          isIndian={chatMode.isIndian}
+          onSwitchMode={chatMode.switchMode}
+          isForceFreeActive={chatMode.isForceFreeActive}
+          forceFreeMinutesUsed={chatMode.forceFreeMinutesUsed}
+          forceFreeMinutesLimit={chatMode.forceFreeMinutesLimit}
+          forceFreeTimeRemaining={chatMode.forceFreeTimeRemaining}
+          onToggleForceFree={chatMode.toggleForceFree}
+        />
+      </div>
+
+      {/* Notifications */}
+      {notifications.length > 0 ? (
+        <div>
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
+              onClick={() => markNotificationRead(notification.id)}
+            >
+              <div className={cn("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary")}>
+                {notification.type === "match" ? <Heart className="w-5 h-5" /> :
+                 notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
+                 <Bell className="w-5 h-5" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm text-foreground truncate">{notification.title}</span>
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                    {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                  {!notification.is_read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 ml-2" />}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">No recent activity</p>
+          <p className="text-muted-foreground/60 text-xs mt-1">Chat requests will appear here</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderUsersTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">Men Online</span>
+          <Badge variant="outline" className="text-[9px]">{sameLanguageMen.length + otherLanguageMen.length}</Badge>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={currentWomanCountry} />
+          <Button variant="ghost" size="sm" onClick={() => fetchOnlineMen(currentWomanLanguage, currentWomanCountry)} className="h-7 w-7 p-0">
+            <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>
+      </div>
 
-        {/* Wallet Balance & Today's Earnings Summary */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.03s" }}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Wallet Balance (Total Earnings - Total Withdrawals) */}
-            <Card 
-              className="p-3 sm:p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 cursor-pointer hover:shadow-md transition-all"
-              onClick={() => navigate("/women-wallet")}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <Wallet className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('walletBalance', 'Wallet Balance')}</p>
-                  <p className="text-xl font-bold text-primary">₹{myWalletBalance.toLocaleString()}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-3 gap-2 text-primary border-primary/30 hover:bg-primary/10"
-                onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}
-              >
-                <IndianRupee className="w-3.5 h-3.5" />
-                {t('withdraw', 'Withdraw')}
-              </Button>
-            </Card>
-            {/* My Today's Earnings */}
-            <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <IndianRupee className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('myEarningsToday', 'My Earnings Today')}</p>
-                  <p className="text-xl font-bold text-primary">₹{stats.todayEarnings.toLocaleString()}</p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Biggest Earner Today */}
-            <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/20">
-                  <Crown className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">{t('topEarnerToday', 'Top Earner Today')}</p>
-                  {biggestEarner ? (
-                    <>
-                      <p className="text-sm font-semibold text-foreground truncate">{biggestEarner.name}</p>
-                      <p className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{t('noEarningsYet', 'No earnings yet')}</p>
-                  )}
-                </div>
-              </div>
-            </Card>
+      {/* Same Language Men */}
+      {sameLanguageMen.length > 0 && (
+        <>
+          <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
+            <span className="text-xs font-semibold text-primary">{currentWomanLanguage}</span>
+            <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageMen.length})</span>
           </div>
-        </div>
-
-        {/* Key Stats - moved to top */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 animate-fade-in" style={{ animationDelay: "0.035s" }}>
-          <Card className="p-3 bg-gradient-aurora border-primary/30 shadow-glow">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/20">
-                <Crown className="w-4 h-4 text-primary" />
+          {/* Premium */}
+          {sameLanguageMen.filter(m => m.hasRecharged).length > 0 && (
+            <>
+              <div className="px-4 py-1.5 bg-primary/3 flex items-center gap-1.5">
+                <Crown className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[10px] font-semibold text-foreground">Premium</span>
               </div>
-              <div>
-                <p className="text-lg font-bold">{stats.rechargedMen}</p>
-                <p className="text-[10px] text-muted-foreground">{t('premiumUsers', 'Premium Men')}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-3 bg-gradient-aurora border-accent/30 shadow-glow">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-accent/20">
-                <IndianRupee className="w-4 h-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">₹{stats.todayEarnings.toFixed(0)}</p>
-                <p className="text-[10px] text-muted-foreground">{t('todayEarnings', "Today's Earnings")}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-3 bg-gradient-aurora border-primary/30 shadow-glow">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/20">
-                <Heart className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{stats.matchCount}</p>
-                <p className="text-[10px] text-muted-foreground">{t('matches', 'Matches')}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-3 bg-gradient-aurora border-info/30 shadow-glow">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/20">
-                <Users className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{stats.rechargedMen + stats.nonRechargedMen}</p>
-                <p className="text-[10px] text-muted-foreground">{t('allMen', 'All Men')}</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-3 bg-gradient-aurora border-success/30 shadow-glow">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-primary/20">
-                <Globe2 className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-lg font-bold">{sameLanguageMen.length + otherLanguageMen.length}</p>
-                <p className="text-[10px] text-muted-foreground">{t('onlineMen', 'Online Men')}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Golden Badge Info Section */}
-        {isIndianWoman && (
-          <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
-            {hasGoldenBadge ? (
-              <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30 shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 sm:p-3 rounded-xl bg-primary/20 shrink-0">
-                    <Star className="w-5 h-5 sm:w-6 sm:h-6 text-primary fill-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs sm:text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
-                      <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
+              {sameLanguageMen.filter(m => m.hasRecharged).map((user) => (
+                <WhatsAppUserCard
+                  key={user.userId}
+                  name={user.fullName}
+                  photoUrl={user.photoUrl}
+                  age={user.age}
+                  language={user.motherTongue}
+                  country={user.country}
+                  state={user.state}
+                  isPremium={true}
+                  walletBalance={user.walletBalance}
+                  activeChatCount={user.activeChatCount}
+                  onClick={() => handleViewProfile(user.userId)}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {hasGoldenBadge && (
+                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(user.userId)}>
+                          <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                        </Button>
+                      )}
+                      {hasGoldenBadge && user.isSameLanguage && isIndianWoman && (user.country === 'IN' || user.country?.toLowerCase().includes('india')) && (
+                        <DirectVideoCallButton currentUserId={currentUserId} targetUserId={user.userId} targetName={user.fullName} targetPhoto={user.photoUrl} walletBalance={myWalletBalance} onBalanceChange={(newBalance) => setMyWalletBalance(newBalance)} iconOnly={true} />
+                      )}
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                        <Eye className="w-3.5 h-3.5 text-primary" />
+                      </Button>
                     </div>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      You can initiate chats & video calls with Indian men who speak your language
-                    </p>
-                    {goldenBadgeExpiry && (
-                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                        Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
+                  }
+                />
+              ))}
+            </>
+          )}
+          {/* Regular */}
+          {sameLanguageMen.filter(m => !m.hasRecharged).length > 0 && (
+            <>
+              <div className="px-4 py-1.5 bg-muted/20 flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-semibold text-foreground">Regular</span>
+              </div>
+              {sameLanguageMen.filter(m => !m.hasRecharged).map((user) => (
+                <WhatsAppUserCard
+                  key={user.userId}
+                  name={user.fullName}
+                  photoUrl={user.photoUrl}
+                  age={user.age}
+                  language={user.motherTongue}
+                  country={user.country}
+                  state={user.state}
+                  activeChatCount={user.activeChatCount}
+                  onClick={() => handleViewProfile(user.userId)}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      {hasGoldenBadge && (
+                        <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(user.userId)}>
+                          <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                        <Eye className="w-3.5 h-3.5 text-primary" />
+                      </Button>
+                    </div>
+                  }
+                />
+              ))}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Other Language Men */}
+      {otherLanguageMen.length > 0 && (
+        <>
+          <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+            <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
+            <span className="text-[10px] text-muted-foreground ml-1">({otherLanguageMen.length})</span>
+          </div>
+          {otherLanguageMen.filter(m => m.hasRecharged).map((user) => (
+            <WhatsAppUserCard
+              key={user.userId}
+              name={user.fullName}
+              photoUrl={user.photoUrl}
+              age={user.age}
+              language={user.motherTongue}
+              country={user.country}
+              state={user.state}
+              isPremium={true}
+              walletBalance={user.walletBalance}
+              activeChatCount={user.activeChatCount}
+              subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
+              onClick={() => handleViewProfile(user.userId)}
+              actions={
+                <div className="flex items-center gap-1">
+                  {hasGoldenBadge && (
+                    <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(user.userId)}>
+                      <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                    <Eye className="w-3.5 h-3.5 text-primary" />
+                  </Button>
                 </div>
-              </Card>
-            ) : (
-              <Card className="p-3 sm:p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10 shrink-0">
-                    <Star className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-xs sm:text-sm font-bold text-foreground">🌟 Golden Badge</h3>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                      Buy for ₹{goldenBadgePrice.toLocaleString()}/month to initiate chats & video calls with men
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
+              }
+            />
+          ))}
+          {otherLanguageMen.filter(m => !m.hasRecharged).map((user) => (
+            <WhatsAppUserCard
+              key={user.userId}
+              name={user.fullName}
+              photoUrl={user.photoUrl}
+              age={user.age}
+              language={user.motherTongue}
+              country={user.country}
+              state={user.state}
+              activeChatCount={user.activeChatCount}
+              subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
+              onClick={() => handleViewProfile(user.userId)}
+              actions={
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${user.userId}`)}>
+                  <Eye className="w-3.5 h-3.5 text-primary" />
+                </Button>
+              }
+            />
+          ))}
+        </>
+      )}
+
+      {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && (
+        <div className="text-center py-16">
+          <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">No men online right now</p>
+        </div>
+      )}
+
+      {/* Matches */}
+      <div className="px-4 py-3 border-t border-border/30">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+            <Heart className="h-4 w-4 text-primary" />
+            Matches ({matchedMen.length})
+          </h3>
+          <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedMen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
+            <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
+          </Button>
+        </div>
+        {matchedMen.length > 0 ? (
+          matchedMen.map((man) => (
+            <WhatsAppUserCard
+              key={man.matchId}
+              name={man.fullName || "User"}
+              photoUrl={man.photoUrl}
+              age={man.age}
+              language={man.primaryLanguage}
+              country={man.country}
+              isOnline={man.isOnline}
+              onClick={() => navigate(`/profile/${man.userId}`)}
+              actions={
+                hasGoldenBadge ? (
+                  <Button variant="aurora" size="sm" className="h-7 px-2 text-[10px]" onClick={() => handleStartChatWithUser(man.userId)}>
+                    <MessageCircle className="w-3 h-3 mr-0.5" />Chat
+                  </Button>
+                ) : (
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${man.userId}`)}>
+                    <Eye className="w-3.5 h-3.5 text-primary" />
+                  </Button>
+                )
+              }
+            />
+          ))
+        ) : (
+          <div className="text-center py-6">
+            <Heart className="w-10 h-10 text-muted-foreground/20 mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">No matches yet</p>
           </div>
         )}
+      </div>
 
-        {/* Chat Mode Switcher */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.045s" }}>
-          <WomenChatModeSwitcher
-            currentMode={chatMode.currentMode}
-            freeMinutesUsed={chatMode.freeMinutesUsed}
-            freeMinutesLimit={chatMode.freeMinutesLimit}
-            freeTimeRemaining={chatMode.freeTimeRemaining}
-            exclusiveFreeLockedUntil={chatMode.exclusiveFreeLockedUntil}
-            canSwitchToPaid={chatMode.canSwitchToPaid}
-            canSwitchToFree={chatMode.canSwitchToFree}
-            canSwitchToExclusiveFree={chatMode.canSwitchToExclusiveFree}
-            isLoading={chatMode.isLoading}
-            isIndian={chatMode.isIndian}
-            onSwitchMode={chatMode.switchMode}
-            isForceFreeActive={chatMode.isForceFreeActive}
-            forceFreeMinutesUsed={chatMode.forceFreeMinutesUsed}
-            forceFreeMinutesLimit={chatMode.forceFreeMinutesLimit}
-            forceFreeTimeRemaining={chatMode.forceFreeTimeRemaining}
-            onToggleForceFree={chatMode.toggleForceFree}
+      {/* Private Groups */}
+      {currentUserId && (
+        <div id="women-private-groups-section" className="px-4 py-3 border-t border-border/30">
+          <PrivateGroupsSection currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
+        </div>
+      )}
+
+      {/* Language Group Chat */}
+      {currentUserId && currentWomanLanguage && (
+        <div className="px-4 py-3 border-t border-border/30">
+          <LanguageGroupChat
+            currentUserId={currentUserId}
+            languageCode={currentWomanLanguageCode || "eng_Latn"}
+            languageName={currentWomanLanguage}
+            userName={userName || 'User'}
+            userPhoto={userPhoto}
           />
         </div>
+      )}
+    </div>
+  );
 
-        {/* Section 2: Men Online - Same Language / Other Language split */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
-              <Globe2 className="w-4 h-4 text-primary" />
-              {t('onlineMen', 'Men Online')}
-              <Badge variant="outline" className="text-[9px] font-normal ml-1">{sameLanguageMen.length + otherLanguageMen.length}</Badge>
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchOnlineMen(currentWomanLanguage, currentWomanCountry)}
-              className="gap-1 h-7 text-xs px-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
-            </Button>
+  const renderEarningsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {/* Wallet Balance */}
+      <div className="px-4 py-4 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent" onClick={() => navigate("/women-wallet")}>
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+            <Wallet className="w-7 h-7 text-primary" />
           </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            {/* Same Language Men */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
-                <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
-                  {currentWomanLanguage}
-                </span>
-                <span className="text-xs text-muted-foreground">({sameLanguageMen.length})</span>
-              </div>
-              
-              {sameLanguageMen.length > 0 ? (
-                <>
-                  {/* Same Language - Premium Men */}
-                  {sameLanguageMen.filter(m => m.hasRecharged).length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Crown className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-semibold text-foreground">Premium Men</span>
-                        <Badge variant="outline" className="text-[9px]">{sameLanguageMen.filter(m => m.hasRecharged).length}</Badge>
-                      </div>
-                      <ScrollableUserList>
-                        {sameLanguageMen.filter(m => m.hasRecharged).map((user, index) => (
-                          <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            {renderUserCard(user, true)}
-                          </div>
-                        ))}
-                      </ScrollableUserList>
-                    </div>
-                  )}
-
-                  {/* Same Language - Regular Men */}
-                  {sameLanguageMen.filter(m => !m.hasRecharged).length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-semibold text-foreground">Regular Men</span>
-                        <Badge variant="outline" className="text-[9px]">{sameLanguageMen.filter(m => !m.hasRecharged).length}</Badge>
-                      </div>
-                      <ScrollableUserList>
-                        {sameLanguageMen.filter(m => !m.hasRecharged).map((user, index) => (
-                          <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            {renderUserCard(user, false)}
-                          </div>
-                        ))}
-                      </ScrollableUserList>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <Card className="p-6 text-center">
-                  <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">{t('noSameLanguageMen', 'No men speaking')} {currentWomanLanguage}</p>
-                </Card>
-              )}
-            </div>
-
-            {/* Other Language Men */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b border-border">
-                <span className="text-sm font-medium text-primary">{t('otherLanguages', 'Other Languages')}</span>
-                <span className="text-xs text-muted-foreground">({otherLanguageMen.length})</span>
-              </div>
-              
-              {otherLanguageMen.length > 0 ? (
-                <>
-                  {/* Other Language - Premium Men */}
-                  {otherLanguageMen.filter(m => m.hasRecharged).length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Crown className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-semibold text-foreground">Premium Men</span>
-                        <Badge variant="outline" className="text-[9px]">{otherLanguageMen.filter(m => m.hasRecharged).length}</Badge>
-                      </div>
-                      <ScrollableUserList>
-                        {otherLanguageMen.filter(m => m.hasRecharged).map((user, index) => (
-                          <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            {renderUserCard(user, true)}
-                          </div>
-                        ))}
-                      </ScrollableUserList>
-                    </div>
-                  )}
-
-                  {/* Other Language - Regular Men */}
-                  {otherLanguageMen.filter(m => !m.hasRecharged).length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-semibold text-foreground">Regular Men</span>
-                        <Badge variant="outline" className="text-[9px]">{otherLanguageMen.filter(m => !m.hasRecharged).length}</Badge>
-                      </div>
-                      <ScrollableUserList>
-                        {otherLanguageMen.filter(m => !m.hasRecharged).map((user, index) => (
-                          <div key={user.userId} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
-                            {renderUserCard(user, false)}
-                          </div>
-                        ))}
-                      </ScrollableUserList>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <Card className="p-6 text-center">
-                  <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">{t('noOtherMen', 'No men speaking other languages available')}</p>
-                </Card>
-              )}
-            </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Wallet Balance</p>
+            <p className="text-2xl font-bold text-primary">₹{myWalletBalance.toLocaleString()}</p>
           </div>
+          <Button variant="outline" size="sm" className="gap-1 text-primary border-primary/30" onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}>
+            <IndianRupee className="w-3.5 h-3.5" />Withdraw
+          </Button>
         </div>
+      </div>
 
-        {/* Your Matches Section */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.07s" }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
-              <Heart className="w-4 h-4 text-primary" />
-              {t('yourMatches', 'Your Matches')}
-              <span className="text-[10px] text-muted-foreground">({matchedMen.length})</span>
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => currentUserId && fetchMatchedMen(currentUserId)}
-              disabled={loadingMatches}
-              className="gap-1 h-7 text-xs px-2"
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
-              Refresh
-            </Button>
+      {/* Today's Earnings */}
+      <div className="grid grid-cols-2 gap-0 border-b border-border/30">
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-primary">₹{stats.todayEarnings.toFixed(0)}</p>
+          <p className="text-[10px] text-muted-foreground">Today's Earnings</p>
+        </div>
+        <div className="text-center py-4">
+          <p className="text-xl font-bold text-foreground">{stats.rechargedMen}</p>
+          <p className="text-[10px] text-muted-foreground">Premium Men</p>
+        </div>
+      </div>
+
+      {/* Top Earner */}
+      {biggestEarner && (
+        <div className="px-4 py-3 flex items-center gap-3 border-b border-border/30">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Crown className="w-5 h-5 text-primary" />
           </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Top Earner Today</p>
+            <p className="text-sm font-semibold text-foreground">{biggestEarner.name}</p>
+          </div>
+          <span className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</span>
+        </div>
+      )}
 
-          {loadingMatches ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : matchedMen.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 sm:gap-3 max-h-[350px] overflow-y-auto pr-1">
-              {matchedMen.map((man) => (
-                <Card
-                  key={man.matchId}
-                  className="p-2 sm:p-3 hover:shadow-lg transition-all cursor-pointer group"
-                  onClick={() => navigate(`/profile/${man.userId}`)}
-                >
-                  <div className="flex flex-col items-center text-center gap-1.5">
-                    <div className="relative">
-                      <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/20">
-                        <AvatarImage src={man.photoUrl || undefined} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                          {man.fullName?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      {man.isOnline && (
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-online" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-xs sm:text-sm text-foreground truncate max-w-[80px] sm:max-w-[120px]">
-                        {man.fullName || "User"}
-                      </p>
-                      {man.age && (
-                        <p className="text-[10px] text-muted-foreground">{man.age} yrs</p>
-                      )}
-                    </div>
-                    {hasGoldenBadge ? (
-                      <Button
-                        variant="aurora"
-                        size="sm"
-                        className="w-full h-7 text-[10px] sm:text-xs gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartChatWithUser(man.userId);
-                        }}
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        Chat
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="auroraOutline"
-                        size="sm"
-                        className="w-full h-7 text-[10px] sm:text-xs gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/profile/${man.userId}`);
-                        }}
-                      >
-                        <Eye className="w-3 h-3" />
-                        View
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              ))}
+      {/* Golden Badge */}
+      {isIndianWoman && (
+        <div className="px-4 py-3 border-b border-border/30">
+          {hasGoldenBadge ? (
+            <div className="flex items-center gap-3">
+              <Star className="w-5 h-5 text-primary fill-primary" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-foreground">🌟 Golden Badge Active</p>
+                {goldenBadgeExpiry && <p className="text-[10px] text-muted-foreground">Expires: {new Date(goldenBadgeExpiry).toLocaleDateString()}</p>}
+              </div>
+              <Badge className="bg-primary text-primary-foreground text-[10px]">PRO</Badge>
             </div>
           ) : (
-            <Card className="p-5 sm:p-8 text-center">
-              <Heart className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('noMatchesYet', 'No matches yet')}</p>
-              <Button
-                variant="aurora"
-                size="sm"
-                className="mt-3 gap-1"
-                onClick={() => navigate("/match-discovery")}
-              >
-                <Search className="w-4 h-4" />
-                {t('discoverMatches', 'Discover Matches')}
+            <div className="flex items-center gap-3">
+              <Star className="w-5 h-5 text-muted-foreground" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-foreground">🌟 Golden Badge</p>
+                <p className="text-[10px] text-muted-foreground">₹{goldenBadgePrice.toLocaleString()}/month</p>
+              </div>
+              <Button variant="aurora" size="sm" className="h-7 text-[10px] px-2" onClick={handlePurchaseGoldenBadge} disabled={isPurchasingBadge}>
+                {isPurchasingBadge ? <Loader2 className="h-3 w-3 animate-spin" /> : "Buy"}
               </Button>
-            </Card>
-          )}
-        </div>
-
-        {/* Private Groups Section */}
-        {currentUserId && (
-          <div id="women-private-groups-section" className="animate-fade-in" style={{ animationDelay: "0.17s" }}>
-            <PrivateGroupsSection
-              currentUserId={currentUserId}
-              userName={userName || 'User'}
-              userPhoto={userPhoto}
-            />
-          </div>
-        )}
-
-        {/* Section 5: Quick Actions */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.18s" }}>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            {t('quickActions', 'Quick Actions')}
-          </h2>
-          <div className="grid grid-cols-2 xs:grid-cols-4 gap-2 sm:gap-3">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={action.action}
-                className="group flex flex-col items-center gap-1.5 sm:gap-2 p-2.5 sm:p-4 rounded-2xl bg-card hover:bg-accent/50 border border-border/50 hover:border-primary/30 hover:shadow-md transition-all duration-200"
-              >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center text-primary-foreground shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-200`}>
-                  {action.icon}
-                </div>
-                <p className="text-[11px] sm:text-xs font-medium text-foreground text-center leading-tight">{action.label}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Section 7: Recent Notifications */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.28s" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
-            <button className="text-sm text-primary hover:underline flex items-center gap-1" onClick={() => currentUserId && fetchNotifications(currentUserId)}>
-              {t('viewAll', 'View all')} <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {notifications.length > 0 ? (
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <Card 
-                  key={notification.id}
-                  className="p-4 flex items-start gap-4 hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => markNotificationRead(notification.id)}
-                >
-                  <div className={`p-2 rounded-full ${
-                    notification.type === "match" ? "bg-primary/10 text-primary" :
-                    notification.type === "message" ? "bg-primary/10 text-primary" :
-                    "bg-primary/10 text-primary"
-                  }`}>
-                    {notification.type === "match" ? <Heart className="w-5 h-5" /> :
-                     notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
-                     <Bell className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{notification.title}</p>
-                    <p className="text-sm text-muted-foreground">{notification.message}</p>
-                  </div>
-                  {!notification.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  )}
-                </Card>
-              ))}
             </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <Heart className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground">No new activity yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Start chatting to get matches and notifications!
-              </p>
-              <Button 
-                variant="aurora" 
-                className="mt-4"
-                onClick={() => navigate("/online-users")}
-              >
-                <Search className="w-4 h-4 mr-2" />
-                Find Users
-              </Button>
-            </Card>
           )}
         </div>
-        {/* Language Group Chat - Women of same language chat with each other */}
-        {currentUserId && currentWomanLanguage && (
-          <div className="animate-fade-in mt-6" style={{ animationDelay: "0.3s" }}>
-            <LanguageGroupChat
-              currentUserId={currentUserId}
-              languageCode={currentWomanLanguageCode || "eng_Latn"}
-              languageName={currentWomanLanguage}
-              userName={userName || 'User'}
-              userPhoto={userPhoto}
-            />
-          </div>
-        )}
+      )}
 
-      </main>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-0 border-b border-border/30">
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+          <p className="text-[10px] text-muted-foreground">Matches</p>
+        </div>
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-foreground">{sameLanguageMen.length + otherLanguageMen.length}</p>
+          <p className="text-[10px] text-muted-foreground">Online Men</p>
+        </div>
+        <div className="text-center py-4">
+          <p className="text-xl font-bold text-foreground">{activeChatCount}/3</p>
+          <p className="text-[10px] text-muted-foreground">Active Chats</p>
+        </div>
+      </div>
 
-      {/* Profile Edit Dialog */}
-      <ProfileEditDialog
-        open={profileEditOpen}
-        onOpenChange={setProfileEditOpen}
-        onProfileUpdated={() => loadDashboardData()}
+      {/* Quick links */}
+      {[
+        { icon: <Wallet className="w-5 h-5 text-primary" />, label: "Wallet & Withdrawals", onClick: () => navigate("/women-wallet") },
+        { icon: <Heart className="w-5 h-5 text-primary" />, label: "Discover Matches", onClick: () => navigate("/match-discovery") },
+      ].map((item, i) => (
+        <div key={i} className="px-4 py-3 flex items-center gap-3 border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={item.onClick}>
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">{item.icon}</div>
+          <span className="text-sm font-medium text-foreground">{item.label}</span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderProfileTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-6 flex flex-col items-center border-b border-border/30">
+        <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-lg mb-3">
+          <AvatarImage src={userPhoto || undefined} />
+          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-2xl font-bold">
+            {userName?.charAt(0) || "?"}
+          </AvatarFallback>
+        </Avatar>
+        <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
+        <p className="text-xs text-muted-foreground">{currentWomanLanguage} • {currentWomanCountry}</p>
+        <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
+          {getStatusText()}
+        </Badge>
+        {hasGoldenBadge && <Badge className="mt-1 bg-primary text-primary-foreground text-[10px]">🌟 Golden Badge</Badge>}
+      </div>
+
+      {[
+        { icon: <User className="w-5 h-5 text-primary" />, label: "Edit Profile", onClick: () => setProfileEditOpen(true) },
+        { icon: <Wallet className="w-5 h-5 text-primary" />, label: "Earnings & Wallet", onClick: () => navigate("/women-wallet") },
+        { icon: <Heart className="w-5 h-5 text-primary" />, label: "Discover Matches", onClick: () => navigate("/match-discovery") },
+        { icon: <Eye className="w-5 h-5 text-primary" />, label: "Online Users", onClick: () => navigate("/online-users") },
+        ...(isIndianWoman ? [{ icon: <FileCheck className="w-5 h-5 text-primary" />, label: "Bank KYC", onClick: () => setShowKYCForm(true) }] : []),
+        { icon: <Settings className="w-5 h-5 text-primary" />, label: "Settings", onClick: () => navigate("/settings") },
+      ].map((item, i) => (
+        <div key={i} className="px-4 py-3 flex items-center gap-3 border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={item.onClick}>
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">{item.icon}</div>
+          <span className="text-sm font-medium text-foreground">{item.label}</span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      <WhatsAppHeader
+        isOnline={isOnline}
+        onToggleOnline={(checked) => {
+          toggleOnlineStatus(checked);
+          toast({
+            title: checked ? 'You are now Online' : 'You are now Offline',
+            description: checked ? 'Men can see you' : 'You are hidden from others',
+          });
+        }}
+        onAdminMessages={() => setShowAdminMessages(true)}
+        onAdminChat={() => setShowAdminChat(true)}
+        onFriends={() => setShowFriendsPanel(true)}
+        onSettings={() => navigate('/settings')}
+        onLogout={handleLogout}
+        unreadNotifications={stats.unreadNotifications}
+        onNotifications={() => setActiveTab("chats")}
+        showKYC={isIndianWoman}
+        onKYC={() => setShowKYCForm(true)}
       />
 
-      {/* TeamsChatLayout removed - all chats handled via EnhancedParallelChatsContainer */}
+      {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "users" && renderUsersTab()}
+      {activeTab === "earnings" && renderEarningsTab()}
+      {activeTab === "profile" && renderProfileTab()}
+
+      <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {activeTab === "chats" && (
+        <WhatsAppFAB onClick={() => {
+          const el = document.getElementById('women-private-groups-section');
+          if (el) { setActiveTab("users"); setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 100); }
+          else setActiveTab("users");
+        }} icon={<Video className="w-6 h-6" />} badge={activeChatCount || undefined} />
+      )}
+
+      {/* Profile Edit Dialog */}
+      <ProfileEditDialog open={profileEditOpen} onOpenChange={setProfileEditOpen} onProfileUpdated={() => loadDashboardData()} />
 
       {/* Enhanced Parallel Chat Windows */}
       {currentUserId && (
-        <EnhancedParallelChatsContainer
-          currentUserId={currentUserId}
-          userGender="female"
-          currentUserLanguage={currentWomanLanguage || "English"}
-          currentUserName={userName}
-        />
+        <EnhancedParallelChatsContainer currentUserId={currentUserId} userGender="female" currentUserLanguage={currentWomanLanguage || "English"} currentUserName={userName} />
       )}
 
-      {/* Incoming Video Call Window - Draggable like mini chat */}
+      {/* Incoming Video Call */}
       {incomingCall && (
-        <IncomingVideoCallWindow
-          callId={incomingCall.callId}
-          callerUserId={incomingCall.callerUserId}
-          callerName={incomingCall.callerName}
-          callerPhoto={incomingCall.callerPhoto}
-          currentUserId={currentUserId}
-          onClose={clearIncomingCall}
-        />
+        <IncomingVideoCallWindow callId={incomingCall.callId} callerUserId={incomingCall.callerUserId} callerName={incomingCall.callerName} callerPhoto={incomingCall.callerPhoto} currentUserId={currentUserId} onClose={clearIncomingCall} />
       )}
 
       {/* Friends & Blocked Panel */}
       {showFriendsPanel && currentUserId && (
-        <FriendsBlockedPanel
-          currentUserId={currentUserId}
-          userGender="female"
-          onClose={() => setShowFriendsPanel(false)}
-        />
+        <FriendsBlockedPanel currentUserId={currentUserId} userGender="female" onClose={() => setShowFriendsPanel(false)} />
       )}
 
       {/* Admin Messages Sheet */}
       <Sheet open={showAdminMessages} onOpenChange={setShowAdminMessages}>
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-primary" />
-              Admin Messages
-            </SheetTitle>
-          </SheetHeader>
-          {currentUserId && (
-            <div className="mt-4">
-              <AdminMessagesWidget currentUserId={currentUserId} />
-            </div>
-          )}
+          <SheetHeader><SheetTitle className="flex items-center gap-2"><Mail className="w-5 h-5 text-primary" />Admin Messages</SheetTitle></SheetHeader>
+          {currentUserId && <div className="mt-4"><AdminMessagesWidget currentUserId={currentUserId} /></div>}
         </SheetContent>
       </Sheet>
 
       {/* Admin Chat Sheet */}
       <Sheet open={showAdminChat} onOpenChange={setShowAdminChat}>
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Chat with Admin
-            </SheetTitle>
-          </SheetHeader>
-          {currentUserId && (
-            <div className="mt-4">
-              <UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} embedded />
-            </div>
-          )}
+          <SheetHeader><SheetTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-primary" />Chat with Admin</SheetTitle></SheetHeader>
+          {currentUserId && <div className="mt-4"><UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} embedded /></div>}
         </SheetContent>
       </Sheet>
 
-      {/* KYC Form Sheet - Indian Women Only */}
+      {/* KYC Form Sheet */}
       <Sheet open={showKYCForm} onOpenChange={setShowKYCForm}>
         <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <FileCheck className="w-5 h-5 text-primary" />
-              Bank KYC — Payout Verification
-            </SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 pb-8">
-            <WomenKYCForm />
-          </div>
+          <SheetHeader><SheetTitle className="flex items-center gap-2"><FileCheck className="w-5 h-5 text-primary" />Bank KYC — Payout Verification</SheetTitle></SheetHeader>
+          <div className="mt-4 pb-8"><WomenKYCForm /></div>
         </SheetContent>
       </Sheet>
     </div>
