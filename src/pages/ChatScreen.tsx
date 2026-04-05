@@ -1632,7 +1632,7 @@ const ChatScreen = () => {
 
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
           {currentUserGender === "male" && chatPartner && (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 [&_button]:text-primary-foreground [&_button]:hover:bg-primary-foreground/10">
             <DirectAudioCallButton
               currentUserId={currentUserId}
               targetUserId={chatPartner.userId}
@@ -1642,7 +1642,6 @@ const ChatScreen = () => {
               size="icon"
               variant="ghost"
               iconOnly={true}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
             />
             <DirectVideoCallButton
               currentUserId={currentUserId}
@@ -1653,7 +1652,6 @@ const ChatScreen = () => {
               size="icon"
               variant="ghost"
               iconOnly={true}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
             />
           </div>
           )}
