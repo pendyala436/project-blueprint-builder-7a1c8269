@@ -235,8 +235,7 @@ const WomenDashboardScreen = () => {
   const [showKYCForm, setShowKYCForm] = useState(false);
   const [activeTab, setActiveTab] = useState("chats");
   
-  // Women Chat Mode (paid/free/exclusive_free)
-  const chatMode = useWomenChatMode(currentUserId || null, isIndianWoman);
+  // All women are in paid mode by default - no mode switching needed
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
     ageRange: [18, 60],
     heightRange: [140, 200],
