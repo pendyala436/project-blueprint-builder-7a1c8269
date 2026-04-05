@@ -1362,8 +1362,7 @@ const WomenDashboardScreen = () => {
             language={man.primaryLanguage}
             country={man.country}
             isOnline={man.isOnline}
-            onClick={() => navigate(`/profile/${man.userId}`)}
-            onDoubleClick={() => handleStartChatWithUser(man.userId)}
+            onClick={() => handleStartChatWithUser(man.userId)}
             actions={
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${man.userId}`); }}>
