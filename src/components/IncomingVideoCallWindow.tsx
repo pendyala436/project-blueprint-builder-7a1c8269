@@ -63,6 +63,7 @@ const IncomingVideoCallWindow = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [pausedChatCount, setPausedChatCount] = useState(0);
+  const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const ringIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Continuous ring sound until answered/declined
