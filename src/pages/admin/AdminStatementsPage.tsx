@@ -147,7 +147,7 @@ const AdminStatementsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, genderTab, userFilter, yearFilter, monthFilter]);
+  }, [isAdmin, genderTab, userFilter, yearFilter, monthFilter, realtimeTick]);
 
   useEffect(() => { search(); }, [search]);
 
