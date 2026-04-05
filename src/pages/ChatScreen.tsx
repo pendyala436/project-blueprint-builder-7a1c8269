@@ -123,6 +123,13 @@ interface Message {
   attachmentUrl?: string;        // URL of attached file/image
   attachmentType?: "image" | "file"; // Type of attachment
   sendFailed?: boolean;          // Whether send failed (for retry UI)
+  replyToId?: string;            // Message this is replying to
+  replyToText?: string;          // Text of replied message (for display)
+  replyToSender?: string;        // Sender name of replied message
+  isForwarded?: boolean;         // Whether message was forwarded
+  isEdited?: boolean;            // Whether message was edited
+  isPinned?: boolean;            // Whether message is pinned
+  reactions?: { emoji: string; count: number; userReacted: boolean }[];
 }
 
 /**
