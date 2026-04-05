@@ -648,18 +648,27 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Also check female_profiles in case user registered as female but no main profile
-      const { data: femaleProfile } = await supabase
-        .from("female_profiles")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Fetch user languages and female_profiles check in parallel
+      const [userLangsResult, femaleCheckResult] = await Promise.all([
+        supabase
+          .from("user_languages")
+          .select("language_name, language_code")
+          .eq("user_id", user.id)
+          .limit(1),
+        // Check female_profiles in case user registered as female but no main profile
+        supabase
+          .from("female_profiles")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      if (femaleProfile) {
+      if (femaleCheckResult.data) {
         navigate("/women-dashboard");
         return;
       }
 
+      const userLanguages = userLangsResult.data;
       // Fetch user's languages
       const { data: userLanguages } = await supabase
         .from("user_languages")
