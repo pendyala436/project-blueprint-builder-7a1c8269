@@ -191,6 +191,7 @@ const DirectVideoCallButton = ({
       }
 
       setActiveCall({ callId, stream: preStream });
+      registerSession('video_call', callId);
 
       toast({
         title: "Calling...",
