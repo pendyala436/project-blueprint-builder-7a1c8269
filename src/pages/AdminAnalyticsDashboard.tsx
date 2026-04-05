@@ -123,63 +123,100 @@ const AdminAnalyticsDashboard = () => {
 
   const fetchAnalytics = useCallback(async () => {
     try {
-      // Cap "all time" to 365 days to avoid generating thousands of chart points
       const days = dateRange === "all" ? 365 : parseInt(dateRange);
       const startDate = subDays(new Date(), days);
       const endDate = new Date();
 
-      // Single server-side RPC — all aggregation happens in Postgres
+      // Try the server-side RPC first
       const { data, error } = await supabase.rpc("get_analytics_summary" as any, {
         p_start_date: startDate.toISOString(),
         p_end_date: endDate.toISOString(),
       });
 
-      if (error) throw error;
+      if (!error && data && data.totals) {
+        const result = data as any;
+        const totals = result.totals;
+        const gender = result.gender;
+        const chart = result.chart;
 
-      const result = data as any;
-      const totals = result.totals;
-      const gender = result.gender;
-      const chart = result.chart;
+        const menRecharges = Number(totals.men_recharges) || 0;
+        const womenWithdrawals = Number(totals.women_withdrawals) || 0;
+        const adminProfit = menRecharges - womenWithdrawals;
+        const totalUsers = Number(totals.total_users) || 0;
+        const totalMatches = Number(totals.total_matches) || 0;
+        const conversionRate = totalUsers ? (totalMatches / totalUsers) * 100 : 0;
 
-      const menRecharges = Number(totals.men_recharges) || 0;
-      const womenWithdrawals = Number(totals.women_withdrawals) || 0;
-      const adminProfit = menRecharges - womenWithdrawals;
-      const totalUsers = Number(totals.total_users) || 0;
-      const totalMatches = Number(totals.total_matches) || 0;
-      const conversionRate = totalUsers ? (totalMatches / totalUsers) * 100 : 0;
+        setAnalytics({
+          totalUsers,
+          activeUsers: Number(totals.active_users) || 0,
+          totalMatches,
+          adminProfit,
+          menRecharges,
+          menSpent: Number(totals.men_spent) || 0,
+          womenEarnings: Number(totals.women_earnings) || 0,
+          womenWithdrawals,
+          newUsersToday: Number(totals.new_users_today) || 0,
+          messagesCount: Number(totals.messages_count) || 0,
+          avgSessionTime: Math.round(Number(totals.avg_session_minutes) || 0),
+          conversionRate,
+        });
 
-      setAnalytics({
-        totalUsers,
-        activeUsers: Number(totals.active_users) || 0,
-        totalMatches,
-        adminProfit,
-        menRecharges,
-        menSpent: Number(totals.men_spent) || 0,
-        womenEarnings: Number(totals.women_earnings) || 0,
-        womenWithdrawals,
-        newUsersToday: Number(totals.new_users_today) || 0,
-        messagesCount: Number(totals.messages_count) || 0,
-        avgSessionTime: Math.round(Number(totals.avg_session_minutes) || 0),
-        conversionRate,
-      });
+        setGenderDistribution([
+          { name: "Male", value: Number(gender?.male) || 0, color: CHART_COLORS.male },
+          { name: "Female", value: Number(gender?.female) || 0, color: CHART_COLORS.female },
+          { name: "Other", value: Number(gender?.other) || 0, color: CHART_COLORS.accent },
+        ]);
 
-      setGenderDistribution([
-        { name: "Male", value: Number(gender.male) || 0, color: CHART_COLORS.male },
-        { name: "Female", value: Number(gender.female) || 0, color: CHART_COLORS.female },
-        { name: "Other", value: Number(gender.other) || 0, color: CHART_COLORS.accent },
-      ]);
+        const chartDataPoints: ChartData[] = (chart || []).map((point: any) => ({
+          date: point.date,
+          users: Number(point.users) || 0,
+          activeUsers: Number(point.activeUsers) || 0,
+          matches: Number(point.matches) || 0,
+          revenue: Number(point.revenue) || 0,
+          messages: Number(point.messages) || 0,
+        }));
+        setChartData(chartDataPoints);
+      } else {
+        // Fallback: Direct queries when RPC fails or returns unexpected format
+        console.warn("[Analytics] RPC failed or returned unexpected format, using fallback queries");
+        const [
+          usersRes, activeRes, matchesRes, msgsRes,
+          maleRes, femaleRes,
+        ] = await Promise.allSettled([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("user_status").select("*", { count: "exact", head: true }).eq("is_online", true),
+          supabase.from("matches").select("*", { count: "exact", head: true }),
+          supabase.from("chat_messages").select("*", { count: "exact", head: true }),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("gender", "male"),
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("gender", "female"),
+        ]);
 
-      // Chart data is already aggregated server-side
-      const chartDataPoints: ChartData[] = (chart || []).map((point: any) => ({
-        date: point.date,
-        users: Number(point.users) || 0,
-        activeUsers: Number(point.activeUsers) || 0,
-        matches: Number(point.matches) || 0,
-        revenue: Number(point.revenue) || 0,
-        messages: Number(point.messages) || 0,
-      }));
-      setChartData(chartDataPoints);
+        const gc = (r: PromiseSettledResult<any>) => r.status === 'fulfilled' && !r.value.error ? (r.value.count || 0) : 0;
+        const totalUsers = gc(usersRes);
+        const totalMatches = gc(matchesRes);
 
+        setAnalytics({
+          totalUsers,
+          activeUsers: gc(activeRes),
+          totalMatches,
+          adminProfit: 0,
+          menRecharges: 0,
+          menSpent: 0,
+          womenEarnings: 0,
+          womenWithdrawals: 0,
+          newUsersToday: 0,
+          messagesCount: gc(msgsRes),
+          avgSessionTime: 0,
+          conversionRate: totalUsers ? (totalMatches / totalUsers) * 100 : 0,
+        });
+
+        setGenderDistribution([
+          { name: "Male", value: gc(maleRes), color: CHART_COLORS.male },
+          { name: "Female", value: gc(femaleRes), color: CHART_COLORS.female },
+          { name: "Other", value: Math.max(0, totalUsers - gc(maleRes) - gc(femaleRes)), color: CHART_COLORS.accent },
+        ]);
+        setChartData([]);
+      }
     } catch (error) {
       console.error("Error fetching analytics:", error);
       toast.error("Failed to load analytics");
