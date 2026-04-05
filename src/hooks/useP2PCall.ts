@@ -51,6 +51,7 @@ export const useP2PCall = ({
   ratePerMinute = 8,
   onCallEnded,
   preAcquiredStream = null,
+  audioOnly = false,
 }: UseP2PCallProps) => {
   const { toast } = useToast();
   
@@ -60,7 +61,7 @@ export const useP2PCall = ({
     callStatus: 'idle',
     callDuration: 0,
     totalCost: 0,
-    isVideoEnabled: true,
+    isVideoEnabled: !audioOnly,
     isAudioEnabled: true,
   });
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
