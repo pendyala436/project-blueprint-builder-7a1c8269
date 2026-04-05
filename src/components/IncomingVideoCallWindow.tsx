@@ -110,6 +110,15 @@ const IncomingVideoCallWindow = ({
   // Check active chats on mount to show warning
   useEffect(() => {
     checkActiveChats();
+    // Detect call type from session
+    supabase
+      .from('video_call_sessions')
+      .select('call_type')
+      .eq('call_id', callId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.call_type === 'audio') setCallType('audio');
+      });
   }, []);
 
   const checkActiveChats = async () => {
