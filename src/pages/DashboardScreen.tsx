@@ -81,6 +81,10 @@ import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
+import { WhatsAppHeader } from "@/components/WhatsAppHeader";
+import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
+import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
+import { WhatsAppFAB } from "@/components/WhatsAppFAB";
 interface Notification {
   id: string;
   title: string;
@@ -231,6 +235,7 @@ const DashboardScreen = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [privateGroupsRefreshKey, setPrivateGroupsRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState("chats");
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
@@ -1255,172 +1260,28 @@ const DashboardScreen = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 overflow-x-hidden">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/20 shadow-sm pt-[env(safe-area-inset-top)]">
-        <div className="px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MeowLogo size="sm" />
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-foreground leading-tight">Meow Meow</p>
-              <p className="text-[10px] text-muted-foreground">Connect & Chat</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-0.5 flex-shrink-0 overflow-x-auto scrollbar-hide max-w-[60vw] sm:max-w-none">
-            {/* Online/Offline Toggle for Men */}
-            <div className="flex items-center gap-1 mr-1 px-1.5 sm:px-2 py-1 rounded-lg bg-muted/50 border border-border/30 flex-shrink-0">
-              <Switch
-                checked={isOnline}
-                onCheckedChange={(checked) => {
-                  toggleOnlineStatus(checked);
-                  toast({
-                    title: checked ? 'You are now Online' : 'You are now Offline',
-                    description: checked ? 'Women can see you' : 'You are hidden from others',
-                  });
-                }}
-                className="data-[state=checked]:bg-primary scale-75"
-              />
-              <span className={`text-[10px] font-medium ${isOnline ? 'text-primary' : 'text-muted-foreground'}`}>
-                {isOnline ? 'On' : 'Off'}
-              </span>
-            </div>
-            {/* Admin Messages */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => setShowAdminMessages(true)}
-              aria-label="Admin Messages"
-            >
-              <Mail className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
+  // activeTab state is declared at top of component
 
-            {/* Admin Chat */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => setShowAdminChat(true)}
-              aria-label="Chat with Admin"
-            >
-              <Shield className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
+  const menTabs = getMenTabs(activeChatCount || undefined, sameLanguageWomen.length + indianTranslatedWomen.length || undefined, matchedWomen.length || undefined);
 
-            {/* Notifications */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              aria-label={`Notifications${stats.unreadNotifications > 0 ? ` (${stats.unreadNotifications} unread)` : ''}`}
-              onClick={() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              <BellRing className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-              {stats.unreadNotifications > 0 && (
-                <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-              )}
-            </button>
-
-            {/* Friends & Blocked */}
-            <button 
-              className="relative min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => setShowFriendsPanel(true)}
-              aria-label="Friends and Blocked Users"
-            >
-              <Users2 className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
-
-            {/* Settings */}
-            <button 
-              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-accent/80 transition-all duration-200 flex-shrink-0"
-              onClick={() => navigate('/settings')}
-              aria-label="Settings"
-            >
-              <Settings className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-primary" />
-            </button>
-
-            {/* Logout */}
-            <button 
-              className="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-all duration-200 flex-shrink-0"
-              onClick={handleLogout}
-              aria-label="Log out"
-            >
-              <LogOut className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-destructive/70" />
-            </button>
-          </div>
+  const renderChatsTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {/* Active status bar */}
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge className={cn("text-[10px] text-primary-foreground", getStatusColor())}>
+            {getStatusText()}
+          </Badge>
+          <span className="text-xs text-muted-foreground">{formatLocalCurrency(walletBalance)}</span>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="px-3 py-3 space-y-4 sm:max-w-4xl sm:mx-auto sm:px-6 sm:py-8 sm:space-y-8">
-        {/* Section 1: Welcome & Status */}
-        <div className="animate-fade-in">
-          <div className="flex flex-col gap-2 mb-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-base sm:text-xl font-bold text-foreground truncate">
-                  {t('welcome', 'Welcome')}, {userName || t('user', 'User')}! 👋
-                </h1>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('findYourPerfectMatch', 'Find your perfect match today')}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <MatchFiltersPanel 
-                  filters={matchFilters} 
-                  onFiltersChange={setMatchFilters}
-                  userCountry={userCountry}
-                />
-                <Button 
-                  variant="auroraOutline" 
-                  size="sm" 
-                  className="gap-1 text-xs h-8"
-                  onClick={() => setRechargeDialogOpen(true)}
-                >
-                  <Wallet className="w-3.5 h-3.5" />
-                  {formatLocalCurrency(walletBalance)}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Key Stats */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
-              <p className="text-lg font-bold text-foreground">{stats.onlineUsersCount}</p>
-              <p className="text-[10px] text-muted-foreground">{t('online', 'Online')}</p>
-            </Card>
-            <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
-              <p className="text-lg font-bold text-foreground">{stats.matchCount}</p>
-              <p className="text-[10px] text-muted-foreground">{t('matches', 'Matches')}</p>
-            </Card>
-            <Card className="p-2.5 text-center bg-gradient-aurora border-primary/20">
-              <p className="text-lg font-bold text-foreground">{activeChatCount}/{MAX_PARALLEL_CHATS}</p>
-              <p className="text-[10px] text-muted-foreground">{t('activeChats', 'Active')}</p>
-            </Card>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-3 gap-2">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 transition-all duration-200 border border-border/20"
-                onClick={action.action}
-              >
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${action.color} text-primary-foreground`}>
-                  {action.icon}
-                </div>
-                <span className="text-[10px] sm:text-xs font-medium text-foreground">{action.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Connect: Random Chat, Video Call & Private Groups */}
-        <div className={`grid ${userCountry === "IN" ? "grid-cols-3" : "grid-cols-2"} gap-1.5 sm:gap-2 animate-fade-in`} style={{ animationDelay: "0.03s" }}>
+        <div className="flex items-center gap-1.5">
           <RandomChatButton 
             userGender="male"
             userLanguage={userLanguage}
             userCountry={userCountry}
             walletBalance={walletBalance}
             onInsufficientBalance={() => setRechargeDialogOpen(true)}
-            className="text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3"
+            className="text-[10px] h-7 !px-2"
           />
           {userCountry === "IN" && (
             <VideoCallMiniButton 
@@ -1430,439 +1291,367 @@ const DashboardScreen = () => {
               onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
             />
           )}
-          <Button
-            variant="aurora"
-            size="lg"
-            className="gap-1 sm:gap-2 text-[10px] xs:text-xs sm:text-sm !px-1.5 sm:!px-3 w-full"
-            onClick={() => {
-              const el = document.getElementById('private-groups-section');
-              el?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            <Video className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-            <span className="truncate">Groups</span>
+        </div>
+      </div>
+
+      {/* Free Minutes Badge */}
+      <div className="px-4 py-2">
+        <MenFreeMinutesBadge 
+          hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
+          freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
+          freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
+          nextResetDate={menFreeMinutes.nextResetDate}
+          isLoading={menFreeMinutes.isLoading}
+        />
+      </div>
+
+      {/* Recent notifications as chat-style list */}
+      <div id="notifications-section">
+        {notifications.length > 0 ? (
+          <div>
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
+                onClick={() => markNotificationRead(notification.id)}
+              >
+                <div className={cn(
+                  "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
+                  notification.type === "match" ? "bg-primary/10 text-primary" :
+                  notification.type === "message" ? "bg-primary/10 text-primary" :
+                  "bg-primary/10 text-primary"
+                )}>
+                  {notification.type === "match" ? <Heart className="w-5 h-5" /> :
+                   notification.type === "message" ? <MessageCircle className="w-5 h-5" /> :
+                   <Bell className="w-5 h-5" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm text-foreground truncate">{notification.title}</span>
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                      {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                    {!notification.is_read && (
+                      <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 ml-2" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+            <p className="text-muted-foreground text-sm">No recent activity</p>
+            <p className="text-muted-foreground/60 text-xs mt-1">Start chatting to see activity here</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderUsersTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {/* Header with refresh & filter */}
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">Women Online</span>
+          <Badge variant="outline" className="text-[9px]">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={userCountry} />
+          <Button variant="ghost" size="sm" onClick={() => userLanguage && fetchOnlineWomen(userLanguage)} disabled={loadingOnlineWomen} className="h-7 w-7 p-0">
+            <RefreshCw className={cn("w-3.5 h-3.5", loadingOnlineWomen && "animate-spin")} />
           </Button>
         </div>
+      </div>
 
-        {/* Free Minutes Badge */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.04s" }}>
-          <MenFreeMinutesBadge 
-            hasFreeMinutes={menFreeMinutes.hasFreeMinutes}
-            freeMinutesRemaining={menFreeMinutes.freeMinutesRemaining}
-            freeMinutesTotal={menFreeMinutes.freeMinutesTotal}
-            nextResetDate={menFreeMinutes.nextResetDate}
-            isLoading={menFreeMinutes.isLoading}
-          />
+      {loadingOnlineWomen ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
-
-        {/* Section 2: Women Online */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.05s" }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
-              <Globe2 className="w-4 h-4 text-primary" />
-              {t('onlineWomen', 'Women Online')}
-              <Badge variant="outline" className="text-[9px] font-normal ml-1">{sameLanguageWomen.length + indianTranslatedWomen.length}</Badge>
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => userLanguage && fetchOnlineWomen(userLanguage)}
-              disabled={loadingOnlineWomen}
-              className="gap-1 h-7 text-xs px-2"
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5", loadingOnlineWomen && "animate-spin")} />
-              Refresh
-            </Button>
-          </div>
-
-          {loadingOnlineWomen ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6">
-              {/* Same Language Women */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-primary">{t('sameLanguage', 'Same Language')}</span>
-                  <span className="px-2 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
-                    {userLanguage}
-                  </span>
-                  <span className="text-xs text-muted-foreground">({sameLanguageWomen.length})</span>
-                </div>
-                
-                {sameLanguageWomen.length > 0 ? (
-                  <ScrollableUserList>
-                    {sameLanguageWomen.map((woman) => (
-                      <Card
-                        key={woman.id}
-                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/50 bg-primary/5"
-                      onClick={() => {
-                        if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
-                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <Avatar className="w-10 h-10 border-2 border-background shadow-md">
-                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-sm">
-                                {woman.full_name?.charAt(0) || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center text-[8px] font-bold",
-                              (woman.active_chat_count || 0) >= 3 
-                                ? "bg-destructive text-destructive-foreground" 
-                                : (woman.active_chat_count || 0) > 0
-                                  ? "bg-amber-500 text-white"
-                                  : "bg-online text-online-foreground"
-                            )}>
-                              {woman.active_chat_count || 0}
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-sm text-foreground truncate">
-                                {woman.full_name || "Anonymous"}
-                              </p>
-                              {woman.age && (
-                                <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
-                              )}
-                            </div>
-                            <span className="inline-block px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
-                              {woman.primary_language}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 flex-wrap shrink-0">
-                            <Button
-                              variant="auroraOutline"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/profile/${woman.user_id}`);
-                              }}
-                              title="View Profile"
-                            >
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                              <DirectVideoCallButton
-                                currentUserId={currentUserId}
-                                targetUserId={woman.user_id}
-                                targetName={woman.full_name || "User"}
-                                targetPhoto={woman.photo_url}
-                                walletBalance={walletBalance}
-                                onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                                iconOnly={true}
-                              />
-                            )}
-                            <Button
-                              variant="aurora"
-                              size="sm"
-                              className={cn(
-                                "gap-1 text-[11px] h-7 px-2",
-                                (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
-                              )}
-                              disabled={(woman.active_chat_count || 0) >= 3}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                              }}
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                              {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </ScrollableUserList>
-                ) : (
-                  <Card className="p-6 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">{t('noSameLanguageWomen', 'No women speaking')} {userLanguage}</p>
-                  </Card>
-                )}
+      ) : (
+        <>
+          {/* Same Language Section */}
+          {sameLanguageWomen.length > 0 && (
+            <>
+              <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
+                <span className="text-xs font-semibold text-primary">{userLanguage}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageWomen.length})</span>
               </div>
-
-              {/* Other Language Women */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-primary">{t('otherLanguages', 'Other Languages')}</span>
-                  <span className="text-xs text-muted-foreground">({indianTranslatedWomen.length})</span>
-                </div>
-                
-                {indianTranslatedWomen.length > 0 ? (
-                  <ScrollableUserList>
-                    {indianTranslatedWomen.map((woman) => (
-                      <Card
-                        key={woman.id}
-                        className="p-3 hover:shadow-lg transition-all cursor-pointer group ring-2 ring-primary/30 bg-primary/5"
-                        onClick={() => {
-                          if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
-                            handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                          }
-                        }}
+              {sameLanguageWomen.map((woman) => (
+                <WhatsAppUserCard
+                  key={woman.id}
+                  name={woman.full_name || "Anonymous"}
+                  photoUrl={woman.photo_url}
+                  age={woman.age}
+                  language={woman.primary_language}
+                  country={woman.country}
+                  activeChatCount={woman.active_chat_count}
+                  onClick={() => {
+                    if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
+                      handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                    }
+                  }}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
+                        <Eye className="w-3.5 h-3.5 text-primary" />
+                      </Button>
+                      {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                        <DirectVideoCallButton
+                          currentUserId={currentUserId}
+                          targetUserId={woman.user_id}
+                          targetName={woman.full_name || "User"}
+                          targetPhoto={woman.photo_url}
+                          walletBalance={walletBalance}
+                          onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
+                          iconOnly={true}
+                        />
+                      )}
+                      <Button
+                        variant="aurora"
+                        size="sm"
+                        className="h-7 px-2 text-[10px]"
+                        disabled={(woman.active_chat_count || 0) >= 3}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <Avatar className="w-10 h-10 border-2 border-background shadow-md">
-                              <AvatarImage src={woman.photo_url || undefined} alt={woman.full_name || "User"} />
-                              <AvatarFallback className="bg-gradient-to-br from-secondary to-primary text-primary-foreground text-sm">
-                                {woman.full_name?.charAt(0) || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center text-[8px] font-bold",
-                              (woman.active_chat_count || 0) >= 3 
-                                ? "bg-destructive text-destructive-foreground" 
-                                : (woman.active_chat_count || 0) > 0
-                                  ? "bg-amber-500 text-white"
-                                  : "bg-online text-online-foreground"
-                            )}>
-                              {woman.active_chat_count || 0}
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-sm text-foreground truncate">
-                                {woman.full_name || "Anonymous"}
-                              </p>
-                              {woman.age && (
-                                <span className="text-xs text-muted-foreground">{woman.age} yrs</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
-                                {woman.primary_language}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">→</span>
-                              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
-                                {userLanguage}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 flex-wrap shrink-0">
-                            <Button
-                              variant="auroraOutline"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/profile/${woman.user_id}`);
-                              }}
-                              title="View Profile"
-                            >
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                            {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                              <DirectVideoCallButton
-                                currentUserId={currentUserId}
-                                targetUserId={woman.user_id}
-                                targetName={woman.full_name || "User"}
-                                targetPhoto={woman.photo_url}
-                                walletBalance={walletBalance}
-                                onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                                iconOnly={true}
-                              />
-                            )}
-                            <Button
-                              variant="aurora"
-                              size="sm"
-                              className={cn(
-                                "gap-1 text-[11px] h-7 px-2",
-                                (woman.active_chat_count || 0) >= 3 && "opacity-50 cursor-not-allowed"
-                              )}
-                              disabled={(woman.active_chat_count || 0) >= 3}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                              }}
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                              {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </ScrollableUserList>
-                ) : (
-                  <Card className="p-6 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">{t('noOtherWomen', 'No women speaking other languages available')}</p>
-                  </Card>
-                )}
+                        <MessageCircle className="w-3 h-3 mr-0.5" />
+                        {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
+                      </Button>
+                    </div>
+                  }
+                />
+              ))}
+            </>
+          )}
+
+          {/* Other Languages Section */}
+          {indianTranslatedWomen.length > 0 && (
+            <>
+              <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+                <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
+                <span className="text-[10px] text-muted-foreground ml-1">({indianTranslatedWomen.length})</span>
               </div>
+              {indianTranslatedWomen.map((woman) => (
+                <WhatsAppUserCard
+                  key={woman.id}
+                  name={woman.full_name || "Anonymous"}
+                  photoUrl={woman.photo_url}
+                  age={woman.age}
+                  language={woman.primary_language}
+                  country={woman.country}
+                  activeChatCount={woman.active_chat_count}
+                  subtitle={`${woman.primary_language} → ${userLanguage}`}
+                  onClick={() => {
+                    if ((woman.active_chat_count || 0) < 3 && canStartNewChat) {
+                      handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
+                    }
+                  }}
+                  actions={
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => navigate(`/profile/${woman.user_id}`)}>
+                        <Eye className="w-3.5 h-3.5 text-primary" />
+                      </Button>
+                      <Button
+                        variant="aurora"
+                        size="sm"
+                        className="h-7 px-2 text-[10px]"
+                        disabled={(woman.active_chat_count || 0) >= 3}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                      >
+                        <MessageCircle className="w-3 h-3 mr-0.5" />
+                        {(woman.active_chat_count || 0) >= 3 ? "Busy" : "Chat"}
+                      </Button>
+                    </div>
+                  }
+                />
+              ))}
+            </>
+          )}
+
+          {sameLanguageWomen.length === 0 && indianTranslatedWomen.length === 0 && (
+            <div className="text-center py-16">
+              <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">No women online right now</p>
             </div>
           )}
-        </div>
 
-        {/* Matches Section */}
-        <div className="animate-fade-in" style={{ animationDelay: "0.07s" }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
-              <Heart className="w-4 h-4 text-primary" />
-              {t('yourMatches', 'Your Matches')}
-              <span className="text-[10px] text-muted-foreground">({matchedWomen.length})</span>
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => currentUserId && fetchMatchedWomen(currentUserId)}
-              disabled={loadingMatches}
-              className="gap-1 h-7 text-xs px-2"
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
-              Refresh
-            </Button>
+          {/* Private Groups */}
+          <div id="private-groups-section" className="px-4 py-3 border-t border-border/30">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Video className="h-4 w-4 text-primary" />
+                Private Groups
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => setPrivateGroupsRefreshKey(prev => prev + 1)} className="h-7 text-xs px-2">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <AvailableGroupsSection
+              key={privateGroupsRefreshKey}
+              currentUserId={currentUserId}
+              userName={userName || 'User'}
+              userPhoto={userPhoto}
+            />
           </div>
+        </>
+      )}
+    </div>
+  );
 
-          {loadingMatches ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : matchedWomen.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 sm:gap-3 max-h-[350px] overflow-y-auto pr-1">
-              {matchedWomen.map((woman) => (
-                <Card
-                  key={woman.matchId}
-                  className="p-2 sm:p-3 hover:shadow-lg transition-all cursor-pointer group"
-                  onClick={() => navigate(`/profile/${woman.userId}`)}
-                >
-                  <div className="flex flex-col items-center text-center gap-1.5">
-                    <div className="relative">
-                      <Avatar className="w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary/20">
-                        <AvatarImage src={woman.photoUrl || undefined} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground">
-                          {woman.fullName?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                    <div>
-                      <p className="font-medium text-xs sm:text-sm text-foreground truncate max-w-[80px] sm:max-w-[120px]">
-                        {woman.fullName || "User"}
-                      </p>
-                      {woman.age && (
-                        <p className="text-[10px] text-muted-foreground">{woman.age} yrs</p>
-                      )}
-                    </div>
-                    <Button
-                      variant="aurora"
-                      size="sm"
-                      className="w-full h-7 text-[10px] sm:text-xs gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartChatWithWoman(woman.userId, woman.fullName || "User");
-                      }}
-                    >
-                      <MessageCircle className="w-3 h-3" />
-                      Chat
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-5 sm:p-8 text-center">
-              <Heart className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('noMatchesYet', 'No matches yet')}</p>
+  const renderMatchesTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">Your Matches ({matchedWomen.length})</span>
+        <Button variant="ghost" size="sm" onClick={() => currentUserId && fetchMatchedWomen(currentUserId)} disabled={loadingMatches} className="h-7 w-7 p-0">
+          <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
+        </Button>
+      </div>
+      {loadingMatches ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      ) : matchedWomen.length > 0 ? (
+        matchedWomen.map((woman) => (
+          <WhatsAppUserCard
+            key={woman.matchId}
+            name={woman.fullName || "User"}
+            photoUrl={woman.photoUrl}
+            age={woman.age}
+            language={woman.primaryLanguage}
+            country={woman.country}
+            isOnline={woman.isOnline}
+            onClick={() => navigate(`/profile/${woman.userId}`)}
+            actions={
               <Button
                 variant="aurora"
                 size="sm"
-                className="mt-3 gap-1"
-                onClick={() => navigate("/match-discovery")}
+                className="h-7 px-2 text-[10px]"
+                onClick={() => handleStartChatWithWoman(woman.userId, woman.fullName || "User")}
               >
-                <Compass className="w-4 h-4" />
-                {t('discoverMatches', 'Discover Matches')}
+                <MessageCircle className="w-3 h-3 mr-0.5" />
+                Chat
               </Button>
-            </Card>
-          )}
-        </div>
-
-
-
-
-        {/* Private Groups Section */}
-        <div id="private-groups-section" className="animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-1.5">
-              <Video className="h-4 w-4 text-primary" />
-              Private Groups
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPrivateGroupsRefreshKey(prev => prev + 1)}
-              className="gap-1 h-7 text-xs px-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
-            </Button>
-          </div>
-          <div className="p-2.5 rounded-lg bg-muted/50 text-[11px] sm:text-sm text-muted-foreground mb-3 border border-border/20">
-            <p className="font-medium text-foreground mb-0.5 text-xs">💰 How to Join</p>
-            <p>Join any live private group call at <span className="font-semibold text-primary">₹{pricing?.groupCallRatePerMinute || 4}/min</span>. Min 5 min balance required.</p>
-          </div>
-          <AvailableGroupsSection
-            key={privateGroupsRefreshKey}
-            currentUserId={currentUserId}
-            userName={userName || 'User'}
-            userPhoto={userPhoto}
+            }
           />
+        ))
+      ) : (
+        <div className="text-center py-16">
+          <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">No matches yet</p>
+          <Button variant="aurora" size="sm" className="mt-3 gap-1" onClick={() => navigate("/match-discovery")}>
+            <Compass className="w-4 h-4" /> Discover
+          </Button>
         </div>
+      )}
+    </div>
+  );
 
-        {/* Section 7: Recent Notifications */}
-        <div id="notifications-section" className="animate-fade-in" style={{ animationDelay: "0.3s" }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-sm sm:text-lg font-semibold text-foreground">{t('recentActivity', 'Recent Activity')}</h2>
-            <button className="text-xs text-primary hover:underline flex items-center gap-0.5" onClick={() => currentUserId && fetchNotifications(currentUserId)}>
-              View all <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+  const renderProfileTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {/* Profile card */}
+      <div className="px-4 py-6 flex flex-col items-center border-b border-border/30">
+        <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-lg mb-3">
+          <AvatarImage src={userPhoto || undefined} />
+          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-2xl font-bold">
+            {userName?.charAt(0) || "?"}
+          </AvatarFallback>
+        </Avatar>
+        <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
+        <p className="text-xs text-muted-foreground">{userLanguage} • {userCountryName || userCountry}</p>
+        <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
+          {getStatusText()}
+        </Badge>
+      </div>
+
+      {/* Wallet */}
+      <div className="px-4 py-3 flex items-center justify-between border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={() => setRechargeDialogOpen(true)}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-primary" />
           </div>
-
-          {notifications.length > 0 ? (
-            <div className="space-y-2">
-              {notifications.map((notification) => (
-                <Card 
-                  key={notification.id}
-                  className="p-2.5 sm:p-4 flex items-start gap-2.5 hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => markNotificationRead(notification.id)}
-                >
-                  <div className={`p-1.5 rounded-full shrink-0 ${
-                    notification.type === "match" ? "bg-female/10 text-female" :
-                    notification.type === "message" ? "bg-info/10 text-info" :
-                    "bg-primary/10 text-primary"
-                  }`}>
-                    {notification.type === "match" ? <Heart className="w-4 h-4" /> :
-                     notification.type === "message" ? <MessageCircle className="w-4 h-4" /> :
-                     <Bell className="w-4 h-4" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-xs sm:text-sm text-foreground truncate">{notification.title}</p>
-                    <p className="text-[11px] sm:text-sm text-muted-foreground line-clamp-1">{notification.message}</p>
-                  </div>
-                  {!notification.is_read && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0 mt-1" />
-                  )}
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-5 sm:p-8 text-center">
-              <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('noNotifications', 'No new activity yet')}</p>
-              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1">
-                {t('startExploringToGetMatches', 'Start exploring to get matches and notifications!')}
-              </p>
-            </Card>
-          )}
+          <div>
+            <p className="text-sm font-medium text-foreground">Wallet Balance</p>
+            <p className="text-xs text-muted-foreground">Tap to recharge</p>
+          </div>
         </div>
+        <span className="text-lg font-bold text-primary">{formatLocalCurrency(walletBalance)}</span>
+      </div>
 
-      </main>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-0 border-b border-border/30">
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
+          <p className="text-[10px] text-muted-foreground">Online</p>
+        </div>
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+          <p className="text-[10px] text-muted-foreground">Matches</p>
+        </div>
+        <div className="text-center py-4">
+          <p className="text-xl font-bold text-foreground">{activeChatCount}/{MAX_PARALLEL_CHATS}</p>
+          <p className="text-[10px] text-muted-foreground">Active Chats</p>
+        </div>
+      </div>
+
+      {/* Quick links */}
+      {[
+        { icon: <UserCircle className="w-5 h-5 text-primary" />, label: "Edit Profile", onClick: () => setProfileEditOpen(true) },
+        { icon: <Compass className="w-5 h-5 text-primary" />, label: "Discover Matches", onClick: () => navigate("/match-discovery") },
+        { icon: <Eye className="w-5 h-5 text-primary" />, label: "Online Users", onClick: () => navigate("/online-users") },
+        { icon: <Gift className="w-5 h-5 text-primary" />, label: "Send Gift", onClick: () => navigate("/gift-sending") },
+        { icon: <Settings className="w-5 h-5 text-primary" />, label: "Settings", onClick: () => navigate("/settings") },
+      ].map((item, i) => (
+        <div key={i} className="px-4 py-3 flex items-center gap-3 border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={item.onClick}>
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">{item.icon}</div>
+          <span className="text-sm font-medium text-foreground">{item.label}</span>
+          <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* WhatsApp-style Header */}
+      <WhatsAppHeader
+        isOnline={isOnline}
+        onToggleOnline={(checked) => {
+          toggleOnlineStatus(checked);
+          toast({
+            title: checked ? 'You are now Online' : 'You are now Offline',
+            description: checked ? 'Women can see you' : 'You are hidden from others',
+          });
+        }}
+        onAdminMessages={() => setShowAdminMessages(true)}
+        onAdminChat={() => setShowAdminChat(true)}
+        onFriends={() => setShowFriendsPanel(true)}
+        onSettings={() => navigate('/settings')}
+        onLogout={handleLogout}
+        unreadNotifications={stats.unreadNotifications}
+        onNotifications={() => {
+          setActiveTab("chats");
+          setTimeout(() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' }), 100);
+        }}
+      />
+
+      {/* Tab Content */}
+      {activeTab === "chats" && renderChatsTab()}
+      {activeTab === "users" && renderUsersTab()}
+      {activeTab === "matches" && renderMatchesTab()}
+      {activeTab === "profile" && renderProfileTab()}
+
+      {/* WhatsApp-style Bottom Tabs */}
+      <WhatsAppBottomTabs tabs={menTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* FAB - Random Chat */}
+      {activeTab === "chats" && (
+        <WhatsAppFAB onClick={handleQuickConnect} badge={activeChatCount || undefined} />
+      )}
 
       {/* Recharge Dialog */}
       <Dialog open={rechargeDialogOpen} onOpenChange={setRechargeDialogOpen}>
@@ -1875,7 +1664,6 @@ const DashboardScreen = () => {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Currency Info */}
             <div className="p-3 rounded-lg bg-muted/50 text-sm">
               <p className="text-muted-foreground">
                 {t('yourCurrency', 'Your currency')}: <span className="font-semibold text-foreground">{getCurrencyInfo().code}</span>
@@ -1884,191 +1672,81 @@ const DashboardScreen = () => {
                 {t('pricesShownInLocal', 'Prices shown in your local currency (stored as INR)')}
               </p>
             </div>
-
-            {/* Indian Payment Gateways */}
             <div>
               <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
                 🇮🇳 {t('indianPaymentMethods', 'Indian Payment Methods')}
               </Label>
-              <RadioGroup
-                value={selectedGateway}
-                onValueChange={setSelectedGateway}
-                className="grid grid-cols-2 gap-3"
-              >
+              <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
                 {INDIAN_GATEWAYS.map((gateway) => (
                   <div key={gateway.id} className="relative">
-                    <RadioGroupItem
-                      value={gateway.id}
-                      id={`gateway-${gateway.id}`}
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor={`gateway-${gateway.id}`}
-                      className={cn(
-                        "flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all",
-                        "hover:border-primary/50 hover:bg-primary/5",
-                        selectedGateway === gateway.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border"
-                      )}
-                    >
+                    <RadioGroupItem value={gateway.id} id={`gateway-${gateway.id}`} className="peer sr-only" />
+                    <Label htmlFor={`gateway-${gateway.id}`} className={cn("flex flex-col items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 hover:bg-primary/5", selectedGateway === gateway.id ? "border-primary bg-primary/10" : "border-border")}>
                       <span className="text-2xl mb-1">{gateway.logo}</span>
                       <span className="font-semibold text-sm">{gateway.name}</span>
                       <span className="text-[10px] text-muted-foreground text-center mt-1">{gateway.description}</span>
-                      {selectedGateway === gateway.id && (
-                        <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />
-                      )}
+                      {selectedGateway === gateway.id && <CheckCircle2 className="absolute top-1 right-1 h-4 w-4 text-primary" />}
                     </Label>
                   </div>
                 ))}
               </RadioGroup>
             </div>
-
-            {/* Recharge Amounts Dropdown + Custom Amount */}
             <div className="space-y-3">
               <Label className="text-sm font-medium block">Select Amount</Label>
-              <Select
-                value={selectedAmount?.toString() || ""}
-                onValueChange={(value) => {
-                  if (value === "custom") {
-                    setSelectedAmount(null);
-                  } else {
-                    setSelectedAmount(Number(value));
-                    setCustomAmount("");
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose recharge amount" />
-                </SelectTrigger>
+              <Select value={selectedAmount?.toString() || ""} onValueChange={(value) => { if (value === "custom") { setSelectedAmount(null); } else { setSelectedAmount(Number(value)); setCustomAmount(""); } }}>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Choose recharge amount" /></SelectTrigger>
                 <SelectContent>
-                  {RECHARGE_AMOUNTS_INR.map((amountINR) => (
-                    <SelectItem key={amountINR} value={amountINR.toString()}>
-                      {formatLocalCurrency(amountINR)} (₹{amountINR})
-                    </SelectItem>
-                  ))}
+                  {RECHARGE_AMOUNTS_INR.map((amountINR) => (<SelectItem key={amountINR} value={amountINR.toString()}>{formatLocalCurrency(amountINR)} (₹{amountINR})</SelectItem>))}
                   <SelectItem value="custom">Custom Amount</SelectItem>
                 </SelectContent>
               </Select>
-
-              {/* Custom Amount Input */}
               {(!selectedAmount || customAmount) && (
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
-                    <input
-                      type="number"
-                      min="10"
-                      max="100000"
-                      placeholder="Enter custom amount"
-                      value={customAmount}
-                      onChange={(e) => {
-                        setCustomAmount(e.target.value);
-                        const val = Number(e.target.value);
-                        if (val >= 10) setSelectedAmount(val);
-                        else setSelectedAmount(null);
-                      }}
-                      className="w-full pl-8 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <input type="number" min="10" max="100000" placeholder="Enter custom amount" value={customAmount} onChange={(e) => { setCustomAmount(e.target.value); const val = Number(e.target.value); if (val >= 10) setSelectedAmount(val); else setSelectedAmount(null); }} className="w-full pl-8 pr-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
                 </div>
               )}
-
-              <Button
-                variant="aurora"
-                className="w-full gap-2"
-                onClick={() => selectedAmount && handleRecharge(selectedAmount)}
-                disabled={!selectedAmount || processingPayment}
-              >
-                {processingPayment ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="h-4 w-4" />
-                    {selectedAmount ? `Pay ${formatLocalCurrency(selectedAmount)}` : "Select Amount"}
-                  </>
-                )}
+              <Button variant="aurora" className="w-full gap-2" onClick={() => selectedAmount && handleRecharge(selectedAmount)} disabled={!selectedAmount || processingPayment}>
+                {processingPayment ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><CreditCard className="h-4 w-4" />{selectedAmount ? `Pay ${formatLocalCurrency(selectedAmount)}` : "Select Amount"}</>}
               </Button>
             </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Secure payment via {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name}
-            </p>
+            <p className="text-xs text-muted-foreground text-center">Secure payment via {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name}</p>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Profile Edit Dialog */}
-      <ProfileEditDialog
-        open={profileEditOpen}
-        onOpenChange={setProfileEditOpen}
-        onProfileUpdated={() => loadDashboardData()}
-      />
-
-      {/* TeamsChatLayout removed - all chats handled via EnhancedParallelChatsContainer */}
+      <ProfileEditDialog open={profileEditOpen} onOpenChange={setProfileEditOpen} onProfileUpdated={() => loadDashboardData()} />
 
       {/* Enhanced Parallel Chat Windows */}
       {currentUserId && (
-        <EnhancedParallelChatsContainer
-          currentUserId={currentUserId}
-          userGender="male"
-          currentUserLanguage={userLanguage}
-          currentUserName={userName}
-        />
+        <EnhancedParallelChatsContainer currentUserId={currentUserId} userGender="male" currentUserLanguage={userLanguage} currentUserName={userName} />
       )}
 
-      {/* Incoming Video Call Window - for Golden Badge women calling men */}
+      {/* Incoming Video Call Window */}
       {incomingCall && (
-        <IncomingVideoCallWindow
-          callId={incomingCall.callId}
-          callerUserId={incomingCall.callerUserId}
-          callerName={incomingCall.callerName}
-          callerPhoto={incomingCall.callerPhoto}
-          currentUserId={currentUserId}
-          onClose={clearIncomingCall}
-        />
+        <IncomingVideoCallWindow callId={incomingCall.callId} callerUserId={incomingCall.callerUserId} callerName={incomingCall.callerName} callerPhoto={incomingCall.callerPhoto} currentUserId={currentUserId} onClose={clearIncomingCall} />
       )}
 
       {/* Friends & Blocked Panel */}
       {showFriendsPanel && currentUserId && (
-        <FriendsBlockedPanel
-          currentUserId={currentUserId}
-          userGender="male"
-          onClose={() => setShowFriendsPanel(false)}
-        />
+        <FriendsBlockedPanel currentUserId={currentUserId} userGender="male" onClose={() => setShowFriendsPanel(false)} />
       )}
 
       {/* Admin Messages Sheet */}
       <Sheet open={showAdminMessages} onOpenChange={setShowAdminMessages}>
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-primary" />
-              Admin Messages
-            </SheetTitle>
-          </SheetHeader>
-          {currentUserId && (
-            <div className="mt-4">
-              <AdminMessagesWidget currentUserId={currentUserId} />
-            </div>
-          )}
+          <SheetHeader><SheetTitle className="flex items-center gap-2"><Mail className="w-5 h-5 text-primary" />Admin Messages</SheetTitle></SheetHeader>
+          {currentUserId && <div className="mt-4"><AdminMessagesWidget currentUserId={currentUserId} /></div>}
         </SheetContent>
       </Sheet>
 
       {/* Admin Chat Sheet */}
       <Sheet open={showAdminChat} onOpenChange={setShowAdminChat}>
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl pb-[env(safe-area-inset-bottom)]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary" />
-              Chat with Admin
-            </SheetTitle>
-          </SheetHeader>
-          {currentUserId && (
-            <div className="mt-4">
-              <UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} embedded />
-            </div>
-          )}
+          <SheetHeader><SheetTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-primary" />Chat with Admin</SheetTitle></SheetHeader>
+          {currentUserId && <div className="mt-4"><UserAdminChat currentUserId={currentUserId} userName={userName || 'User'} embedded /></div>}
         </SheetContent>
       </Sheet>
     </div>
