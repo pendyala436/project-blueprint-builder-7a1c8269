@@ -95,17 +95,25 @@ export function isLatinScript(text: string): boolean {
 
 /**
  * Detect if text is a MIX of Latin and non-Latin scripts (partial translation).
- * Returns true if both Latin and non-Latin characters are present in significant amounts.
- * This catches cases where auto-detect translates only PART of a transliterated message.
+ * Returns true if both Latin and non-Latin characters are present in meaningful amounts.
+ * This catches cases where auto-detect translates only PART of a transliterated message,
+ * including outputs like "ఎందుకు messages మిస్ అవుతున్నాయి".
  */
 export function isMixedScript(text: string): boolean {
   const cleaned = text.replace(/[\s\d.,!?;:'"()\-@#$%&*+=<>/\\|~`^{}[\]_\u00A0]/g, '');
   if (!cleaned || cleaned.length < 4) return false;
-  const latinChars = (cleaned.match(/[a-zA-Z\u00C0-\u024F]/g) || []).length;
+
+  const latinTokens: string[] = cleaned.match(/[a-zA-Z\u00C0-\u024F]+/g) ?? [];
+  const latinChars = latinTokens.reduce<number>((sum, token) => sum + token.length, 0);
   const nonLatinChars = cleaned.length - latinChars;
-  // Mixed if both Latin and non-Latin make up at least 15% of text
+
+  if (latinChars === 0 || nonLatinChars === 0) return false;
+
+  // Strong signal: even one leftover Latin word inside native script means partial translation.
+  if (latinTokens.some((token) => token.length >= 3) && nonLatinChars >= 2) return true;
+
   const latinRatio = latinChars / cleaned.length;
-  return latinRatio > 0.15 && latinRatio < 0.85 && nonLatinChars > 2 && latinChars > 2;
+  return latinRatio > 0.08 && latinRatio < 0.92;
 }
 
 /**
