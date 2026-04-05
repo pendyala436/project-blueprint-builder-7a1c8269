@@ -82,7 +82,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .select("*, private_groups(name, owner_id)")
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(20);
 
       // Collect all partner IDs for batch profile fetch
       const partnerIds = new Set<string>();
