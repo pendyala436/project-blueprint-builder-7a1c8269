@@ -1,14 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-import { RandomChatButton } from "@/components/RandomChatButton";
 import { 
   Heart, 
   Users, 
@@ -16,32 +12,16 @@ import {
   MessageCircle, 
   Settings,
   FileCheck,
-  Circle,
   LogOut,
   Wallet,
-  
   IndianRupee,
   Crown,
-  MapPin,
   ChevronRight,
-  Search,
   User,
-  Languages,
-  Globe,
-  Globe2,
-  Filter,
-  Power,
-  Users2,
-  Star,
-  Loader2,
-  MessageCircle as MessageCircleIcon,
   Video,
   Eye,
-  Sparkles,
   Mail,
   Shield,
-  ChevronUp,
-  ChevronDown,
   RefreshCw,
   Phone
 } from "lucide-react";
@@ -135,7 +115,6 @@ const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   // Plain English helper - no translation, returns fallback directly
-  const t = useCallback((_key: string, fallback: string) => fallback, []);
   
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
@@ -315,8 +294,8 @@ const WomenDashboardScreen = () => {
     onStatusChange: (online) => {
       if (!online) {
         toast({
-          title: t('autoOffline', 'Gone Offline'),
-          description: t('inactivityMessage', 'You went offline due to inactivity'),
+          title: 'Gone Offline',
+          description: 'You went offline due to inactivity',
         });
       }
     }
@@ -972,8 +951,8 @@ const WomenDashboardScreen = () => {
     }
     await supabase.auth.signOut();
     toast({
-      title: t('loggedOut', 'Logged out'),
-      description: t('seeYouSoon', 'See you soon!'),
+      title: 'Logged out',
+      description: 'See you soon!',
     });
     navigate('/', { replace: true });
   };
@@ -999,7 +978,7 @@ const WomenDashboardScreen = () => {
       }
       if (!data.success) {
         toast({
-          title: t('cannotStartChat', 'Cannot Start Chat'),
+          title: 'Cannot Start Chat',
           description: data.message || "Unable to start chat",
           variant: "destructive",
         });
@@ -1019,8 +998,8 @@ const WomenDashboardScreen = () => {
       navigate(`/chat/${userId}`);
 
       toast({
-        title: t('chatStarted', 'Chat Started!'),
-        description: t('chatInitiated', 'Chat session started successfully'),
+        title: 'Chat Started!',
+        description: 'Chat session started successfully',
       });
     } catch (err: any) {
       toast({

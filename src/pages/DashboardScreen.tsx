@@ -28,15 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Heart, 
-  Users, 
   Bell, 
   MessageCircle, 
   Settings,
-  Sparkles,
   ChevronRight,
   LogOut,
   Wallet,
@@ -44,17 +41,12 @@ import {
   CheckCircle2,
   RefreshCw,
   Eye,
-  Users2,
   Compass,
   UserCircle,
-  BellRing,
-  Globe2,
   Video,
   Gift,
   Shield,
   Mail,
-  ChevronUp,
-  ChevronDown,
   Phone,
   User,
   Loader2
@@ -64,7 +56,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
-import { RandomChatButton } from "@/components/RandomChatButton";
+// RandomChatButton removed — not used in WhatsApp-style layout
 import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import DirectAudioCallButton from "@/components/DirectAudioCallButton";
@@ -155,7 +147,6 @@ const DashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   // Plain English helper - no translation, returns fallback directly
-  const t = useCallback((_key: string, fallback: string) => fallback, []);
   
   const { creditWallet } = useAtomicTransaction();
   const [isLoading, setIsLoading] = useState(true);
@@ -261,8 +252,8 @@ const DashboardScreen = () => {
     onStatusChange: (online) => {
       if (!online) {
         toast({
-          title: t('autoOffline', 'Gone Offline'),
-          description: t('inactivityMessage', 'You went offline due to inactivity'),
+          title: 'Gone Offline',
+          description: 'You went offline due to inactivity',
         });
       }
     }
@@ -780,8 +771,8 @@ const DashboardScreen = () => {
         // If woman is busy, try auto-reconnect
         if (data.message?.includes("capacity") || data.message?.includes("Maximum")) {
           toast({
-            title: t('userBusy', 'User Busy'),
-            description: t('findingAnotherUser', 'Finding another available user...'),
+            title: 'User Busy',
+            description: 'Finding another available user...',
           });
 
           const nextWoman = _reconnectDepth < 2 ? await initiateReconnect(womanUserId) : null;
@@ -789,8 +780,8 @@ const DashboardScreen = () => {
             await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
           } else {
             toast({
-              title: t('noOneAvailable', 'No One Available'),
-              description: t('tryAgainLater', 'All users are busy. Please try again later.'),
+              title: 'No One Available',
+              description: 'All users are busy. Please try again later.',
               variant: "destructive",
             });
           }
@@ -800,7 +791,7 @@ const DashboardScreen = () => {
         // Insufficient balance - show recharge dialog
         if (data.message?.includes("balance") || data.message?.includes("Insufficient")) {
           toast({
-            title: t('insufficientBalance', 'Insufficient Balance'),
+            title: 'Insufficient Balance',
             description: data.message,
             variant: "destructive",
           });
@@ -809,7 +800,7 @@ const DashboardScreen = () => {
         }
 
         toast({
-          title: t('cannotStartChat', 'Cannot Start Chat'),
+          title: 'Cannot Start Chat',
           description: data.message || "Unable to start chat session",
           variant: "destructive",
         });
@@ -827,8 +818,8 @@ const DashboardScreen = () => {
       }
 
       toast({
-        title: t('chatStarted', 'Chat Started'),
-        description: `${t('startingChatWith', 'Starting chat with')} ${womanName} (${formatPrice(data.rate_per_minute || pricing.ratePerMinute)}/min)`,
+        title: 'Chat Started',
+        description: `${'Starting chat with'} ${womanName} (${formatPrice(data.rate_per_minute || pricing.ratePerMinute)}/min)`,
       });
 
       // Navigate to full-screen WhatsApp-style chat view
@@ -842,7 +833,7 @@ const DashboardScreen = () => {
         await handleStartChatWithWoman(nextWoman.userId, nextWoman.fullName, _reconnectDepth + 1);
       } else {
         toast({
-          title: t('error', 'Error'),
+          title: 'Error',
           description: classifyError(error, 'start the chat').message,
           variant: "destructive",
         });
@@ -1002,8 +993,8 @@ const DashboardScreen = () => {
     // Check balance first
     if (!hasSufficientBalance(walletBalance, 2)) {
       toast({
-        title: t('insufficientBalance', 'Insufficient Balance'),
-        description: t('pleaseRechargeToChat', 'Please recharge your wallet to start chatting'),
+        title: 'Insufficient Balance',
+        description: 'Please recharge your wallet to start chatting',
         variant: "destructive",
       });
       setRechargeDialogOpen(true);
@@ -1012,8 +1003,8 @@ const DashboardScreen = () => {
 
     setIsConnecting(true);
     toast({
-      title: t('searchingForMatch', 'Searching...'),
-      description: t('findingBestMatch', 'Finding the best available match for you'),
+      title: 'Searching...',
+      description: 'Finding the best available match for you',
     });
 
     try {
@@ -1023,16 +1014,16 @@ const DashboardScreen = () => {
         await handleStartChatWithWoman(bestMatch.userId, bestMatch.fullName);
       } else {
         toast({
-          title: t('noOneAvailable', 'No One Available'),
-          description: t('tryAgainLater', 'All users are busy. Please try again later.'),
+          title: 'No One Available',
+          description: 'All users are busy. Please try again later.',
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error("Quick connect error:", error);
       toast({
-        title: t('error', 'Error'),
-        description: t('failedToConnect', 'Failed to connect. Please try again.'),
+        title: 'Error',
+        description: 'Failed to connect. Please try again.',
         variant: "destructive",
       });
     } finally {
@@ -1198,8 +1189,8 @@ const DashboardScreen = () => {
     }
     await supabase.auth.signOut();
     toast({
-      title: t('loggedOut', 'Logged out'),
-      description: t('seeYouSoon', 'See you soon!'),
+      title: 'Logged out',
+      description: 'See you soon!',
     });
     navigate('/', { replace: true });
   };
@@ -1299,7 +1290,7 @@ const DashboardScreen = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">{t('loading', 'Loading...')}</p>
+          <p className="text-muted-foreground">{'Loading...'}</p>
         </div>
       </div>
     );
@@ -1734,22 +1725,22 @@ const DashboardScreen = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />
-              {t('rechargeWallet', 'Recharge Wallet')}
+              {'Recharge Wallet'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6">
             <div className="p-3 rounded-lg bg-muted/50 text-sm">
               <p className="text-muted-foreground">
-                {t('yourCurrency', 'Your currency')}: <span className="font-semibold text-foreground">{getCurrencyInfo().code}</span>
+                {'Your currency'}: <span className="font-semibold text-foreground">{getCurrencyInfo().code}</span>
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {t('pricesShownInLocal', 'Prices shown in your local currency (stored as INR)')}
+                {'Prices shown in your local currency (stored as INR)'}
               </p>
             </div>
             <div>
               <Label className="text-sm font-medium mb-3 block flex items-center gap-2">
-                🇮🇳 {t('indianPaymentMethods', 'Indian Payment Methods')}
+                🇮🇳 {'Indian Payment Methods'}
               </Label>
               <RadioGroup value={selectedGateway} onValueChange={setSelectedGateway} className="grid grid-cols-2 gap-3">
                 {INDIAN_GATEWAYS.map((gateway) => (
