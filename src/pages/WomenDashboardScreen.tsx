@@ -42,7 +42,8 @@ import {
   Shield,
   ChevronUp,
   ChevronDown,
-  RefreshCw
+  RefreshCw,
+  Phone
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
