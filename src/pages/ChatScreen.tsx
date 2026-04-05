@@ -1198,7 +1198,7 @@ const ChatScreen = () => {
 
     setIsSending(true);
 
-    // Add optimistic message immediately so sender sees the exact same content as the preview
+    // Use preview's native text as the actual sent message so bubble matches preview exactly
     const tempId = `temp-${Date.now()}`;
     const senderLang = currentUserLanguageRef.current || 'English';
     const canReusePreview =
@@ -1206,34 +1206,36 @@ const ChatScreen = () => {
       !isPreviewLoading &&
       (!!previewNative.trim() || !!previewEnglish.trim());
 
-    const optimisticTranslatedMessage = canReusePreview ? (previewNative.trim() || undefined) : undefined;
+    // The message to store in DB: use native script from preview if available
+    const actualMessage = canReusePreview && previewNative.trim()
+      ? previewNative.trim()
+      : messageText;
+
     const optimisticEnglishText = canReusePreview ? (previewEnglish.trim() || undefined) : undefined;
 
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
-      message: messageText,
-      translatedMessage: optimisticTranslatedMessage,
+      message: actualMessage,
+      translatedMessage: undefined,
       englishText: optimisticEnglishText,
-      isTranslated: !!optimisticTranslatedMessage && optimisticTranslatedMessage !== messageText,
+      isTranslated: false,
       isRead: false,
       isTranslating: !canReusePreview,
       createdAt: new Date().toISOString(),
     }]);
 
-    // If preview already resolved, keep that exact result instead of recalculating
+    // If preview wasn't available, translate async to populate english subtitle
     if (!canReusePreview) {
-      // Translate optimistic message for sender's own view (native script + English subtitle)
-      // Pass senderLang as 3rd arg so Strategy C (transliteration bridge) fires for Latin input
       translateForViewer(messageText, senderLang, senderLang).then(result => {
         setMessages(prev => prev.map(m => {
           const realId = tempToRealIdRef.current.get(tempId);
           if (m.id === tempId || (realId && m.id === realId)) {
             return {
               ...m,
-              translatedMessage: result.nativeText,
+              // Replace message with native script, show english subtitle
+              message: result.nativeText || m.message,
               englishText: result.englishText,
-              isTranslated: result.nativeText !== messageText,
               isTranslating: false,
             };
           }
@@ -1266,13 +1268,14 @@ const ChatScreen = () => {
     }
 
     try {
+      // Store the native script (from preview) in DB so receiver also sees native text
       const { error } = await supabase
         .from("chat_messages")
         .insert({
           chat_id: chatId.current,
           sender_id: currentUserId,
           receiver_id: chatPartner.userId,
-          message: messageText,
+          message: actualMessage,
         });
 
       if (error) {
