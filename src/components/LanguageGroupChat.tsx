@@ -58,18 +58,19 @@ interface LanguageGroupChatProps {
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_FILE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "application/msword",
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif",
+  "image/heic", "image/heif", "image/bmp", "image/tiff", "image/svg+xml",
+  "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/x-matroska", "video/3gpp",
+  "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "audio/webm", "audio/x-m4a",
+  "application/pdf", "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain"
+  "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.spreadsheet",
+  "text/plain", "text/csv", "application/rtf", "application/zip",
+  "application/octet-stream"
 ];
 
 export const LanguageGroupChat = ({
@@ -392,10 +393,15 @@ export const LanguageGroupChat = ({
       return;
     }
 
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const knownExts = ["jpg","jpeg","png","gif","webp","heic","heif","bmp","tiff","avif","svg",
+                        "mp4","webm","mov","avi","mkv","3gp","mp3","wav","ogg","m4a",
+                        "pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","rtf","zip","rar"];
+    const isAllowed = ALLOWED_FILE_TYPES.includes(file.type) || file.type.startsWith("image/") || file.type.startsWith("video/") || file.type.startsWith("audio/") || knownExts.includes(ext);
+    if (!isAllowed) {
       toast({
         title: t("invalidFileType", "Invalid File Type"),
-        description: t("allowedTypes", "Allowed: Images, PDFs, Word, Excel, PowerPoint"),
+        description: t("allowedTypes", "Allowed: Images, Videos, Audio, PDFs, Word, Excel, PowerPoint"),
         variant: "destructive"
       });
       return;
