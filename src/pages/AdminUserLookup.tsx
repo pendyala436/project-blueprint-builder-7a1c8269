@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import AdminNav from "@/components/AdminNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -115,6 +116,13 @@ const AdminUserLookup = () => {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [genderFilter, setGenderFilter] = useState<string>("all");
+  const loadAllUsersRef = useRef<() => void>(() => {});
+
+  // Real-time subscription for profiles updates
+  useRealtimeSubscription({
+    table: "profiles",
+    onUpdate: () => loadAllUsersRef.current(),
+  });
 
   useEffect(() => {
     loadAllUsers();
@@ -155,6 +163,7 @@ const AdminUserLookup = () => {
       setLoading(false);
     }
   };
+  loadAllUsersRef.current = loadAllUsers;
 
   const selectUser = async (user: UserProfile) => {
     setSelectedUser(user);

@@ -1,6 +1,6 @@
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import AdminNav from "@/components/AdminNav";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { 
   ArrowLeft, 
   Database, 
@@ -47,25 +48,17 @@ const AdminBackupManagement = () => {
   const [triggeringBackup, setTriggeringBackup] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const fetchBackupsCb = useCallback(() => { fetchBackups(); }, []);
+
   useEffect(() => {
     fetchBackups();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('backup-logs-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'backup_logs' },
-        () => {
-          fetchBackups();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
+
+  // Real-time subscription using standardized hook
+  useRealtimeSubscription({
+    table: "backup_logs",
+    onUpdate: fetchBackupsCb,
+  });
 
   const fetchBackups = async () => {
     try {
