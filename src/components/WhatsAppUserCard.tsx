@@ -42,6 +42,7 @@ export const WhatsAppUserCard: React.FC<WhatsAppUserCardProps> = ({
   subtitle,
   actions,
   onClick,
+  onDoubleClick,
   className,
 }) => {
   return (
