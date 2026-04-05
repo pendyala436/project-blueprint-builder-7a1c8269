@@ -848,6 +848,7 @@ const DashboardScreen = () => {
       }
     } finally {
       setIsConnecting(false);
+      setConnectingUserId(null);
     }
   };
 
