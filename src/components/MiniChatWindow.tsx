@@ -217,6 +217,38 @@ const MiniChatWindow = ({
           setTodayEarnings(total);
         }
 
+        // Check if this is a free chat (woman chatting with no-balance man)
+        if (userGender === "female") {
+          const { data: partnerWallet } = await supabase
+            .from("users_wallet")
+            .select("balance")
+            .eq("user_id", partnerId)
+            .maybeSingle();
+          
+          const partnerBalance = partnerWallet?.balance ?? 0;
+          if (partnerBalance <= 0) {
+            // Check free chat status
+            const { data: freeChatStatus } = await supabase.rpc("check_free_chat_status", {
+              p_woman_id: currentUserId,
+              p_man_id: partnerId,
+            });
+            
+            if (freeChatStatus?.blocked) {
+              toast({
+                title: "Free Chat Expired",
+                description: "You've used your 5-minute free chat with this user. Ask them to recharge!",
+                variant: "destructive",
+              });
+              onClose();
+              return;
+            }
+            
+            setIsFreeChatMode(true);
+            setFreeChatRemainingSeconds(freeChatStatus?.remaining_seconds ?? 300);
+            freeChatElapsedRef.current = freeChatStatus?.seconds_used ?? 0;
+          }
+        }
+
         if (!sessionStartedRef.current) {
           sessionStartedRef.current = true;
         }
@@ -227,7 +259,7 @@ const MiniChatWindow = ({
     };
 
     loadInitialData();
-  }, [currentUserId, userGender, ratePerMinute]);
+  }, [currentUserId, userGender, ratePerMinute, partnerId]);
 
   useEffect(() => {
     loadMessages();
