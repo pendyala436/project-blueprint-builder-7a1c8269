@@ -1094,10 +1094,7 @@ const WomenDashboardScreen = () => {
   };
 
   const handleViewProfile = (userId: string) => {
-    toast({
-      title: t('viewingProfile', 'Profile'),
-      description: t('useButtonsToChat', 'Use the Chat or Video buttons to connect'),
-    });
+    navigate(`/profile/${userId}`);
   };
 
   // ScrollableUserList extracted to top-level component to avoid Hooks violation
