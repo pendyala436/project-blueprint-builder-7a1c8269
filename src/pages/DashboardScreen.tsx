@@ -75,6 +75,7 @@ import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useMessageSound } from "@/hooks/useMessageSound";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { WhatsAppHeader } from "@/components/WhatsAppHeader";
 import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
