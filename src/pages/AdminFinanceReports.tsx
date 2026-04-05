@@ -264,7 +264,7 @@ const AdminFinanceReports = () => {
           .select("user_id, debit, credit, transaction_type")
           .gte("created_at", startDate.toISOString())
           .lte("created_at", endDate.toISOString())
-          .in("transaction_type", ["chat_charge", "video_call_charge", "group_call_charge"]);
+          .in("transaction_type", ["chat_debit", "video_debit", "audio_debit", "group_call_debit", "gift_debit"]);
 
         // Get women earnings for this month
         const { data: womenEarningsData } = await supabase
