@@ -55,7 +55,8 @@ import {
   Mail,
   ChevronUp,
   ChevronDown,
-  Phone
+  Phone,
+  User
 } from "lucide-react";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
@@ -331,6 +332,20 @@ const DashboardScreen = () => {
       return Math.round(converted);
     }
     return Math.round(converted * 100) / 100;
+  };
+
+  // Format chat timestamps with date context
+  const formatChatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const dayMs = 86400000;
+    if (diff < dayMs && now.getDate() === date.getDate()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (diff < 2 * dayMs && now.getDate() - date.getDate() === 1) return 'Yesterday';
+    if (diff < 7 * dayMs) return date.toLocaleDateString([], { weekday: 'short' });
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
   // Format currency display
@@ -1304,33 +1319,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const quickActions = [
-    { 
-      icon: <Compass className="w-6 h-6" />, 
-      label: t('findMatch', 'Discover'), 
-      color: "from-primary to-primary/80",
-      action: () => navigate("/match-discovery")
-    },
-    { 
-      icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Chats'), 
-      color: "from-primary/90 to-primary/70",
-      action: () => {
-        const el = document.getElementById('parallel-chats-section');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-        } else {
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-      }
-    },
-    { 
-      icon: <UserCircle className="w-6 h-6" />, 
-      label: t('profile', 'My Profile'), 
-      color: "from-primary/80 to-primary/60",
-      action: () => setProfileEditOpen(true)
-    },
-  ];
+  // quickActions removed — not used in WhatsApp-style layout
 
   if (isLoading) {
     return (
@@ -1556,16 +1545,15 @@ const DashboardScreen = () => {
               <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                 <AvatarImage src={chat.partnerPhoto || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                  {chat.partnerName.charAt(0)}
+                  {chat.partnerName?.charAt(0) || <User className="w-5 h-5" />}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-online" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-sm text-foreground truncate">{chat.partnerName}</span>
                 <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                  {new Date(chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatChatTime(chat.lastMessageAt)}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-0.5">
@@ -1673,7 +1661,7 @@ const DashboardScreen = () => {
         <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-lg mb-3">
           <AvatarImage src={userPhoto || undefined} />
           <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-2xl font-bold">
-            {userName?.charAt(0) || "?"}
+            {userName?.charAt(0) || <User className="w-8 h-8" />}
           </AvatarFallback>
         </Avatar>
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>

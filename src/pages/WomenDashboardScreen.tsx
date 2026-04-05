@@ -273,32 +273,24 @@ const WomenDashboardScreen = () => {
     hasBio: false,
   });
 
-  const quickActions = [
-    { 
-      icon: <MessageCircle className="w-6 h-6" />, 
-      label: t('messages', 'Chats'), 
-      color: "from-primary to-primary/80",
-      action: () => navigate("/match-discovery")
-    },
-    { 
-      icon: <Wallet className="w-6 h-6" />, 
-      label: t('withdraw', 'Earnings'), 
-      color: "from-primary/90 to-primary/70",
-      action: () => navigate("/women-wallet")
-    },
-    { 
-      icon: <Heart className="w-6 h-6" />, 
-      label: t('matches', 'Matches'), 
-      color: "from-primary/80 to-primary/60",
-      action: () => navigate("/match-discovery")
-    },
-    { 
-      icon: <User className="w-6 h-6" />, 
-      label: t('profile', 'My Profile'), 
-      color: "from-primary/70 to-primary/50",
-      action: () => setProfileEditOpen(true)
-    },
-  ];
+  // Format chat timestamps with date context
+  const formatChatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const dayMs = 86400000;
+    if (diff < dayMs && now.getDate() === date.getDate()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (diff < 2 * dayMs && now.getDate() - date.getDate() === 1) return 'Yesterday';
+    if (diff < 7 * dayMs) return date.toLocaleDateString([], { weekday: 'short' });
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  // Format currency display (dynamic, not hardcoded ₹)
+  const formatLocalCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -1109,112 +1101,7 @@ const WomenDashboardScreen = () => {
 
   // ScrollableUserList extracted to top-level component to avoid Hooks violation
 
-  const renderUserCard = (user: OnlineMan, isPremium = false) => (
-    <Card 
-      className={cn(
-        "group hover:shadow-lg transition-all duration-300 cursor-pointer",
-        user.isSameLanguage && "ring-2 ring-primary/50",
-        user.walletBalance > 1000 && "border-warning/30 bg-gradient-to-br from-warning/5 to-transparent"
-      )}
-      onClick={() => handleViewProfile(user.userId)}
-    >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-11 w-11 sm:h-14 sm:w-14 border-2 border-background shadow-md">
-              <AvatarImage src={user.photoUrl || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground text-sm sm:text-lg">
-                {user.fullName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            {/* Status indicator: Green=Online, Red=Full */}
-            <div className={cn(
-              "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background",
-              "bg-online"
-            )} title="Available" />
-            {user.walletBalance > 1000 && (
-              <div className="absolute -top-1 -right-1">
-                <Crown className="h-3.5 w-3.5 text-primary" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate max-w-[100px] sm:max-w-none">{user.fullName}</h3>
-              {user.age && (
-                <Badge variant="outline" className="text-[10px] sm:text-xs font-medium px-1.5">
-                  {user.age}
-                </Badge>
-              )}
-              {user.isSameLanguage && (
-                <Badge variant="default" className="text-[9px] sm:text-[10px] bg-primary/90 px-1.5 hidden xs:inline-flex">
-                  Same
-                </Badge>
-              )}
-            </div>
-            
-            {/* Wallet Balance */}
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20">
-                <IndianRupee className="h-3 w-3 text-primary" />
-                <span className="text-xs font-bold text-primary">
-                  ₹{user.walletBalance.toFixed(0)}
-                </span>
-              </div>
-              {isPremium && (
-                <Badge variant="outline" className="text-[9px] bg-primary/10 border-primary/30 text-primary px-1">
-                  <Crown className="h-2.5 w-2.5 mr-0.5" />
-                  Pro
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap mt-1">
-              <div className="flex items-center gap-0.5">
-                <Languages className="h-3 w-3" />
-                <span className="truncate max-w-[60px] sm:max-w-none">{user.motherTongue}</span>
-              </div>
-              {(user.state || user.country) && (
-                <>
-                  <span>•</span>
-                  <div className="flex items-center gap-0.5 truncate">
-                    <MapPin className="h-3 w-3 flex-shrink-0" />
-                    <span className="truncate max-w-[80px] sm:max-w-none">{[user.state, user.country].filter(Boolean).join(", ")}</span>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center gap-1 sm:gap-1.5 mt-2 flex-wrap">
-              <Button 
-                size="sm" 
-                variant="aurora"
-                className="h-7 text-xs gap-1 px-2"
-                onClick={(e) => { e.stopPropagation(); handleStartChatWithUser(user.userId); }}
-                title="Start Chat"
-              >
-                <MessageCircleIcon className="h-3.5 w-3.5" />
-                Chat
-              </Button>
-              {/* Women cannot initiate video/audio calls — they only receive */}
-              <Button 
-                size="sm" 
-                variant="auroraOutline"
-                className="h-7 text-xs gap-1 px-2"
-                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}
-                title={t('viewProfile', 'View Profile')}
-              >
-                <Eye className="h-3.5 w-3.5" />
-                View
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  // renderUserCard removed — replaced by WhatsAppUserCard component
 
   if (isLoading) {
     return (
@@ -1247,7 +1134,7 @@ const WomenDashboardScreen = () => {
           <Badge className={cn("text-[10px] text-primary-foreground", getStatusColor())}>
             {getStatusText()}
           </Badge>
-          <span className="text-xs text-muted-foreground">₹{myWalletBalance.toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground">{formatLocalCurrency(myWalletBalance)}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <MatchFiltersPanel filters={matchFilters} onFiltersChange={setMatchFilters} userCountry={currentWomanCountry} />
@@ -1263,7 +1150,7 @@ const WomenDashboardScreen = () => {
           className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "recharged" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
           onClick={() => setOnlineSubTab("recharged")}
         >
-          💰 Recharged ({sameLanguageMen.length + otherLanguageMen.length})
+          💰 Recharged ({rechargedMen.length})
         </button>
         <button
           className={cn("flex-1 py-2 text-xs font-semibold text-center transition-colors", onlineSubTab === "nobalance" ? "text-primary border-b-2 border-primary" : "text-muted-foreground")}
@@ -1453,16 +1340,15 @@ const WomenDashboardScreen = () => {
               <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
                 <AvatarImage src={chat.partnerPhoto || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
-                  {chat.partnerName.charAt(0)}
+                  {chat.partnerName?.charAt(0) || <User className="w-5 h-5" />}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background bg-online" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-sm text-foreground truncate">{chat.partnerName}</span>
                 <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
-                  {new Date(chat.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatChatTime(chat.lastMessageAt)}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-0.5">
@@ -1586,7 +1472,7 @@ const WomenDashboardScreen = () => {
           </div>
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">Wallet Balance</p>
-            <p className="text-2xl font-bold text-primary">₹{myWalletBalance.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-primary">{formatLocalCurrency(myWalletBalance)}</p>
           </div>
           <Button variant="outline" size="sm" className="gap-1 text-primary border-primary/30" onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}>
             <IndianRupee className="w-3.5 h-3.5" />Withdraw
@@ -1597,7 +1483,7 @@ const WomenDashboardScreen = () => {
       {/* Today's Earnings */}
       <div className="grid grid-cols-2 gap-0 border-b border-border/30">
         <div className="text-center py-4 border-r border-border/30">
-          <p className="text-xl font-bold text-primary">₹{stats.todayEarnings.toFixed(0)}</p>
+          <p className="text-xl font-bold text-primary">{formatLocalCurrency(stats.todayEarnings)}</p>
           <p className="text-[10px] text-muted-foreground">Today's Earnings</p>
         </div>
         <div className="text-center py-4">
@@ -1616,7 +1502,7 @@ const WomenDashboardScreen = () => {
             <p className="text-xs text-muted-foreground">Top Earner Today</p>
             <p className="text-sm font-semibold text-foreground">{biggestEarner.name}</p>
           </div>
-          <span className="text-lg font-bold text-primary">₹{biggestEarner.amount.toLocaleString()}</span>
+          <span className="text-lg font-bold text-primary">{formatLocalCurrency(biggestEarner.amount)}</span>
         </div>
       )}
 
@@ -1657,7 +1543,7 @@ const WomenDashboardScreen = () => {
         <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-lg mb-3">
           <AvatarImage src={userPhoto || undefined} />
           <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-2xl font-bold">
-            {userName?.charAt(0) || "?"}
+            {userName?.charAt(0) || <User className="w-8 h-8" />}
           </AvatarFallback>
         </Avatar>
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
