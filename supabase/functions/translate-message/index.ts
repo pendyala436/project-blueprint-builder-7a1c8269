@@ -259,15 +259,38 @@ async function translateWithPivot(
   // Direct translation if one side is English or source is auto
   if (sourceLang === 'en' || targetLang === 'en' || sourceLang === 'auto') {
     const result = await scrapeGoogleTranslate(text, sourceLang, targetLang);
-    return result || text; // English fallback
+    
+    // Auto-detection failure fix: if source=auto and result equals input,
+    // Google couldn't detect the language. Retry treating input as English.
+    // This handles transliterated text like "bagunnava" → Telugu "బాగున్నావా"
+    if (sourceLang === 'auto' && result && result.trim().toLowerCase() === text.trim().toLowerCase() && targetLang !== 'en') {
+      const retryResult = await scrapeGoogleTranslate(text, 'en', targetLang);
+      if (retryResult && retryResult.trim().toLowerCase() !== text.trim().toLowerCase()) {
+        return retryResult;
+      }
+    }
+    
+    // Auto-detection failure fix for auto→en: if result equals input,
+    // the text might be transliterated. We can't do much here directly,
+    // but we should NOT cache this failure so Strategy C on client side can work.
+    if (sourceLang === 'auto' && targetLang === 'en' && result && result.trim().toLowerCase() === text.trim().toLowerCase()) {
+      // Check if text is Latin script — if so, auto-detect genuinely failed
+      const isLatin = /^[a-zA-Z\u00C0-\u024F\s\d.,!?;:'"()\-]+$/.test(text.trim());
+      if (isLatin) {
+        // Mark as untranslated so it won't be cached
+        return text;
+      }
+    }
+    
+    return result || text;
   }
 
   // Pivot through English: source → en → target
   const toEnglish = await scrapeGoogleTranslate(text, sourceLang, 'en');
-  if (!toEnglish) return text; // English fallback
+  if (!toEnglish) return text;
 
   const toTarget = await scrapeGoogleTranslate(toEnglish, 'en', targetLang);
-  return toTarget || toEnglish; // If target fails, return English (fallback)
+  return toTarget || toEnglish;
 }
 
 /**
