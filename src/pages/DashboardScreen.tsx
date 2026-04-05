@@ -433,7 +433,6 @@ const DashboardScreen = () => {
           const record = payload.new as { user_id?: string; language_name?: string; language_code?: string };
           // Only process if this is our user's language change
           if (record?.user_id === currentUserId && record?.language_name) {
-            console.log("[Dashboard] user_languages INSERT:", record.language_name);
             setUserLanguage(record.language_name);
             setUserLanguageCode(record.language_code || "eng_Latn");
             fetchOnlineWomen(record.language_name);
@@ -447,7 +446,6 @@ const DashboardScreen = () => {
         async (payload) => {
           const newLanguage = (payload.new as { language_name?: string })?.language_name;
           const newCode = (payload.new as { language_code?: string })?.language_code || "eng_Latn";
-          console.log("[Dashboard] user_languages UPDATE:", newLanguage);
           if (newLanguage) {
             setUserLanguage(newLanguage);
             setUserLanguageCode(newCode);
@@ -462,7 +460,6 @@ const DashboardScreen = () => {
         async (payload) => {
           const newProfile = payload.new as { primary_language?: string; preferred_language?: string };
           const newLanguage = newProfile?.primary_language || newProfile?.preferred_language;
-          console.log("[Dashboard] male_profiles language changed:", newLanguage);
           if (newLanguage) {
             setUserLanguage(newLanguage);
             fetchOnlineWomen(newLanguage);
@@ -535,50 +532,52 @@ const DashboardScreen = () => {
       }
 
       const partnerIds = sessions.map(s => s.woman_user_id);
+      const chatIds = sessions.map(s => s.chat_id);
       
-      // Fetch partner profiles and last messages in parallel
+      // Fetch profiles, last messages, and unread counts ALL in parallel (eliminates N+1)
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-      const [profiles, lastMessages] = await Promise.all([
+      const [profiles, lastMsgsRes, unreadRes] = await Promise.all([
         fetchPublicProfiles(partnerIds),
-        Promise.all(sessions.map(async (s) => {
-          const { data } = await supabase
+        // Get last message per chat in a single query
+        Promise.all(sessions.map(s =>
+          supabase
             .from("chat_messages")
-            .select("message, created_at, sender_id, is_read")
+            .select("message, created_at")
             .eq("chat_id", s.chat_id)
             .order("created_at", { ascending: false })
-            .limit(1);
-          
-          // Count unread
-          const { count } = await supabase
-            .from("chat_messages")
-            .select("*", { count: "exact", head: true })
-            .eq("chat_id", s.chat_id)
-            .eq("receiver_id", currentUserId)
-            .eq("is_read", false);
-          
-          return {
-            chatId: s.chat_id,
-            lastMessage: data?.[0]?.message || "",
-            lastMessageAt: data?.[0]?.created_at || s.last_activity_at,
-            unreadCount: count || 0,
-          };
-        }))
+            .limit(1)
+            .then(r => ({ chatId: s.chat_id, msg: r.data?.[0], fallback: s.last_activity_at }))
+        )),
+        // Get all unread counts in a single batch query
+        supabase
+          .from("chat_messages")
+          .select("chat_id", { count: "exact" })
+          .in("chat_id", chatIds)
+          .eq("receiver_id", currentUserId)
+          .eq("is_read", false),
       ]);
 
       const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
-      const messageMap = new Map(lastMessages.map(m => [m.chatId, m]));
+      
+      // Build unread count map from batch result
+      const unreadCountMap = new Map<string, number>();
+      if (unreadRes.data) {
+        for (const row of unreadRes.data) {
+          unreadCountMap.set(row.chat_id, (unreadCountMap.get(row.chat_id) || 0) + 1);
+        }
+      }
 
       const chats = sessions.map(s => {
         const profile = profileMap.get(s.woman_user_id);
-        const msg = messageMap.get(s.chat_id);
+        const msgInfo = lastMsgsRes.find(m => m.chatId === s.chat_id);
         return {
           chatId: s.chat_id,
           partnerId: s.woman_user_id,
           partnerName: profile?.full_name || "User",
           partnerPhoto: profile?.photo_url || null,
-          lastMessage: msg?.lastMessage || "",
-          lastMessageAt: msg?.lastMessageAt || s.last_activity_at,
-          unreadCount: msg?.unreadCount || 0,
+          lastMessage: msgInfo?.msg?.message || "",
+          lastMessageAt: msgInfo?.msg?.created_at || s.last_activity_at,
+          unreadCount: unreadCountMap.get(s.chat_id) || 0,
         };
       });
 
@@ -646,24 +645,27 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Also check female_profiles in case user registered as female but no main profile
-      const { data: femaleProfile } = await supabase
-        .from("female_profiles")
-        .select("user_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Fetch user languages and female_profiles check in parallel
+      const [userLangsResult, femaleCheckResult] = await Promise.all([
+        supabase
+          .from("user_languages")
+          .select("language_name, language_code")
+          .eq("user_id", user.id)
+          .limit(1),
+        // Check female_profiles in case user registered as female but no main profile
+        supabase
+          .from("female_profiles")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      if (femaleProfile) {
+      if (femaleCheckResult.data) {
         navigate("/women-dashboard");
         return;
       }
 
-      // Fetch user's languages
-      const { data: userLanguages } = await supabase
-        .from("user_languages")
-        .select("language_name, language_code")
-        .eq("user_id", user.id)
-        .limit(1);
+      const userLanguages = userLangsResult.data;
 
       // Use main profiles table (single source of truth)
       const motherTongue = userLanguages?.[0]?.language_name || 
@@ -844,7 +846,6 @@ const DashboardScreen = () => {
   };
 
   const fetchOnlineWomen = async (language: string) => {
-    console.log("[Dashboard] fetchOnlineWomen called with language:", language);
     setLoadingOnlineWomen(true);
     try {
       // Get ONLY online user IDs - strict online check
@@ -857,7 +858,6 @@ const DashboardScreen = () => {
       
       // If no users online, show empty lists
       if (onlineUserIds.length === 0) {
-        console.log("[Dashboard] No online users found");
         setSameLanguageWomen([]);
         setIndianTranslatedWomen([]);
         setLoadingOnlineWomen(false);
@@ -876,44 +876,41 @@ const DashboardScreen = () => {
       const onlineWomenList: OnlineWoman[] = femaleProfiles || [];
 
       if (onlineWomenList.length === 0) {
-        console.log("[Dashboard] No online women found");
         setSameLanguageWomen([]);
         setIndianTranslatedWomen([]);
         setLoadingOnlineWomen(false);
         return;
       }
 
-      // Get active chat counts for load balancing
+      // Fetch chat counts, availability, and languages in PARALLEL
       const womenUserIds = onlineWomenList.map(w => w.user_id);
-      const { data: chatCounts } = await supabase
-        .from("active_chat_sessions")
-        .select("woman_user_id, status")
-        .in("woman_user_id", womenUserIds)
-        .in("status", ["active", "pending"]);
+      const [chatCountsRes, availabilityRes, userLanguagesRes] = await Promise.all([
+        supabase
+          .from("active_chat_sessions")
+          .select("woman_user_id, status")
+          .in("woman_user_id", womenUserIds)
+          .in("status", ["active", "pending"]),
+        supabase
+          .from("women_availability")
+          .select("user_id, is_available, current_chat_count, max_concurrent_chats")
+          .in("user_id", womenUserIds),
+        supabase
+          .from("user_languages")
+          .select("user_id, language_name")
+          .in("user_id", womenUserIds),
+      ]);
 
       const chatCountMap = new Map<string, number>();
-      chatCounts?.forEach(chat => {
+      chatCountsRes.data?.forEach(chat => {
         const count = chatCountMap.get(chat.woman_user_id) || 0;
         chatCountMap.set(chat.woman_user_id, count + 1);
       });
 
-      // Get availability data
-      const { data: availabilityData } = await supabase
-        .from("women_availability")
-        .select("user_id, is_available, current_chat_count, max_concurrent_chats")
-        .in("user_id", womenUserIds);
-
       const availabilityMap = new Map(
-        (availabilityData as any[] || []).map(a => [a.user_id, a])
+        (availabilityRes.data as any[] || []).map(a => [a.user_id, a])
       );
 
-      // Get languages
-      const { data: userLanguages } = await supabase
-        .from("user_languages")
-        .select("user_id, language_name")
-        .in("user_id", womenUserIds);
-
-      const languageMap = new Map((userLanguages as any[] || []).map(l => [l.user_id, l.language_name as string]));
+      const languageMap = new Map((userLanguagesRes.data as any[] || []).map(l => [l.user_id, l.language_name as string]));
 
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
@@ -931,17 +928,13 @@ const DashboardScreen = () => {
 
       // Sort: Badged (earning eligible) women first, then by availability and load
       const sortByBadgeAndLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
-        // First: Badged (earning eligible) women on top
         if (a.is_earning_eligible !== b.is_earning_eligible) {
           return a.is_earning_eligible ? -1 : 1;
         }
-        // Second: available vs not available
         if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
-        // Third: not at max capacity
         const aAtMax = a.active_chat_count >= a.max_chats;
         const bAtMax = b.active_chat_count >= b.max_chats;
         if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
-        // Fourth: by chat count (lower first = less load)
         return a.active_chat_count - b.active_chat_count;
       };
 
@@ -956,7 +949,7 @@ const DashboardScreen = () => {
         if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
           if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
         }
-        if (matchFilters.verifiedOnly) return true; // verified field not in RPC result
+        if (matchFilters.verifiedOnly) return true;
         return true;
       });
 
@@ -969,13 +962,10 @@ const DashboardScreen = () => {
         .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
         .sort(sortByBadgeAndLoad);
 
-      console.log("[Dashboard] Online same-language women:", sameLanguage.length);
-      console.log("[Dashboard] Online other-language women:", otherWomen.length);
       setSameLanguageWomen(sameLanguage.slice(0, 10));
       setIndianTranslatedWomen(otherWomen.slice(0, 15));
     } catch (error) {
       console.error("Error fetching online women:", error);
-      // Non-critical - online users list, will retry
       setSameLanguageWomen([]);
       setIndianTranslatedWomen([]);
     } finally {
