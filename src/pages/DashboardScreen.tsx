@@ -1373,7 +1373,7 @@ const DashboardScreen = () => {
                             toast({ title: "Audio Call", description: "₹6/min • Coming soon" });
                           }}
                         >
-                          <Phone className="w-3.5 h-3.5 text-green-600" />
+                          <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
                       {/* Video Call - same language only */}
