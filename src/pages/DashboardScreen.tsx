@@ -43,6 +43,7 @@ import {
   RefreshCw,
   Eye,
   Compass,
+  UserCircle,
   Video,
   Gift,
   Shield,
