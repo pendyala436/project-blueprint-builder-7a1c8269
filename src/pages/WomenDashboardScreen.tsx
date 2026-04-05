@@ -1726,10 +1726,7 @@ const WomenDashboardScreen = () => {
       {/* Profile Edit Dialog */}
       <ProfileEditDialog open={profileEditOpen} onOpenChange={setProfileEditOpen} onProfileUpdated={() => loadDashboardData()} />
 
-      {/* Enhanced Parallel Chat Windows */}
-      {currentUserId && (
-        <EnhancedParallelChatsContainer currentUserId={currentUserId} userGender="female" currentUserLanguage={currentWomanLanguage || "English"} currentUserName={userName} />
-      )}
+      {/* Chat windows removed — chats are async (WhatsApp-style), accessed via Chats tab */}
 
       {/* Incoming Video Call */}
       {incomingCall && (
