@@ -117,7 +117,7 @@ const AdminChatPricing = () => {
           video_women_earning_rate: (menVideo / 2).toFixed(2),
           group_call_rate_per_minute: menGroup.toString(),
           group_call_women_earning_rate: groupWomenEarn.toFixed(2),
-          min_withdrawal_balance: (data.min_withdrawal_balance ?? 5000).toString()
+          min_withdrawal_balance: (data.min_withdrawal_balance ?? 100).toString()
         });
       } else if (!pricing) {
         // No DB row exists — seed with canonical defaults.
