@@ -532,8 +532,14 @@ const AdminUserManagement = () => {
   const handleApproveUser = async (user: UserProfile, approve: boolean) => {
     try {
       const newStatus = approve ? "approved" : "disapproved";
-      const { error } = await supabase.from("profiles").update({ approval_status: newStatus, updated_at: new Date().toISOString() }).eq("id", user.id);
+      const now = new Date().toISOString();
+      // Update both profiles and female_profiles for data consistency
+      const { error } = await supabase.from("profiles").update({ approval_status: newStatus, updated_at: now }).eq("id", user.id);
       if (error) throw error;
+      // Also sync to female_profiles if user is female
+      if (user.gender?.toLowerCase() === "female") {
+        await supabase.from("female_profiles").update({ approval_status: newStatus, updated_at: now }).eq("user_id", user.user_id);
+      }
       toast.success(`User ${approve ? "approved" : "disapproved"} successfully`);
       fetchUsers(); loadStats();
     } catch (error) { console.error("Error approving user:", error); toast.error("Failed to update approval status"); }

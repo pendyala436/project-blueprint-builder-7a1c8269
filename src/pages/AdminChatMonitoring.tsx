@@ -155,6 +155,12 @@ const AdminChatMonitoring = () => {
   const [groupParticipants, setGroupParticipants] = useState<any[]>([]);
 
   // ─── Data loaders ──────────────────────────────────────────────
+  // Use refs for realtime callbacks to avoid recreating the channel on every state change
+  const silentMonitorChatIdRef = useRef(silentMonitorChatId);
+  silentMonitorChatIdRef.current = silentMonitorChatId;
+  const monitoringGroupIdRef = useRef(monitoringGroupId);
+  monitoringGroupIdRef.current = monitoringGroupId;
+
   useEffect(() => {
     loadMessages();
     loadActiveChats();
@@ -166,7 +172,7 @@ const AdminChatMonitoring = () => {
       .channel('chat-monitoring')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
         loadMessages();
-        if (silentMonitorChatId) loadSilentMonitorMessages(silentMonitorChatId);
+        if (silentMonitorChatIdRef.current) loadSilentMonitorMessages(silentMonitorChatIdRef.current);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'active_chat_sessions' }, () => {
         loadActiveChats();
@@ -178,12 +184,12 @@ const AdminChatMonitoring = () => {
         loadLiveGroups();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_messages' }, () => {
-        if (monitoringGroupId) loadGroupMessages(monitoringGroupId);
+        if (monitoringGroupIdRef.current) loadGroupMessages(monitoringGroupIdRef.current);
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [filterStatus, filterFlagged, silentMonitorChatId, monitoringGroupId]);
+  }, [filterStatus, filterFlagged]);
 
   const loadMessages = async () => {
     try {

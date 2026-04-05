@@ -118,19 +118,21 @@ const AdminPolicyAlerts = () => {
 
   const loadStats = useCallback(async () => {
     try {
-      const { data: allAlerts } = await supabase
-        .from("policy_violation_alerts")
-        .select("status, severity");
-
-      if (allAlerts) {
-        setStats({
-          pending: allAlerts.filter(a => a.status === "pending").length,
-          reviewing: allAlerts.filter(a => a.status === "reviewing").length,
-          resolved: allAlerts.filter(a => a.status === "resolved").length,
-          critical: allAlerts.filter(a => a.severity === "critical").length,
-          high: allAlerts.filter(a => a.severity === "high").length,
-        });
-      }
+      // Use server-side count queries instead of fetching all rows
+      const [pending, reviewing, resolved, critical, high] = await Promise.all([
+        supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "reviewing"),
+        supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "resolved"),
+        supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("severity", "critical"),
+        supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("severity", "high"),
+      ]);
+      setStats({
+        pending: pending.count || 0,
+        reviewing: reviewing.count || 0,
+        resolved: resolved.count || 0,
+        critical: critical.count || 0,
+        high: high.count || 0,
+      });
     } catch (error) {
       console.error("Error loading stats:", error);
       toast.error("Stats unavailable", { description: "Unable to load policy alert statistics. Please refresh." });
