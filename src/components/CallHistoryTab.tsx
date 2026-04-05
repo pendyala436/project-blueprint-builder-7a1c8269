@@ -66,7 +66,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .select("*")
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(50);
 
       // 2. Video call sessions
       const { data: videoSessions } = await supabase
@@ -74,7 +74,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .select("*")
         .or(`man_user_id.eq.${currentUserId},woman_user_id.eq.${currentUserId}`)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(30);
 
       // 3. Group call participation (via group_video_access)
       const { data: groupAccess } = await supabase
