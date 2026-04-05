@@ -399,8 +399,16 @@ const DashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'active_chat_sessions' },
-        () => { loadActiveChatCount(); }
+        { event: 'UPDATE', schema: 'public', table: 'active_chat_sessions', filter: `man_user_id=eq.${currentUserId}` },
+        (payload: any) => {
+          loadActiveChatCount();
+          fetchActiveChats();
+          // Recycled session (ended → active) means someone started a new chat with us
+          if (payload.new?.status === 'active' && payload.old?.status === 'ended') {
+            playMessageSound();
+            toast({ title: 'New Chat', description: 'You have a new conversation!' });
+          }
+        }
       )
       .on(
         'postgres_changes',
@@ -536,14 +544,42 @@ const DashboardScreen = () => {
     if (!currentUserId) return;
     setLoadingChats(true);
     try {
-      const { data: sessions } = await supabase
-        .from("active_chat_sessions")
-        .select("chat_id, woman_user_id, started_at, last_activity_at, status")
-        .eq("man_user_id", currentUserId)
-        .in("status", ["active", "pending"])
-        .order("last_activity_at", { ascending: false });
+      // Fetch active/pending sessions AND ended sessions with unread messages
+      // This ensures WhatsApp-style async chats remain visible even if
+      // partner_offline briefly ended the session
+      const [activeRes, unreadChatIdsRes] = await Promise.all([
+        supabase
+          .from("active_chat_sessions")
+          .select("chat_id, woman_user_id, started_at, last_activity_at, status")
+          .eq("man_user_id", currentUserId)
+          .in("status", ["active", "pending"])
+          .order("last_activity_at", { ascending: false }),
+        supabase
+          .from("chat_messages")
+          .select("chat_id")
+          .eq("receiver_id", currentUserId)
+          .eq("is_read", false),
+      ]);
 
-      if (!sessions || sessions.length === 0) {
+      const unreadChatIds = new Set((unreadChatIdsRes.data || []).map((r: any) => r.chat_id));
+      let sessions = activeRes.data || [];
+
+      // If there are unread messages in ended sessions, fetch those too
+      if (unreadChatIds.size > 0) {
+        const activeChatIds = new Set(sessions.map(s => s.chat_id));
+        const missingChatIds = [...unreadChatIds].filter(id => !activeChatIds.has(id));
+        if (missingChatIds.length > 0) {
+          const { data: endedSessions } = await supabase
+            .from("active_chat_sessions")
+            .select("chat_id, woman_user_id, started_at, last_activity_at, status")
+            .eq("man_user_id", currentUserId)
+            .in("chat_id", missingChatIds)
+            .order("last_activity_at", { ascending: false });
+          if (endedSessions) sessions = [...sessions, ...endedSessions];
+        }
+      }
+
+      if (sessions.length === 0) {
         setActiveChats([]);
         setLoadingChats(false);
         return;
