@@ -267,7 +267,7 @@ const AdminDashboard = () => {
         supabase.from("user_status").select("*", { count: "exact", head: true }).eq("is_online", true),
         supabase.from("active_chat_sessions").select("*", { count: "exact", head: true }).eq("status", "active"),
         supabase.from("chat_messages").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending").ilike("gender", "female"),
+        supabase.from("female_profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
         supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("ledger_transactions").select("credit").eq("transaction_type", "recharge").gte("created_at", `${today}T00:00:00`),
       ]);
