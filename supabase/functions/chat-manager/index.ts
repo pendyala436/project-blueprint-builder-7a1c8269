@@ -1082,10 +1082,11 @@ serve(async (req) => {
             session = existingSession;
             console.log(`[START_CHAT] Reusing existing active session ${existingSession.id} for chat ${chatId}`);
           } else if (existingSession.status === "pending") {
-            // Touch the pending session so realtime UPDATE fires and women see the popup
+            // Activate the pending session (chat is async now)
             const { data: touchedSession, error: touchError } = await supabase
               .from("active_chat_sessions")
               .update({
+                status: "active",
                 started_at: new Date().toISOString(),
                 last_activity_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -1094,7 +1095,7 @@ serve(async (req) => {
               .select()
               .single();
             session = touchError ? existingSession : touchedSession;
-            console.log(`[START_CHAT] Touched pending session ${existingSession.id} for chat ${chatId}`);
+            console.log(`[START_CHAT] Activated pending session ${existingSession.id} for chat ${chatId}`);
           } else {
             // Session exists but is ended/inactive — recycle it by updating in-place
             // This avoids FK constraint violations from women_earnings references
@@ -1104,7 +1105,7 @@ serve(async (req) => {
                 man_user_id,
                 woman_user_id,
                 rate_per_minute: ratePerMinute,
-                status: "pending",
+                status: "active",
                 started_at: new Date().toISOString(),
                 ended_at: null,
                 end_reason: null,
@@ -1133,7 +1134,8 @@ serve(async (req) => {
               man_user_id,
               woman_user_id,
               rate_per_minute: ratePerMinute,
-              status: "pending"
+              status: "active",
+              started_at: new Date().toISOString()
             })
             .select()
             .single();
@@ -1160,12 +1162,12 @@ serve(async (req) => {
           }
         }
 
-        // NOTE: Woman's availability count is NOT updated here.
-        // It will be updated by the DB trigger when the session transitions from 'pending' to 'active'
-        // (i.e., when the woman accepts the chat).
-
-        // Update man's status only (woman's status stays unchanged until she accepts)
-        await updateUserStatus(man_user_id);
+        // Chat is now async (WhatsApp-style) — session starts as 'active' immediately
+        // Update both users' status
+        await Promise.all([
+          updateUserStatus(man_user_id),
+          updateUserStatus(woman_user_id)
+        ]);
 
         console.log(`Chat started: ${chatId}`);
 
