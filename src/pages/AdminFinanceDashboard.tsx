@@ -254,6 +254,7 @@ const AdminFinanceDashboard = () => {
 
   const totalRevenue = dailyRevenue.reduce((sum, d) => sum + d.revenue, 0);
   const totalTransactions = walletTransactions.length + giftTransactions.length;
+  // FIX #4: Gift revenue is informational only — already included in recharge deposits
   const giftRevenue = giftTransactions.reduce((sum, t) => sum + Number(t.price_paid), 0);
   const totalProfit = totalRevenue - totalWithdrawals;
 
