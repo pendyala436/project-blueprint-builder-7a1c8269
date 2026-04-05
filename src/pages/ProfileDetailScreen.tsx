@@ -643,27 +643,16 @@ const ProfileDetailScreen = () => {
             {isLiked ? t('liked', 'Liked') : t('like', 'Like')}
           </Button>
 
-          {/* Chat Button - Only for men or Golden Badge women */}
-          {(currentUserGender === "male" || hasGoldenBadge) && (
-            <Button
-              variant="auroraOutline"
-              className="flex-1 h-14 text-lg gap-2"
-              onClick={handleChat}
-            >
-              <MessageCircle className="w-6 h-6" />
-              {t('chat', 'Chat')}
-            </Button>
-          )}
+          {/* Chat Button */}
+          <Button
+            variant="auroraOutline"
+            className="flex-1 h-14 text-lg gap-2"
+            onClick={handleChat}
+          >
+            <MessageCircle className="w-6 h-6" />
+            {t('chat', 'Chat')}
+          </Button>
         </div>
-
-        {/* View-only notice for women without Golden Badge */}
-        {currentUserGender === "female" && !hasGoldenBadge && (
-          <Card className="p-4 animate-fade-in bg-muted/50 border-border" style={{ animationDelay: "0.25s" }}>
-            <p className="text-sm text-muted-foreground text-center">
-              {t('viewOnlyMode', 'View-only mode — wait for men to send you a chat or video call request, or purchase a Golden Badge to initiate.')}
-            </p>
-          </Card>
-        )}
 
         {/* Online Status Card */}
         <Card className={`p-4 animate-fade-in border-2 transition-colors ${
