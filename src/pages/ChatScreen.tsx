@@ -105,6 +105,8 @@ import { ForwardDialog } from "@/components/chat/ForwardDialog";
 import { PinnedMessages } from "@/components/chat/PinnedMessages";
 import { MessageReactions } from "@/components/chat/MessageReactions";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
+import { useIncomingCalls } from "@/hooks/useIncomingCalls";
+import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
