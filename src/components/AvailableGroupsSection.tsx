@@ -96,12 +96,13 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchGroups = async () => {
     try {
-      // Fetch ALL active groups — live groups shown first with Join button, offline groups shown as waiting
+      // Men only see LIVE groups (where a host is actively streaming)
       const { data, error } = await supabase
         .from('private_groups')
         .select('*')
         .eq('is_active', true)
-        .order('is_live', { ascending: false })
+        .eq('is_live', true)
+        .not('current_host_id', 'is', null)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -237,14 +238,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="font-medium">No private groups available</p>
-          <p className="text-sm">Groups will appear here once they are created by the admin.</p>
+          <p className="font-medium">No live groups right now</p>
+          <p className="text-sm">Groups will appear here when a host goes live.</p>
         </CardContent>
       </Card>
     );
   }
 
-  const liveCount = groups.filter(g => g.is_live && g.current_host_id).length;
+  const liveCount = groups.length;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
@@ -261,7 +262,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Badge variant="outline" className="text-xs">
-            {liveCount} Live / {groups.length} Total
+            {liveCount} Live
           </Badge>
         </div>
       </div>
@@ -275,22 +276,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {groups.map((group) => {
-          const isLive = group.is_live && !!group.current_host_id;
+          const isLive = true; // All groups in this list are live
           const isFull = group.participant_count >= MAX_PARTICIPANTS;
           const isJoining = joiningGroupId === group.id;
 
           return (
-            <Card key={group.id} className={cn("relative overflow-hidden", isLive ? "border-destructive/30" : "border-muted opacity-75")}>
-              {isLive ? (
-                <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
-                  <Radio className="h-3 w-3 animate-pulse" />
-                  LIVE
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="absolute top-2 right-2 gap-1 z-10 text-muted-foreground">
-                  OFFLINE
-                </Badge>
-              )}
+            <Card key={group.id} className={cn("relative overflow-hidden border-destructive/30")}>
+              <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
+                <Radio className="h-3 w-3 animate-pulse" />
+                LIVE
+              </Badge>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">{FLOWER_EMOJIS[group.name] || '🌸'}</div>
@@ -303,13 +298,6 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Show host offline message for non-live groups */}
-                {!isLive && (
-                  <div className="p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-                    ⚠️ Host has not logged in or gone live yet. You can join once the host starts the session.
-                  </div>
-                )}
-
                 {group.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
                 )}
@@ -326,14 +314,14 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleJoinGroup(group)}
-                  disabled={!isLive || !hasEnoughBalance || isFull || isJoining}
+                  disabled={!hasEnoughBalance || isFull || isJoining}
                 >
                   {isJoining ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Video className="h-4 w-4" />
                   )}
-                  {!isLive ? 'Host Offline' : isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
+                  {isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
                 </Button>
               </CardContent>
             </Card>

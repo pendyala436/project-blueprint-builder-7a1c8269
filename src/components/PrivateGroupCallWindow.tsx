@@ -460,10 +460,7 @@ export function PrivateGroupCallWindow({
 
   return (
     <div className={cn(
-      "fixed z-50 flex flex-col overflow-hidden select-none",
-      isFullscreen
-        ? "inset-0"
-        : "bottom-4 right-4 w-[900px] h-[650px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] rounded-2xl shadow-2xl border border-white/10"
+      "fixed inset-0 z-[130] flex flex-col overflow-hidden select-none bg-black",
     )}>
       {/* ─── Video Layer (Full Background) ───────────────────────── */}
       <div className="absolute inset-0">
@@ -553,9 +550,7 @@ export function PrivateGroupCallWindow({
               {formatTime(remainingTime)}
             </Badge>
           )}
-          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={() => setIsFullscreen(!isFullscreen)}>
-            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </Button>
+          {/* Fullscreen toggle removed — always fullscreen */}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>
