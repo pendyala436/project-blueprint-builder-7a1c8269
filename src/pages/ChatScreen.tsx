@@ -190,6 +190,7 @@ const ChatScreen = () => {
   
   // Toast notifications hook
   const { toast } = useToast();
+  const { playMessageSound } = useMessageSound();
   
   // ============= STATE DECLARATIONS =============
   
