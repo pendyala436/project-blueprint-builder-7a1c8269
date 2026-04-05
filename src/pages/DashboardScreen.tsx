@@ -57,7 +57,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
-import { RandomChatButton } from "@/components/RandomChatButton";
+// RandomChatButton removed — not used in WhatsApp-style layout
 import VideoCallMiniButton from "@/components/VideoCallMiniButton";
 import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import DirectAudioCallButton from "@/components/DirectAudioCallButton";
