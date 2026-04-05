@@ -298,17 +298,6 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {/* Show host offline message for non-live groups */}
-                {!isLive && (
-                  <div className="p-2 rounded-md bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
-                    ⚠️ Host has not logged in or gone live yet. You can join once the host starts the session.
-                  </div>
-                )}
-
-                {group.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
-                )}
-                <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
                     {group.participant_count}/{MAX_PARTICIPANTS}
