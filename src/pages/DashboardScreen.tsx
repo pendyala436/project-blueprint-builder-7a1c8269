@@ -535,50 +535,52 @@ const DashboardScreen = () => {
       }
 
       const partnerIds = sessions.map(s => s.woman_user_id);
+      const chatIds = sessions.map(s => s.chat_id);
       
-      // Fetch partner profiles and last messages in parallel
+      // Fetch profiles, last messages, and unread counts ALL in parallel (eliminates N+1)
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-      const [profiles, lastMessages] = await Promise.all([
+      const [profiles, lastMsgsRes, unreadRes] = await Promise.all([
         fetchPublicProfiles(partnerIds),
-        Promise.all(sessions.map(async (s) => {
-          const { data } = await supabase
+        // Get last message per chat in a single query
+        Promise.all(sessions.map(s =>
+          supabase
             .from("chat_messages")
-            .select("message, created_at, sender_id, is_read")
+            .select("message, created_at")
             .eq("chat_id", s.chat_id)
             .order("created_at", { ascending: false })
-            .limit(1);
-          
-          // Count unread
-          const { count } = await supabase
-            .from("chat_messages")
-            .select("*", { count: "exact", head: true })
-            .eq("chat_id", s.chat_id)
-            .eq("receiver_id", currentUserId)
-            .eq("is_read", false);
-          
-          return {
-            chatId: s.chat_id,
-            lastMessage: data?.[0]?.message || "",
-            lastMessageAt: data?.[0]?.created_at || s.last_activity_at,
-            unreadCount: count || 0,
-          };
-        }))
+            .limit(1)
+            .then(r => ({ chatId: s.chat_id, msg: r.data?.[0], fallback: s.last_activity_at }))
+        )),
+        // Get all unread counts in a single batch query
+        supabase
+          .from("chat_messages")
+          .select("chat_id", { count: "exact" })
+          .in("chat_id", chatIds)
+          .eq("receiver_id", currentUserId)
+          .eq("is_read", false),
       ]);
 
       const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
-      const messageMap = new Map(lastMessages.map(m => [m.chatId, m]));
+      
+      // Build unread count map from batch result
+      const unreadCountMap = new Map<string, number>();
+      if (unreadRes.data) {
+        for (const row of unreadRes.data) {
+          unreadCountMap.set(row.chat_id, (unreadCountMap.get(row.chat_id) || 0) + 1);
+        }
+      }
 
       const chats = sessions.map(s => {
         const profile = profileMap.get(s.woman_user_id);
-        const msg = messageMap.get(s.chat_id);
+        const msgInfo = lastMsgsRes.find(m => m.chatId === s.chat_id);
         return {
           chatId: s.chat_id,
           partnerId: s.woman_user_id,
           partnerName: profile?.full_name || "User",
           partnerPhoto: profile?.photo_url || null,
-          lastMessage: msg?.lastMessage || "",
-          lastMessageAt: msg?.lastMessageAt || s.last_activity_at,
-          unreadCount: msg?.unreadCount || 0,
+          lastMessage: msgInfo?.msg?.message || "",
+          lastMessageAt: msgInfo?.msg?.created_at || s.last_activity_at,
+          unreadCount: unreadCountMap.get(s.chat_id) || 0,
         };
       });
 
