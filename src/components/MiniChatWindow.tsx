@@ -850,6 +850,11 @@ const MiniChatWindow = ({
                 </Badge>
               )}
             </div>
+            {isFreeChatMode && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1 border-amber-400 text-amber-600">
+                ⏱ Free {Math.floor(freeChatRemainingSeconds / 60)}:{String(freeChatRemainingSeconds % 60).padStart(2, '0')}
+              </Badge>
+            )}
             {billingStarted && (
               <div className="flex items-center gap-1 text-[10px]">
                 <Clock className="h-2 w-2 text-muted-foreground" />
