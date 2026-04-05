@@ -23,7 +23,7 @@
  */
 
 // ============= IMPORTS SECTION =============
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminNav from "@/components/AdminNav";
 // Navigation hook for page redirects
 import { useNavigate } from 'react-router-dom';
@@ -210,12 +210,12 @@ const AdminModerationScreen = () => {
    * 
    * Loads all moderation data in parallel.
    */
-  const loadData = async () => {
+  // FIX #37: Wrap loadData in useCallback
+  const loadData = useCallback(async () => {
     setLoading(true);
-    // Load all data types concurrently
     await Promise.all([loadReports(), loadFlaggedMessages(), loadBlockedUsers()]);
     setLoading(false);
-  };
+  }, []);
 
   /**
    * loadReports Function

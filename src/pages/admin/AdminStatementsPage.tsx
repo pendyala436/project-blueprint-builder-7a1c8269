@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,14 @@ const AdminStatementsPage = () => {
   const [loading,     setLoading]     = useState(false);
   const [detailLoad,  setDetailLoad]  = useState(false);
   const [generating,  setGenerating]  = useState(false);
+  const [realtimeTick, setRealtimeTick] = useState(0);
+
+  // FIX #1: Realtime subscription for statements — triggers re-search
+  useRealtimeSubscription({
+    table: "monthly_statements" as any,
+    onUpdate: () => setRealtimeTick(t => t + 1),
+    enabled: isAdmin,
+  });
 
   // ── Auth guard
   useEffect(() => {
@@ -138,7 +147,7 @@ const AdminStatementsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, genderTab, userFilter, yearFilter, monthFilter]);
+  }, [isAdmin, genderTab, userFilter, yearFilter, monthFilter, realtimeTick]);
 
   useEffect(() => { search(); }, [search]);
 
