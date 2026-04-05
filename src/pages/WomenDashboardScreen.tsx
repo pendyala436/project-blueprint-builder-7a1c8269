@@ -1747,6 +1747,7 @@ const WomenDashboardScreen = () => {
 
       {activeTab === "chats" && renderChatsTab()}
       {activeTab === "users" && renderUsersTab()}
+      {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
       {activeTab === "profile" && renderProfileTab()}
 
