@@ -962,7 +962,7 @@ const DashboardScreen = () => {
         if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
           if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
         }
-        if (matchFilters.verifiedOnly && !w.is_verified) return false;
+        if (matchFilters.verifiedOnly) return true; // verified field not in RPC result
         return true;
       });
 
