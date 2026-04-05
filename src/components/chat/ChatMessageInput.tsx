@@ -24,6 +24,7 @@ export function getNativeLabels(language?: string) {
 interface ChatMessageInputProps {
   onSendMessage: (message: string) => void;
   onTyping?: (isTyping: boolean) => void;
+  onInputChange?: (text: string) => void;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
@@ -34,6 +35,7 @@ interface ChatMessageInputProps {
 export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   onSendMessage,
   onTyping,
+  onInputChange,
   disabled = false,
   placeholder,
   className,
@@ -108,13 +110,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     const value = e.target.value;
     if (value.length > maxLength) return;
     setMessage(value);
+    onInputChange?.(value);
 
     if (onTyping) {
       onTyping(value.length > 0);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [onTyping, maxLength]);
+  }, [onTyping, onInputChange, maxLength]);
 
   const handleSend = useCallback(async () => {
     const text = message.trim().replace(/<[^>]*>/g, "");

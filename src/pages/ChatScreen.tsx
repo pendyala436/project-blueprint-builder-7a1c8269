@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import MeowLogo from "@/components/MeowLogo";
 import { translateForViewer } from "@/lib/translation-service";
+import { Loader2 as PreviewSpinner } from 'lucide-react';
 import { moderateMessage } from '@/lib/content-moderation';
 // Toast notifications hook
 import { useToast } from "@/hooks/use-toast";
@@ -238,6 +239,13 @@ const ChatScreen = () => {
   const [partnerDisconnected, setPartnerDisconnected] = useState(false);
   const [showStopChatDialog, setShowStopChatDialog] = useState(false);
   const [isStoppingChat, setIsStoppingChat] = useState(false);
+  
+  // Typing preview state (native + English subtitle while typing)
+  const [previewNative, setPreviewNative] = useState("");
+  const [previewEnglish, setPreviewEnglish] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [typingText, setTypingText] = useState("");
+  const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
   
@@ -613,6 +621,35 @@ const ChatScreen = () => {
       supabase.removeChannel(sessionChannel);
     };
   }, [chatPartner?.userId, currentUserId, currentUserGender, isSessionActive, handleAutoReconnect, toast]);
+
+  // Typing preview: debounce 600ms, show native script + English subtitle
+  useEffect(() => {
+    if (!typingText.trim()) {
+      setPreviewNative("");
+      setPreviewEnglish("");
+      setIsPreviewLoading(false);
+      return;
+    }
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    setIsPreviewLoading(true);
+    previewDebounceRef.current = setTimeout(() => {
+      let cancelled = false;
+      const senderLang = currentUserLanguageRef.current || 'English';
+      translateForViewer(typingText.trim(), senderLang, senderLang).then(result => {
+        if (!cancelled) {
+          setPreviewNative(result.nativeText);
+          setPreviewEnglish(result.englishText);
+          setIsPreviewLoading(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setIsPreviewLoading(false);
+      });
+      return () => { cancelled = true; };
+    }, 600);
+    return () => {
+      if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    };
+  }, [typingText]);
 
   /**
    * translateHistoryMessages
@@ -2060,11 +2097,36 @@ const ChatScreen = () => {
             </div>
           )}
           
+          {/* Typing preview — native script + English subtitle */}
+          {typingText.trim() && (previewNative || isPreviewLoading) && (
+            <div className="mx-4 mb-1 px-3 py-2 rounded-lg bg-muted/50 border border-border/30">
+              {isPreviewLoading ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Translating preview...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm unicode-text text-foreground" dir="auto">{previewNative}</p>
+                  {previewEnglish && previewEnglish.toLowerCase() !== previewNative.toLowerCase() && (
+                    <p className="text-[10px] text-muted-foreground/70 italic mt-0.5" dir="ltr">
+                      english: {previewEnglish.toLowerCase()}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          
           {/* Simple Chat Input */}
           <ChatMessageInput
             onSendMessage={async (msg) => {
               await handleSendMessage(msg);
+              setTypingText("");
+              setPreviewNative("");
+              setPreviewEnglish("");
             }}
+            onInputChange={setTypingText}
             disabled={isSending || isBlocked || isBlockedByPartner}
             userLanguage={currentUserLanguage || "english"}
           />
