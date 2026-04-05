@@ -2097,11 +2097,36 @@ const ChatScreen = () => {
             </div>
           )}
           
+          {/* Typing preview — native script + English subtitle */}
+          {typingText.trim() && (previewNative || isPreviewLoading) && (
+            <div className="mx-4 mb-1 px-3 py-2 rounded-lg bg-muted/50 border border-border/30">
+              {isPreviewLoading ? (
+                <div className="flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Translating preview...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm unicode-text text-foreground" dir="auto">{previewNative}</p>
+                  {previewEnglish && previewEnglish.toLowerCase() !== previewNative.toLowerCase() && (
+                    <p className="text-[10px] text-muted-foreground/70 italic mt-0.5" dir="ltr">
+                      english: {previewEnglish.toLowerCase()}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          
           {/* Simple Chat Input */}
           <ChatMessageInput
             onSendMessage={async (msg) => {
               await handleSendMessage(msg);
+              setTypingText("");
+              setPreviewNative("");
+              setPreviewEnglish("");
             }}
+            onInputChange={setTypingText}
             disabled={isSending || isBlocked || isBlockedByPartner}
             userLanguage={currentUserLanguage || "english"}
           />
