@@ -32,7 +32,7 @@ export const UserActivityProvider = ({ children }: { children: React.ReactNode }
       if (now - lastEventTime < THROTTLE_MS) return;
       lastEventTime = now;
       lastActivityRef.current = now;
-      setLastActivityTime(now);
+      lastActivityTimeRef.current = now;
       subscribersRef.current.forEach(cb => cb());
     };
 
