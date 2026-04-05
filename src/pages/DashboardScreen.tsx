@@ -1737,7 +1737,7 @@ const DashboardScreen = () => {
         onLogout={handleLogout}
         unreadNotifications={stats.unreadNotifications}
         onNotifications={() => {
-          setActiveTab("chats");
+          setActiveTab("online");
           setTimeout(() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' }), 100);
         }}
       />
