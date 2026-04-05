@@ -1198,61 +1198,72 @@ const ChatScreen = () => {
 
     setIsSending(true);
 
-    // Add optimistic message immediately so sender sees it right away
+    // Add optimistic message immediately so sender sees the exact same content as the preview
     const tempId = `temp-${Date.now()}`;
     const senderLang = currentUserLanguageRef.current || 'English';
+    const canReusePreview =
+      typingText.trim() === messageText &&
+      !isPreviewLoading &&
+      (!!previewNative.trim() || !!previewEnglish.trim());
+
+    const optimisticTranslatedMessage = canReusePreview ? (previewNative.trim() || undefined) : undefined;
+    const optimisticEnglishText = canReusePreview ? (previewEnglish.trim() || undefined) : undefined;
+
     setMessages(prev => [...prev, {
       id: tempId,
       senderId: currentUserId,
       message: messageText,
+      translatedMessage: optimisticTranslatedMessage,
+      englishText: optimisticEnglishText,
+      isTranslated: !!optimisticTranslatedMessage && optimisticTranslatedMessage !== messageText,
       isRead: false,
-      isTranslating: true,
+      isTranslating: !canReusePreview,
       createdAt: new Date().toISOString(),
     }]);
 
-    // Translate optimistic message for sender's own view (native script + English subtitle)
-    // Pass senderLang as 3rd arg so Strategy C (transliteration bridge) fires for Latin input
-    translateForViewer(messageText, senderLang, senderLang).then(result => {
-      setMessages(prev => prev.map(m => {
-        // Match by tempId OR by mapped real ID (race condition fix)
-        const realId = tempToRealIdRef.current.get(tempId);
-        if (m.id === tempId || (realId && m.id === realId)) {
-          return {
-            ...m,
-            translatedMessage: result.nativeText,
-            englishText: result.englishText,
-            isTranslated: result.nativeText !== messageText,
-            isTranslating: false,
-          };
-        }
-        return m;
-      }));
-      // Clean up mapping
-      tempToRealIdRef.current.delete(tempId);
-    }).catch(() => {
-      // Fallback: at least get English subtitle
-      import("@/lib/translation-service").then(({ getEnglishTranslation }) => {
-        getEnglishTranslation(messageText, 'auto').then(eng => {
-          setMessages(prev => prev.map(m => {
-            const realId = tempToRealIdRef.current.get(tempId);
-            if (m.id === tempId || (realId && m.id === realId)) {
-              return { ...m, englishText: eng, isTranslating: false };
-            }
-            return m;
-          }));
-          tempToRealIdRef.current.delete(tempId);
-        }).catch(() => {
-          setMessages(prev => prev.map(m => {
-            const realId = tempToRealIdRef.current.get(tempId);
-            if (m.id === tempId || (realId && m.id === realId)) {
-              return { ...m, isTranslating: false };
-            }
-            return m;
-          }));
-          tempToRealIdRef.current.delete(tempId);
+    // If preview already resolved, keep that exact result instead of recalculating
+    if (!canReusePreview) {
+      // Translate optimistic message for sender's own view (native script + English subtitle)
+      // Pass senderLang as 3rd arg so Strategy C (transliteration bridge) fires for Latin input
+      translateForViewer(messageText, senderLang, senderLang).then(result => {
+        setMessages(prev => prev.map(m => {
+          const realId = tempToRealIdRef.current.get(tempId);
+          if (m.id === tempId || (realId && m.id === realId)) {
+            return {
+              ...m,
+              translatedMessage: result.nativeText,
+              englishText: result.englishText,
+              isTranslated: result.nativeText !== messageText,
+              isTranslating: false,
+            };
+          }
+          return m;
+        }));
+        tempToRealIdRef.current.delete(tempId);
+      }).catch(() => {
+        import("@/lib/translation-service").then(({ getEnglishTranslation }) => {
+          getEnglishTranslation(messageText, 'auto').then(eng => {
+            setMessages(prev => prev.map(m => {
+              const realId = tempToRealIdRef.current.get(tempId);
+              if (m.id === tempId || (realId && m.id === realId)) {
+                return { ...m, englishText: eng, isTranslating: false };
+              }
+              return m;
+            }));
+            tempToRealIdRef.current.delete(tempId);
+          }).catch(() => {
+            setMessages(prev => prev.map(m => {
+              const realId = tempToRealIdRef.current.get(tempId);
+              if (m.id === tempId || (realId && m.id === realId)) {
+                return { ...m, isTranslating: false };
+              }
+              return m;
+            }));
+            tempToRealIdRef.current.delete(tempId);
+          });
         });
       });
-    });
+    }
 
     try {
       const { error } = await supabase
