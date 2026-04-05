@@ -1424,14 +1424,19 @@ const ChatScreen = () => {
         return m;
       }));
 
-      const { error } = await supabase
-        .from("chat_messages")
-        .insert({
+      const insertData: any = {
           chat_id: chatId.current,
           sender_id: currentUserId,
           receiver_id: chatPartner.userId,
           message: actualMessage,
-        });
+        };
+      if (replyTo) {
+        insertData.reply_to_id = replyTo.id;
+        setReplyTo(null);
+      }
+      const { error } = await supabase
+        .from("chat_messages")
+        .insert(insertData);
 
       if (error) {
         // Remove optimistic message on failure
