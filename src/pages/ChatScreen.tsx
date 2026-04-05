@@ -60,32 +60,6 @@ import {
   Trash2,
   Pin
 } from "lucide-react";
-  ArrowLeft,    // Back navigation icon
-  Send,         // Send message icon
-  Circle,       // Status indicator
-  
-  Loader2,      // Loading spinner
-  MoreVertical, // Options menu icon
-  Check,        // Single check (sent)
-  CheckCheck,   // Double check (read)
-  Paperclip,    // Attachment icon
-  Image,        // Image upload icon
-  FileText,     // File upload icon
-  Camera,       // Selfie/camera icon
-  X,            // Close icon
-  UserPlus,     // Add friend icon
-  UserMinus,    // Remove friend icon
-  Ban,          // Block icon
-  Shield,       // Unblock icon
-  Heart,        // Friend icon
-  AlertTriangle, // Warning icon
-  PhoneOff,     // Stop chat icon
-  LogOut,       // Leave chat icon
-  Home,         // Home navigation icon
-  Phone,        // Audio call icon
-  Video,        // Video call icon
-  Trash2        // Delete message icon
-} from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
