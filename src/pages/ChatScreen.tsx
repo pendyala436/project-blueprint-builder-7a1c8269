@@ -769,12 +769,17 @@ const ChatScreen = () => {
 
       // Fetch wallet balance for call buttons
       if (userGender === "male") {
-        const { data: walletData } = await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        setWalletBalance(Number(walletData?.balance) || 0);
+        try {
+          const { data: walletRpc } = await supabase.rpc('get_men_wallet_balance', {
+            p_user_id: user.id
+          });
+          if (walletRpc) {
+            const wd = walletRpc as Record<string, number>;
+            setWalletBalance(Number(wd.balance) || 0);
+          }
+        } catch {
+          console.warn('[Chat] Wallet balance fetch failed');
+        }
       }
 
       // ============= FETCH PARTNER PROFILE =============
