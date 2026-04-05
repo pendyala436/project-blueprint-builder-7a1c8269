@@ -378,8 +378,8 @@ const AdminFinanceReports = () => {
         
         const amount = Math.abs((txn as any).debit || 0);
         existing.total_spent += amount;
-        if (["chat_charge", "video_call_charge", "group_call_charge"].includes((txn as any).transaction_type)) existing.chat_spending += amount;
-        if ((txn as any).transaction_type === "gift_purchase") existing.gift_spending += amount;
+        if (["chat_debit", "video_debit", "audio_debit", "group_call_debit"].includes((txn as any).transaction_type)) existing.chat_spending += amount;
+        if ((txn as any).transaction_type === "gift_debit") existing.gift_spending += amount;
         
         menSpendingMap.set(txn.user_id, existing);
       });
