@@ -1296,12 +1296,13 @@ const ChatScreen = () => {
     if (file) {
       // Accept by MIME type OR by common image extension (some devices report empty/wrong MIME)
       const ext = file.name.split(".").pop()?.toLowerCase() || "";
-      const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "avif", "svg"];
-      const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
-      if (!isImage) {
+      const mediaExts = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "avif", "svg",
+                          "mp4", "webm", "mov", "avi", "mkv", "3gp"];
+      const isMedia = file.type.startsWith("image/") || file.type.startsWith("video/") || mediaExts.includes(ext);
+      if (!isMedia) {
         toast({
           title: "Invalid file",
-          description: "Please select an image file",
+          description: "Please select an image or video file",
           variant: "destructive",
         });
         return;
@@ -1315,7 +1316,7 @@ const ChatScreen = () => {
         return;
       }
       setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      setPreviewUrl(file.type.startsWith("video/") ? null : URL.createObjectURL(file));
       setIsAttachmentOpen(false);
     }
   };
@@ -1468,7 +1469,9 @@ const ChatScreen = () => {
       }
 
       const attachmentType = selectedFile.type.startsWith("image/") ? "image" : "file";
-      const messageText = newMessage.trim() || (attachmentType === "image" ? "📷 Image" : `📎 ${selectedFile.name}`);
+      const videoExts = ["mp4", "webm", "mov", "avi", "mkv", "3gp"];
+      const isVideo = selectedFile.type.startsWith("video/") || videoExts.includes((selectedFile.name.split(".").pop() || "").toLowerCase());
+      const messageText = newMessage.trim() || (attachmentType === "image" ? "📷 Image" : isVideo ? "🎬 Video" : `📎 ${selectedFile.name}`);
 
       const { error } = await supabase
         .from("chat_messages")
@@ -2086,7 +2089,7 @@ const ChatScreen = () => {
           <input 
             ref={imageInputRef}
             type="file" 
-            accept="image/*" 
+            accept="image/*,video/*"
             className="hidden"
             onChange={handleImageSelect}
           />
@@ -2117,7 +2120,7 @@ const ChatScreen = () => {
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
                   >
                     <Image className="w-5 h-5 text-primary" />
-                    <span className="text-sm">Photo</span>
+                    <span className="text-sm">Photo / Video</span>
                   </button>
                   <button
                     type="button"
