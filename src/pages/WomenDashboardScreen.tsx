@@ -1597,7 +1597,7 @@ const WomenDashboardScreen = () => {
       {/* Today's Earnings */}
       <div className="grid grid-cols-2 gap-0 border-b border-border/30">
         <div className="text-center py-4 border-r border-border/30">
-          <p className="text-xl font-bold text-primary">₹{stats.todayEarnings.toFixed(0)}</p>
+          <p className="text-xl font-bold text-primary">{formatLocalCurrency(stats.todayEarnings)}</p>
           <p className="text-[10px] text-muted-foreground">Today's Earnings</p>
         </div>
         <div className="text-center py-4">
