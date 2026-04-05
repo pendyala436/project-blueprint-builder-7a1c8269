@@ -1640,30 +1640,28 @@ const ChatScreen = () => {
           )}
 
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
-          {currentUserGender === "male" && (
+          {currentUserGender === "male" && chatPartner && (
           <div className="flex items-center gap-0.5">
-            <button
-              onClick={() => {
-                toast({
-                  title: "Audio Call",
-                  description: "₹6/min • Coming soon",
-                });
-              }}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Phone className="w-5 h-5 text-foreground" />
-            </button>
-            <button
-              onClick={() => {
-                toast({
-                  title: "Video Call", 
-                  description: "₹8/min • Coming soon",
-                });
-              }}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Video className="w-5 h-5 text-foreground" />
-            </button>
+            <DirectAudioCallButton
+              currentUserId={currentUserId}
+              targetUserId={chatPartner.userId}
+              targetName={chatPartner.fullName}
+              targetPhoto={chatPartner.avatar}
+              walletBalance={walletBalance}
+              size="icon"
+              variant="ghost"
+              iconOnly={true}
+            />
+            <DirectVideoCallButton
+              currentUserId={currentUserId}
+              targetUserId={chatPartner.userId}
+              targetName={chatPartner.fullName}
+              targetPhoto={chatPartner.avatar}
+              walletBalance={walletBalance}
+              size="icon"
+              variant="ghost"
+              iconOnly={true}
+            />
           </div>
           )}
 
