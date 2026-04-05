@@ -437,6 +437,11 @@ const WomenDashboardScreen = () => {
       )
       .on(
         'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
+        () => { fetchWomenActiveChats(); }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'women_earnings' },
         // Only refresh wallet/earnings, not full dashboard reload
         () => { if (currentUserId) { fetchWalletBalance(currentUserId); fetchTopEarnerLeaderboard(currentUserId); } }

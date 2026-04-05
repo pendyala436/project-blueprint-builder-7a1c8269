@@ -457,6 +457,11 @@ const DashboardScreen = () => {
       // the man's language filter - which is recalculated on user_status changes
       .on(
         'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `receiver_id=eq.${currentUserId}` },
+        () => { fetchActiveChats(); }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'video_call_sessions' },
         () => { loadActiveChatCount(); }
       )
