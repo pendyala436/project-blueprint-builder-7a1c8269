@@ -73,7 +73,7 @@ const EnhancedParallelChatsContainer = ({
   const { maxParallelChats, setMaxParallelChats, isLoading: settingsLoading } = 
     useParallelChatSettings(currentUserId);
 
-  const { incomingChats, acceptChat, rejectChat, clearChat } = useIncomingChats(currentUserId, userGender);
+  // Chat is now async (WhatsApp-style) — no accept/reject for chats
 
   // Load active chats - NO dependency on activeChats (uses ref for positions)
   const loadActiveChats = useCallback(async (force = false) => {
