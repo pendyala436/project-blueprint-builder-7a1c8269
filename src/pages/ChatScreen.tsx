@@ -1294,7 +1294,11 @@ const ChatScreen = () => {
    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
+      // Accept by MIME type OR by common image extension (some devices report empty/wrong MIME)
+      const ext = file.name.split(".").pop()?.toLowerCase() || "";
+      const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "tiff", "avif", "svg"];
+      const isImage = file.type.startsWith("image/") || imageExts.includes(ext);
+      if (!isImage) {
         toast({
           title: "Invalid file",
           description: "Please select an image file",
@@ -1413,9 +1417,28 @@ const ChatScreen = () => {
       const randomSuffix = crypto.randomUUID().slice(0, 8);
       const storagePath = `${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
       
+      // Determine content type — use file.type if available, otherwise infer from extension
+      const mimeMap: Record<string, string> = {
+        jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+        webp: "image/webp", heic: "image/heic", heif: "image/heif", bmp: "image/bmp",
+        tiff: "image/tiff", avif: "image/avif", svg: "image/svg+xml",
+        mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime", avi: "video/x-msvideo",
+        mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/x-m4a",
+        pdf: "application/pdf", doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ppt: "application/vnd.ms-powerpoint",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        txt: "text/plain", csv: "text/csv", rtf: "application/rtf",
+        zip: "application/zip",
+      };
+      const extLower = (fileExt || "").toLowerCase();
+      const contentType = file.type || mimeMap[extLower] || "application/octet-stream";
+
       const { data, error } = await supabase.storage
         .from("chat-attachments")
-        .upload(storagePath, file, { cacheControl: "3600", upsert: false });
+        .upload(storagePath, file, { cacheControl: "3600", upsert: false, contentType });
       
       if (error) throw error;
       
