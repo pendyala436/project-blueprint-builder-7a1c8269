@@ -1288,13 +1288,21 @@ const ChatScreen = () => {
   /**
    * Handle Image Selection
    */
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
         toast({
           title: "Invalid file",
           description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        toast({
+          title: "File too large",
+          description: "Maximum image size is 50MB",
           variant: "destructive",
         });
         return;
