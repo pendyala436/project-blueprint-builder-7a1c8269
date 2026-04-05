@@ -54,7 +54,9 @@ import {
   AlertTriangle, // Warning icon
   PhoneOff,     // Stop chat icon
   LogOut,       // Leave chat icon
-  Home          // Home navigation icon
+  Home,         // Home navigation icon
+  Phone,        // Audio call icon
+  Video         // Video call icon
 } from "lucide-react";
 import {
   Popover,
