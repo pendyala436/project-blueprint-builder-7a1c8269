@@ -58,18 +58,19 @@ interface LanguageGroupChatProps {
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_FILE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "application/msword",
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/avif",
+  "image/heic", "image/heif", "image/bmp", "image/tiff", "image/svg+xml",
+  "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/x-matroska", "video/3gpp",
+  "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "audio/webm", "audio/x-m4a",
+  "application/pdf", "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain"
+  "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.spreadsheet",
+  "text/plain", "text/csv", "application/rtf", "application/zip",
+  "application/octet-stream"
 ];
 
 export const LanguageGroupChat = ({
@@ -332,9 +333,23 @@ export const LanguageGroupChat = ({
         const fileExt = selectedFile.name.split(".").pop();
         const filePath = `${languageName}/${currentUserId}/${Date.now()}.${fileExt}`;
 
+        const mimeMap: Record<string, string> = {
+          jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
+          webp: "image/webp", heic: "image/heic", heif: "image/heif", bmp: "image/bmp",
+          mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+          mp3: "audio/mpeg", wav: "audio/wav", m4a: "audio/x-m4a",
+          pdf: "application/pdf", doc: "application/msword",
+          docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          txt: "text/plain", csv: "text/csv", zip: "application/zip",
+        };
+        const extLower = (fileExt || "").toLowerCase();
+        const contentType = selectedFile.type || mimeMap[extLower] || "application/octet-stream";
+
         const { error: uploadError } = await supabase.storage
           .from("community-files")
-          .upload(filePath, selectedFile);
+          .upload(filePath, selectedFile, { contentType });
 
         if (uploadError) throw uploadError;
 
@@ -392,10 +407,15 @@ export const LanguageGroupChat = ({
       return;
     }
 
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const knownExts = ["jpg","jpeg","png","gif","webp","heic","heif","bmp","tiff","avif","svg",
+                        "mp4","webm","mov","avi","mkv","3gp","mp3","wav","ogg","m4a",
+                        "pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","rtf","zip","rar"];
+    const isAllowed = ALLOWED_FILE_TYPES.includes(file.type) || file.type.startsWith("image/") || file.type.startsWith("video/") || file.type.startsWith("audio/") || knownExts.includes(ext);
+    if (!isAllowed) {
       toast({
         title: t("invalidFileType", "Invalid File Type"),
-        description: t("allowedTypes", "Allowed: Images, PDFs, Word, Excel, PowerPoint"),
+        description: t("allowedTypes", "Allowed: Images, Videos, Audio, PDFs, Word, Excel, PowerPoint"),
         variant: "destructive"
       });
       return;
@@ -407,6 +427,8 @@ export const LanguageGroupChat = ({
   const getFileIcon = (fileType: string | null) => {
     if (!fileType) return <File className="w-5 h-5" />;
     if (fileType.startsWith("image/")) return <Image className="w-5 h-5" />;
+    if (fileType.startsWith("video/")) return <Image className="w-5 h-5 text-purple-500" />;
+    if (fileType.startsWith("audio/")) return <File className="w-5 h-5 text-pink-500" />;
     if (fileType.includes("pdf")) return <FileText className="w-5 h-5 text-red-500" />;
     if (fileType.includes("word") || fileType.includes("document")) 
       return <FileText className="w-5 h-5 text-blue-500" />;
