@@ -12,6 +12,7 @@ import 'widgets/admin_messages_section.dart';
 import 'widgets/admin_chat_section.dart';
 import 'women_home_tab.dart';
 import 'women_chats_tab.dart';
+import 'women_groups_tab.dart';
 import 'women_earnings_tab.dart';
 import 'women_profile_tab.dart';
 
