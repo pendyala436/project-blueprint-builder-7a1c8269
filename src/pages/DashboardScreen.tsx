@@ -1479,24 +1479,12 @@ const DashboardScreen = () => {
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
                   subtitle={`${woman.primary_language} → ${userLanguage}`}
-                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                  onClick={() => navigate(`/profile/${woman.user_id}`)}
+                  onDoubleClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
                         <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
-                      <Button
-                        variant="aurora"
-                        size="sm"
-                        className="h-7 px-2 text-[10px]"
-                        disabled={isConnecting}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartChatWithWoman(woman.user_id, woman.full_name || "User");
-                        }}
-                      >
-                        {connectingUserId === woman.user_id ? <Loader2 className="w-3 h-3 mr-0.5 animate-spin" /> : <MessageCircle className="w-3 h-3 mr-0.5" />}
-                        Chat
                       </Button>
                     </div>
                   }
