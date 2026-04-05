@@ -276,7 +276,7 @@ const AdminFinanceReports = () => {
         const menSpendingTotal = (walletTxns || []).reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const chatSpending = (walletTxns || [])
-          .filter((t: any) => ["chat_charge", "video_call_charge", "group_call_charge"].includes(t.transaction_type))
+          .filter((t: any) => ["chat_debit", "video_debit", "audio_debit", "group_call_debit"].includes(t.transaction_type))
           .reduce((sum, t: any) => sum + Math.abs(t.debit), 0);
         
         const giftSpending = (walletTxns || [])
