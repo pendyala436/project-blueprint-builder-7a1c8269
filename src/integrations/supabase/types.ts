@@ -2646,6 +2646,7 @@ export type Database = {
       video_call_sessions: {
         Row: {
           call_id: string
+          call_type: string
           created_at: string
           end_reason: string | null
           ended_at: string | null
@@ -2661,6 +2662,7 @@ export type Database = {
         }
         Insert: {
           call_id: string
+          call_type?: string
           created_at?: string
           end_reason?: string | null
           ended_at?: string | null
@@ -2676,6 +2678,7 @@ export type Database = {
         }
         Update: {
           call_id?: string
+          call_type?: string
           created_at?: string
           end_reason?: string | null
           ended_at?: string | null
