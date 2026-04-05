@@ -1790,7 +1790,7 @@ const ChatScreen = () => {
                 Stop Chat?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will end the current chat session. Billing will stop and you'll be disconnected from this conversation.
+                This will end the current chat session.{currentUserGender === "male" ? " Billing will stop and you'll be disconnected from this conversation." : " You'll be disconnected from this conversation."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
