@@ -367,7 +367,18 @@ const AdminTransactionHistory = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  // Use debounced realtime subscriptions
+  useMultipleRealtimeSubscriptions(
+    ["ledger_transactions", "active_chat_sessions", "video_call_sessions", "gift_transactions", "withdrawal_requests"],
+    loadAllData,
+    true
+  );
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
