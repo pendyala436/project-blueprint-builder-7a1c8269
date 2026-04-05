@@ -33,6 +33,7 @@ interface UseP2PCallProps {
   ratePerMinute?: number;
   onCallEnded?: () => void;
   preAcquiredStream?: MediaStream | null;
+  audioOnly?: boolean;
 }
 
 const OFFER_RETRY_INTERVAL_MS = 2000;
