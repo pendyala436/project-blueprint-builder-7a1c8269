@@ -572,7 +572,7 @@ const AdminChatPricing = () => {
                 <div className="space-y-2">
                   <Label htmlFor="groupWomenRate" className="flex items-center gap-2">
                     Host (Indian Woman) Earning Per Man Per Minute (INR)
-                    <Badge variant="secondary" className="text-xs font-normal">Auto: always half of men</Badge>
+                    <Badge variant="secondary" className="text-xs font-normal">Default: ₹0.50</Badge>
                   </Label>
                   <div className="relative">
                     <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
