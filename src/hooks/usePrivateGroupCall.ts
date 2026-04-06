@@ -217,6 +217,10 @@ export function usePrivateGroupCall({
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+      // GRP-F-001 FIX: drain queued ICE candidates after setting remote description
+      await drainIceCandidateQueue(fromId);
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
