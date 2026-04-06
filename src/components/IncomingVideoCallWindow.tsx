@@ -305,7 +305,8 @@ const IncomingVideoCallWindow = ({
   // If answered, show the draggable video call window
   if (isAnswered) {
     const isAudio = callType === 'audio';
-    return (
+    // BUG-VID-05 FIX: Portal renders outside stacking context
+    return createPortal(
       <DraggableVideoCallWindow
         callId={callId}
         remoteUserId={callerUserId}
@@ -319,7 +320,8 @@ const IncomingVideoCallWindow = ({
         ratePerMinute={isAudio ? pricing.audioRatePerMinute : pricing.videoRatePerMinute}
         preAcquiredStream={preAcquiredStream}
         audioOnly={isAudio}
-      />
+      />,
+      document.body
     );
   }
 
