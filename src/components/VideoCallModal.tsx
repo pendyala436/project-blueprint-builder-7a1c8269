@@ -82,7 +82,7 @@ const VideoCallModal = ({
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, remoteUserId);
 
-  // Auto-close call if blocked
+  // Auto-close call if blocked — VID-F-007 FIX: include handleEndCall in deps
   useEffect(() => {
     if (isBlocked) {
       toast({
@@ -94,7 +94,7 @@ const VideoCallModal = ({
       });
       handleEndCall();
     }
-  }, [isBlocked]);
+  }, [isBlocked, handleEndCall, isBlockedByThem, toast]);
 
   // Callback refs that bind streams when video elements mount
   const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
