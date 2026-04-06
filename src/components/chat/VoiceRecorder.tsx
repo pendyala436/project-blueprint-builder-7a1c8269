@@ -22,6 +22,7 @@ export const VoiceRecorder = ({
   receiverId,
   disabled = false,
   onVoiceSent,
+  onError,
 }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
