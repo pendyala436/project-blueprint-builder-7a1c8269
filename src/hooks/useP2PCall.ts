@@ -148,8 +148,8 @@ export const useP2PCall = ({
 
   // Process video call billing per minute
   const processBilling = async () => {
-    // Only bill if call is active and initiator (man) pays
-    if (state.callStatus !== 'active' || !isInitiator) return;
+    // VID-F-003 FIX: Use ref instead of stale state
+    if (callStatusRef.current !== 'active' || !isInitiator) return;
     
     // Prevent concurrent billing calls (race condition guard)
     if (billingInProgressRef.current) {
@@ -409,11 +409,13 @@ export const useP2PCall = ({
     console.log('[P2P] Creating peer connection...');
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Add local tracks to the connection
-    localStream.getTracks().forEach(track => {
-      console.log('[P2P] Adding local track:', track.kind);
-      pc.addTrack(track, localStream);
-    });
+    // AUD-F-001 FIX: Filter tracks by kind for audio-only calls
+    localStream.getTracks()
+      .filter(t => !audioOnly || t.kind === 'audio')
+      .forEach(track => {
+        console.log('[P2P] Adding local track:', track.kind);
+        pc.addTrack(track, localStream);
+      });
 
     // Handle incoming remote stream
     pc.ontrack = (event) => {
@@ -835,11 +837,12 @@ export const useP2PCall = ({
 
   // End call and cleanup — VID-H-02: idempotency guard prevents double-update
   const endCall = useCallback(async () => {
-    // VID-H-02: Local idempotency guard — prevent duplicate endCall invocations
-    if (state.callStatus === 'ended') {
+    // VID-F-002 FIX: Use ref for idempotency guard instead of stale state
+    if (callStatusRef.current === 'ended') {
       console.log('[P2P] endCall already called, skipping');
       return;
     }
+    callStatusRef.current = 'ended';
     
     console.log('[P2P] Ending call...');
     setState(prev => ({ ...prev, callStatus: 'ended' }));

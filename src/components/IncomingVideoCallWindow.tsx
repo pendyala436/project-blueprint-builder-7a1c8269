@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -304,7 +305,8 @@ const IncomingVideoCallWindow = ({
   // If answered, show the draggable video call window
   if (isAnswered) {
     const isAudio = callType === 'audio';
-    return (
+    // BUG-VID-05 FIX: Portal renders outside stacking context
+    return createPortal(
       <DraggableVideoCallWindow
         callId={callId}
         remoteUserId={callerUserId}
@@ -318,13 +320,14 @@ const IncomingVideoCallWindow = ({
         ratePerMinute={isAudio ? pricing.audioRatePerMinute : pricing.videoRatePerMinute}
         preAcquiredStream={preAcquiredStream}
         audioOnly={isAudio}
-      />
+      />,
+      document.body
     );
   }
 
   // Incoming call UI
   return (
-    <Card className="fixed bottom-20 right-4 w-72 sm:w-80 p-4 bg-gradient-to-br from-card to-muted border-border shadow-2xl z-[130] animate-in slide-in-from-right-5">
+    <Card className="fixed bottom-20 right-4 w-72 sm:w-80 p-4 bg-gradient-to-br from-card to-muted border-border shadow-2xl z-[200] animate-in slide-in-from-right-5">
       <div className="flex flex-col items-center text-center">
         {/* Animated ring effect */}
         <div className="relative mb-4">

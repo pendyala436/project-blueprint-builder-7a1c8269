@@ -13,6 +13,7 @@ interface VoiceRecorderProps {
   receiverId: string;
   disabled?: boolean;
   onVoiceSent?: () => void;
+  onError?: (msg: string) => void;
 }
 
 export const VoiceRecorder = ({
@@ -21,6 +22,7 @@ export const VoiceRecorder = ({
   receiverId,
   disabled = false,
   onVoiceSent,
+  onError,
 }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -97,15 +99,17 @@ export const VoiceRecorder = ({
       }
 
       const fileName = `voice_${currentUserId}_${Date.now()}.webm`;
-      const filePath = `chat-attachments/${chatId}/${fileName}`;
+      // BUG-VM-01 FIX: path is relative to bucket, don't include bucket name
+      const filePath = `${chatId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
         .upload(filePath, blob, { contentType: 'audio/webm' });
 
       if (uploadError) {
-        // Try creating bucket if it doesn't exist, then retry
         console.error('Upload error:', uploadError);
+        // BUG-VM-03 FIX: Show error to user
+        onError?.(`Voice upload failed: ${uploadError.message}`);
         setIsSending(false);
         return;
       }

@@ -163,12 +163,28 @@ interface ChatPartner {
 /** Renders chat attachment with signed URL resolution for private bucket */
 const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: boolean; resolveUrl: (u: string) => Promise<string> }) => {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    resolveUrl(url).then((u) => { if (!cancelled) setResolvedUrl(u); });
+    resolveUrl(url).then((u) => {
+      if (!cancelled) {
+        if (u === '') {
+          setFailed(true);
+        } else {
+          setResolvedUrl(u);
+        }
+      }
+    });
     return () => { cancelled = true; };
   }, [url, resolveUrl]);
+
+  // BUG-IMG-01 FIX: Show error state when signed URL fails
+  if (failed) {
+    return <div className={`rounded-2xl overflow-hidden px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}>
+      <span className="text-sm text-destructive">Attachment unavailable</span>
+    </div>;
+  }
 
   if (!resolvedUrl) {
     return <div className={`rounded-2xl overflow-hidden px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}>
@@ -176,7 +192,11 @@ const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: bool
     </div>;
   }
 
-  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+  // BUG-IMG-02 FIX: Detect image and video extensions
+  const ext = url.split('.').pop()?.toLowerCase() || '';
+  const isImage = /^(jpg|jpeg|png|gif|webp|heic|heif|bmp|avif)$/.test(ext);
+  const isVideo = /^(mp4|webm|mov|avi|3gp|mkv)$/.test(ext);
+
   return (
     <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
       {isImage ? (
@@ -185,6 +205,13 @@ const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: bool
           alt="Attachment"
           className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
           onClick={() => window.open(resolvedUrl, "_blank")}
+        />
+      ) : isVideo ? (
+        <video
+          src={resolvedUrl}
+          controls
+          playsInline
+          className="max-w-[280px] max-h-[300px] rounded-xl"
         />
       ) : (
         <a
@@ -199,6 +226,18 @@ const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: bool
       )}
     </div>
   );
+};
+
+/** BUG-VM-02 FIX: Resolves voice URL via signed URL before rendering player */
+const ResolvedVoicePlayer = ({ voiceUrl, isMine, resolveUrl }: { voiceUrl: string; isMine: boolean; resolveUrl: (u: string) => Promise<string> }) => {
+  const [resolved, setResolved] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    resolveUrl(voiceUrl).then(u => { if (!cancelled) setResolved(u); });
+    return () => { cancelled = true; };
+  }, [voiceUrl, resolveUrl]);
+  if (!resolved || resolved === '') return <div className="text-xs text-muted-foreground px-2 py-1">Voice unavailable</div>;
+  return <VoiceMessagePlayer audioUrl={resolved} isMine={isMine} />;
 };
 
 const ChatScreen = () => {
@@ -576,7 +615,7 @@ const ChatScreen = () => {
    */
   useEffect(() => {
     if (!chatPartner?.userId || !currentUserId) return;
-
+    if (!chatId.current) return; // BUG-CHT-RT-01 FIX: guard against empty chatId
     // 15-second debounce timer for partner offline detection
     // Prevents brief network flickers from ending active chats
     let offlineDebounceTimer: NodeJS.Timeout | null = null;
@@ -847,7 +886,7 @@ const ChatScreen = () => {
           .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'wallets',
+            table: 'users_wallet',  // BUG-VID-03 FIX: correct table name
             filter: `user_id=eq.${user.id}`,
           }, (payload: any) => {
             if (payload.new?.balance !== undefined) {
@@ -1538,31 +1577,43 @@ const ChatScreen = () => {
    */
   const openCamera = async () => {
     try {
-      setIsCameraOpen(true);
-      setIsAttachmentOpen(false);
+      // BUG-SELFIE-01 FIX: Acquire stream BEFORE setting state (iOS Safari)
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "user" },
         audio: false 
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      setIsAttachmentOpen(false);
+      setIsCameraOpen(true);
+      // Stream will be assigned to video ref via useEffect below
     } catch (error) {
       console.error("Camera error:", error);
       const camErr = classifyError(error);
       toast({ title: camErr.title, description: camErr.message, variant: "destructive" });
-      setIsCameraOpen(false);
     }
   };
+
+  // BUG-SELFIE-01 FIX: Assign stream to video element after render
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [isCameraOpen]);
 
   /**
    * Capture Selfie
    */
   const captureSelfie = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    
+    // BUG-SELFIE-03 FIX: Check video is actually playing before capture
+    const doCapture = () => {
+      if (video.videoWidth === 0) {
+        requestAnimationFrame(doCapture);
+        return;
+      }
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
@@ -1577,7 +1628,8 @@ const ChatScreen = () => {
           }
         }, "image/jpeg", 0.8);
       }
-    }
+    };
+    doCapture();
   };
 
   /**
@@ -1699,10 +1751,10 @@ const ChatScreen = () => {
     const voiceMatch = message.match(/🎤voice:(.+)/) || message.match(/\[VOICE:(.*?)\]/);
     if (voiceMatch) {
       const voicePath = voiceMatch[1];
-      // If it's a storage path (not a full URL), generate public URL
+      // BUG-VM-02 FIX: Use signed URL scheme instead of public URL for private bucket
       const voiceUrl = voicePath.startsWith('http')
         ? voicePath
-        : supabase.storage.from('chat-attachments').getPublicUrl(voicePath).data.publicUrl;
+        : `chat-attachment://${voicePath}`;
       return { text: '', voiceUrl };
     }
     
@@ -1734,8 +1786,8 @@ const ChatScreen = () => {
       .createSignedUrl(storagePath, 3600); // 1 hour
 
     if (error || !data?.signedUrl) {
-      console.warn('[Chat] Failed to generate signed URL:', error?.message);
-      return url;
+      console.error('[Chat] Failed to generate signed URL:', error?.message);
+      return '';  // BUG-IMG-01 FIX: return empty so ChatAttachment shows error UI
     }
 
     signedUrlCache.current.set(url, data.signedUrl);
@@ -2165,7 +2217,7 @@ const ChatScreen = () => {
                             <ReplyPreview replyToText={message.replyToText} replyToSender={message.replyToSender || ''} isOwn={isMine} compact />
                           )}
 
-                          {voiceUrl && <VoiceMessagePlayer audioUrl={voiceUrl} isMine={isMine} />}
+                          {voiceUrl && <ResolvedVoicePlayer voiceUrl={voiceUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
                           {attachmentUrl && <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
                           
                           {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
@@ -2259,7 +2311,7 @@ const ChatScreen = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{selectedFile.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {(selectedFile.size / 1024).toFixed(1)} KB
+                  {selectedFile.size < 1024 ? `${selectedFile.size} B` : selectedFile.size < 1024 * 1024 ? `${(selectedFile.size / 1024).toFixed(1)} KB` : `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`}
                 </p>
               </div>
               <button
