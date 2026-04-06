@@ -615,7 +615,7 @@ const ChatScreen = () => {
    */
   useEffect(() => {
     if (!chatPartner?.userId || !currentUserId) return;
-
+    if (!chatId.current) return; // BUG-CHT-RT-01 FIX: guard against empty chatId
     // 15-second debounce timer for partner offline detection
     // Prevents brief network flickers from ending active chats
     let offlineDebounceTimer: NodeJS.Timeout | null = null;
