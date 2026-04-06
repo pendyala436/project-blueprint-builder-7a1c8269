@@ -82,6 +82,7 @@ import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs"
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
+import TransactionStatementTab from "@/components/TransactionStatementTab";
 interface Notification {
   id: string;
   title: string;
@@ -1691,6 +1692,7 @@ const DashboardScreen = () => {
       {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
+      {activeTab === "statement" && <TransactionStatementTab gender="male" />}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}

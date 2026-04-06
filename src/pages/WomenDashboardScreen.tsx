@@ -54,6 +54,7 @@ import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 // WhatsAppFAB removed — unused in current layout
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
+import TransactionStatementTab from "@/components/TransactionStatementTab";
 
 interface Notification {
   id: string;
@@ -1537,6 +1538,7 @@ const WomenDashboardScreen = () => {
       {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
+      {activeTab === "statement" && <TransactionStatementTab gender="female" />}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />

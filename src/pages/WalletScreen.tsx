@@ -352,11 +352,11 @@ const WalletScreen = () => {
           </CardContent>
         </Card>
 
-        {/* Statement link */}
+        {/* Statement link — now in dashboard Statement tab */}
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={() => navigate("/statement")} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-1.5">
             <FileText className="h-3.5 w-3.5" />
-            View Transaction Statement
+            View Transaction Statement (Dashboard → Statement tab)
           </Button>
         </div>
 
