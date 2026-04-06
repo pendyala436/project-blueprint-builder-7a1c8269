@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Home, Wallet, TrendingUp, Clock,
   ArrowDownToLine, CheckCircle2, AlertCircle,
-  Globe, Zap, Building2, IndianRupee, RefreshCw,
+  Globe, Zap, Building2, IndianRupee, RefreshCw, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -416,6 +416,14 @@ const WomenWalletScreen = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Statement link */}
+      <div className="flex justify-center pb-6">
+        <Button variant="outline" size="sm" onClick={() => navigate("/statement")} className="gap-1.5">
+          <FileText className="h-3.5 w-3.5" />
+          View Earnings Statement
+        </Button>
+      </div>
 
     </div>
   );
