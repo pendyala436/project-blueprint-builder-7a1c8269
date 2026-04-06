@@ -64,6 +64,7 @@ export const getMenTabs = (onlineBadge?: number, chatBadge?: number, matchBadge?
   { id: "history", label: "History", icon: <Clock className="w-5 h-5" /> },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
   { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchBadge },
+  { id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> },
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
 ];
 
