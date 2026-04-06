@@ -13,10 +13,43 @@ interface IncomingCall {
 let ringAudioContext: AudioContext | null = null;
 let ringIntervalId: NodeJS.Timeout | null = null;
 
+// GEN-001 FIX: Pre-warm AudioContext on first user interaction for iOS Safari
+let audioContextWarmed = false;
+const warmAudioContext = () => {
+  if (audioContextWarmed) return;
+  audioContextWarmed = true;
+  try {
+    if (!ringAudioContext || ringAudioContext.state === 'closed') {
+      ringAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Resume suspended context (iOS requires user gesture)
+    if (ringAudioContext.state === 'suspended') {
+      ringAudioContext.resume();
+    }
+  } catch (e) {
+    console.warn('[IncomingCalls] Failed to pre-warm AudioContext:', e);
+  }
+};
+
+// Register once on first user interaction
+if (typeof document !== 'undefined') {
+  const handler = () => {
+    warmAudioContext();
+    document.removeEventListener('click', handler);
+    document.removeEventListener('touchstart', handler);
+  };
+  document.addEventListener('click', handler, { once: true });
+  document.addEventListener('touchstart', handler, { once: true });
+}
+
 const playRingSound = () => {
   try {
     if (!ringAudioContext || ringAudioContext.state === 'closed') {
       ringAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // GEN-001 FIX: Resume if suspended (iOS Safari)
+    if (ringAudioContext.state === 'suspended') {
+      ringAudioContext.resume();
     }
     const ctx = ringAudioContext;
     const now = ctx.currentTime;
