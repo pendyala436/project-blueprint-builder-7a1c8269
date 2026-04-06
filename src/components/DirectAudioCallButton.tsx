@@ -246,7 +246,8 @@ const DirectAudioCallButton = ({
         )}
       </Button>
 
-      {activeCall && (
+      {/* BUG-AUD-01 FIX: Portal renders outside stacking context */}
+      {activeCall && createPortal(
         <DraggableVideoCallWindow
           callId={activeCall.callId}
           remoteUserId={targetUserId}
@@ -260,7 +261,8 @@ const DirectAudioCallButton = ({
           ratePerMinute={audioRate}
           preAcquiredStream={activeCall.stream}
           audioOnly={true}
-        />
+        />,
+        document.body
       )}
 
       <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>

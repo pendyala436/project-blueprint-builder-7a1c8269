@@ -246,7 +246,8 @@ const DirectVideoCallButton = ({
         )}
       </Button>
 
-      {activeCall && (
+      {/* BUG-VID-01 FIX: Portal renders outside stacking context */}
+      {activeCall && createPortal(
         <DraggableVideoCallWindow
           callId={activeCall.callId}
           remoteUserId={targetUserId}
@@ -259,7 +260,8 @@ const DirectVideoCallButton = ({
           zIndex={130}
           ratePerMinute={pricing.videoRatePerMinute}
           preAcquiredStream={activeCall.stream}
-        />
+        />,
+        document.body
       )}
 
       <AlertDialog open={showRechargeDialog} onOpenChange={setShowRechargeDialog}>
