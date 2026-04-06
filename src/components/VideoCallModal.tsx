@@ -105,7 +105,27 @@ const VideoCallModal = ({
     }
   }, [isBlocked, handleEndCall, isBlockedByThem, toast]);
 
-  // VID-H-04: Only allow dismiss without confirmation during non-active states
+  // Callback refs that bind streams when video elements mount
+  const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
+    (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
+    if (element && localStream) {
+      bindStreamToVideo(element, localStream);
+    }
+  }, [localVideoRef, localStream, bindStreamToVideo]);
+
+  const setRemoteVideoElement = useCallback((element: HTMLVideoElement | null) => {
+    (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
+    if (element && remoteStream) {
+      bindStreamToVideo(element, remoteStream);
+    }
+  }, [remoteVideoRef, remoteStream, bindStreamToVideo]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
       // If call is active, show confirmation instead of ending immediately
