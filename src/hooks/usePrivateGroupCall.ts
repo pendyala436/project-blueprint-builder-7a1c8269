@@ -563,11 +563,13 @@ export function usePrivateGroupCall({
   }, []);
 
   // Setup signaling channel
-  const setupSignaling = useCallback(() => {
-    // Clean up existing channel to prevent duplicates
+  const setupSignaling = useCallback(async () => {
+    // GRP-F-006 FIX: Clean up existing channel with delay to allow flush
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
+      // Allow pending broadcasts to flush before creating new channel
+      await new Promise(r => setTimeout(r, 400));
     }
 
     const channel = supabase.channel(`private-group-${groupId}`, {
