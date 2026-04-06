@@ -738,16 +738,29 @@ export function usePrivateGroupCall({
         
         setState(prev => ({ ...prev, isConnected: true }));
 
-        // If participant, signal ready for WebRTC after a brief delay
+        // GRP-F-002 FIX: If participant, retry participant-ready until an offer is received
         if (!isOwner) {
-          setTimeout(() => {
-            console.log('[PrivateGroupCall] Participant sending ready signal');
+          let readyRetries = 0;
+          const maxReadyRetries = 5;
+          const sendReady = () => {
+            console.log(`[PrivateGroupCall] Participant sending ready signal (attempt ${readyRetries + 1})`);
             channel.send({
               type: 'broadcast',
               event: 'participant-ready',
               payload: { participantId: currentUserId },
             });
-          }, 500);
+          };
+          // Initial send after brief delay
+          setTimeout(sendReady, 500);
+          // Retry every 3s until we have a peer connection or max retries
+          const readyInterval = setInterval(() => {
+            readyRetries++;
+            if (readyRetries >= maxReadyRetries || peerConnections.current.size > 0) {
+              clearInterval(readyInterval);
+              return;
+            }
+            sendReady();
+          }, 3000);
         }
       }
     });
