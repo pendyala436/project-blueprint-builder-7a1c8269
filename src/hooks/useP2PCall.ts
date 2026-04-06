@@ -516,7 +516,7 @@ export const useP2PCall = ({
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [currentUserId, onCallEnded, toast, syncCallStatus, bindStreamToVideo]);
+  }, [currentUserId, onCallEnded, toast, syncCallStatus, bindStreamToVideo, sendSignal, isInitiator, audioOnly]);
 
   // Send/re-send offer (used for initial dial + peer-ready handshake)
   const sendOffer = useCallback(async () => {
