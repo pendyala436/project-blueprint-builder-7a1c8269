@@ -253,16 +253,46 @@ export function usePrivateGroupCall({
     }
   }, []);
 
-  // Handle incoming ICE candidate
+  // GRP-F-001 FIX: ICE candidate queue per participant
+  const iceCandidateQueueRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+
+  // Handle incoming ICE candidate — queue if remote description not set yet
   const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit, fromId: string) => {
     const pc = peerConnections.current.get(fromId);
-    if (pc) {
+    if (!pc) {
+      // No PC yet — queue for later
+      const queue = iceCandidateQueueRef.current.get(fromId) || [];
+      queue.push(candidate);
+      iceCandidateQueueRef.current.set(fromId, queue);
+      return;
+    }
+    if (!pc.remoteDescription) {
+      // PC exists but remote description not set — queue
+      const queue = iceCandidateQueueRef.current.get(fromId) || [];
+      queue.push(candidate);
+      iceCandidateQueueRef.current.set(fromId, queue);
+      return;
+    }
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+      console.error('[PrivateGroupCall] Error handling ICE candidate:', error);
+    }
+  }, []);
+
+  // GRP-F-001 FIX: Drain queued ICE candidates after remote description is set
+  const drainIceCandidateQueue = useCallback(async (participantId: string) => {
+    const pc = peerConnections.current.get(participantId);
+    const queue = iceCandidateQueueRef.current.get(participantId);
+    if (!pc || !queue || queue.length === 0) return;
+    for (const candidate of queue) {
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (error) {
-        console.error('[PrivateGroupCall] Error handling ICE candidate:', error);
+        console.error('[PrivateGroupCall] Error adding queued ICE candidate:', error);
       }
     }
+    iceCandidateQueueRef.current.delete(participantId);
   }, []);
 
   // Initiate WebRTC connection to a participant (host sends offer)
