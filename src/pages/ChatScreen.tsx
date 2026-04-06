@@ -874,7 +874,7 @@ const ChatScreen = () => {
           .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'wallets',
+            table: 'users_wallet',  // BUG-VID-03 FIX: correct table name
             filter: `user_id=eq.${user.id}`,
           }, (payload: any) => {
             if (payload.new?.balance !== undefined) {
