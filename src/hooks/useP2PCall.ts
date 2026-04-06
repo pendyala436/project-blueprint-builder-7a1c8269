@@ -473,15 +473,36 @@ export const useP2PCall = ({
       }
     };
 
-    // Monitor ICE connection state
+    // VID-F-005 FIX: ICE restart on connection failure
     pc.oniceconnectionstatechange = () => {
       console.log('[P2P] ICE connection state:', pc.iceConnectionState);
       if (pc.iceConnectionState === 'failed') {
-        toast({
-          title: 'Network Traversal Failed',
-          description: 'Could not establish media path. Please retry or switch network.',
-          variant: 'destructive',
-        });
+        console.log('[P2P] ICE failed — attempting ICE restart');
+        try {
+          pc.restartIce();
+          // Re-create and send a new offer with iceRestart flag
+          if (isInitiator) {
+            pc.createOffer({ iceRestart: true }).then(async (offer) => {
+              await pc.setLocalDescription(offer);
+              await sendSignal('offer', { sdp: offer, senderId: currentUserId });
+              console.log('[P2P] ICE restart offer sent');
+            }).catch(err => {
+              console.error('[P2P] ICE restart offer failed:', err);
+              toast({
+                title: 'Network Traversal Failed',
+                description: 'Could not re-establish media path. Please retry or switch network.',
+                variant: 'destructive',
+              });
+            });
+          }
+        } catch (err) {
+          console.error('[P2P] ICE restart failed:', err);
+          toast({
+            title: 'Network Traversal Failed',
+            description: 'Could not establish media path. Please retry or switch network.',
+            variant: 'destructive',
+          });
+        }
       }
     };
 
