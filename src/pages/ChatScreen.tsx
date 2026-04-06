@@ -1774,8 +1774,8 @@ const ChatScreen = () => {
       .createSignedUrl(storagePath, 3600); // 1 hour
 
     if (error || !data?.signedUrl) {
-      console.warn('[Chat] Failed to generate signed URL:', error?.message);
-      return url;
+      console.error('[Chat] Failed to generate signed URL:', error?.message);
+      return '';  // BUG-IMG-01 FIX: return empty so ChatAttachment shows error UI
     }
 
     signedUrlCache.current.set(url, data.signedUrl);
