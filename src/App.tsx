@@ -186,6 +186,7 @@ const AppShell = () => {
             <Route path="/send-gift/:receiverId" element={<ProtectedRoute><GiftSendingScreen /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><WalletScreen /></ProtectedRoute>} />
             <Route path="/women-wallet" element={<ProtectedRoute requiredRole="female"><WomenWalletScreen /></ProtectedRoute>} />
+            <Route path="/statement" element={<ProtectedRoute><TransactionStatementScreen /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
             <Route path="/install" element={<RouteSuspense><InstallApp /></RouteSuspense>} />
 
