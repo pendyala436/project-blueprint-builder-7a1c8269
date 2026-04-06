@@ -2205,7 +2205,7 @@ const ChatScreen = () => {
                             <ReplyPreview replyToText={message.replyToText} replyToSender={message.replyToSender || ''} isOwn={isMine} compact />
                           )}
 
-                          {voiceUrl && <VoiceMessagePlayer audioUrl={voiceUrl} isMine={isMine} />}
+                          {voiceUrl && <ResolvedVoicePlayer voiceUrl={voiceUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
                           {attachmentUrl && <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
                           
                           {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
