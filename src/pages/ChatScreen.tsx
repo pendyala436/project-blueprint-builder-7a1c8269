@@ -1565,23 +1565,28 @@ const ChatScreen = () => {
    */
   const openCamera = async () => {
     try {
-      setIsCameraOpen(true);
-      setIsAttachmentOpen(false);
+      // BUG-SELFIE-01 FIX: Acquire stream BEFORE setting state (iOS Safari)
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "user" },
         audio: false 
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      setIsAttachmentOpen(false);
+      setIsCameraOpen(true);
+      // Stream will be assigned to video ref via useEffect below
     } catch (error) {
       console.error("Camera error:", error);
       const camErr = classifyError(error);
       toast({ title: camErr.title, description: camErr.message, variant: "destructive" });
-      setIsCameraOpen(false);
     }
   };
+
+  // BUG-SELFIE-01 FIX: Assign stream to video element after render
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [isCameraOpen]);
 
   /**
    * Capture Selfie
