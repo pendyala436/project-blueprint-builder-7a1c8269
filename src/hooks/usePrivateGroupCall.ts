@@ -250,6 +250,9 @@ export function usePrivateGroupCall({
       }
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(answer));
+
+        // GRP-F-001 FIX: drain queued ICE candidates after setting remote description
+        await drainIceCandidateQueue(fromId);
       } catch (error) {
         console.error('[PrivateGroupCall] Error handling answer:', error);
       toast.error('Call connection failed', { description: 'Unable to complete call setup. Please try again.' });
