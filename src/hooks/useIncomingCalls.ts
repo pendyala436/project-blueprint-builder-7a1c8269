@@ -315,7 +315,7 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(pollInterval);
+      if (pollTimeoutId) clearTimeout(pollTimeoutId);
     };
   }, [currentUserId, userGender]);
 
