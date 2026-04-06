@@ -120,10 +120,11 @@ const VideoCallModal = ({
   // VID-H-04: Confirmation dialog for active calls to prevent accidental dismiss
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
-  const handleEndCall = async () => {
+  // VID-F-007 FIX: wrap in useCallback for stable reference
+  const handleEndCall = useCallback(async () => {
     await endCall();
     onClose();
-  };
+  }, [endCall, onClose]);
 
   // VID-H-04: Only allow dismiss without confirmation during non-active states
   const handleDialogOpenChange = (open: boolean) => {
