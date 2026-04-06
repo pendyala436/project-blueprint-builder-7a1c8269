@@ -3485,6 +3485,25 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_statement_detail: {
+        Args: { p_month: number; p_year: number }
+        Returns: {
+          credit: number
+          debit: number
+          description: string
+          duration_seconds: number
+          rate_per_minute: number
+          running_balance: number
+          session_id: string
+          transaction_id: string
+          txn_date: string
+          txn_type: string
+        }[]
+      }
+      get_my_statement_summary: {
+        Args: { p_month: number; p_year: number }
+        Returns: Json
+      }
       get_offline_women_for_daily_ping: {
         Args: never
         Returns: {
