@@ -121,7 +121,7 @@ export function PrivateGroupCallWindow({
   const [showGiftDialog, setShowGiftDialog] = useState(false);
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [showEmojiBar, setShowEmojiBar] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false); // repurposed as scroll toggle
+  // GRP-F-007 FIX: Removed unused isScreenSharing (was misleadingly named)
   const [isScrollEnabled, setIsScrollEnabled] = useState(true);
   const [showParticipantList, setShowParticipantList] = useState(false);
 

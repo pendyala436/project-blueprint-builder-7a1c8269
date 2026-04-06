@@ -745,11 +745,12 @@ export const useP2PCall = ({
         }
       })
       // Receiver notifies initiator it is ready; initiator re-sends offer safely
+      // VID-F-008 FIX: Use ref to always call latest sendOffer
       .on('broadcast', { event: 'peer-ready' }, async ({ payload }) => {
         if (payload.senderId !== currentUserId && isInitiator) {
           console.log('[P2P] Peer is ready, sending/re-sending offer');
           try {
-            await sendOffer();
+            await sendOfferRef.current();
           } catch (error) {
             console.error('[P2P] Error sending offer on peer-ready:', error);
           }
