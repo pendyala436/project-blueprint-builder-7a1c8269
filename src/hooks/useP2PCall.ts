@@ -148,8 +148,8 @@ export const useP2PCall = ({
 
   // Process video call billing per minute
   const processBilling = async () => {
-    // Only bill if call is active and initiator (man) pays
-    if (state.callStatus !== 'active' || !isInitiator) return;
+    // VID-F-003 FIX: Use ref instead of stale state
+    if (callStatusRef.current !== 'active' || !isInitiator) return;
     
     // Prevent concurrent billing calls (race condition guard)
     if (billingInProgressRef.current) {
