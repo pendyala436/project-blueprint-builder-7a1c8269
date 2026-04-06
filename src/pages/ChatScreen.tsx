@@ -1592,9 +1592,16 @@ const ChatScreen = () => {
    * Capture Selfie
    */
   const captureSelfie = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    
+    // BUG-SELFIE-03 FIX: Check video is actually playing before capture
+    const doCapture = () => {
+      if (video.videoWidth === 0) {
+        requestAnimationFrame(doCapture);
+        return;
+      }
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
@@ -1609,7 +1616,8 @@ const ChatScreen = () => {
           }
         }, "image/jpeg", 0.8);
       }
-    }
+    };
+    doCapture();
   };
 
   /**
