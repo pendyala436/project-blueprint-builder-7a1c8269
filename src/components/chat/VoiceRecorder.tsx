@@ -13,6 +13,7 @@ interface VoiceRecorderProps {
   receiverId: string;
   disabled?: boolean;
   onVoiceSent?: () => void;
+  onError?: (msg: string) => void;
 }
 
 export const VoiceRecorder = ({
