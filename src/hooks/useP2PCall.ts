@@ -816,6 +816,8 @@ export const useP2PCall = ({
       startOfferRetry();
     } catch (error) {
       console.error('[P2P] Error starting call:', error);
+      // VID-F-006 FIX: cleanup media tracks on signaling failure
+      cleanup();
       setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
       toast({
         title: "Error",
@@ -823,7 +825,7 @@ export const useP2PCall = ({
         variant: "destructive",
       });
     }
-  }, [callId, initLocalMedia, setupSignaling, createPeerConnection, sendOffer, startOfferRetry, toast]);
+  }, [callId, initLocalMedia, setupSignaling, createPeerConnection, sendOffer, startOfferRetry, toast, cleanup]);
 
   // Join call (receiver waits for offer)
   const joinCall = useCallback(async () => {
