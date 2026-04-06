@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { registerOutgoingCall } from "@/hooks/useIncomingCalls";
 import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { useNavigate } from "react-router-dom";
