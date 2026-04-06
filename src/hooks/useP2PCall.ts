@@ -518,6 +518,12 @@ export const useP2PCall = ({
     return pc;
   }, [currentUserId, onCallEnded, toast, syncCallStatus, bindStreamToVideo, sendSignal, isInitiator, audioOnly]);
 
+  // VID-F-008 FIX: Use ref for sendOffer so signaling channel always calls latest version
+  const sendOfferRef = useRef<() => Promise<void>>(async () => {});
+
+  // VID-F-009 FIX: Guard against concurrent createOffer calls
+  const isCreatingOfferRef = useRef(false);
+
   // Send/re-send offer (used for initial dial + peer-ready handshake)
   const sendOffer = useCallback(async () => {
     const pc = peerConnectionRef.current;
@@ -528,17 +534,31 @@ export const useP2PCall = ({
       return;
     }
 
+    // VID-F-009 FIX: prevent concurrent createOffer
+    if (isCreatingOfferRef.current) {
+      console.log('[P2P] createOffer already in progress, re-sending existing description');
+      if (pc.localDescription && pc.localDescription.type === 'offer') {
+        await sendSignal('offer', { sdp: pc.localDescription.toJSON(), senderId: currentUserId });
+      }
+      return;
+    }
+
     let offerSdp: RTCSessionDescriptionInit | null = pc.localDescription?.toJSON() ?? null;
 
     if (!offerSdp || offerSdp.type !== 'offer') {
       console.log('[P2P] Creating fresh offer...');
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
-      await pc.setLocalDescription(offer);
-      offerSdp = offer;
-      console.log('[P2P] Set local description (offer)');
+      isCreatingOfferRef.current = true;
+      try {
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        });
+        await pc.setLocalDescription(offer);
+        offerSdp = offer;
+        console.log('[P2P] Set local description (offer)');
+      } finally {
+        isCreatingOfferRef.current = false;
+      }
     } else {
       console.log('[P2P] Re-sending existing local offer');
     }
@@ -551,6 +571,11 @@ export const useP2PCall = ({
       callStatus: prev.callStatus === 'active' ? prev.callStatus : 'ringing'
     }));
   }, [currentUserId]);
+
+  // Keep sendOfferRef in sync
+  useEffect(() => {
+    sendOfferRef.current = sendOffer;
+  }, [sendOffer]);
 
   const stopOfferRetry = useCallback(() => {
     if (offerRetryTimerRef.current) {
@@ -720,11 +745,12 @@ export const useP2PCall = ({
         }
       })
       // Receiver notifies initiator it is ready; initiator re-sends offer safely
+      // VID-F-008 FIX: Use ref to always call latest sendOffer
       .on('broadcast', { event: 'peer-ready' }, async ({ payload }) => {
         if (payload.senderId !== currentUserId && isInitiator) {
           console.log('[P2P] Peer is ready, sending/re-sending offer');
           try {
-            await sendOffer();
+            await sendOfferRef.current();
           } catch (error) {
             console.error('[P2P] Error sending offer on peer-ready:', error);
           }

@@ -563,11 +563,13 @@ export function usePrivateGroupCall({
   }, []);
 
   // Setup signaling channel
-  const setupSignaling = useCallback(() => {
-    // Clean up existing channel to prevent duplicates
+  const setupSignaling = useCallback(async () => {
+    // GRP-F-006 FIX: Clean up existing channel with delay to allow flush
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
+      // Allow pending broadcasts to flush before creating new channel
+      await new Promise(r => setTimeout(r, 400));
     }
 
     const channel = supabase.channel(`private-group-${groupId}`, {
@@ -738,16 +740,29 @@ export function usePrivateGroupCall({
         
         setState(prev => ({ ...prev, isConnected: true }));
 
-        // If participant, signal ready for WebRTC after a brief delay
+        // GRP-F-002 FIX: If participant, retry participant-ready until an offer is received
         if (!isOwner) {
-          setTimeout(() => {
-            console.log('[PrivateGroupCall] Participant sending ready signal');
+          let readyRetries = 0;
+          const maxReadyRetries = 5;
+          const sendReady = () => {
+            console.log(`[PrivateGroupCall] Participant sending ready signal (attempt ${readyRetries + 1})`);
             channel.send({
               type: 'broadcast',
               event: 'participant-ready',
               payload: { participantId: currentUserId },
             });
-          }, 500);
+          };
+          // Initial send after brief delay
+          setTimeout(sendReady, 500);
+          // Retry every 3s until we have a peer connection or max retries
+          const readyInterval = setInterval(() => {
+            readyRetries++;
+            if (readyRetries >= maxReadyRetries || peerConnections.current.size > 0) {
+              clearInterval(readyInterval);
+              return;
+            }
+            sendReady();
+          }, 3000);
         }
       }
     });
@@ -789,7 +804,7 @@ export function usePrivateGroupCall({
         totalEarnings: 0,
       };
 
-      setupSignaling();
+      await setupSignaling();
       startCountdownTimer();
       startBillingTimer();
 
@@ -859,7 +874,7 @@ export function usePrivateGroupCall({
         return false;
       }
 
-      setupSignaling();
+      await setupSignaling();
       startBillingTimer(); // Start billing fallback timer for participant
 
       setState(prev => ({ 

@@ -82,7 +82,16 @@ const VideoCallModal = ({
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, remoteUserId);
 
-  // Auto-close call if blocked
+  // VID-H-04: Confirmation dialog for active calls to prevent accidental dismiss
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
+  // VID-F-007 FIX: wrap in useCallback for stable reference, declared before useEffect
+  const handleEndCall = useCallback(async () => {
+    await endCall();
+    onClose();
+  }, [endCall, onClose]);
+
+  // Auto-close call if blocked — VID-F-007 FIX: include handleEndCall in deps
   useEffect(() => {
     if (isBlocked) {
       toast({
@@ -94,7 +103,7 @@ const VideoCallModal = ({
       });
       handleEndCall();
     }
-  }, [isBlocked]);
+  }, [isBlocked, handleEndCall, isBlockedByThem, toast]);
 
   // Callback refs that bind streams when video elements mount
   const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
@@ -117,15 +126,6 @@ const VideoCallModal = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // VID-H-04: Confirmation dialog for active calls to prevent accidental dismiss
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
-
-  const handleEndCall = async () => {
-    await endCall();
-    onClose();
-  };
-
-  // VID-H-04: Only allow dismiss without confirmation during non-active states
   const handleDialogOpenChange = (open: boolean) => {
     if (!open) {
       // If call is active, show confirmation instead of ending immediately

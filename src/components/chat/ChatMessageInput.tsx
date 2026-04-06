@@ -52,6 +52,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const isNonEnglish = langNorm !== 'english';
 
   // Fetch translated UI labels via live Lingva translation (no hardcoding)
+  // CHT-F-008 FIX: Clear stale cache when language changes
   useEffect(() => {
     if (!isNonEnglish || !userLanguage) {
       setDynamicLabels(DEFAULT_LABELS);
@@ -63,6 +64,9 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
       setDynamicLabels(labelCache.get(cacheKey)!);
       return;
     }
+
+    // Clear any previous language entries to prevent stale cache
+    labelCache.clear();
 
     let cancelled = false;
     (async () => {
