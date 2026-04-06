@@ -1537,6 +1537,7 @@ const WomenDashboardScreen = () => {
       {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "earnings" && renderEarningsTab()}
+      {activeTab === "statement" && <TransactionStatementTab gender="female" />}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
