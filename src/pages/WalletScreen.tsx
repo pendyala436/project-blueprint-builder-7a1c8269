@@ -19,7 +19,7 @@ import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
 import { toast } from "sonner";
 import {
   ArrowLeft, Home, RefreshCw, Wallet,
-  CreditCard, Plus, CheckCircle2, IndianRupee,
+  CreditCard, Plus, CheckCircle2, IndianRupee, FileText,
   DollarSign, Euro,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
