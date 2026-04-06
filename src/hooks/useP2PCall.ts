@@ -849,6 +849,8 @@ export const useP2PCall = ({
       console.log('[P2P] Ready to receive offer');
     } catch (error) {
       console.error('[P2P] Error joining call:', error);
+      // VID-F-006 FIX: cleanup media tracks on signaling failure
+      cleanup();
       setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
       toast({
         title: "Error",
@@ -856,7 +858,7 @@ export const useP2PCall = ({
         variant: "destructive",
       });
     }
-  }, [initLocalMedia, setupSignaling, createPeerConnection, currentUserId, toast]);
+  }, [initLocalMedia, setupSignaling, createPeerConnection, currentUserId, toast, cleanup]);
 
   // End call and cleanup — VID-H-02: idempotency guard prevents double-update
   const endCall = useCallback(async () => {
