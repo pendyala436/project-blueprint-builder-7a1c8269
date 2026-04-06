@@ -163,12 +163,28 @@ interface ChatPartner {
 /** Renders chat attachment with signed URL resolution for private bucket */
 const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: boolean; resolveUrl: (u: string) => Promise<string> }) => {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    resolveUrl(url).then((u) => { if (!cancelled) setResolvedUrl(u); });
+    resolveUrl(url).then((u) => {
+      if (!cancelled) {
+        if (u === '') {
+          setFailed(true);
+        } else {
+          setResolvedUrl(u);
+        }
+      }
+    });
     return () => { cancelled = true; };
   }, [url, resolveUrl]);
+
+  // BUG-IMG-01 FIX: Show error state when signed URL fails
+  if (failed) {
+    return <div className={`rounded-2xl overflow-hidden px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}>
+      <span className="text-sm text-destructive">Attachment unavailable</span>
+    </div>;
+  }
 
   if (!resolvedUrl) {
     return <div className={`rounded-2xl overflow-hidden px-4 py-3 ${isMine ? "bg-primary/80" : "bg-muted"}`}>
@@ -176,7 +192,11 @@ const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: bool
     </div>;
   }
 
-  const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+  // BUG-IMG-02 FIX: Detect image and video extensions
+  const ext = url.split('.').pop()?.toLowerCase() || '';
+  const isImage = /^(jpg|jpeg|png|gif|webp|heic|heif|bmp|avif)$/.test(ext);
+  const isVideo = /^(mp4|webm|mov|avi|3gp|mkv)$/.test(ext);
+
   return (
     <div className={`rounded-2xl overflow-hidden ${isMine ? "rounded-br-md" : "rounded-bl-md"}`}>
       {isImage ? (
@@ -185,6 +205,13 @@ const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: bool
           alt="Attachment"
           className="max-w-[280px] max-h-[300px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
           onClick={() => window.open(resolvedUrl, "_blank")}
+        />
+      ) : isVideo ? (
+        <video
+          src={resolvedUrl}
+          controls
+          playsInline
+          className="max-w-[280px] max-h-[300px] rounded-xl"
         />
       ) : (
         <a
