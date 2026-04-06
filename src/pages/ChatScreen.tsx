@@ -1739,10 +1739,10 @@ const ChatScreen = () => {
     const voiceMatch = message.match(/🎤voice:(.+)/) || message.match(/\[VOICE:(.*?)\]/);
     if (voiceMatch) {
       const voicePath = voiceMatch[1];
-      // If it's a storage path (not a full URL), generate public URL
+      // BUG-VM-02 FIX: Use signed URL scheme instead of public URL for private bucket
       const voiceUrl = voicePath.startsWith('http')
         ? voicePath
-        : supabase.storage.from('chat-attachments').getPublicUrl(voicePath).data.publicUrl;
+        : `chat-attachment://${voicePath}`;
       return { text: '', voiceUrl };
     }
     
