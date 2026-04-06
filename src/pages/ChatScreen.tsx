@@ -679,6 +679,12 @@ const ChatScreen = () => {
       )
       .subscribe();
 
+    // BUG-CHT-RT-01 FIX: Guard against empty chatId to prevent subscribing to ALL sessions
+    if (!chatId.current) {
+      console.warn('[ChatScreen] session-monitor skipped: chatId.current is empty');
+      return;
+    }
+
     // Monitor active_chat_sessions for this conversation
     const sessionChannel = supabase
       .channel(`session-monitor-${chatId.current}`)

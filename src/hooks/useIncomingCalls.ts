@@ -13,10 +13,43 @@ interface IncomingCall {
 let ringAudioContext: AudioContext | null = null;
 let ringIntervalId: NodeJS.Timeout | null = null;
 
+// GEN-001 FIX: Pre-warm AudioContext on first user interaction for iOS Safari
+let audioContextWarmed = false;
+const warmAudioContext = () => {
+  if (audioContextWarmed) return;
+  audioContextWarmed = true;
+  try {
+    if (!ringAudioContext || ringAudioContext.state === 'closed') {
+      ringAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Resume suspended context (iOS requires user gesture)
+    if (ringAudioContext.state === 'suspended') {
+      ringAudioContext.resume();
+    }
+  } catch (e) {
+    console.warn('[IncomingCalls] Failed to pre-warm AudioContext:', e);
+  }
+};
+
+// Register once on first user interaction
+if (typeof document !== 'undefined') {
+  const handler = () => {
+    warmAudioContext();
+    document.removeEventListener('click', handler);
+    document.removeEventListener('touchstart', handler);
+  };
+  document.addEventListener('click', handler, { once: true });
+  document.addEventListener('touchstart', handler, { once: true });
+}
+
 const playRingSound = () => {
   try {
     if (!ringAudioContext || ringAudioContext.state === 'closed') {
       ringAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // GEN-001 FIX: Resume if suspended (iOS Safari)
+    if (ringAudioContext.state === 'suspended') {
+      ringAudioContext.resume();
     }
     const ctx = ringAudioContext;
     const now = ctx.currentTime;
@@ -199,10 +232,24 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
       )
       .subscribe();
 
-    // Polling fallback: check for ringing calls every 3 seconds
-    // This catches calls that realtime INSERT events may have missed
-    const pollInterval = setInterval(async () => {
-      if (incomingCallRef.current) return; // Already showing a call
+    // GEN-002 FIX: Polling fallback with exponential backoff
+    // Only activates as a true fallback; backs off when no calls found
+    let pollIntervalMs = 3000; // Start at 3s
+    let consecutiveEmpty = 0;
+    let pollTimeoutId: NodeJS.Timeout | null = null;
+
+    const schedulePoll = () => {
+      pollTimeoutId = setTimeout(pollForCalls, pollIntervalMs);
+    };
+
+    const pollForCalls = async () => {
+      if (incomingCallRef.current) {
+        // Already showing a call, reset backoff and schedule next
+        consecutiveEmpty = 0;
+        pollIntervalMs = 3000;
+        schedulePoll();
+        return;
+      }
 
       const { data: ringingCalls } = await supabase
         .from('video_call_sessions')
@@ -217,49 +264,58 @@ export const useIncomingCalls = (currentUserId: string | null, userGender?: "mal
         const callAge = Date.now() - new Date(call.created_at).getTime();
         
         // Only process calls less than 35 seconds old
-        if (callAge > 35000) return;
+        if (callAge <= 35000) {
+          const callerId = call[callerColumn];
+          if (callerId !== currentUserId && !outgoingCallIds.has(call.call_id) && !call.call_id?.startsWith(`call_${currentUserId}_`)) {
+            const callType = call.call_type === 'audio' ? 'audio_call' : 'video_call';
+            if (!shouldBlockIncoming(callType as any)) {
+              // Fetch caller info
+              const { fetchPublicProfile } = await import("@/lib/profile-queries");
+              const callerProfile = await fetchPublicProfile(callerId);
+              let callerName = callerProfile?.full_name || 'Someone';
+              let callerPhoto = callerProfile?.photo_url || null;
 
-        // Skip own outgoing calls
-        const callerId = call[callerColumn];
-        if (callerId === currentUserId) return;
-        if (outgoingCallIds.has(call.call_id)) return;
-        if (call.call_id?.startsWith(`call_${currentUserId}_`)) return;
+              if (!callerProfile) {
+                const fallbackTable = gender === "male" ? "female_profiles" : "male_profiles";
+                const { data: fallbackProfile } = await supabase
+                  .from(fallbackTable)
+                  .select('full_name, photo_url')
+                  .eq('user_id', callerId)
+                  .single();
+                if (fallbackProfile) {
+                  callerName = fallbackProfile.full_name || 'Someone';
+                  callerPhoto = fallbackProfile.photo_url;
+                }
+              }
 
-        // Priority check
-        const callType = call.call_type === 'audio' ? 'audio_call' : 'video_call';
-        if (shouldBlockIncoming(callType as any)) return;
-
-        // Fetch caller info
-        const { fetchPublicProfile } = await import("@/lib/profile-queries");
-        const callerProfile = await fetchPublicProfile(callerId);
-        let callerName = callerProfile?.full_name || 'Someone';
-        let callerPhoto = callerProfile?.photo_url || null;
-
-        if (!callerProfile) {
-          const fallbackTable = gender === "male" ? "female_profiles" : "male_profiles";
-          const { data: fallbackProfile } = await supabase
-            .from(fallbackTable)
-            .select('full_name, photo_url')
-            .eq('user_id', callerId)
-            .single();
-          if (fallbackProfile) {
-            callerName = fallbackProfile.full_name || 'Someone';
-            callerPhoto = fallbackProfile.photo_url;
+              consecutiveEmpty = 0;
+              pollIntervalMs = 3000;
+              setIncomingCall({
+                callId: call.call_id,
+                callerUserId: callerId,
+                callerName,
+                callerPhoto
+              });
+              schedulePoll();
+              return;
+            }
           }
         }
-
-        setIncomingCall({
-          callId: call.call_id,
-          callerUserId: callerId,
-          callerName,
-          callerPhoto
-        });
       }
-    }, 3000);
+
+      // No calls found — exponential backoff (3s → 5s → 10s → 30s max)
+      consecutiveEmpty++;
+      if (consecutiveEmpty >= 3) {
+        pollIntervalMs = Math.min(pollIntervalMs * 2, 30000);
+      }
+      schedulePoll();
+    };
+
+    schedulePoll();
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(pollInterval);
+      if (pollTimeoutId) clearTimeout(pollTimeoutId);
     };
   }, [currentUserId, userGender]);
 

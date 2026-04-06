@@ -340,6 +340,17 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId]);
 
+  // CHT-F-005 FIX: Reset idle timer on incoming partner messages too
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.senderId !== currentUserId) {
+        // Partner sent a message — reset activity timer
+        setLastActivityTime(Date.now());
+      }
+    }
+  }, [messages, currentUserId]);
+
   // Inactivity warning and auto-close after 2 minutes idle
   useEffect(() => {
     if (!billingStarted) return;

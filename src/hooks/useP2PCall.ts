@@ -473,15 +473,36 @@ export const useP2PCall = ({
       }
     };
 
-    // Monitor ICE connection state
+    // VID-F-005 FIX: ICE restart on connection failure
     pc.oniceconnectionstatechange = () => {
       console.log('[P2P] ICE connection state:', pc.iceConnectionState);
       if (pc.iceConnectionState === 'failed') {
-        toast({
-          title: 'Network Traversal Failed',
-          description: 'Could not establish media path. Please retry or switch network.',
-          variant: 'destructive',
-        });
+        console.log('[P2P] ICE failed — attempting ICE restart');
+        try {
+          pc.restartIce();
+          // Re-create and send a new offer with iceRestart flag
+          if (isInitiator) {
+            pc.createOffer({ iceRestart: true }).then(async (offer) => {
+              await pc.setLocalDescription(offer);
+              await sendSignal('offer', { sdp: offer, senderId: currentUserId });
+              console.log('[P2P] ICE restart offer sent');
+            }).catch(err => {
+              console.error('[P2P] ICE restart offer failed:', err);
+              toast({
+                title: 'Network Traversal Failed',
+                description: 'Could not re-establish media path. Please retry or switch network.',
+                variant: 'destructive',
+              });
+            });
+          }
+        } catch (err) {
+          console.error('[P2P] ICE restart failed:', err);
+          toast({
+            title: 'Network Traversal Failed',
+            description: 'Could not establish media path. Please retry or switch network.',
+            variant: 'destructive',
+          });
+        }
       }
     };
 
@@ -495,7 +516,7 @@ export const useP2PCall = ({
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [currentUserId, onCallEnded, toast, syncCallStatus, bindStreamToVideo]);
+  }, [currentUserId, onCallEnded, toast, syncCallStatus, bindStreamToVideo, sendSignal, isInitiator, audioOnly]);
 
   // Send/re-send offer (used for initial dial + peer-ready handshake)
   const sendOffer = useCallback(async () => {
@@ -795,6 +816,13 @@ export const useP2PCall = ({
       startOfferRetry();
     } catch (error) {
       console.error('[P2P] Error starting call:', error);
+      // VID-F-006 FIX: cleanup media tracks on signaling failure
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+        localStreamRef.current = null;
+      }
+      if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
+      if (signalChannelRef.current) { supabase.removeChannel(signalChannelRef.current); signalChannelRef.current = null; }
       setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
       toast({
         title: "Error",
@@ -826,6 +854,13 @@ export const useP2PCall = ({
       console.log('[P2P] Ready to receive offer');
     } catch (error) {
       console.error('[P2P] Error joining call:', error);
+      // VID-F-006 FIX: cleanup media tracks on signaling failure
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+        localStreamRef.current = null;
+      }
+      if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
+      if (signalChannelRef.current) { supabase.removeChannel(signalChannelRef.current); signalChannelRef.current = null; }
       setState(prev => ({ ...prev, isConnecting: false, callStatus: 'ended' }));
       toast({
         title: "Error",
