@@ -228,6 +228,18 @@ const ChatAttachment = ({ url, isMine, resolveUrl }: { url: string; isMine: bool
   );
 };
 
+/** BUG-VM-02 FIX: Resolves voice URL via signed URL before rendering player */
+const ResolvedVoicePlayer = ({ voiceUrl, isMine, resolveUrl }: { voiceUrl: string; isMine: boolean; resolveUrl: (u: string) => Promise<string> }) => {
+  const [resolved, setResolved] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    resolveUrl(voiceUrl).then(u => { if (!cancelled) setResolved(u); });
+    return () => { cancelled = true; };
+  }, [voiceUrl, resolveUrl]);
+  if (!resolved || resolved === '') return <div className="text-xs text-muted-foreground px-2 py-1">Voice unavailable</div>;
+  return <VoiceMessagePlayer audioUrl={resolved} isMine={isMine} />;
+};
+
 const ChatScreen = () => {
   // ============= HOOKS INITIALIZATION =============
   
