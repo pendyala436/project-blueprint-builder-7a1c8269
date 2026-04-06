@@ -76,6 +76,7 @@ export const getWomenTabs = (onlineBadge?: number, chatBadge?: number, matchesBa
   { id: "community", label: "Community", icon: <Users className="w-5 h-5" /> },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
   { id: "earnings", label: "Earnings", icon: <Wallet className="w-5 h-5" /> },
+  { id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> },
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
 ];
 
