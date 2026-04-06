@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { registerSession, unregisterSession } from "@/hooks/useSessionPriority";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
