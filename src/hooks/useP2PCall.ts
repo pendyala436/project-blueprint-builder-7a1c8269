@@ -409,11 +409,13 @@ export const useP2PCall = ({
     console.log('[P2P] Creating peer connection...');
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    // Add local tracks to the connection
-    localStream.getTracks().forEach(track => {
-      console.log('[P2P] Adding local track:', track.kind);
-      pc.addTrack(track, localStream);
-    });
+    // AUD-F-001 FIX: Filter tracks by kind for audio-only calls
+    localStream.getTracks()
+      .filter(t => !audioOnly || t.kind === 'audio')
+      .forEach(track => {
+        console.log('[P2P] Adding local track:', track.kind);
+        pc.addTrack(track, localStream);
+      });
 
     // Handle incoming remote stream
     pc.ontrack = (event) => {
