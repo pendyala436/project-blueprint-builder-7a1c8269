@@ -82,6 +82,15 @@ const VideoCallModal = ({
   // Check block status - auto-close if blocked
   const { isBlocked, isBlockedByThem } = useBlockCheck(currentUserId, remoteUserId);
 
+  // VID-H-04: Confirmation dialog for active calls to prevent accidental dismiss
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
+  // VID-F-007 FIX: wrap in useCallback for stable reference, declared before useEffect
+  const handleEndCall = useCallback(async () => {
+    await endCall();
+    onClose();
+  }, [endCall, onClose]);
+
   // Auto-close call if blocked — VID-F-007 FIX: include handleEndCall in deps
   useEffect(() => {
     if (isBlocked) {
@@ -95,36 +104,6 @@ const VideoCallModal = ({
       handleEndCall();
     }
   }, [isBlocked, handleEndCall, isBlockedByThem, toast]);
-
-  // Callback refs that bind streams when video elements mount
-  const setLocalVideoElement = useCallback((element: HTMLVideoElement | null) => {
-    (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    if (element && localStream) {
-      bindStreamToVideo(element, localStream);
-    }
-  }, [localVideoRef, localStream, bindStreamToVideo]);
-
-  const setRemoteVideoElement = useCallback((element: HTMLVideoElement | null) => {
-    (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    if (element && remoteStream) {
-      bindStreamToVideo(element, remoteStream);
-    }
-  }, [remoteVideoRef, remoteStream, bindStreamToVideo]);
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // VID-H-04: Confirmation dialog for active calls to prevent accidental dismiss
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
-
-  // VID-F-007 FIX: wrap in useCallback for stable reference
-  const handleEndCall = useCallback(async () => {
-    await endCall();
-    onClose();
-  }, [endCall, onClose]);
 
   // VID-H-04: Only allow dismiss without confirmation during non-active states
   const handleDialogOpenChange = (open: boolean) => {
