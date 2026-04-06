@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Home, Wallet, TrendingUp, Clock,
   ArrowDownToLine, CheckCircle2, AlertCircle,
-  Globe, Zap, Building2, IndianRupee, RefreshCw,
+  Globe, Zap, Building2, IndianRupee, RefreshCw, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
