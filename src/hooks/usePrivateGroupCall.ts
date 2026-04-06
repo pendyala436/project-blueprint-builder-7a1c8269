@@ -804,7 +804,7 @@ export function usePrivateGroupCall({
         totalEarnings: 0,
       };
 
-      setupSignaling();
+      await setupSignaling();
       startCountdownTimer();
       startBillingTimer();
 
