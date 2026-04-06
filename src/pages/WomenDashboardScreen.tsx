@@ -54,6 +54,7 @@ import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 // WhatsAppFAB removed — unused in current layout
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
+import TransactionStatementTab from "@/components/TransactionStatementTab";
 
 interface Notification {
   id: string;

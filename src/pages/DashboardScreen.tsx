@@ -82,6 +82,7 @@ import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs"
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
+import TransactionStatementTab from "@/components/TransactionStatementTab";
 interface Notification {
   id: string;
   title: string;
