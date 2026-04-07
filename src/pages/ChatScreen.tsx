@@ -370,6 +370,7 @@ const ChatScreen = () => {
   
   // Map temp message IDs to real DB IDs for translation resolution
   const tempToRealIdRef = useRef<Map<string, string>>(new Map());
+  const walletChannelRef = useRef<any>(null);
 
   // Cleanup camera stream on unmount
   useEffect(() => {
