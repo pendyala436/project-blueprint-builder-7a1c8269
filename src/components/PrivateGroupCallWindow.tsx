@@ -529,13 +529,12 @@ export function PrivateGroupCallWindow({
       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10" />
 
-      {/* ─── Top Bar (Over Video) ─────────────────────────────────── */}
-      <div className="relative z-20 flex items-center justify-between px-4 py-3">
+      {/* ─── Top Bar (WhatsApp-style) ─────────────────────────────── */}
+      <div className="relative z-20 flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-[#075E54]/90 to-transparent">
         <div className="flex items-center gap-2">
-          {/* Host avatar + name */}
-          <Avatar className="h-9 w-9 ring-2 ring-red-500">
+          <Avatar className="h-9 w-9 ring-2 ring-[#25D366]">
             <AvatarImage src={isOwner ? (userPhoto || undefined) : participants.find(p => p.isOwner)?.photo} />
-            <AvatarFallback className="text-xs bg-red-600 text-white">
+            <AvatarFallback className="text-xs bg-[#128C7E] text-white">
               {isOwner ? userName[0] : (participants.find(p => p.isOwner)?.name?.[0] || 'H')}
             </AvatarFallback>
           </Avatar>
@@ -543,7 +542,7 @@ export function PrivateGroupCallWindow({
             <p className="text-white text-sm font-semibold leading-tight">{group.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               {isLive && (
-                <Badge className="bg-red-600 text-white text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0">
+                <Badge className="bg-[#25D366] text-white text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0">
                   <Radio className="h-2.5 w-2.5 animate-pulse" /> LIVE
                 </Badge>
               )}
@@ -556,12 +555,11 @@ export function PrivateGroupCallWindow({
 
         <div className="flex items-center gap-2">
           {isLive && (
-            <Badge variant="outline" className="text-white/90 border-white/30 bg-black/40 text-[11px] gap-1">
-              <Circle className="h-2 w-2 fill-red-500 text-red-500 animate-pulse" />
+            <Badge variant="outline" className="text-white/90 border-[#25D366]/50 bg-[#075E54]/60 text-[11px] gap-1">
+              <Circle className="h-2 w-2 fill-[#25D366] text-[#25D366] animate-pulse" />
               {formatTime(remainingTime)}
             </Badge>
           )}
-          {/* Fullscreen toggle removed — always fullscreen */}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -626,7 +624,7 @@ export function PrivateGroupCallWindow({
             <div key={msg.id} className="px-1 py-0.5">
               <span className={cn(
                 "font-bold text-xs mr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
-                msg.isSelf ? "text-primary" : "text-amber-400"
+                msg.isSelf ? "text-[#25D366]" : "text-amber-400"
               )}>
                 {msg.senderName}:
               </span>
@@ -723,7 +721,7 @@ export function PrivateGroupCallWindow({
                 <Button
                   size="sm"
                   onClick={handleGoLive}
-                  className="gap-1.5 rounded-full px-5 bg-red-600 hover:bg-red-700"
+                  className="gap-1.5 rounded-full px-5 bg-[#25D366] hover:bg-[#128C7E] text-white"
                   disabled={isConnecting}
                 >
                   {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}
@@ -813,7 +811,7 @@ export function PrivateGroupCallWindow({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 text-primary hover:bg-white/10 shrink-0"
+                className="h-7 w-7 text-[#25D366] hover:bg-white/10 shrink-0"
                 onClick={handleSendComment}
               >
                 <Send className="h-4 w-4" />
