@@ -355,6 +355,8 @@ const TransactionStatementScreen = () => {
                     <TableRow className="bg-muted/40">
                       <TableHead className="text-xs">Date & Time (IST)</TableHead>
                       <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Start</TableHead>
+                      <TableHead className="text-xs">End</TableHead>
                       <TableHead className="text-xs">Duration</TableHead>
                       <TableHead className="text-xs">Rate</TableHead>
                       {isMale ? (
