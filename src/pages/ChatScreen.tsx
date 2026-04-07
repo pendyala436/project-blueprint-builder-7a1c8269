@@ -918,7 +918,7 @@ const ChatScreen = () => {
           .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'users_wallet',  // BUG-VID-03 FIX: correct table name
+            table: 'users_wallet',
             filter: `user_id=eq.${user.id}`,
           }, (payload: any) => {
             if (payload.new?.balance !== undefined) {
@@ -927,10 +927,8 @@ const ChatScreen = () => {
           })
           .subscribe();
 
-        // Cleanup wallet subscription when component unmounts
-        return () => {
-          supabase.removeChannel(walletChannel);
-        };
+        // Store channel ref for cleanup (do NOT return here — it would abort initializeChat)
+        walletChannelRef.current = walletChannel;
       }
 
       // ============= FETCH PARTNER PROFILE =============
