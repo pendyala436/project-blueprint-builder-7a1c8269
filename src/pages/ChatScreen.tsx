@@ -2512,14 +2512,13 @@ const ChatScreen = () => {
               />
             )}
 
-            {/* Chat input — flex: 1 */}
-            <div className="flex-1">
-          
+          </div>
+
           {/* Issue 2.3: Show explanation when blocked */}
           {(isBlocked || isBlockedByPartner) && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive text-sm rounded-md mx-2 mb-1">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <span>{isBlocked ? "You have blocked this user. Unblock to send messages." : "You cannot send messages to this user."}</span>
+            <div className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 rounded-md" style={{ background: 'rgba(198,40,40,0.08)' }}>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" style={{ color: '#C62828' }} />
+              <span style={{ fontSize: 12, color: '#C62828' }}>{isBlocked ? "You have blocked this user. Unblock to send messages." : "You cannot send messages to this user."}</span>
             </div>
           )}
           
