@@ -905,7 +905,7 @@ const DashboardScreen = () => {
 
       // Fetch chat counts, availability, and languages in PARALLEL
       const womenUserIds = onlineWomenList.map(w => w.user_id);
-      const [chatCountsRes, availabilityRes, userLanguagesRes] = await Promise.all([
+      const [chatCountsRes, availabilityRes, userLanguagesRes, walletsRes] = await Promise.all([
         supabase
           .from("active_chat_sessions")
           .select("woman_user_id, status")
@@ -918,6 +918,10 @@ const DashboardScreen = () => {
         supabase
           .from("user_languages")
           .select("user_id, language_name")
+          .in("user_id", womenUserIds),
+        supabase
+          .from("wallets")
+          .select("user_id, balance")
           .in("user_id", womenUserIds),
       ]);
 
