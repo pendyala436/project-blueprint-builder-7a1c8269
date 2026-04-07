@@ -1283,6 +1283,7 @@ const WomenDashboardScreen = () => {
                 language={user.motherTongue}
                 country={user.country}
                 state={user.state}
+                walletBalance={user.walletBalance}
                 activeChatCount={user.activeChatCount}
                 actions={
                   <div className="flex items-center gap-1">
