@@ -1870,15 +1870,32 @@ const ChatScreen = () => {
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* ============= INCOMING CALL POPUP ============= */}
-      {incomingCall && (
-        <IncomingVideoCallWindow
-          callId={incomingCall.callId}
-          callerUserId={incomingCall.callerUserId}
+      {/* ============= INCOMING CALL BANNER ============= */}
+      {incomingCall && callStatus === 'idle' && (
+        <IncomingCallBanner
           callerName={incomingCall.callerName}
           callerPhoto={incomingCall.callerPhoto}
-          currentUserId={currentUserId}
-          onClose={clearIncomingCall}
+          callType={incomingCall.callType}
+          onAccept={() => {
+            acceptCall(incomingCall.callId, incomingCall.callType, incomingCall.callerUserId, incomingCall.callerName, incomingCall.callerPhoto);
+            clearIncomingCall();
+          }}
+          onDecline={() => {
+            declineCall(incomingCall.callId);
+            clearIncomingCall();
+          }}
+        />
+      )}
+      {/* ============= WHATSAPP CALL SCREEN ============= */}
+      {(callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'active') && (
+        <WhatsAppCallScreen
+          status={callStatus}
+          activeCall={activeCall}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          onEnd={endCall}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
         />
       )}
       {/* ============= HEADER SECTION ============= */}
