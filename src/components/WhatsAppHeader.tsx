@@ -44,6 +44,8 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
   onNotifications,
   showKYC,
   onKYC,
+  unreadAdminMessages = 0,
+  unreadAdminChat = 0,
 }) => {
   return (
     <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
