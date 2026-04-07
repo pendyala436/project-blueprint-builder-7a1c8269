@@ -446,8 +446,8 @@ const WomenDashboardScreen = () => {
           .select("user_id, balance")
           .in("user_id", allMenIds);
         if (!data || data.length === 0) return;
-        const balanceMap = new Map(data.map((w: any) => [w.user_id, Number(w.balance) || 0]));
-        const updateList = (list: OnlineMan[]) =>
+        const balanceMap = new Map<string, number>(data.map((w: { user_id: string; balance: number }) => [w.user_id, Number(w.balance) || 0]));
+        const updateList = (list: OnlineMan[]): OnlineMan[] =>
           list.map(m => {
             const newBal = balanceMap.get(m.userId);
             return newBal !== undefined ? { ...m, walletBalance: newBal, hasRecharged: newBal > 0 } : m;
