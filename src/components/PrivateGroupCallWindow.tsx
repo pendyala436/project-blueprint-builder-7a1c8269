@@ -721,7 +721,7 @@ export function PrivateGroupCallWindow({
                 <Button
                   size="sm"
                   onClick={handleGoLive}
-                  className="gap-1.5 rounded-full px-5 bg-red-600 hover:bg-red-700"
+                  className="gap-1.5 rounded-full px-5 bg-[#25D366] hover:bg-[#128C7E] text-white"
                   disabled={isConnecting}
                 >
                   {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Radio className="h-4 w-4" />}
