@@ -407,7 +407,7 @@ const AdminUserManagement = () => {
         supabase.from("matches").delete().eq("user_id", userId),
         supabase.from("matches").delete().eq("matched_user_id", userId),
         supabase.from("ledger_transactions").delete().eq("user_id", userId),
-        supabase.from("users_wallet" as any).delete().eq("user_id", userId),
+        supabase.from("wallets").delete().eq("user_id", userId),
       ]);
 
       const { error } = await supabase.from("profiles").delete().eq("id", selectedUser.id);
