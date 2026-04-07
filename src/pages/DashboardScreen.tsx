@@ -103,6 +103,7 @@ interface OnlineWoman {
   is_available?: boolean;
   max_chats?: number;
   is_earning_eligible?: boolean; // Badged women shown at top
+  walletBalance?: number; // Women's wallet/earning balance
 }
 
 interface MatchedWoman {
@@ -494,6 +495,16 @@ const DashboardScreen = () => {
       supabase.removeChannel(channel);
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
+
+  // 30-second auto-refresh for online users' wallet balances
+  useEffect(() => {
+    if (!currentUserId || !userLanguageRef.current) return;
+    const intervalId = setInterval(() => {
+      const lang = userLanguageRef.current;
+      if (lang) fetchOnlineWomen(lang);
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [currentUserId]);
 
   // Eager-load active chats on mount for unread badge
   useEffect(() => {
@@ -904,7 +915,7 @@ const DashboardScreen = () => {
 
       // Fetch chat counts, availability, and languages in PARALLEL
       const womenUserIds = onlineWomenList.map(w => w.user_id);
-      const [chatCountsRes, availabilityRes, userLanguagesRes] = await Promise.all([
+      const [chatCountsRes, availabilityRes, userLanguagesRes, walletsRes] = await Promise.all([
         supabase
           .from("active_chat_sessions")
           .select("woman_user_id, status")
@@ -917,6 +928,10 @@ const DashboardScreen = () => {
         supabase
           .from("user_languages")
           .select("user_id, language_name")
+          .in("user_id", womenUserIds),
+        supabase
+          .from("wallets")
+          .select("user_id, balance")
           .in("user_id", womenUserIds),
       ]);
 
@@ -932,6 +947,10 @@ const DashboardScreen = () => {
 
       const languageMap = new Map((userLanguagesRes.data as any[] || []).map(l => [l.user_id, l.language_name as string]));
 
+      const walletMap = new Map<string, number>(
+        (walletsRes.data as any[] || []).map((w: any) => [w.user_id, Number(w.balance) || 0])
+      );
+
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
         const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
@@ -943,6 +962,7 @@ const DashboardScreen = () => {
           is_available: avail?.is_available !== false,
           max_chats: avail?.max_concurrent_chats || 3,
           is_earning_eligible: w.is_earning_eligible || false,
+          walletBalance: walletMap.get(w.user_id) || 0,
         };
       });
 
@@ -1386,6 +1406,7 @@ const DashboardScreen = () => {
                   language={woman.primary_language}
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
+                  walletBalance={woman.walletBalance}
                   onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
@@ -1427,6 +1448,7 @@ const DashboardScreen = () => {
                   language={woman.primary_language}
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
+                  walletBalance={woman.walletBalance}
                   subtitle={`${woman.primary_language} → ${userLanguage}`}
                   onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
