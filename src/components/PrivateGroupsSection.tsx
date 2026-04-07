@@ -157,23 +157,23 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   return (
     <div className="space-y-3">
       {/* WhatsApp-style header */}
-      <div className="flex items-center justify-between bg-[#075E54] text-white px-4 py-2.5 rounded-t-xl -mx-1">
+      <div className="flex items-center justify-between bg-primary text-primary-foreground px-4 py-2.5 rounded-t-xl -mx-1">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Users className="h-4 w-4" />
           Private Groups
         </h3>
         <div className="flex items-center gap-2">
-          <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">
+          <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 text-[10px] h-5">
             {liveGroups.length} Live
           </Badge>
-          <button onClick={() => { setIsLoading(true); fetchGroups(); }} className="hover:bg-white/10 rounded-full p-1.5 transition-colors">
+          <button onClick={() => { setIsLoading(true); fetchGroups(); }} className="hover:bg-primary-foreground/10 rounded-full p-1.5 transition-colors">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* Tip info banner */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#DCF8C6] rounded-lg text-[11px] text-[#303030] border border-[#B2DFAB]">
+      <div className="flex items-center gap-2 px-3 py-2 bg-accent/15 rounded-lg text-[11px] text-foreground border border-accent/30">
         <span className="text-sm">💰</span>
         <span>{TIP_INFO}</span>
       </div>

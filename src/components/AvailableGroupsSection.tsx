@@ -224,7 +224,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       "h-8 text-xs rounded-full px-4 gap-1",
                       isFull || !hasEnoughBalance
                         ? "bg-muted text-muted-foreground cursor-not-allowed"
-                        : "bg-[#25D366] hover:bg-[#128C7E] text-white"
+                        : "bg-accent hover:bg-accent/80 text-accent-foreground"
                     )}
                     onClick={() => handleJoinGroup(group)}
                     disabled={!hasEnoughBalance || isFull || isJoining}
