@@ -433,16 +433,20 @@ const WomenDashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineMen reads from refs; language handlers fetch directly
 
+  // Refs to track current men lists (avoids side-effect-only setState peeks)
+  const rechargedMenRef = useRef<OnlineMan[]>([]);
+  const nonRechargedMenRef = useRef<OnlineMan[]>([]);
+  useEffect(() => { rechargedMenRef.current = rechargedMen; }, [rechargedMen]);
+  useEffect(() => { nonRechargedMenRef.current = nonRechargedMen; }, [nonRechargedMen]);
+
   // 5-second lightweight wallet balance refresh for online men
   useEffect(() => {
     if (!currentUserId) return;
     const intervalId = setInterval(async () => {
-      // Use functional updates to avoid stale closures
-      let allMenIds: string[] = [];
-      // Peek at current state to get IDs
-      setRechargedMen(prev => { allMenIds.push(...prev.map(m => m.userId)); return prev; });
-      setNonRechargedMen(prev => { allMenIds.push(...prev.map(m => m.userId)); return prev; });
-
+      const allMenIds = [
+        ...rechargedMenRef.current.map(m => m.userId),
+        ...nonRechargedMenRef.current.map(m => m.userId),
+      ];
       if (allMenIds.length === 0) return;
       try {
         const { data } = await supabase
@@ -456,25 +460,10 @@ const WomenDashboardScreen = () => {
           return newBal !== undefined ? { ...m, walletBalance: newBal, hasRecharged: newBal > 0 } : m;
         };
 
-        // Atomic re-partition using functional updates (no stale closures)
-        const repartition = (prevRecharged: OnlineMan[], prevNonRecharged: OnlineMan[]) => {
-          const allMen = [...prevRecharged, ...prevNonRecharged].map(updateMan);
-          return {
-            recharged: allMen.filter(m => m.walletBalance > 0),
-            nonRecharged: allMen.filter(m => m.walletBalance <= 0),
-          };
-        };
-
-        // We need both prev states simultaneously — use a ref-based approach
-        let capturedRecharged: OnlineMan[] = [];
-        setRechargedMen(prev => { capturedRecharged = prev; return prev; });
-        setNonRechargedMen(prevNon => {
-          const result = repartition(capturedRecharged, prevNon);
-          // Set recharged in next microtask to avoid nested setState
-          queueMicrotask(() => setRechargedMen(result.recharged));
-          return result.nonRecharged;
-        });
-
+        // Re-partition: combine all men, update balances, then split
+        const allMen = [...rechargedMenRef.current, ...nonRechargedMenRef.current].map(updateMan);
+        setRechargedMen(allMen.filter(m => m.walletBalance > 0));
+        setNonRechargedMen(allMen.filter(m => m.walletBalance <= 0));
         setSameLanguageMen(prev => prev.map(updateMan));
         setOtherLanguageMen(prev => prev.map(updateMan));
       } catch { /* silent */ }

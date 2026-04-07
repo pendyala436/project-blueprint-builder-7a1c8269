@@ -116,8 +116,9 @@ const WomenWalletScreen = () => {
   useEffect(() => { loadData(); }, []);
 
   // Realtime: refresh when wallet balance changes (triggered by billing RPCs)
-  useRealtimeSubscription({ table: "wallets",           onUpdate: loadData });
-  useRealtimeSubscription({ table: "withdrawal_requests",  onUpdate: loadData });
+  // Filter by user_id to avoid reacting to OTHER users' wallet changes
+  useRealtimeSubscription({ table: "wallets", filter: currentUserId ? `user_id=eq.${currentUserId}` : undefined, onUpdate: loadData, enabled: !!currentUserId });
+  useRealtimeSubscription({ table: "withdrawal_requests", filter: currentUserId ? `user_id=eq.${currentUserId}` : undefined, onUpdate: loadData, enabled: !!currentUserId });
   useRealtimeSubscription({ table: "chat_pricing",         onUpdate: loadData });
 
   // ── Withdraw handler ─────────────────────────────────────────────────────
