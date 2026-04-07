@@ -937,6 +937,10 @@ const DashboardScreen = () => {
 
       const languageMap = new Map((userLanguagesRes.data as any[] || []).map(l => [l.user_id, l.language_name as string]));
 
+      const walletMap = new Map<string, number>(
+        (walletsRes.data as any[] || []).map((w: any) => [w.user_id, Number(w.balance) || 0])
+      );
+
       const womenWithChatCount = onlineWomenList.map(w => {
         const avail = availabilityMap.get(w.user_id);
         const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
@@ -948,6 +952,7 @@ const DashboardScreen = () => {
           is_available: avail?.is_available !== false,
           max_chats: avail?.max_concurrent_chats || 3,
           is_earning_eligible: w.is_earning_eligible || false,
+          walletBalance: walletMap.get(w.user_id) || 0,
         };
       });
 
