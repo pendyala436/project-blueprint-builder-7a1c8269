@@ -442,7 +442,7 @@ const TransactionStatementScreen = () => {
                     {/* Totals footer */}
                     {rows.length > 0 && (
                       <TableRow className="bg-muted/60 font-semibold border-t-2">
-                        <TableCell colSpan={4} className="text-xs text-right pr-2">
+                        <TableCell colSpan={6} className="text-xs text-right pr-2">
                           Totals:
                         </TableCell>
                         {isMale ? (
