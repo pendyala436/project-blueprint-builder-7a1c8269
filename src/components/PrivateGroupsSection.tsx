@@ -196,7 +196,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
               key={group.id}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/40",
-                isLive && "bg-[#DCF8C6]/20"
+                isLive && "bg-accent/10"
               )}
             >
               {/* Flower avatar */}
