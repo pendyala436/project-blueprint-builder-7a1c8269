@@ -196,7 +196,7 @@ const AdminFinanceDashboard = () => {
 
   // Real-time subscriptions for finance data
   useMultipleRealtimeSubscriptions(
-    ["ledger_transactions", "gift_transactions", "users_wallet", "withdrawal_requests"],
+    ["ledger_transactions", "gift_transactions", "wallets", "withdrawal_requests"],
     loadFinanceData,
     true
   );
