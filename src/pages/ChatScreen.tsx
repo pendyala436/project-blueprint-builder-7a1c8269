@@ -372,12 +372,16 @@ const ChatScreen = () => {
   const tempToRealIdRef = useRef<Map<string, string>>(new Map());
   const walletChannelRef = useRef<any>(null);
 
-  // Cleanup camera stream on unmount
+  // Cleanup camera stream and wallet channel on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+      }
+      if (walletChannelRef.current) {
+        supabase.removeChannel(walletChannelRef.current);
+        walletChannelRef.current = null;
       }
     };
   }, []);
