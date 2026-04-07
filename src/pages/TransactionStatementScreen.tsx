@@ -112,7 +112,7 @@ const TransactionStatementScreen = () => {
       const { data } = await supabase
         .from("profiles")
         .select("gender")
-        .eq("id", session.user.id)
+        .eq("user_id", session.user.id)
         .single();
       if (data?.gender) setGender(data.gender);
     })();
