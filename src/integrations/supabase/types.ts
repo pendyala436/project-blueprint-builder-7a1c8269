@@ -3682,9 +3682,11 @@ export type Database = {
           debit: number
           description: string
           duration_seconds: number
+          end_time: string
           rate_per_minute: number
           running_balance: number
           session_id: string
+          start_time: string
           transaction_id: string
           txn_date: string
           txn_type: string
