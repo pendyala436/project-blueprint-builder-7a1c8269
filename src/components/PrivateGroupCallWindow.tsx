@@ -811,7 +811,7 @@ export function PrivateGroupCallWindow({
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-7 w-7 text-[#25D366] hover:bg-white/10 shrink-0"
+                className="h-7 w-7 text-accent hover:bg-white/10 shrink-0"
                 onClick={handleSendComment}
               >
                 <Send className="h-4 w-4" />
