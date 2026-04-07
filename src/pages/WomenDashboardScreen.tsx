@@ -1578,6 +1578,8 @@ const WomenDashboardScreen = () => {
         onFriends={() => setShowFriendsPanel(true)}
         onSettings={() => navigate('/settings')}
         onLogout={handleLogout}
+        unreadAdminMessages={unreadAdminMessages}
+        unreadAdminChat={unreadAdminChat}
         unreadNotifications={stats.unreadNotifications}
         onNotifications={() => setActiveTab("online")}
         showKYC={isIndianWoman}
