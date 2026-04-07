@@ -1990,25 +1990,27 @@ const ChatScreen = () => {
 
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
           {currentUserGender === "male" && chatPartner && (
-          <div className="flex items-center gap-0.5 [&_button]:text-primary-foreground [&_button]:hover:bg-primary-foreground/10">
+          <div className="flex items-center gap-0.5">
             <button
-              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              className="p-1.5 rounded-full transition-colors"
+              style={{ color: WA.headerText }}
               onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'audio')}
             >
-              <Phone className="w-5 h-5 text-primary-foreground" />
+              <Phone className="w-5 h-5" />
             </button>
             <button
-              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              className="p-1.5 rounded-full transition-colors"
+              style={{ color: WA.headerText }}
               onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'video')}
             >
-              <Video className="w-5 h-5 text-primary-foreground" />
+              <Video className="w-5 h-5" />
             </button>
           </div>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors">
-                <MoreVertical className="w-5 h-5 text-primary-foreground" />
+              <button className="p-1.5 rounded-full transition-colors" style={{ color: WA.headerText }}>
+                <MoreVertical className="w-5 h-5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
