@@ -458,6 +458,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                   <TableRow className="bg-muted/40">
                     <TableHead className="text-xs">Date & Time (IST)</TableHead>
                     <TableHead className="text-xs">Type</TableHead>
+                    <TableHead className="text-xs">Description</TableHead>
                     <TableHead className="text-xs">Duration</TableHead>
                     <TableHead className="text-xs">Rate</TableHead>
                     {isMale ? (
@@ -477,7 +478,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                 <TableBody>
                   {summary && (
                     <TableRow className="bg-muted/20">
-                      <TableCell className="text-xs text-muted-foreground" colSpan={4}>
+                      <TableCell className="text-xs text-muted-foreground" colSpan={5}>
                         Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
                       </TableCell>
                       <TableCell className="text-xs text-right">—</TableCell>
@@ -499,6 +500,9 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                           <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
                             {typeLabel(row.txn_type, isMale)}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={row.description || ""}>
+                          {row.description || "—"}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {fmtDuration(row.duration_seconds)}
@@ -534,7 +538,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
 
                   {rows.length > 0 && (
                     <TableRow className="bg-muted/60 font-semibold border-t-2">
-                      <TableCell colSpan={4} className="text-xs text-right pr-2">Totals:</TableCell>
+                      <TableCell colSpan={5} className="text-xs text-right pr-2">Totals:</TableCell>
                       {isMale ? (
                         <>
                           <TableCell className="text-xs text-right text-destructive">
