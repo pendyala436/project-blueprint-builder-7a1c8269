@@ -149,6 +149,7 @@ const WomenDashboardScreen = () => {
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
+  const { unreadMessages: unreadAdminMessages, unreadChat: unreadAdminChat } = useAdminUnreadCounts(currentUserId || null);
   const [activeTab, setActiveTab] = useState("online");
   const matchesFetchedRef = useRef(false);
   const chatsFetchedRef = useRef(false);

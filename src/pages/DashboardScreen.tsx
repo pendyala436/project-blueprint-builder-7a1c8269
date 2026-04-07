@@ -241,6 +241,8 @@ const DashboardScreen = () => {
     initiateReconnect 
   } = useAutoReconnect(currentUserId, userLanguage);
 
+  const { unreadMessages: unreadAdminMessages, unreadChat: unreadAdminChat } = useAdminUnreadCounts(currentUserId || null);
+
   // Men's free chat minutes removed - feature deprecated
 
   // ScrollableUserList extracted to avoid hooks-in-render violations - see below
