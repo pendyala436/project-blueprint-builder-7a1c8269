@@ -529,15 +529,18 @@ export type Database = {
           audio_women_earning_rate: number
           created_at: string
           currency: string
+          gift_women_percent: number
           group_call_rate_per_minute: number
           group_call_women_earning_rate: number
           id: string
           is_active: boolean
           min_withdrawal_balance: number
           rate_per_minute: number
+          recharge_platform_fee_percent: number
           updated_at: string
           video_rate_per_minute: number
           video_women_earning_rate: number
+          withdrawal_fee_percent: number
           women_earning_rate: number
         }
         Insert: {
@@ -545,15 +548,18 @@ export type Database = {
           audio_women_earning_rate?: number
           created_at?: string
           currency?: string
+          gift_women_percent?: number
           group_call_rate_per_minute?: number
           group_call_women_earning_rate?: number
           id?: string
           is_active?: boolean
           min_withdrawal_balance?: number
           rate_per_minute?: number
+          recharge_platform_fee_percent?: number
           updated_at?: string
           video_rate_per_minute?: number
           video_women_earning_rate?: number
+          withdrawal_fee_percent?: number
           women_earning_rate?: number
         }
         Update: {
@@ -561,15 +567,18 @@ export type Database = {
           audio_women_earning_rate?: number
           created_at?: string
           currency?: string
+          gift_women_percent?: number
           group_call_rate_per_minute?: number
           group_call_women_earning_rate?: number
           id?: string
           is_active?: boolean
           min_withdrawal_balance?: number
           rate_per_minute?: number
+          recharge_platform_fee_percent?: number
           updated_at?: string
           video_rate_per_minute?: number
           video_women_earning_rate?: number
+          withdrawal_fee_percent?: number
           women_earning_rate?: number
         }
         Relationships: []
@@ -706,6 +715,8 @@ export type Database = {
           approval_status: string
           auto_approved: boolean | null
           avg_response_time_seconds: number | null
+          bank_account_number: string | null
+          bank_name: string | null
           bio: string | null
           body_type: string | null
           country: string | null
@@ -719,6 +730,7 @@ export type Database = {
           has_golden_badge: boolean | null
           height_cm: number | null
           id: string
+          ifsc_code: string | null
           interests: string[] | null
           is_earning_eligible: boolean | null
           is_indian: boolean | null
@@ -730,6 +742,7 @@ export type Database = {
           marital_status: string | null
           monthly_chat_minutes: number | null
           occupation: string | null
+          pan_number: string | null
           performance_score: number | null
           phone: string | null
           photo_url: string | null
@@ -753,6 +766,8 @@ export type Database = {
           approval_status?: string
           auto_approved?: boolean | null
           avg_response_time_seconds?: number | null
+          bank_account_number?: string | null
+          bank_name?: string | null
           bio?: string | null
           body_type?: string | null
           country?: string | null
@@ -766,6 +781,7 @@ export type Database = {
           has_golden_badge?: boolean | null
           height_cm?: number | null
           id?: string
+          ifsc_code?: string | null
           interests?: string[] | null
           is_earning_eligible?: boolean | null
           is_indian?: boolean | null
@@ -777,6 +793,7 @@ export type Database = {
           marital_status?: string | null
           monthly_chat_minutes?: number | null
           occupation?: string | null
+          pan_number?: string | null
           performance_score?: number | null
           phone?: string | null
           photo_url?: string | null
@@ -800,6 +817,8 @@ export type Database = {
           approval_status?: string
           auto_approved?: boolean | null
           avg_response_time_seconds?: number | null
+          bank_account_number?: string | null
+          bank_name?: string | null
           bio?: string | null
           body_type?: string | null
           country?: string | null
@@ -813,6 +832,7 @@ export type Database = {
           has_golden_badge?: boolean | null
           height_cm?: number | null
           id?: string
+          ifsc_code?: string | null
           interests?: string[] | null
           is_earning_eligible?: boolean | null
           is_indian?: boolean | null
@@ -824,6 +844,7 @@ export type Database = {
           marital_status?: string | null
           monthly_chat_minutes?: number | null
           occupation?: string | null
+          pan_number?: string | null
           performance_score?: number | null
           phone?: string | null
           photo_url?: string | null
@@ -1773,6 +1794,72 @@ export type Database = {
           status?: string
           txn_id?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_ledger: {
+        Row: {
+          balance_after: number
+          counterparty_id: string | null
+          created_at_ist: string
+          credit: number
+          debit: number
+          description: string | null
+          duration_minutes: number | null
+          entry_type: string
+          id: string
+          idempotency_key: string | null
+          ist_date: string | null
+          ist_month: string | null
+          ist_year: number | null
+          rate_per_unit: number | null
+          reference_number: string | null
+          session_id: string | null
+          session_type: string | null
+          user_gender: string
+          user_id: string
+        }
+        Insert: {
+          balance_after?: number
+          counterparty_id?: string | null
+          created_at_ist?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          duration_minutes?: number | null
+          entry_type: string
+          id?: string
+          idempotency_key?: string | null
+          ist_date?: string | null
+          ist_month?: string | null
+          ist_year?: number | null
+          rate_per_unit?: number | null
+          reference_number?: string | null
+          session_id?: string | null
+          session_type?: string | null
+          user_gender: string
+          user_id: string
+        }
+        Update: {
+          balance_after?: number
+          counterparty_id?: string | null
+          created_at_ist?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          duration_minutes?: number | null
+          entry_type?: string
+          id?: string
+          idempotency_key?: string | null
+          ist_date?: string | null
+          ist_month?: string | null
+          ist_year?: number | null
+          rate_per_unit?: number | null
+          reference_number?: string | null
+          session_id?: string | null
+          session_type?: string | null
+          user_gender?: string
           user_id?: string
         }
         Relationships: []
@@ -2925,8 +3012,14 @@ export type Database = {
       withdrawal_requests: {
         Row: {
           amount: number
+          bank_account_number: string | null
+          bank_name: string | null
           created_at: string
+          fee_amount: number | null
+          fee_percent: number | null
           id: string
+          ifsc_code: string | null
+          net_amount: number | null
           payment_details: Json | null
           payment_method: string | null
           processed_at: string | null
@@ -2938,8 +3031,14 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_number?: string | null
+          bank_name?: string | null
           created_at?: string
+          fee_amount?: number | null
+          fee_percent?: number | null
           id?: string
+          ifsc_code?: string | null
+          net_amount?: number | null
           payment_details?: Json | null
           payment_method?: string | null
           processed_at?: string | null
@@ -2951,8 +3050,14 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_number?: string | null
+          bank_name?: string | null
           created_at?: string
+          fee_amount?: number | null
+          fee_percent?: number | null
           id?: string
+          ifsc_code?: string | null
+          net_amount?: number | null
           payment_details?: Json | null
           payment_method?: string | null
           processed_at?: string | null
@@ -3299,6 +3404,81 @@ export type Database = {
         }
         Relationships: []
       }
+      women_payout_snapshots: {
+        Row: {
+          already_paid: number
+          bank_account_number: string | null
+          bank_name: string | null
+          bank_reference: string | null
+          created_at: string
+          full_name: string
+          gross_earned: number
+          id: string
+          ifsc_code: string | null
+          incremental_payable: number
+          ist_month: string
+          ist_year: number
+          net_payable: number
+          payment_status: string
+          processed_at: string | null
+          processed_by: string | null
+          snapshot_ist_date: string
+          snapshot_ist_datetime: string
+          snapshot_type: string
+          user_id: string
+          wallet_balance_at_snapshot: number
+          withdrawal_fee_amount: number
+        }
+        Insert: {
+          already_paid?: number
+          bank_account_number?: string | null
+          bank_name?: string | null
+          bank_reference?: string | null
+          created_at?: string
+          full_name: string
+          gross_earned?: number
+          id?: string
+          ifsc_code?: string | null
+          incremental_payable?: number
+          ist_month: string
+          ist_year: number
+          net_payable?: number
+          payment_status?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          snapshot_ist_date: string
+          snapshot_ist_datetime: string
+          snapshot_type: string
+          user_id: string
+          wallet_balance_at_snapshot?: number
+          withdrawal_fee_amount?: number
+        }
+        Update: {
+          already_paid?: number
+          bank_account_number?: string | null
+          bank_name?: string | null
+          bank_reference?: string | null
+          created_at?: string
+          full_name?: string
+          gross_earned?: number
+          id?: string
+          ifsc_code?: string | null
+          incremental_payable?: number
+          ist_month?: string
+          ist_year?: number
+          net_payable?: number
+          payment_status?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          snapshot_ist_date?: string
+          snapshot_ist_datetime?: string
+          snapshot_type?: string
+          user_id?: string
+          wallet_balance_at_snapshot?: number
+          withdrawal_fee_amount?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -3364,6 +3544,10 @@ export type Database = {
       }
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
       cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
+      capture_payout_snapshot: {
+        Args: { p_snapshot_type: string }
+        Returns: Json
+      }
       check_free_chat_status: {
         Args: { p_man_id: string; p_woman_id: string }
         Returns: Json
@@ -3663,6 +3847,7 @@ export type Database = {
         Returns: Json
       }
       migrate_existing_wallets_to_ledger: { Args: never; Returns: Json }
+      now_ist: { Args: never; Returns: string }
       perform_monthly_earning_rotation: { Args: never; Returns: Json }
       process_atomic_transfer: {
         Args: {
@@ -3673,12 +3858,40 @@ export type Database = {
         }
         Returns: Json
       }
+      process_audio_billing: {
+        Args: {
+          p_idempotency?: string
+          p_man_id: string
+          p_minutes: number
+          p_session_id: string
+          p_woman_id: string
+        }
+        Returns: Json
+      }
       process_call_billing: {
         Args: { p_call_id: string; p_call_type?: string }
         Returns: Json
       }
-      process_chat_billing: {
-        Args: { p_minutes: number; p_session_id: string }
+      process_chat_billing:
+        | {
+            Args: {
+              p_idempotency?: string
+              p_man_id: string
+              p_minutes: number
+              p_session_id: string
+              p_woman_id: string
+            }
+            Returns: Json
+          }
+        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
+      process_gift_billing: {
+        Args: {
+          p_gift_name?: string
+          p_gift_value: number
+          p_idempotency?: string
+          p_man_id: string
+          p_woman_id: string
+        }
         Returns: Json
       }
       process_gift_transaction: {
@@ -3693,13 +3906,42 @@ export type Database = {
       process_group_billing:
         | { Args: { p_group_id: string }; Returns: Json }
         | { Args: { p_group_id: string; p_minutes?: number }; Returns: Json }
+      process_group_billing_v2: {
+        Args: {
+          p_group_id: string
+          p_host_id: string
+          p_idempotency?: string
+          p_man_ids: string[]
+          p_minutes: number
+          p_session_id: string
+        }
+        Returns: Json
+      }
       process_group_tip: {
         Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+        Returns: Json
+      }
+      process_men_recharge: {
+        Args: {
+          p_gross_amount: number
+          p_reference?: string
+          p_user_id: string
+        }
         Returns: Json
       }
       process_video_billing:
         | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
         | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
+      process_video_billing_v2: {
+        Args: {
+          p_idempotency?: string
+          p_man_id: string
+          p_minutes: number
+          p_session_id: string
+          p_woman_id: string
+        }
+        Returns: Json
+      }
       process_wallet_transaction:
         | {
             Args: {
@@ -3722,6 +3964,17 @@ export type Database = {
             }
             Returns: Json
           }
+      process_withdrawal: {
+        Args: {
+          p_account_no: string
+          p_amount: number
+          p_bank_name: string
+          p_idempotency?: string
+          p_ifsc_code: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       process_withdrawal_request: {
         Args: {
           p_amount: number
@@ -3735,6 +3988,7 @@ export type Database = {
       r2: { Args: { v: number }; Returns: number }
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       reset_private_group_counts: { Args: never; Returns: undefined }
+      reset_women_wallets_after_snapshot: { Args: never; Returns: Json }
       revert_busy_to_online: { Args: { p_user_id: string }; Returns: undefined }
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
@@ -3742,6 +3996,7 @@ export type Database = {
       stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
+      today_ist: { Args: never; Returns: string }
       unblock_user: { Args: { p_target_user_id: string }; Returns: Json }
       unfriend_user: { Args: { p_target_user_id: string }; Returns: Json }
       update_daily_platform_metrics: { Args: never; Returns: undefined }
