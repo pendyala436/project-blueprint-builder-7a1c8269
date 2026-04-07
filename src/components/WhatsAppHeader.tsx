@@ -26,6 +26,10 @@ interface WhatsAppHeaderProps {
   /** Women-only: show KYC button */
   showKYC?: boolean;
   onKYC?: () => void;
+  /** Unread admin message count */
+  unreadAdminMessages?: number;
+  /** Unread admin chat count */
+  unreadAdminChat?: number;
 }
 
 export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
