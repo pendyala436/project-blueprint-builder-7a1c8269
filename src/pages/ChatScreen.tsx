@@ -112,6 +112,31 @@ import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // Default fallback only used if database is unavailable
 const DEFAULT_MAX_PARALLEL_CHATS = 3;
 
+// ============= WHATSAPP COLOR TOKENS =============
+const WA = {
+  headerBg      : '#075E54',
+  headerText    : '#FFFFFF',
+  headerSub     : '#B2DFDB',
+  chatBg        : '#E5DDD5',
+  sentBubble    : '#DCF8C6',
+  sentText      : '#111111',
+  recvBubble    : '#FFFFFF',
+  recvText      : '#111111',
+  subtitleColor : '#888888',
+  metaColor     : '#999999',
+  tickRead      : '#4FC3F7',
+  tickSent      : '#B0BEC5',
+  inputBg       : '#F0F0F0',
+  inputBarBg    : '#FFFFFF',
+  dateSepBg     : 'rgba(255,255,255,0.75)',
+  dateSepText   : '#555555',
+  attachSheet   : '#FFFFFF',
+  previewBarBg  : '#F0FBF8',
+  previewBorder : '#075E54',
+  onlineDot     : '#4CAF50',
+  offlineDot    : '#9E9E9E',
+};
+
 /**
  * Message Interface
  * 
@@ -1857,10 +1882,10 @@ const ChatScreen = () => {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: WA.chatBg }}>
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading chat...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto" style={{ color: WA.headerBg }} />
+          <p style={{ color: WA.metaColor }}>Loading chat...</p>
         </div>
       </div>
     );
@@ -1869,7 +1894,7 @@ const ChatScreen = () => {
   // ============= MAIN RENDER =============
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: WA.chatBg }}>
       {/* ============= INCOMING CALL BANNER ============= */}
       {incomingCall && callStatus === 'idle' && (
         <IncomingCallBanner
@@ -1899,7 +1924,7 @@ const ChatScreen = () => {
         />
       )}
       {/* ============= HEADER SECTION ============= */}
-      <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-50 pt-[env(safe-area-inset-top)]" style={{ background: WA.headerBg }}>
         <div className="px-3 py-2.5 flex items-center gap-3">
           {/* Back button */}
           <button 
@@ -1907,9 +1932,10 @@ const ChatScreen = () => {
               const dashboardPath = currentUserGender === "female" ? "/women-dashboard" : "/dashboard";
               window.history.length > 1 ? navigate(-1) : navigate(dashboardPath);
             }}
-            className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+            className="p-1.5 rounded-full transition-colors"
+            style={{ color: WA.headerText }}
           >
-            <ArrowLeft className="w-5 h-5 text-primary-foreground" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           
           {/* Chat partner info - clickable to view profile */}
@@ -1924,25 +1950,30 @@ const ChatScreen = () => {
                   <img 
                     src={chatPartner.avatar} 
                     alt={chatPartner.fullName}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/20"
+                    className="w-10 h-10 rounded-full object-cover"
+                    style={{ border: '2px solid rgba(255,255,255,0.2)' }}
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary-foreground">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                    <span className="text-lg font-bold" style={{ color: WA.headerText }}>
                       {chatPartner.fullName.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-primary ${
-                  chatPartner.isOnline ? "bg-online" : "bg-muted-foreground"
-                }`} />
+                <div
+                  className="absolute -bottom-0.5 -right-0.5 w-[10px] h-[10px] rounded-full"
+                  style={{
+                    background: chatPartner.isOnline ? WA.onlineDot : WA.offlineDot,
+                    border: `2px solid ${WA.headerBg}`,
+                  }}
+                />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-primary-foreground truncate">{chatPartner.fullName}</p>
-                <p className="text-xs text-primary-foreground/70 flex items-center gap-1">
+                <p className="truncate" style={{ fontSize: 15, fontWeight: 500, color: WA.headerText }}>{chatPartner.fullName}</p>
+                <p className="flex items-center gap-1" style={{ fontSize: 12, color: WA.headerSub }}>
                   {chatPartner.isOnline ? (
-                    <span className="text-primary-foreground/90">Online</span>
+                    <span style={{ color: WA.headerSub }}>Online</span>
                   ) : (
                     <span>Offline</span>
                   )}
@@ -1959,25 +1990,27 @@ const ChatScreen = () => {
 
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
           {currentUserGender === "male" && chatPartner && (
-          <div className="flex items-center gap-0.5 [&_button]:text-primary-foreground [&_button]:hover:bg-primary-foreground/10">
+          <div className="flex items-center gap-0.5">
             <button
-              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              className="p-1.5 rounded-full transition-colors"
+              style={{ color: WA.headerText }}
               onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'audio')}
             >
-              <Phone className="w-5 h-5 text-primary-foreground" />
+              <Phone className="w-5 h-5" />
             </button>
             <button
-              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              className="p-1.5 rounded-full transition-colors"
+              style={{ color: WA.headerText }}
               onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'video')}
             >
-              <Video className="w-5 h-5 text-primary-foreground" />
+              <Video className="w-5 h-5" />
             </button>
           </div>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors">
-                <MoreVertical className="w-5 h-5 text-primary-foreground" />
+              <button className="p-1.5 rounded-full transition-colors" style={{ color: WA.headerText }}>
+                <MoreVertical className="w-5 h-5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -2133,8 +2166,8 @@ const ChatScreen = () => {
 
       {/* Blocked by partner warning */}
       {isBlockedByPartner && (
-        <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2">
-          <p className="text-sm text-destructive text-center">
+        <div className="px-4 py-2" style={{ background: 'rgba(198,40,40,0.08)' }}>
+          <p style={{ fontSize: 12, color: '#C62828', textAlign: 'center' }}>
             You cannot send messages to this user.
           </p>
         </div>
@@ -2142,8 +2175,8 @@ const ChatScreen = () => {
 
       {/* Your own block warning */}
       {isBlocked && (
-        <div className="bg-warning/10 border-b border-warning/20 px-4 py-2">
-          <p className="text-sm text-warning text-center">
+        <div className="px-4 py-2" style={{ background: 'rgba(198,40,40,0.08)' }}>
+          <p style={{ fontSize: 12, color: '#C62828', textAlign: 'center' }}>
             You have blocked this user. Unblock to send messages.
           </p>
         </div>
@@ -2152,16 +2185,19 @@ const ChatScreen = () => {
       {/* Translation happens automatically via realtime subscription */}
 
       {/* ============= MESSAGES AREA ============= */}
-      <main className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <main className="flex-1 overflow-y-auto wa-chat-scroll px-3 py-2" style={{ background: WA.chatBg }}>
+        <div className="space-y-1">
           {/* Iterate through date groups */}
           {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-            <div key={date} className="space-y-3">
+            <div key={date} className="space-y-1">
               {/* Date separator label */}
-              <div className="flex justify-center">
-                <span className="px-3 py-1 rounded-full bg-muted text-xs text-muted-foreground">
+              <div className="flex justify-center my-2">
+                <div
+                  className="px-3 py-1 rounded-lg shadow-sm"
+                  style={{ background: WA.dateSepBg, color: WA.dateSepText, fontSize: 11, fontWeight: 500 }}
+                >
                   {date}
-                </span>
+                </div>
               </div>
 
               {/* Messages for this date */}
@@ -2203,50 +2239,85 @@ const ChatScreen = () => {
                     onPinToggle={handlePinToggle}
                   >
                     <div
-                      className={`flex ${isMine ? "justify-end" : "justify-start"} animate-slide-up`}
-                      style={{ animationDelay: `${index * 0.05}s` }}
+                      className={`flex ${isMine ? "justify-end" : "justify-start"} mb-[2px]`}
                     >
-                      <div className={`flex items-end gap-2 max-w-[80%] ${isMine ? "flex-row-reverse" : ""}`}>
+                      <div className={`flex items-end gap-1 ${isMine ? "flex-row-reverse" : ""}`} style={{ maxWidth: '72%' }}>
                         {!isMine && (
                           <div className="w-8 flex-shrink-0">
                             {showAvatar && chatPartner?.avatar ? (
                               <img src={chatPartner.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
                             ) : showAvatar ? (
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                                <span className="text-xs font-bold text-primary">{chatPartner?.fullName.charAt(0).toUpperCase()}</span>
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#DDD' }}>
+                                <span className="text-xs font-bold" style={{ color: '#555' }}>{chatPartner?.fullName.charAt(0).toUpperCase()}</span>
                               </div>
-                            ) : null}
+                            ) : <div className="w-8" />}
                           </div>
                         )}
-                        <div className="space-y-1">
-                          <span className={`text-[10px] font-semibold px-1 block ${isMine ? "text-primary text-right" : "text-emerald-600 dark:text-emerald-400 text-left"}`}>
-                            {isMine ? "You" : chatPartner?.fullName}
-                            {message.isForwarded && <span className="text-muted-foreground/60 font-normal ms-1">↗ Forwarded</span>}
-                          </span>
+                        <div>
+                          {message.isForwarded && (
+                            <span style={{ fontSize: 11, color: WA.metaColor, fontStyle: 'italic' }} className="block mb-0.5 px-1">↗ Forwarded</span>
+                          )}
 
                           {/* Reply quote */}
                           {message.replyToText && (
                             <ReplyPreview replyToText={message.replyToText} replyToSender={message.replyToSender || ''} isOwn={isMine} compact />
                           )}
 
-                          {voiceUrl && <ResolvedVoicePlayer voiceUrl={voiceUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
-                          {attachmentUrl && <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
+                          {voiceUrl && (
+                            <div style={{
+                              background: isMine ? WA.sentBubble : WA.recvBubble,
+                              borderRadius: isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                              padding: '6px 10px 4px 10px',
+                              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                            }}>
+                              <ResolvedVoicePlayer voiceUrl={voiceUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
+                            </div>
+                          )}
+                          {attachmentUrl && (
+                            <div style={{
+                              borderRadius: isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                              overflow: 'hidden',
+                              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                            }}>
+                              <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
+                            </div>
+                          )}
                           
                           {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
-                            <div className={`px-4 py-2.5 rounded-2xl shadow-sm border ${isMine ? "bg-primary/5 border-primary/20 rounded-br-md" : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"}`}>
+                            <div style={{
+                              background: isMine ? WA.sentBubble : WA.recvBubble,
+                              borderRadius: isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                              padding: '6px 10px 4px 10px',
+                              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                            }}>
                               {message.isTranslating ? (
                                 <div className="flex items-center gap-1.5 py-1">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">Translating...</span>
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: WA.metaColor }} />
+                                  <span style={{ fontSize: 12, color: WA.metaColor }}>Translating...</span>
                                 </div>
                               ) : (
                                 <>
-                                  <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${isMine ? "text-primary dark:text-primary" : "text-emerald-800 dark:text-emerald-200"}`} dir="auto">{displayText}</p>
+                                  <p className="whitespace-pre-wrap break-words unicode-text" style={{ fontSize: 14, color: isMine ? WA.sentText : WA.recvText }} dir="auto">{displayText}</p>
                                   {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                                    <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">english: {englishSubtitle.toLowerCase()}</p>
+                                    <p className="whitespace-pre-wrap break-words" style={{ fontSize: 10, color: WA.subtitleColor, fontStyle: 'italic', marginTop: 2 }} dir="ltr">english: {englishSubtitle.toLowerCase()}</p>
                                   )}
                                 </>
                               )}
+                              {/* Meta row */}
+                              <div className="flex items-center justify-end gap-[3px]" style={{ marginTop: 2 }}>
+                                <span style={{ fontSize: 11, color: WA.metaColor }}>{formatTime(message.createdAt)}</span>
+                                {message.isEdited && <span style={{ fontSize: 10, color: WA.metaColor, fontStyle: 'italic' }}>edited</span>}
+                                {message.isPinned && <Pin className="w-3 h-3" style={{ color: WA.headerBg }} />}
+                                {isMine && (message.isRead ? <CheckCheck className="w-[14px] h-[14px]" style={{ color: WA.tickRead }} /> : <Check className="w-[14px] h-[14px]" style={{ color: WA.tickSent }} />)}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Meta row for voice/attachment-only messages */}
+                          {(voiceUrl || attachmentUrl) && (!displayText || displayText.startsWith("📷") || displayText.startsWith("📎")) && (
+                            <div className="flex items-center justify-end gap-[3px] px-1" style={{ marginTop: 2 }}>
+                              <span style={{ fontSize: 11, color: WA.metaColor }}>{formatTime(message.createdAt)}</span>
+                              {isMine && (message.isRead ? <CheckCheck className="w-[14px] h-[14px]" style={{ color: WA.tickRead }} /> : <Check className="w-[14px] h-[14px]" style={{ color: WA.tickSent }} />)}
                             </div>
                           )}
 
@@ -2254,13 +2325,6 @@ const ChatScreen = () => {
                           {message.reactions && message.reactions.length > 0 && (
                             <MessageReactions reactions={message.reactions} onToggle={(emoji) => handleReaction(message.id, emoji)} isOwn={isMine} />
                           )}
-
-                          <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-                            <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
-                            {message.isEdited && <span className="text-[10px] text-muted-foreground italic">edited</span>}
-                            {message.isPinned && <Pin className="w-3 h-3 text-primary" />}
-                            {isMine && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-info" /> : <Check className="w-3.5 h-3.5 text-muted-foreground" />)}
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -2270,6 +2334,25 @@ const ChatScreen = () => {
             </div>
           ))}
           
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="flex justify-start mb-[2px]">
+              <div style={{
+                background: WA.recvBubble,
+                borderRadius: '8px 8px 8px 2px',
+                padding: '10px 14px',
+                display: 'inline-flex',
+                gap: 4,
+                alignItems: 'center',
+                boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+              }}>
+                <span className="wa-typing-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#999', animationDelay: '0s' }} />
+                <span className="wa-typing-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#999', animationDelay: '0.2s' }} />
+                <span className="wa-typing-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#999', animationDelay: '0.4s' }} />
+              </div>
+            </div>
+          )}
+
           {/* Invisible element at bottom for auto-scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
@@ -2278,11 +2361,11 @@ const ChatScreen = () => {
       {/* ============= CAMERA MODAL ============= */}
       {isCameraOpen && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between p-4">
-            <button onClick={closeCamera} className="p-2 text-white">
+          <div className="flex items-center justify-between" style={{ background: 'rgba(0,0,0,0.6)', padding: '12px 16px' }}>
+            <button onClick={closeCamera} className="p-2" style={{ color: 'white' }}>
               <X className="w-6 h-6" />
             </button>
-            <span className="text-white font-medium">Take Selfie</span>
+            <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>Take Selfie</span>
             <div className="w-10" />
           </div>
           <div className="flex-1 flex items-center justify-center">
@@ -2298,9 +2381,10 @@ const ChatScreen = () => {
           <div className="p-6 flex justify-center">
             <button 
               onClick={captureSelfie}
-              className="w-16 h-16 rounded-full bg-primary border-4 border-primary-foreground flex items-center justify-center"
+              className="flex items-center justify-center"
+              style={{ width: 64, height: 64, borderRadius: '50%', background: WA.headerBg, border: '4px solid rgba(255,255,255,0.8)' }}
             >
-              <Camera className="w-8 h-8 text-primary-foreground" />
+              <Camera className="w-7 h-7" style={{ color: 'white' }} />
             </button>
           </div>
           <canvas ref={canvasRef} className="hidden" />
@@ -2308,35 +2392,43 @@ const ChatScreen = () => {
       )}
 
       {/* ============= MESSAGE INPUT AREA ============= */}
-      <footer className="sticky bottom-0 bg-background pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-4xl mx-auto">
+      <footer className="sticky bottom-0 pb-[env(safe-area-inset-bottom)]" style={{ background: WA.inputBarBg }}>
+        <div>
           {/* Selected file preview */}
           {selectedFile && (
-            <div className="flex items-center gap-3 p-2 mx-4 mt-2 bg-muted rounded-lg border-b border-border/50">
+            <div className="flex items-center gap-3" style={{
+              background: WA.previewBarBg,
+              borderLeft: `3px solid ${WA.previewBorder}`,
+              borderRadius: 4,
+              padding: '8px 12px',
+              margin: '0 0 4px 0',
+            }}>
               {previewUrl ? (
                 <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded object-cover" />
               ) : (
-                <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded flex items-center justify-center" style={{ background: 'rgba(7,94,84,0.1)' }}>
+                  <FileText className="w-6 h-6" style={{ color: WA.headerBg }} />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p style={{ fontSize: 14, fontWeight: 500 }} className="truncate">{selectedFile.name}</p>
+                <p style={{ fontSize: 12, color: WA.metaColor }}>
                   {selectedFile.size < 1024 ? `${selectedFile.size} B` : selectedFile.size < 1024 * 1024 ? `${(selectedFile.size / 1024).toFixed(1)} KB` : `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`}
                 </p>
               </div>
               <button
                 onClick={handleSendWithAttachment}
                 disabled={isSending || isUploading}
-                className="p-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="p-2 rounded-full transition-colors disabled:opacity-50"
+                style={{ background: WA.headerBg, color: 'white' }}
                 title="Send"
               >
                 {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </button>
               <button 
                 onClick={cancelSelectedFile}
-                className="p-1.5 hover:bg-muted-foreground/10 rounded-full"
+                className="p-1.5 rounded-full"
+                style={{ color: WA.metaColor }}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2358,43 +2450,53 @@ const ChatScreen = () => {
             onChange={handleFileSelect}
           />
           
-          {/* Attachment and gift buttons row */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30">
+          {/* Attachment and voice row + input */}
+          <div className="flex items-end gap-2" style={{ padding: '6px 8px', background: WA.inputBarBg }}>
             {/* Attachment button with popover */}
             <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-2 rounded-full transition-colors flex-shrink-0"
+                  style={{ color: '#8696A0' }}
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-48 p-2" side="top" align="start">
-                <div className="space-y-1">
+              <PopoverContent className="w-52 p-1" side="top" align="start" style={{ background: WA.attachSheet }}>
+                <div>
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg text-left"
+                    style={{ padding: '12px 16px' }}
                   >
-                    <Image className="w-5 h-5 text-primary" />
-                    <span className="text-sm">Photo / Video</span>
+                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#5157AE' }}>
+                      <Image className="w-3 h-3" style={{ color: 'white' }} />
+                    </div>
+                    <span style={{ fontSize: 15, color: '#111' }}>Photo / Video</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg text-left"
+                    style={{ padding: '12px 16px' }}
                   >
-                    <FileText className="w-5 h-5 text-info" />
-                    <span className="text-sm">File</span>
+                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#0063CB' }}>
+                      <FileText className="w-3 h-3" style={{ color: 'white' }} />
+                    </div>
+                    <span style={{ fontSize: 15, color: '#111' }}>File</span>
                   </button>
                   <button
                     type="button"
                     onClick={openCamera}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg text-left"
+                    style={{ padding: '12px 16px' }}
                   >
-                    <Camera className="w-5 h-5 text-success" />
-                    <span className="text-sm">Selfie</span>
+                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#009DE2' }}>
+                      <Camera className="w-3 h-3" style={{ color: 'white' }} />
+                    </div>
+                    <span style={{ fontSize: 15, color: '#111' }}>Selfie</span>
                   </button>
                 </div>
               </PopoverContent>
@@ -2409,13 +2511,14 @@ const ChatScreen = () => {
                 disabled={isSending || isBlocked || isBlockedByPartner}
               />
             )}
+
           </div>
-          
+
           {/* Issue 2.3: Show explanation when blocked */}
           {(isBlocked || isBlockedByPartner) && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-destructive/10 text-destructive text-sm rounded-md mx-2 mb-1">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-              <span>{isBlocked ? "You have blocked this user. Unblock to send messages." : "You cannot send messages to this user."}</span>
+            <div className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 rounded-md" style={{ background: 'rgba(198,40,40,0.08)' }}>
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" style={{ color: '#C62828' }} />
+              <span style={{ fontSize: 12, color: '#C62828' }}>{isBlocked ? "You have blocked this user. Unblock to send messages." : "You cannot send messages to this user."}</span>
             </div>
           )}
           

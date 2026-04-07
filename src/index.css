@@ -1,5 +1,19 @@
 /* Fonts loaded via <link> in index.html for non-blocking render */
 
+/* WhatsApp-style scrollbar */
+.wa-chat-scroll::-webkit-scrollbar { width: 6px; }
+.wa-chat-scroll::-webkit-scrollbar-track { background: transparent; }
+.wa-chat-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+
+/* WhatsApp typing dots animation */
+@keyframes wa-typing-bounce {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.4); opacity: 1; }
+}
+.wa-typing-dot {
+  animation: wa-typing-bounce 1.2s ease-in-out infinite;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
