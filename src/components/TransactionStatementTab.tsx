@@ -89,14 +89,23 @@ interface TxRow {
   debit: number;
   credit: number;
   running_balance: number;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  const totalMin = Math.floor(sec / 60);
+  const remainSec = sec % 60;
+  if (totalMin === 0) return `${remainSec} sec`;
+  if (remainSec === 0) return `${totalMin} min`;
+  return `${totalMin} min ${remainSec} sec`;
+};
+const fmtTimeIST = (dateStr: string | null) => {
+  if (!dateStr) return null;
+  const ist = new Date(new Date(dateStr).getTime() + 5.5 * 60 * 60 * 1000);
+  return format(ist, "HH:mm:ss");
 };
 const typeLabel = (t: string, isMale: boolean) => {
   const map = isMale ? RATE_INFO_MEN : RATE_INFO_WOMEN;
@@ -170,7 +179,7 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
     const title = isMale ? "Wallet Statement" : "Earnings Statement";
     const header = `${title} — ${monthName} ${year}`;
 
-    const headerRow = ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"];
+    const headerRow = ["Date & Time (IST)", "Type", "Description", "Start Time", "End Time", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"];
 
     const dataRows = rows.map(row => {
       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
@@ -178,6 +187,8 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
         format(istDate, "dd MMM yyyy HH:mm"),
         typeLabel(row.txn_type, isMale),
         row.description || "—",
+        fmtTimeIST(row.start_time) || "—",
+        fmtTimeIST(row.end_time) || "—",
         fmtDuration(row.duration_seconds),
         row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—",
         Number(row.debit) > 0 ? Number(row.debit).toFixed(2) : "—",
@@ -482,90 +493,98 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="text-xs">Date & Time (IST)</TableHead>
-                    <TableHead className="text-xs">Type</TableHead>
-                    <TableHead className="text-xs">Description</TableHead>
-                    <TableHead className="text-xs">Duration</TableHead>
-                    <TableHead className="text-xs">Rate</TableHead>
-                    {isMale ? (
-                      <>
-                        <TableHead className="text-xs text-right text-destructive">Debit (₹)</TableHead>
-                        <TableHead className="text-xs text-right text-green-600">Credit (₹)</TableHead>
-                      </>
-                    ) : (
-                      <>
-                        <TableHead className="text-xs text-right text-green-600">Earned (₹)</TableHead>
-                        <TableHead className="text-xs text-right text-destructive">Deduction (₹)</TableHead>
-                      </>
-                    )}
-                    <TableHead className="text-xs text-right">Balance (₹)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {summary && (
-                    <TableRow className="bg-muted/20">
-                      <TableCell className="text-xs text-muted-foreground" colSpan={5}>
-                        Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
-                      </TableCell>
-                      <TableCell className="text-xs text-right">—</TableCell>
-                      <TableCell className="text-xs text-right">—</TableCell>
-                      <TableCell className="text-xs text-right font-semibold">
-                        {fmtINR(summary.opening_balance)}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                   <TableRow className="bg-muted/40">
+                     <TableHead className="text-xs">Date & Time (IST)</TableHead>
+                     <TableHead className="text-xs">Type</TableHead>
+                     <TableHead className="text-xs">Description</TableHead>
+                     <TableHead className="text-xs">Start</TableHead>
+                     <TableHead className="text-xs">End</TableHead>
+                     <TableHead className="text-xs">Duration</TableHead>
+                     <TableHead className="text-xs">Rate</TableHead>
+                     {isMale ? (
+                       <>
+                         <TableHead className="text-xs text-right text-destructive">Debit (₹)</TableHead>
+                         <TableHead className="text-xs text-right text-green-600">Credit (₹)</TableHead>
+                       </>
+                     ) : (
+                       <>
+                         <TableHead className="text-xs text-right text-green-600">Earned (₹)</TableHead>
+                         <TableHead className="text-xs text-right text-destructive">Deduction (₹)</TableHead>
+                       </>
+                     )}
+                     <TableHead className="text-xs text-right">Balance (₹)</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {summary && (
+                     <TableRow className="bg-muted/20">
+                       <TableCell className="text-xs text-muted-foreground" colSpan={7}>
+                         Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
+                       </TableCell>
+                       <TableCell className="text-xs text-right">—</TableCell>
+                       <TableCell className="text-xs text-right">—</TableCell>
+                       <TableCell className="text-xs text-right font-semibold">
+                         {fmtINR(summary.opening_balance)}
+                       </TableCell>
+                     </TableRow>
+                   )}
 
-                  {rows.map((row, i) => {
-                    const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
-                    return (
-                      <TableRow key={i} className="hover:bg-muted/30">
-                        <TableCell className="text-xs whitespace-nowrap">
-                          {format(istDate, "dd MMM yyyy HH:mm")}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
-                            {typeLabel(row.txn_type, isMale)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={row.description || ""}>
-                          {row.description || "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {fmtDuration(row.duration_seconds)}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—"}
-                        </TableCell>
-                        {isMale ? (
-                          <>
-                            <TableCell className="text-xs text-right font-medium text-destructive">
-                              {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
-                            </TableCell>
-                            <TableCell className="text-xs text-right font-medium text-green-600">
-                              {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell className="text-xs text-right font-medium text-green-600">
-                              {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
-                            </TableCell>
-                            <TableCell className="text-xs text-right font-medium text-destructive">
-                              {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
-                            </TableCell>
-                          </>
-                        )}
-                        <TableCell className="text-xs text-right font-semibold">
-                          {fmtINR(row.running_balance)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                   {rows.map((row, i) => {
+                     const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
+                     return (
+                       <TableRow key={i} className="hover:bg-muted/30">
+                         <TableCell className="text-xs whitespace-nowrap">
+                           {format(istDate, "dd MMM yyyy HH:mm")}
+                         </TableCell>
+                         <TableCell className="text-xs">
+                           <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
+                             {typeLabel(row.txn_type, isMale)}
+                           </Badge>
+                         </TableCell>
+                         <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={row.description || ""}>
+                           {row.description || "—"}
+                         </TableCell>
+                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                           {fmtTimeIST(row.start_time) || "—"}
+                         </TableCell>
+                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                           {fmtTimeIST(row.end_time) || "—"}
+                         </TableCell>
+                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                           {fmtDuration(row.duration_seconds)}
+                         </TableCell>
+                         <TableCell className="text-xs text-muted-foreground">
+                           {row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—"}
+                         </TableCell>
+                         {isMale ? (
+                           <>
+                             <TableCell className="text-xs text-right font-medium text-destructive">
+                               {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
+                             </TableCell>
+                             <TableCell className="text-xs text-right font-medium text-green-600">
+                               {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
+                             </TableCell>
+                           </>
+                         ) : (
+                           <>
+                             <TableCell className="text-xs text-right font-medium text-green-600">
+                               {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
+                             </TableCell>
+                             <TableCell className="text-xs text-right font-medium text-destructive">
+                               {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
+                             </TableCell>
+                           </>
+                         )}
+                         <TableCell className="text-xs text-right font-semibold">
+                           {fmtINR(row.running_balance)}
+                         </TableCell>
+                       </TableRow>
+                     );
+                   })}
 
                   {rows.length > 0 && (
                     <TableRow className="bg-muted/60 font-semibold border-t-2">
-                      <TableCell colSpan={5} className="text-xs text-right pr-2">Totals:</TableCell>
+                      <TableCell colSpan={7} className="text-xs text-right pr-2">Totals:</TableCell>
                       {isMale ? (
                         <>
                           <TableCell className="text-xs text-right text-destructive">

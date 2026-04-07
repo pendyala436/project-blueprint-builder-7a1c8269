@@ -83,15 +83,24 @@ interface TxRow {
   debit: number;
   credit: number;
   running_balance: number;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  const totalMin = Math.floor(sec / 60);
+  const remainSec = sec % 60;
+  if (totalMin === 0) return `${remainSec} sec`;
+  if (remainSec === 0) return `${totalMin} min`;
+  return `${totalMin} min ${remainSec} sec`;
+};
+const fmtTimeIST = (dateStr: string | null) => {
+  if (!dateStr) return null;
+  const ist = new Date(new Date(dateStr).getTime() + 5.5 * 60 * 60 * 1000);
+  return format(ist, "HH:mm:ss");
 };
 const typeLabel = (t: string, isMale: boolean) => {
   const map = isMale ? RATE_INFO_MEN : RATE_INFO_WOMEN;
@@ -346,6 +355,8 @@ const TransactionStatementScreen = () => {
                     <TableRow className="bg-muted/40">
                       <TableHead className="text-xs">Date & Time (IST)</TableHead>
                       <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Start</TableHead>
+                      <TableHead className="text-xs">End</TableHead>
                       <TableHead className="text-xs">Duration</TableHead>
                       <TableHead className="text-xs">Rate</TableHead>
                       {isMale ? (
@@ -366,7 +377,7 @@ const TransactionStatementScreen = () => {
                     {/* Opening balance row */}
                     {summary && (
                       <TableRow className="bg-muted/20">
-                        <TableCell className="text-xs text-muted-foreground" colSpan={4}>
+                        <TableCell className="text-xs text-muted-foreground" colSpan={6}>
                           Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
                         </TableCell>
                         <TableCell className="text-xs text-right">—</TableCell>
@@ -378,7 +389,6 @@ const TransactionStatementScreen = () => {
                     )}
 
                     {rows.map((row, i) => {
-                      // Convert UTC to IST for display
                       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
 
                       return (
@@ -391,7 +401,13 @@ const TransactionStatementScreen = () => {
                               {typeLabel(row.txn_type, isMale)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {fmtTimeIST(row.start_time) || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {fmtTimeIST(row.end_time) || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                             {fmtDuration(row.duration_seconds)}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
@@ -426,7 +442,7 @@ const TransactionStatementScreen = () => {
                     {/* Totals footer */}
                     {rows.length > 0 && (
                       <TableRow className="bg-muted/60 font-semibold border-t-2">
-                        <TableCell colSpan={4} className="text-xs text-right pr-2">
+                        <TableCell colSpan={6} className="text-xs text-right pr-2">
                           Totals:
                         </TableCell>
                         {isMale ? (
