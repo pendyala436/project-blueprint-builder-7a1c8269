@@ -2394,126 +2394,6 @@ const ChatScreen = () => {
       {/* ============= MESSAGE INPUT AREA ============= */}
       <footer className="sticky bottom-0 pb-[env(safe-area-inset-bottom)]" style={{ background: WA.inputBarBg }}>
         <div>
-          {/* Selected file preview */}
-          {selectedFile && (
-            <div className="flex items-center gap-3" style={{
-              background: WA.previewBarBg,
-              borderLeft: `3px solid ${WA.previewBorder}`,
-              borderRadius: 4,
-              padding: '8px 12px',
-              margin: '0 0 4px 0',
-            }}>
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded object-cover" />
-              ) : (
-                <div className="w-12 h-12 rounded flex items-center justify-center" style={{ background: 'rgba(7,94,84,0.1)' }}>
-                  <FileText className="w-6 h-6" style={{ color: WA.headerBg }} />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p style={{ fontSize: 14, fontWeight: 500 }} className="truncate">{selectedFile.name}</p>
-                <p style={{ fontSize: 12, color: WA.metaColor }}>
-                  {selectedFile.size < 1024 ? `${selectedFile.size} B` : selectedFile.size < 1024 * 1024 ? `${(selectedFile.size / 1024).toFixed(1)} KB` : `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`}
-                </p>
-              </div>
-              <button
-                onClick={handleSendWithAttachment}
-                disabled={isSending || isUploading}
-                className="p-2 rounded-full transition-colors disabled:opacity-50"
-                style={{ background: WA.headerBg, color: 'white' }}
-                title="Send"
-              >
-                {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </button>
-              <button 
-                onClick={cancelSelectedFile}
-                className="p-1.5 rounded-full"
-                style={{ color: WA.metaColor }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-          
-          {/* Hidden file inputs */}
-          <input 
-            ref={imageInputRef}
-            type="file" 
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={handleImageSelect}
-          />
-          <input 
-            ref={fileInputRef}
-            type="file" 
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          
-          {/* Attachment and voice row + input */}
-          <div className="flex items-end gap-2" style={{ padding: '6px 8px', background: WA.inputBarBg }}>
-            {/* Attachment button with popover */}
-            <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="p-2 rounded-full transition-colors flex-shrink-0"
-                  style={{ color: '#8696A0' }}
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-52 p-1" side="top" align="start" style={{ background: WA.attachSheet }}>
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 rounded-lg text-left"
-                    style={{ padding: '12px 16px' }}
-                  >
-                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#5157AE' }}>
-                      <Image className="w-3 h-3" style={{ color: 'white' }} />
-                    </div>
-                    <span style={{ fontSize: 15, color: '#111' }}>Photo / Video</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 rounded-lg text-left"
-                    style={{ padding: '12px 16px' }}
-                  >
-                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#0063CB' }}>
-                      <FileText className="w-3 h-3" style={{ color: 'white' }} />
-                    </div>
-                    <span style={{ fontSize: 15, color: '#111' }}>File</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openCamera}
-                    className="w-full flex items-center gap-3 rounded-lg text-left"
-                    style={{ padding: '12px 16px' }}
-                  >
-                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#009DE2' }}>
-                      <Camera className="w-3 h-3" style={{ color: 'white' }} />
-                    </div>
-                    <span style={{ fontSize: 15, color: '#111' }}>Selfie</span>
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            
-            {/* Voice recorder */}
-            {chatPartner && activeChatId && (
-              <VoiceRecorder
-                chatId={activeChatId}
-                currentUserId={currentUserId}
-                receiverId={chatPartner.userId}
-                disabled={isSending || isBlocked || isBlockedByPartner}
-              />
-            )}
-
-          </div>
-
           {/* Issue 2.3: Show explanation when blocked */}
           {(isBlocked || isBlockedByPartner) && (
             <div className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 rounded-md" style={{ background: 'rgba(198,40,40,0.08)' }}>
@@ -2543,7 +2423,7 @@ const ChatScreen = () => {
             </div>
           )}
           
-          {/* Simple Chat Input */}
+          {/* WhatsApp-style Chat Input — text only, no attachments */}
           <ChatMessageInput
             onSendMessage={async (msg) => {
               await handleSendMessage(msg);
