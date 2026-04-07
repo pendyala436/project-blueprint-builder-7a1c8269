@@ -131,7 +131,7 @@ const GiftSendingScreen = () => {
   });
 
   useRealtimeSubscription({
-    table: "users_wallet",
+    table: "wallets",
     onUpdate: loadData
   });
 

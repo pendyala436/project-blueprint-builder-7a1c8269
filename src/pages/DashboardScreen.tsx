@@ -413,7 +413,7 @@ const DashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'users_wallet' },
+        { event: '*', schema: 'public', table: 'wallets' },
         () => { loadWalletBalance(); }
       )
       .on(

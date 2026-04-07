@@ -102,7 +102,7 @@ const WalletScreen = () => {
 
   useEffect(() => { loadWallet(); }, []);
 
-  useRealtimeSubscription({ table: "users_wallet", onUpdate: loadWallet });
+  useRealtimeSubscription({ table: "wallets", onUpdate: loadWallet });
 
   // ── Recharge via Cashfree ───────────────────────────────────────────────
   const handleRecharge = async (amount: number) => {

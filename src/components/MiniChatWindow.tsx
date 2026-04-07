@@ -220,7 +220,7 @@ const MiniChatWindow = ({
         // Check if this is a free chat (woman chatting with no-balance man)
         if (userGender === "female") {
           const { data: partnerWallet } = await supabase
-            .from("users_wallet")
+            .from("wallets")
             .select("balance")
             .eq("user_id", partnerId)
             .maybeSingle();

@@ -130,7 +130,7 @@ const AdminFinanceDashboard = () => {
 
       // Load wallet stats from users_wallet
       const { data: wallets, error: walletsError } = await supabase
-        .from("users_wallet")
+        .from("wallets")
         .select("id, balance");
 
       if (walletsError) throw walletsError;
