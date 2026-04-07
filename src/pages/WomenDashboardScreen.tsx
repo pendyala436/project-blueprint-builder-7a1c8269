@@ -1551,9 +1551,34 @@ const WomenDashboardScreen = () => {
 
       {/* Chat windows removed — chats are async (WhatsApp-style), accessed via Chats tab */}
 
-      {/* Incoming Video Call */}
-      {incomingCall && (
-        <IncomingVideoCallWindow callId={incomingCall.callId} callerUserId={incomingCall.callerUserId} callerName={incomingCall.callerName} callerPhoto={incomingCall.callerPhoto} currentUserId={currentUserId} onClose={clearIncomingCall} />
+      {/* Incoming Call Banner */}
+      {incomingCall && callStatus === 'idle' && (
+        <IncomingCallBanner
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          callType={incomingCall.callType}
+          onAccept={() => {
+            acceptCall(incomingCall.callId, incomingCall.callType, incomingCall.callerUserId, incomingCall.callerName, incomingCall.callerPhoto);
+            clearIncomingCall();
+          }}
+          onDecline={() => {
+            declineCall(incomingCall.callId);
+            clearIncomingCall();
+          }}
+        />
+      )}
+
+      {/* WhatsApp Call Screen */}
+      {(callStatus === 'connecting' || callStatus === 'active') && (
+        <WhatsAppCallScreen
+          status={callStatus}
+          activeCall={activeCall}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          onEnd={endCall}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
+        />
       )}
 
       {/* Friends & Blocked Panel */}
