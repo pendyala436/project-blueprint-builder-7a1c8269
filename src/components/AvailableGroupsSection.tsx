@@ -203,7 +203,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       LIVE
                     </Badge>
                   </div>
-                  <p className="text-xs text-[#128C7E] font-medium truncate mt-0.5">
+                  <p className="text-xs text-primary font-medium truncate mt-0.5">
                     📹 {group.current_host_name || group.owner_name}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
