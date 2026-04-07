@@ -67,8 +67,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     let preStream: MediaStream | null = null;
     try {
       preStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 48000 },
       });
     } catch (mediaErr) {
       console.error('[PrivateGroups] Pre-acquire media failed:', mediaErr);
@@ -147,7 +147,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   }, [groups]);
 
   if (isLoading) {
-    return <div className="animate-pulse h-32 bg-[#E5DDD5]/30 rounded-lg" />;
+    return <div className="animate-pulse h-32 bg-muted/30 rounded-lg" />;
   }
 
   const isHostOfAny = groups.some(g => g.current_host_id === currentUserId && g.is_live);
@@ -157,23 +157,23 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   return (
     <div className="space-y-3">
       {/* WhatsApp-style header */}
-      <div className="flex items-center justify-between bg-[#075E54] text-white px-4 py-2.5 rounded-t-xl -mx-1">
+      <div className="flex items-center justify-between bg-primary text-primary-foreground px-4 py-2.5 rounded-t-xl -mx-1">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Users className="h-4 w-4" />
           Private Groups
         </h3>
         <div className="flex items-center gap-2">
-          <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">
+          <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 text-[10px] h-5">
             {liveGroups.length} Live
           </Badge>
-          <button onClick={() => { setIsLoading(true); fetchGroups(); }} className="hover:bg-white/10 rounded-full p-1.5 transition-colors">
+          <button onClick={() => { setIsLoading(true); fetchGroups(); }} className="hover:bg-primary-foreground/10 rounded-full p-1.5 transition-colors">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* Tip info banner */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#DCF8C6] rounded-lg text-[11px] text-[#303030] border border-[#B2DFAB]">
+      <div className="flex items-center gap-2 px-3 py-2 bg-accent/15 rounded-lg text-[11px] text-foreground border border-accent/30">
         <span className="text-sm">💰</span>
         <span>{TIP_INFO}</span>
       </div>
@@ -196,13 +196,13 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
               key={group.id}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/40",
-                isLive && "bg-[#DCF8C6]/20"
+                isLive && "bg-accent/10"
               )}
             >
               {/* Flower avatar */}
               <div className={cn(
                 "w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0",
-                isLive ? "bg-[#128C7E]/10 ring-2 ring-[#25D366]" : "bg-muted"
+                isLive ? "bg-primary/10 ring-2 ring-accent" : "bg-muted"
               )}>
                 {FLOWER_EMOJIS[group.name] || '🌸'}
               </div>
@@ -212,14 +212,14 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-sm text-foreground truncate">{group.name}</span>
                   {isLive && (
-                    <Badge className="bg-[#25D366] text-white text-[9px] h-4 px-1.5 border-0 gap-0.5 shrink-0">
+                    <Badge className="bg-accent text-accent-foreground text-[9px] h-4 px-1.5 border-0 gap-0.5 shrink-0">
                       <Radio className="h-2 w-2 animate-pulse" /> LIVE
                     </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {isLive && group.current_host_name && (
-                    <span className="text-xs text-[#128C7E] font-medium truncate">
+                     <span className="text-xs text-primary font-medium truncate">
                       {isMyHost ? '📹 You are hosting' : `Host: ${group.current_host_name}`}
                     </span>
                   )}
@@ -246,7 +246,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   <div className="flex flex-col gap-1">
                     <Button
                       size="sm"
-                      className="h-7 text-[11px] bg-[#128C7E] hover:bg-[#075E54] text-white gap-1"
+                      className="h-7 text-[11px] bg-primary hover:bg-primary/80 text-primary-foreground gap-1"
                       onClick={() => setActiveGroup(group)}
                     >
                       Open
@@ -263,7 +263,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 ) : canGoLive ? (
                   <Button
                     size="sm"
-                    className="h-8 text-xs bg-[#25D366] hover:bg-[#128C7E] text-white gap-1 rounded-full px-4"
+                    className="h-8 text-xs bg-accent hover:bg-accent/80 text-accent-foreground gap-1 rounded-full px-4"
                     disabled={goingLive === group.id}
                     onClick={() => handleGoLive(group)}
                   >

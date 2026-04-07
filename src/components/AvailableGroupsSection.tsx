@@ -131,7 +131,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     setActiveGroupVideo(null);
   };
 
-  if (isLoading) return <div className="animate-pulse h-32 bg-[#E5DDD5]/30 rounded-lg" />;
+  if (isLoading) return <div className="animate-pulse h-32 bg-muted/30 rounded-lg" />;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
@@ -139,16 +139,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   return (
     <div className="space-y-3">
       {/* WhatsApp-style header */}
-      <div className="flex items-center justify-between bg-[#075E54] text-white px-4 py-2.5 rounded-t-xl -mx-1">
+      <div className="flex items-center justify-between bg-primary text-primary-foreground px-4 py-2.5 rounded-t-xl -mx-1">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Video className="h-4 w-4" />
           Live Groups
         </h3>
         <div className="flex items-center gap-2">
-          <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">
+          <Badge className="bg-primary-foreground/20 text-primary-foreground border-0 text-[10px] h-5">
             {groups.length} Live
           </Badge>
-          <button onClick={() => { setIsLoading(true); fetchGroups(); fetchWalletBalance(); }} className="hover:bg-white/10 rounded-full p-1.5 transition-colors">
+          <button onClick={() => { setIsLoading(true); fetchGroups(); fetchWalletBalance(); }} className="hover:bg-primary-foreground/10 rounded-full p-1.5 transition-colors">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -187,11 +187,11 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
               >
                 {/* Flower avatar with live ring */}
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-[#128C7E]/10 ring-2 ring-[#25D366]">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-primary/10 ring-2 ring-accent">
                     {FLOWER_EMOJIS[group.name] || '🌸'}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#25D366] rounded-full flex items-center justify-center">
-                    <Radio className="h-2 w-2 text-white animate-pulse" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center">
+                    <Radio className="h-2 w-2 text-accent-foreground animate-pulse" />
                   </div>
                 </div>
 
@@ -199,11 +199,11 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-sm text-foreground truncate">{group.name}</span>
-                    <Badge className="bg-[#25D366] text-white text-[9px] h-4 px-1.5 border-0 shrink-0">
+                    <Badge className="bg-accent text-accent-foreground text-[9px] h-4 px-1.5 border-0 shrink-0">
                       LIVE
                     </Badge>
                   </div>
-                  <p className="text-xs text-[#128C7E] font-medium truncate mt-0.5">
+                  <p className="text-xs text-primary font-medium truncate mt-0.5">
                     📹 {group.current_host_name || group.owner_name}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -224,7 +224,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                       "h-8 text-xs rounded-full px-4 gap-1",
                       isFull || !hasEnoughBalance
                         ? "bg-muted text-muted-foreground cursor-not-allowed"
-                        : "bg-[#25D366] hover:bg-[#128C7E] text-white"
+                        : "bg-accent hover:bg-accent/80 text-accent-foreground"
                     )}
                     onClick={() => handleJoinGroup(group)}
                     disabled={!hasEnoughBalance || isFull || isJoining}

@@ -126,7 +126,21 @@ export function usePrivateGroupCall({
     // Only add local tracks - host sends video+audio, participants send audio only
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => {
-        pc.addTrack(track, localStream.current!);
+        const sender = pc.addTrack(track, localStream.current!);
+        // Set WhatsApp-quality bitrate constraints
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          if (track.kind === 'video') {
+            params.encodings[0].maxBitrate = 1_500_000; // 1.5 Mbps for 720p
+            params.encodings[0].maxFramerate = 30;
+          } else if (track.kind === 'audio') {
+            params.encodings[0].maxBitrate = 64_000; // 64 kbps Opus
+          }
+          sender.setParameters(params).catch(() => {});
+        } catch (_) { /* browser may not support */ }
       });
     }
 
@@ -352,16 +366,17 @@ export function usePrivateGroupCall({
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
-              width: { ideal: 640, max: 960 },
-              height: { ideal: 480, max: 720 },
-              frameRate: { ideal: 24, max: 30 },
+              width: { ideal: 1280, max: 1280 },
+              height: { ideal: 720, max: 720 },
+              frameRate: { ideal: 30, max: 30 },
               facingMode: 'user',
             },
             audio: {
               echoCancellation: true,
               noiseSuppression: true,
               autoGainControl: true,
-              sampleRate: 22050,
+              sampleRate: 48000,
+              channelCount: 1,
             },
           });
         } catch (mediaErr) {
