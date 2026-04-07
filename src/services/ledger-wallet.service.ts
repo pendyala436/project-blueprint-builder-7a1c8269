@@ -122,7 +122,7 @@ export const PRICING = {
  */
 export async function getLedgerWallet(userId: string): Promise<UsersWallet | null> {
   const { data, error } = await supabase
-    .from('users_wallet')
+    .from('wallets')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
