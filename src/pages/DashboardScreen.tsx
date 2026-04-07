@@ -62,6 +62,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
+import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 // MenFreeMinutesBadge removed - free minutes feature removed
 import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
 import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
