@@ -108,7 +108,7 @@ export const WhatsAppUserCard: React.FC<WhatsAppUserCardProps> = ({
             </span>
           )}
           {walletBalance !== undefined && walletBalance > 0 && (
-            <span className="text-primary font-semibold">₹{walletBalance.toFixed(0)}</span>
+            <span className="text-primary font-semibold">₹{Math.round(walletBalance).toLocaleString('en-IN')}</span>
           )}
         </div>
         {subtitle && (
