@@ -437,8 +437,12 @@ const WomenDashboardScreen = () => {
   useEffect(() => {
     if (!currentUserId) return;
     const intervalId = setInterval(async () => {
-      // Get all currently displayed men user IDs
-      const allMenIds = [...rechargedMen, ...nonRechargedMen].map(m => m.userId);
+      // Use functional updates to avoid stale closures
+      let allMenIds: string[] = [];
+      // Peek at current state to get IDs
+      setRechargedMen(prev => { allMenIds.push(...prev.map(m => m.userId)); return prev; });
+      setNonRechargedMen(prev => { allMenIds.push(...prev.map(m => m.userId)); return prev; });
+
       if (allMenIds.length === 0) return;
       try {
         const { data } = await supabase
@@ -447,23 +451,36 @@ const WomenDashboardScreen = () => {
           .in("user_id", allMenIds);
         if (!data || data.length === 0) return;
         const balanceMap = new Map<string, number>(data.map((w: { user_id: string; balance: number }) => [w.user_id, Number(w.balance) || 0]));
-        const updateList = (list: OnlineMan[]): OnlineMan[] =>
-          list.map(m => {
-            const newBal = balanceMap.get(m.userId);
-            return newBal !== undefined ? { ...m, walletBalance: newBal, hasRecharged: newBal > 0 } : m;
-          });
-        // Re-partition after balance update so men move between tabs correctly
-        const updatedRecharged = updateList([...rechargedMen]);
-        const updatedNonRecharged = updateList([...nonRechargedMen]);
-        const allMen = [...updatedRecharged, ...updatedNonRecharged];
-        setRechargedMen(allMen.filter(m => m.walletBalance > 0));
-        setNonRechargedMen(allMen.filter(m => m.walletBalance <= 0));
-        setSameLanguageMen(prev => updateList(prev));
-        setOtherLanguageMen(prev => updateList(prev));
+        const updateMan = (m: OnlineMan): OnlineMan => {
+          const newBal = balanceMap.get(m.userId);
+          return newBal !== undefined ? { ...m, walletBalance: newBal, hasRecharged: newBal > 0 } : m;
+        };
+
+        // Atomic re-partition using functional updates (no stale closures)
+        const repartition = (prevRecharged: OnlineMan[], prevNonRecharged: OnlineMan[]) => {
+          const allMen = [...prevRecharged, ...prevNonRecharged].map(updateMan);
+          return {
+            recharged: allMen.filter(m => m.walletBalance > 0),
+            nonRecharged: allMen.filter(m => m.walletBalance <= 0),
+          };
+        };
+
+        // We need both prev states simultaneously — use a ref-based approach
+        let capturedRecharged: OnlineMan[] = [];
+        setRechargedMen(prev => { capturedRecharged = prev; return prev; });
+        setNonRechargedMen(prevNon => {
+          const result = repartition(capturedRecharged, prevNon);
+          // Set recharged in next microtask to avoid nested setState
+          queueMicrotask(() => setRechargedMen(result.recharged));
+          return result.nonRecharged;
+        });
+
+        setSameLanguageMen(prev => prev.map(updateMan));
+        setOtherLanguageMen(prev => prev.map(updateMan));
       } catch { /* silent */ }
     }, 5000);
     return () => clearInterval(intervalId);
-  }, [currentUserId, rechargedMen.length, nonRechargedMen.length]);
+  }, [currentUserId]);
 
   // 5-second lightweight own wallet balance refresh
   useEffect(() => {

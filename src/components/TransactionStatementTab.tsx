@@ -488,8 +488,17 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                     <TableHead className="text-xs">Description</TableHead>
                     <TableHead className="text-xs">Duration</TableHead>
                     <TableHead className="text-xs">Rate</TableHead>
-                    <TableHead className="text-xs text-right text-destructive">Debit (₹)</TableHead>
-                    <TableHead className="text-xs text-right text-green-600">Credit (₹)</TableHead>
+                    {isMale ? (
+                      <>
+                        <TableHead className="text-xs text-right text-destructive">Debit (₹)</TableHead>
+                        <TableHead className="text-xs text-right text-green-600">Credit (₹)</TableHead>
+                      </>
+                    ) : (
+                      <>
+                        <TableHead className="text-xs text-right text-green-600">Earned (₹)</TableHead>
+                        <TableHead className="text-xs text-right text-destructive">Deduction (₹)</TableHead>
+                      </>
+                    )}
                     <TableHead className="text-xs text-right">Balance (₹)</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -528,12 +537,25 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                         <TableCell className="text-xs text-muted-foreground">
                           {row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—"}
                         </TableCell>
-                        <TableCell className="text-xs text-right font-medium text-destructive">
-                          {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-right font-medium text-green-600">
-                          {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
-                        </TableCell>
+                        {isMale ? (
+                          <>
+                            <TableCell className="text-xs text-right font-medium text-destructive">
+                              {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-medium text-green-600">
+                              {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="text-xs text-right font-medium text-green-600">
+                              {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-medium text-destructive">
+                              {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
+                            </TableCell>
+                          </>
+                        )}
                         <TableCell className="text-xs text-right font-semibold">
                           {fmtINR(row.running_balance)}
                         </TableCell>
@@ -544,12 +566,25 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                   {rows.length > 0 && (
                     <TableRow className="bg-muted/60 font-semibold border-t-2">
                       <TableCell colSpan={5} className="text-xs text-right pr-2">Totals:</TableCell>
-                      <TableCell className="text-xs text-right text-destructive">
-                        {fmtINR(rows.reduce((s, r) => s + Number(r.debit), 0))}
-                      </TableCell>
-                      <TableCell className="text-xs text-right text-green-600">
-                        {fmtINR(rows.reduce((s, r) => s + Number(r.credit), 0))}
-                      </TableCell>
+                      {isMale ? (
+                        <>
+                          <TableCell className="text-xs text-right text-destructive">
+                            {fmtINR(rows.reduce((s, r) => s + Number(r.debit), 0))}
+                          </TableCell>
+                          <TableCell className="text-xs text-right text-green-600">
+                            {fmtINR(rows.reduce((s, r) => s + Number(r.credit), 0))}
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="text-xs text-right text-green-600">
+                            {fmtINR(rows.reduce((s, r) => s + Number(r.credit), 0))}
+                          </TableCell>
+                          <TableCell className="text-xs text-right text-destructive">
+                            {fmtINR(rows.reduce((s, r) => s + Number(r.debit), 0))}
+                          </TableCell>
+                        </>
+                      )}
                       <TableCell className="text-xs text-right">
                         {summary ? fmtINR(summary.closing_balance) : "—"}
                       </TableCell>
