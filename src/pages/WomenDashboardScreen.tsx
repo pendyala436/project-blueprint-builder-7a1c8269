@@ -35,9 +35,11 @@ import { cn, formatChatTime } from "@/lib/utils";
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 // Chat mode removed - all women are in paid mode by default
-import { useIncomingCalls } from "@/hooks/useIncomingCalls";
+import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
+import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
+import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";

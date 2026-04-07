@@ -57,17 +57,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn, formatChatTime } from "@/lib/utils";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed — not used in WhatsApp-style layout
-import VideoCallMiniButton from "@/components/VideoCallMiniButton";
-import DirectVideoCallButton from "@/components/DirectVideoCallButton";
-import DirectAudioCallButton from "@/components/DirectAudioCallButton";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 // MenFreeMinutesBadge removed - free minutes feature removed
-import { useIncomingCalls } from "@/hooks/useIncomingCalls";
-import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
+import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
+import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
 import { useChatPricing } from "@/hooks/useChatPricing";
