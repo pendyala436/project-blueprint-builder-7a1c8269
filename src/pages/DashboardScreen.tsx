@@ -103,6 +103,7 @@ interface OnlineWoman {
   is_available?: boolean;
   max_chats?: number;
   is_earning_eligible?: boolean; // Badged women shown at top
+  walletBalance?: number; // Women's wallet/earning balance
 }
 
 interface MatchedWoman {
