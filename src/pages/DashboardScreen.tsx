@@ -1406,7 +1406,6 @@ const DashboardScreen = () => {
                   language={woman.primary_language}
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
-                  walletBalance={woman.walletBalance}
                   onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
                     <div className="flex items-center gap-1">
@@ -1448,7 +1447,6 @@ const DashboardScreen = () => {
                   language={woman.primary_language}
                   country={woman.country}
                   activeChatCount={woman.active_chat_count}
-                  walletBalance={woman.walletBalance}
                   subtitle={`${woman.primary_language} → ${userLanguage}`}
                   onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
                   actions={
