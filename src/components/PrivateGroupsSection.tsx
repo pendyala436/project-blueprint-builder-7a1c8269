@@ -202,7 +202,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
               {/* Flower avatar */}
               <div className={cn(
                 "w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0",
-                isLive ? "bg-[#128C7E]/10 ring-2 ring-[#25D366]" : "bg-muted"
+                isLive ? "bg-primary/10 ring-2 ring-accent" : "bg-muted"
               )}>
                 {FLOWER_EMOJIS[group.name] || '🌸'}
               </div>
