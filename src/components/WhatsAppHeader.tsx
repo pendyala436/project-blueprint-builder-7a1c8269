@@ -101,9 +101,19 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={onAdminMessages} className="gap-2">
                 <Mail className="w-4 h-4" /> Admin Messages
+                {unreadAdminMessages > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadAdminMessages > 99 ? "99+" : unreadAdminMessages}
+                  </span>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onAdminChat} className="gap-2">
                 <Shield className="w-4 h-4" /> Chat with Admin
+                {unreadAdminChat > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadAdminChat > 99 ? "99+" : unreadAdminChat}
+                  </span>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onFriends} className="gap-2">
                 <Users2 className="w-4 h-4" /> Friends & Blocked
