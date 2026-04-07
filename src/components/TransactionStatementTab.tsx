@@ -35,23 +35,35 @@ const YEARS = [...new Set(ALLOWED_MONTHS.map(m => m.year))];
 
 const RATE_INFO_MEN: Record<string, string> = {
   chat_charge: "Chat — ₹4/min",
+  chat_debit: "Chat — ₹4/min",
   video_call_charge: "Video Call — ₹8/min",
+  video_debit: "Video Call — ₹8/min",
   audio_call_charge: "Audio Call — ₹6/min",
+  audio_debit: "Audio Call — ₹6/min",
   group_call_charge: "Group Call — ₹4/min per man",
   gift_charge: "Gift Sent — 100% deducted",
+  gift_debit: "Gift Sent — 100% deducted",
   tip_charge: "Tip Sent — 100% deducted",
   recharge: "Wallet Recharge",
   opening_balance: "Opening Balance",
+  debit: "Charge",
+  credit: "Recharge",
 };
 
 const RATE_INFO_WOMEN: Record<string, string> = {
   chat: "Chat Earning — ₹2/min",
+  chat_credit: "Chat Earning — ₹2/min",
   video_call: "Video Call Earning — ₹4/min",
+  video_credit: "Video Call Earning — ₹4/min",
   audio_call: "Audio Call Earning — ₹3/min",
-  group_call_earning: "Group Call — ₹0.50/min × men",
+  audio_credit: "Audio Call Earning — ₹3/min",
+  group_call_earning: "Group Call Earning",
+  group_call: "Group Call Earning",
   gift_earning: "Gift Received — 50% credited",
+  gift_credit: "Gift Received — 50% credited",
   tip_earning: "Tip Received — 50% credited",
   withdrawal: "Bank Withdrawal",
+  payout: "Bank Withdrawal",
 };
 
 interface Summary {
