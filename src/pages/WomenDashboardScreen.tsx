@@ -452,8 +452,12 @@ const WomenDashboardScreen = () => {
             const newBal = balanceMap.get(m.userId);
             return newBal !== undefined ? { ...m, walletBalance: newBal, hasRecharged: newBal > 0 } : m;
           });
-        setRechargedMen(prev => updateList(prev));
-        setNonRechargedMen(prev => updateList(prev));
+        // Re-partition after balance update so men move between tabs correctly
+        const updatedRecharged = updateList([...rechargedMen]);
+        const updatedNonRecharged = updateList([...nonRechargedMen]);
+        const allMen = [...updatedRecharged, ...updatedNonRecharged];
+        setRechargedMen(allMen.filter(m => m.walletBalance > 0));
+        setNonRechargedMen(allMen.filter(m => m.walletBalance <= 0));
         setSameLanguageMen(prev => updateList(prev));
         setOtherLanguageMen(prev => updateList(prev));
       } catch { /* silent */ }

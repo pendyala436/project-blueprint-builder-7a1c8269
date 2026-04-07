@@ -77,21 +77,14 @@ const WalletScreen = () => {
       if (!session?.user) { navigate("/"); return; }
       setUserId(session.user.id);
 
-      const { data: walletData, error } = await supabase
-        .from("wallets")
-        .select("balance, currency")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      // Single source of truth: RPC only (no double-fetch race condition)
+      const { data: rpcData, error: rpcError } = await supabase.rpc("get_men_wallet_balance", { p_user_id: session.user.id });
+      const bd = rpcData as Record<string, number | string> | null;
+      if (rpcError) throw rpcError;
 
-      if (error) throw error;
-
-      let balance = walletData?.balance || 0;
-      // Server-side RPC for accuracy
-      const { data: rpcData } = await supabase.rpc("get_men_wallet_balance", { p_user_id: session.user.id });
-      const bd = rpcData as Record<string, number> | null;
-      if (bd?.balance !== undefined) balance = Number(bd.balance);
-
-      setWallet({ balance, currency: walletData?.currency || "INR" });
+      const balance = bd?.balance !== undefined ? Number(bd.balance) : 0;
+      const currency = (bd?.currency as string) || "INR";
+      setWallet({ balance, currency });
     } catch (err) {
       toast.error("Wallet unavailable", { description: classifyError(err).message });
     } finally {

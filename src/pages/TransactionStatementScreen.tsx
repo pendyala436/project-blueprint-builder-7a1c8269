@@ -112,7 +112,7 @@ const TransactionStatementScreen = () => {
       const { data } = await supabase
         .from("profiles")
         .select("gender")
-        .eq("id", session.user.id)
+        .eq("user_id", session.user.id)
         .single();
       if (data?.gender) setGender(data.gender);
     })();
@@ -143,11 +143,19 @@ const TransactionStatementScreen = () => {
       const sumData = sumRes.data as Summary;
       if (!sumData.success) {
         toast.error(sumData.error || "Failed to load statement");
+        setSummary(null);
+        setRows([]);
         return;
       }
-      setSummary(sumData);
 
-      if (detRes.error) throw detRes.error;
+      if (detRes.error) {
+        setSummary(null);
+        setRows([]);
+        throw detRes.error;
+      }
+
+      // Atomic: set both together so partial state is never visible
+      setSummary(sumData);
       setRows((detRes.data as TxRow[]) || []);
     } catch (err: any) {
       toast.error("Failed to load statement", { description: err.message });
