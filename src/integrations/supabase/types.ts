@@ -3578,7 +3578,6 @@ export type Database = {
             }
             Returns: Json
           }
-        | { Args: { p_session_type: string; p_user_id: string }; Returns: Json }
       cleanup_chat_media: { Args: never; Returns: undefined }
       cleanup_expired_data: { Args: never; Returns: undefined }
       cleanup_idle_sessions: { Args: never; Returns: undefined }
