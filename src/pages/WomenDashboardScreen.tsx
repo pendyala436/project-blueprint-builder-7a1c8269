@@ -461,6 +461,15 @@ const WomenDashboardScreen = () => {
     return () => clearInterval(intervalId);
   }, [currentUserId, rechargedMen.length, nonRechargedMen.length]);
 
+  // 5-second lightweight own wallet balance refresh
+  useEffect(() => {
+    if (!currentUserId) return;
+    const intervalId = setInterval(() => {
+      fetchWalletBalance(currentUserId);
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [currentUserId]);
+
   // Eager-load active chats on mount for unread badge
   useEffect(() => {
     if (!currentUserId) return;
