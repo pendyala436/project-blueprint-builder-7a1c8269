@@ -3584,6 +3584,7 @@ export type Database = {
       cleanup_old_admin_messages: { Args: never; Returns: undefined }
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
+      cleanup_old_transactions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
       expire_group_video_access: { Args: never; Returns: undefined }
       generate_monthly_statement: {
