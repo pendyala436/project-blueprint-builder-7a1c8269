@@ -89,14 +89,23 @@ interface TxRow {
   debit: number;
   credit: number;
   running_balance: number;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  const totalMin = Math.floor(sec / 60);
+  const remainSec = sec % 60;
+  if (totalMin === 0) return `${remainSec} sec`;
+  if (remainSec === 0) return `${totalMin} min`;
+  return `${totalMin} min ${remainSec} sec`;
+};
+const fmtTimeIST = (dateStr: string | null) => {
+  if (!dateStr) return null;
+  const ist = new Date(new Date(dateStr).getTime() + 5.5 * 60 * 60 * 1000);
+  return format(ist, "HH:mm:ss");
 };
 const typeLabel = (t: string, isMale: boolean) => {
   const map = isMale ? RATE_INFO_MEN : RATE_INFO_WOMEN;
