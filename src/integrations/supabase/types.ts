@@ -2926,8 +2926,10 @@ export type Database = {
           balance_after: number | null
           created_at: string
           description: string | null
+          duration_seconds: number | null
           id: string
           idempotency_key: string | null
+          rate_per_minute: number | null
           reference_id: string | null
           session_id: string | null
           session_type: string | null
@@ -2942,8 +2944,10 @@ export type Database = {
           balance_after?: number | null
           created_at?: string
           description?: string | null
+          duration_seconds?: number | null
           id?: string
           idempotency_key?: string | null
+          rate_per_minute?: number | null
           reference_id?: string | null
           session_id?: string | null
           session_type?: string | null
@@ -2958,8 +2962,10 @@ export type Database = {
           balance_after?: number | null
           created_at?: string
           description?: string | null
+          duration_seconds?: number | null
           id?: string
           idempotency_key?: string | null
+          rate_per_minute?: number | null
           reference_id?: string | null
           session_id?: string | null
           session_type?: string | null
