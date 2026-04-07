@@ -2,9 +2,7 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,42 +11,20 @@ import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
 interface PrivateGroup {
-  id: string;
-  owner_id: string;
-  name: string;
-  description: string | null;
-  min_gift_amount: number;
-  access_type: string;
-  is_active: boolean;
-  is_live: boolean;
-  stream_id: string | null;
-  participant_count: number;
-  current_host_id: string | null;
-  current_host_name: string | null;
-  owner_language: string | null;
-  updated_at: string;
-  created_at: string;
-  owner_name?: string;
-  owner_photo?: string;
+  id: string; owner_id: string; name: string; description: string | null;
+  min_gift_amount: number; access_type: string; is_active: boolean; is_live: boolean;
+  stream_id: string | null; participant_count: number; current_host_id: string | null;
+  current_host_name: string | null; owner_language: string | null; updated_at: string;
+  created_at: string; owner_name?: string; owner_photo?: string;
 }
 
 interface AvailableGroupsSectionProps {
-  currentUserId: string;
-  userName: string;
-  userPhoto: string | null;
+  currentUserId: string; userName: string; userPhoto: string | null;
 }
 
 const FLOWER_EMOJIS: Record<string, string> = {
-  Rose: '🌹',
-  Lily: '🌸',
-  Jasmine: '🌼',
-  Orchid: '🌺',
-  Sunflower: '🌻',
-  Tulip: '🌷',
-  Lotus: '🪷',
-  Daisy: '🌼',
-  Lavender: '💜',
-  Marigold: '🏵️',
+  Rose: '🌹', Lily: '🌸', Jasmine: '🌼', Orchid: '🌺', Sunflower: '🌻',
+  Tulip: '🌷', Lotus: '🪷', Daisy: '🌼', Lavender: '💜', Marigold: '🏵️',
 };
 
 const MIN_BALANCE_MINUTES = 5;
@@ -63,18 +39,15 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
 
-  // GRP-H-01: Fix stale closure by using ref for activeGroupVideo
   const activeGroupVideoRef = useRef(activeGroupVideo);
   activeGroupVideoRef.current = activeGroupVideo;
 
   useEffect(() => {
     fetchGroups();
     fetchWalletBalance();
-
     const channel = supabase
       .channel('available-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, (payload) => {
-        // Use ref to avoid stale closure
         if (payload.eventType === 'UPDATE') {
           const updated = payload.new as PrivateGroup;
           if (!updated.is_live && activeGroupVideoRef.current?.id === updated.id) {
@@ -88,248 +61,188 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         fetchWalletBalance();
       })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUserId]); // GRP-H-01: Removed activeGroupVideo?.id from deps to prevent stale closure
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUserId]);
 
   const fetchGroups = async () => {
     try {
-      // Men only see LIVE groups (where a host is actively streaming)
       const { data, error } = await supabase
-        .from('private_groups')
-        .select('*')
-        .eq('is_active', true)
-        .eq('is_live', true)
-        .not('current_host_id', 'is', null)
-        .order('name', { ascending: true });
-
+        .from('private_groups').select('*').eq('is_active', true).eq('is_live', true)
+        .not('current_host_id', 'is', null).order('name', { ascending: true });
       if (error) throw error;
-
       if (data && data.length > 0) {
-        const enrichedGroups: PrivateGroup[] = data.map(group => ({
-          ...group,
-          owner_name: group.current_host_name || 'Host',
-        }));
-        setGroups(enrichedGroups);
-      } else {
-        setGroups([]);
-      }
+        setGroups(data.map(group => ({ ...group, owner_name: group.current_host_name || 'Host' })));
+      } else { setGroups([]); }
     } catch (error) {
       console.error('Error fetching groups:', error);
       toast.error('Groups unavailable', { description: 'Unable to load available groups. Please refresh the page.' });
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   const fetchWalletBalance = async () => {
     try {
-      const { data } = await supabase
-        .from('users_wallet')
-        .select('balance')
-        .eq('user_id', currentUserId)
-        .single();
+      const { data } = await supabase.from('users_wallet').select('balance').eq('user_id', currentUserId).single();
       if (data) setWalletBalance(data.balance);
-    } catch (err) {
-      console.error('[AvailableGroups] fetchWalletBalance error:', err);
-    }
+    } catch (err) { console.error('[AvailableGroups] fetchWalletBalance error:', err); }
   };
 
   const handleJoinGroup = async (group: PrivateGroup) => {
-    const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES; // ₹20
-
-    if (walletBalance < minBalance) {
-      toast.error(`Insufficient balance. You need at least ₹${minBalance} (${MIN_BALANCE_MINUTES} minutes) to join.`);
-      return;
-    }
-
-    if (group.participant_count >= MAX_PARTICIPANTS) {
-      toast.error(`This group is full (max ${MAX_PARTICIPANTS} participants)`);
-      return;
-    }
-
+    const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
+    if (walletBalance < minBalance) { toast.error(`Insufficient balance. You need at least ₹${minBalance} (${MIN_BALANCE_MINUTES} minutes) to join.`); return; }
+    if (group.participant_count >= MAX_PARTICIPANTS) { toast.error(`This group is full (max ${MAX_PARTICIPANTS} participants)`); return; }
     setJoiningGroupId(group.id);
-    
-    // CRITICAL: Acquire audio NOW in click handler (user gesture context)
     let preStream: MediaStream | null = null;
     try {
-      preStream = await navigator.mediaDevices.getUserMedia({
-        video: false,
-        audio: { echoCancellation: true, noiseSuppression: true },
-      });
-      // Mute by default for participants
+      preStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: { echoCancellation: true, noiseSuppression: true } });
       preStream.getAudioTracks().forEach(t => { t.enabled = false; });
     } catch (mediaErr) {
       console.error('[AvailableGroups] Pre-acquire audio failed:', mediaErr);
       toast.error('Could not access microphone. Please allow access.');
-      setJoiningGroupId(null);
-      return;
+      setJoiningGroupId(null); return;
     }
-
     try {
-      // GRP-C-01: Use atomic join RPC to prevent race condition > 100 participants
       const { data: joinResult, error: joinError } = await supabase.rpc('join_group_atomic', {
-        p_group_id: group.id,
-        p_user_id: currentUserId,
-        p_max_participants: MAX_PARTICIPANTS,
+        p_group_id: group.id, p_user_id: currentUserId, p_max_participants: MAX_PARTICIPANTS,
       });
-
       if (joinError) throw joinError;
       const result = joinResult as { success: boolean; error?: string; participant_count?: number };
-      if (!result.success) {
-        toast.error(result.error || 'Could not join group');
-        preStream.getTracks().forEach(t => t.stop());
-        setJoiningGroupId(null);
-        return;
-      }
-
+      if (!result.success) { toast.error(result.error || 'Could not join group'); preStream.getTracks().forEach(t => t.stop()); setJoiningGroupId(null); return; }
       setActiveGroupStream(preStream);
       setActiveGroupVideo(group);
     } catch (error: any) {
       preStream.getTracks().forEach(t => t.stop());
       toast.error('Could not join group', { description: classifyError(error, 'join the group').message });
-    } finally {
-      setJoiningGroupId(null);
-    }
+    } finally { setJoiningGroupId(null); }
   };
 
   const handleLeaveGroup = async () => {
     if (activeGroupVideo) {
-      // GRP-H-02: Stop local audio stream tracks before leaving
-      if (activeGroupStream) {
-        activeGroupStream.getTracks().forEach(t => t.stop());
-        setActiveGroupStream(null);
-      }
-
+      if (activeGroupStream) { activeGroupStream.getTracks().forEach(t => t.stop()); setActiveGroupStream(null); }
       const groupId = activeGroupVideo.id;
-
-      // Use atomic RPC to leave group safely (decrement + deactivate membership)
       try {
-        const { error } = await supabase.rpc('leave_group_atomic', {
-          p_group_id: groupId,
-          p_user_id: currentUserId,
-        });
+        const { error } = await supabase.rpc('leave_group_atomic', { p_group_id: groupId, p_user_id: currentUserId });
         if (error) {
-          // Fallback: manual update if RPC not available
           console.warn('[AvailableGroups] leave_group_atomic RPC failed, using fallback:', error);
-          await supabase
-            .from('group_memberships')
-            .update({ has_access: false })
-            .eq('group_id', groupId)
-            .eq('user_id', currentUserId);
+          await supabase.from('group_memberships').update({ has_access: false }).eq('group_id', groupId).eq('user_id', currentUserId);
         }
-      } catch (e) {
-        console.error('[AvailableGroups] Leave group error:', e);
-      }
-      
+      } catch (e) { console.error('[AvailableGroups] Leave group error:', e); }
       fetchGroups();
     }
     setActiveGroupVideo(null);
   };
 
-  if (isLoading) {
-    return <div className="animate-pulse h-32 bg-muted rounded-lg" />;
-  }
-
-  if (groups.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="font-medium">No live groups right now</p>
-          <p className="text-sm">Groups will appear here when a host goes live.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const liveCount = groups.length;
+  if (isLoading) return <div className="animate-pulse h-32 bg-[#E5DDD5]/30 rounded-lg" />;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Video className="h-5 w-5 text-primary" />
-          Private Groups
+    <div className="space-y-3">
+      {/* WhatsApp-style header */}
+      <div className="flex items-center justify-between bg-[#075E54] text-white px-4 py-2.5 rounded-t-xl -mx-1">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <Video className="h-4 w-4" />
+          Live Groups
         </h3>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setIsLoading(true); fetchGroups(); fetchWalletBalance(); }}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Badge variant="outline" className="text-xs">
-            {liveCount} Live
+          <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">
+            {groups.length} Live
           </Badge>
+          <button onClick={() => { setIsLoading(true); fetchGroups(); fetchWalletBalance(); }} className="hover:bg-white/10 rounded-full p-1.5 transition-colors">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
+      {/* Balance warning */}
       {!hasEnoughBalance && (
-        <div className="p-3 rounded-lg bg-destructive/10 text-sm text-destructive border border-destructive/20">
-          <p className="font-medium">⚠️ Insufficient balance</p>
-          <p className="text-xs mt-1">You need at least ₹{minBalance} to join a private room. Please recharge your wallet.</p>
+        <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-950/30 rounded-lg text-xs text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+          <span>⚠️</span>
+          <span>Need at least ₹{minBalance} to join. Please recharge.</span>
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {groups.map((group) => {
-          const isLive = true; // All groups in this list are live
-          const isFull = group.participant_count >= MAX_PARTICIPANTS;
-          const isJoining = joiningGroupId === group.id;
+      {/* Empty state */}
+      {groups.length === 0 && (
+        <div className="py-10 text-center bg-card rounded-xl border border-border/60">
+          <div className="w-14 h-14 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
+            <Video className="h-7 w-7 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No live groups right now</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">Groups will appear when a host goes live</p>
+        </div>
+      )}
 
-          return (
-            <Card key={group.id} className={cn("relative overflow-hidden border-destructive/30")}>
-              <Badge variant="destructive" className="absolute top-2 right-2 gap-1 z-10">
-                <Radio className="h-3 w-3 animate-pulse" />
-                LIVE
-              </Badge>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl">{FLOWER_EMOJIS[group.name] || '🌸'}</div>
-                  <div>
-                    <CardTitle className="text-base">{group.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Host: {group.current_host_name || group.owner_name}
-                    </p>
+      {/* Group list - WhatsApp chat-list style */}
+      {groups.length > 0 && (
+        <div className="divide-y divide-border/50 bg-card rounded-xl overflow-hidden border border-border/60">
+          {groups.map((group) => {
+            const isFull = group.participant_count >= MAX_PARTICIPANTS;
+            const isJoining = joiningGroupId === group.id;
+
+            return (
+              <div
+                key={group.id}
+                className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/40"
+              >
+                {/* Flower avatar with live ring */}
+                <div className="relative shrink-0">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-[#128C7E]/10 ring-2 ring-[#25D366]">
+                    {FLOWER_EMOJIS[group.name] || '🌸'}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#25D366] rounded-full flex items-center justify-center">
+                    <Radio className="h-2 w-2 text-white animate-pulse" />
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {group.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{group.description}</p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="gap-1">
-                    <Users className="h-3 w-3" />
-                    {group.participant_count}/{MAX_PARTICIPANTS}
-                  </Badge>
-                  <Badge variant="secondary" className="gap-1 text-xs">
-                    💰 ₹{RATE_PER_MINUTE}/min
-                  </Badge>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-sm text-foreground truncate">{group.name}</span>
+                    <Badge className="bg-[#25D366] text-white text-[9px] h-4 px-1.5 border-0 shrink-0">
+                      LIVE
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-[#128C7E] font-medium truncate mt-0.5">
+                    📹 {group.current_host_name || group.owner_name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                      <Users className="h-2.5 w-2.5" /> {group.participant_count}/{MAX_PARTICIPANTS}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      💰 ₹{RATE_PER_MINUTE}/min
+                    </span>
+                  </div>
                 </div>
 
-                <Button
-                  className="w-full gap-2"
-                  onClick={() => handleJoinGroup(group)}
-                  disabled={!hasEnoughBalance || isFull || isJoining}
-                >
-                  {isJoining ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Video className="h-4 w-4" />
-                  )}
-                  {isFull ? 'Full' : !hasEnoughBalance ? `Need ₹${minBalance}+` : isJoining ? 'Joining...' : 'Join Call'}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                {/* Join button */}
+                <div className="shrink-0">
+                  <Button
+                    size="sm"
+                    className={cn(
+                      "h-8 text-xs rounded-full px-4 gap-1",
+                      isFull || !hasEnoughBalance
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-[#25D366] hover:bg-[#128C7E] text-white"
+                    )}
+                    onClick={() => handleJoinGroup(group)}
+                    disabled={!hasEnoughBalance || isFull || isJoining}
+                  >
+                    {isJoining ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Video className="h-3 w-3" />
+                    )}
+                    {isFull ? 'Full' : !hasEnoughBalance ? `₹${minBalance}+` : isJoining ? '...' : 'Join'}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Private Group Call Window */}
       {activeGroupVideo && (
         <PrivateGroupCallWindow
           group={activeGroupVideo}
