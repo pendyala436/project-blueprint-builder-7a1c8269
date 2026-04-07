@@ -219,7 +219,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {isLive && group.current_host_name && (
-                    <span className="text-xs text-[#128C7E] font-medium truncate">
+                     <span className="text-xs text-primary font-medium truncate">
                       {isMyHost ? '📹 You are hosting' : `Host: ${group.current_host_name}`}
                     </span>
                   )}
