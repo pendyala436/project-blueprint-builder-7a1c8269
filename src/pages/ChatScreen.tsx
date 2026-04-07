@@ -1882,10 +1882,10 @@ const ChatScreen = () => {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: WA.chatBg }}>
         <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading chat...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto" style={{ color: WA.headerBg }} />
+          <p style={{ color: WA.metaColor }}>Loading chat...</p>
         </div>
       </div>
     );
@@ -1894,7 +1894,7 @@ const ChatScreen = () => {
   // ============= MAIN RENDER =============
   
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: WA.chatBg }}>
       {/* ============= INCOMING CALL BANNER ============= */}
       {incomingCall && callStatus === 'idle' && (
         <IncomingCallBanner
