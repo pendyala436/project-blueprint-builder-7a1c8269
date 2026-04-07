@@ -407,7 +407,7 @@ const AdminUserManagement = () => {
         supabase.from("matches").delete().eq("user_id", userId),
         supabase.from("matches").delete().eq("matched_user_id", userId),
         supabase.from("ledger_transactions").delete().eq("user_id", userId),
-        supabase.from("users_wallet" as any).delete().eq("user_id", userId),
+        supabase.from("wallets").delete().eq("user_id", userId),
       ]);
 
       const { error } = await supabase.from("profiles").delete().eq("id", selectedUser.id);
@@ -610,7 +610,7 @@ const AdminUserManagement = () => {
     setDeductDialogOpen(true);
     // Load current balance
     try {
-      const { data } = await supabase.from("users_wallet" as any).select("balance").eq("user_id", user.user_id).maybeSingle();
+      const { data } = await supabase.from("wallets").select("balance").eq("user_id", user.user_id).maybeSingle();
       const walletData = data as any;
       setDeductUserBalance(walletData?.balance ?? 0);
     } catch { setDeductUserBalance(0); }

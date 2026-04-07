@@ -122,7 +122,7 @@ export const PRICING = {
  */
 export async function getLedgerWallet(userId: string): Promise<UsersWallet | null> {
   const { data, error } = await supabase
-    .from('users_wallet')
+    .from('wallets')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
@@ -447,7 +447,7 @@ export function subscribeLedgerWallet(
     .channel(`ledger_wallet:${userId}`)
     .on(
       'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'users_wallet', filter: `user_id=eq.${userId}` },
+      { event: 'UPDATE', schema: 'public', table: 'wallets', filter: `user_id=eq.${userId}` },
       (payload) => onUpdate(payload.new as UsersWallet)
     )
     .subscribe();

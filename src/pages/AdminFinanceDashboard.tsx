@@ -130,7 +130,7 @@ const AdminFinanceDashboard = () => {
 
       // Load wallet stats from users_wallet
       const { data: wallets, error: walletsError } = await supabase
-        .from("users_wallet")
+        .from("wallets")
         .select("id, balance");
 
       if (walletsError) throw walletsError;
@@ -196,7 +196,7 @@ const AdminFinanceDashboard = () => {
 
   // Real-time subscriptions for finance data
   useMultipleRealtimeSubscriptions(
-    ["ledger_transactions", "gift_transactions", "users_wallet", "withdrawal_requests"],
+    ["ledger_transactions", "gift_transactions", "wallets", "withdrawal_requests"],
     loadFinanceData,
     true
   );

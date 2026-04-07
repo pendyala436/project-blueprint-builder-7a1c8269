@@ -116,7 +116,7 @@ const WomenWalletScreen = () => {
   useEffect(() => { loadData(); }, []);
 
   // Realtime: refresh when wallet balance changes (triggered by billing RPCs)
-  useRealtimeSubscription({ table: "users_wallet",           onUpdate: loadData });
+  useRealtimeSubscription({ table: "wallets",           onUpdate: loadData });
   useRealtimeSubscription({ table: "withdrawal_requests",  onUpdate: loadData });
   useRealtimeSubscription({ table: "chat_pricing",         onUpdate: loadData });
 

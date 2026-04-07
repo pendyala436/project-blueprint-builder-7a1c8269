@@ -9,6 +9,7 @@ type TableName =
   | "active_chat_sessions"
   | "video_call_sessions"
   | "chat_messages"
+  | "wallets"
   | "users_wallet"
   | "ledger_transactions"
   | "women_earnings"

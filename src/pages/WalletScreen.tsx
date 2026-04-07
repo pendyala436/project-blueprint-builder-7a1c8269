@@ -78,7 +78,7 @@ const WalletScreen = () => {
       setUserId(session.user.id);
 
       const { data: walletData, error } = await supabase
-        .from("users_wallet")
+        .from("wallets")
         .select("balance, currency")
         .eq("user_id", session.user.id)
         .maybeSingle();
@@ -102,7 +102,7 @@ const WalletScreen = () => {
 
   useEffect(() => { loadWallet(); }, []);
 
-  useRealtimeSubscription({ table: "users_wallet", onUpdate: loadWallet });
+  useRealtimeSubscription({ table: "wallets", onUpdate: loadWallet });
 
   // ── Recharge via Cashfree ───────────────────────────────────────────────
   const handleRecharge = async (amount: number) => {
