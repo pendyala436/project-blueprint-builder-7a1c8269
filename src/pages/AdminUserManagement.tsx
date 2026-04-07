@@ -610,7 +610,7 @@ const AdminUserManagement = () => {
     setDeductDialogOpen(true);
     // Load current balance
     try {
-      const { data } = await supabase.from("users_wallet" as any).select("balance").eq("user_id", user.user_id).maybeSingle();
+      const { data } = await supabase.from("wallets").select("balance").eq("user_id", user.user_id).maybeSingle();
       const walletData = data as any;
       setDeductUserBalance(walletData?.balance ?? 0);
     } catch { setDeductUserBalance(0); }
