@@ -109,7 +109,7 @@ const ProfileDetailScreen = lazyRetry(() => import("@/pages/ProfileDetailScreen"
 const GiftSendingScreen = lazyRetry(() => import("@/pages/GiftSendingScreen"));
 const WalletScreen = lazyRetry(() => import("@/pages/WalletScreen"));
 const WomenWalletScreen = lazyRetry(() => import("@/pages/WomenWalletScreen"));
-const TransactionStatementScreen = lazyRetry(() => import("@/pages/TransactionStatementScreen"));
+
 const SettingsScreen = lazyRetry(() => import("@/pages/SettingsScreen"));
 const InstallApp = lazyRetry(() => import("@/pages/InstallApp"));
 
