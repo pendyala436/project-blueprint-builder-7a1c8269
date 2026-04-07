@@ -496,13 +496,12 @@ const DashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
-  // 30-second auto-refresh for online users' wallet balances
+  // 5-second lightweight wallet balance refresh for own wallet
   useEffect(() => {
-    if (!currentUserId || !userLanguageRef.current) return;
+    if (!currentUserId) return;
     const intervalId = setInterval(() => {
-      const lang = userLanguageRef.current;
-      if (lang) fetchOnlineWomen(lang);
-    }, 30000);
+      loadWalletBalance();
+    }, 5000);
     return () => clearInterval(intervalId);
   }, [currentUserId]);
 
