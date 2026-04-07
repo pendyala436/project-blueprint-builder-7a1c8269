@@ -1394,29 +1394,15 @@ const DashboardScreen = () => {
                       </Button>
                       {/* Audio Call - same language only */}
                       {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <DirectAudioCallButton
-                          currentUserId={currentUserId}
-                          targetUserId={woman.user_id}
-                          targetName={woman.full_name || "User"}
-                          targetPhoto={woman.photo_url}
-                          walletBalance={walletBalance}
-                          onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                          size="sm"
-                          variant="ghost"
-                          iconOnly={true}
-                        />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
+                          <Phone className="w-3.5 h-3.5 text-primary" />
+                        </Button>
                       )}
                       {/* Video Call - same language only */}
                       {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <DirectVideoCallButton
-                          currentUserId={currentUserId}
-                          targetUserId={woman.user_id}
-                          targetName={woman.full_name || "User"}
-                          targetPhoto={woman.photo_url}
-                          walletBalance={walletBalance}
-                          onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                          iconOnly={true}
-                        />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
+                          <Video className="w-3.5 h-3.5 text-primary" />
+                        </Button>
                       )}
                     </div>
                   }
