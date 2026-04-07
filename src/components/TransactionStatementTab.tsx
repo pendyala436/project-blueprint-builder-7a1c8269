@@ -150,9 +150,7 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
     const title = isMale ? "Wallet Statement" : "Earnings Statement";
     const header = `${title} — ${monthName} ${year}`;
 
-    const headerRow = isMale
-      ? ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"]
-      : ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Earned (₹)", "Deduction (₹)", "Balance (₹)"];
+    const headerRow = ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"];
 
     const dataRows = rows.map(row => {
       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
