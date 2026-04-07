@@ -230,9 +230,9 @@ ${summary ? `
 <table>
 <thead><tr>${headerRow.map(h => `<th${h.includes("₹") || h.includes("Balance") ? ' class="text-right"' : ""}>${h}</th>`).join("")}</tr></thead>
 <tbody>
-${dataRows.map(r => `<tr>${r.map((c, i) => `<td${i >= 4 ? ' class="text-right ' + (i === 4 ? (isMale ? "debit" : "credit") : i === 5 ? (isMale ? "credit" : "debit") : "") + '"' : ""}>${c}</td>`).join("")}</tr>`).join("\n")}
+${dataRows.map(r => `<tr>${r.map((c, i) => `<td${i >= 5 ? ' class="text-right ' + (i === 5 ? (isMale ? "debit" : "credit") : i === 6 ? (isMale ? "credit" : "debit") : "") + '"' : ""}>${c}</td>`).join("")}</tr>`).join("\n")}
 ${rows.length > 0 ? `<tr class="totals">
-  <td colspan="4" class="text-right">Totals:</td>
+  <td colspan="5" class="text-right">Totals:</td>
   <td class="text-right ${isMale ? "debit" : "credit"}">${Number(rows.reduce((s, r) => s + Number(r.debit), 0)).toFixed(2)}</td>
   <td class="text-right ${isMale ? "credit" : "debit"}">${Number(rows.reduce((s, r) => s + Number(r.credit), 0)).toFixed(2)}</td>
   <td class="text-right">${summary ? fmtINR(summary.closing_balance) : "—"}</td>
