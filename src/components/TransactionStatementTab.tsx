@@ -144,14 +144,15 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
     const header = `${title} — ${monthName} ${year}`;
 
     const headerRow = isMale
-      ? ["Date & Time (IST)", "Type", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"]
-      : ["Date & Time (IST)", "Type", "Duration", "Rate", "Earned (₹)", "Deduction (₹)", "Balance (₹)"];
+      ? ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"]
+      : ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Earned (₹)", "Deduction (₹)", "Balance (₹)"];
 
     const dataRows = rows.map(row => {
       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
       return [
         format(istDate, "dd MMM yyyy HH:mm"),
         typeLabel(row.txn_type, isMale),
+        row.description || "—",
         fmtDuration(row.duration_seconds),
         row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—",
         Number(row.debit) > 0 ? Number(row.debit).toFixed(2) : "—",
@@ -229,9 +230,9 @@ ${summary ? `
 <table>
 <thead><tr>${headerRow.map(h => `<th${h.includes("₹") || h.includes("Balance") ? ' class="text-right"' : ""}>${h}</th>`).join("")}</tr></thead>
 <tbody>
-${dataRows.map(r => `<tr>${r.map((c, i) => `<td${i >= 4 ? ' class="text-right ' + (i === 4 ? (isMale ? "debit" : "credit") : i === 5 ? (isMale ? "credit" : "debit") : "") + '"' : ""}>${c}</td>`).join("")}</tr>`).join("\n")}
+${dataRows.map(r => `<tr>${r.map((c, i) => `<td${i >= 5 ? ' class="text-right ' + (i === 5 ? (isMale ? "debit" : "credit") : i === 6 ? (isMale ? "credit" : "debit") : "") + '"' : ""}>${c}</td>`).join("")}</tr>`).join("\n")}
 ${rows.length > 0 ? `<tr class="totals">
-  <td colspan="4" class="text-right">Totals:</td>
+  <td colspan="5" class="text-right">Totals:</td>
   <td class="text-right ${isMale ? "debit" : "credit"}">${Number(rows.reduce((s, r) => s + Number(r.debit), 0)).toFixed(2)}</td>
   <td class="text-right ${isMale ? "credit" : "debit"}">${Number(rows.reduce((s, r) => s + Number(r.credit), 0)).toFixed(2)}</td>
   <td class="text-right">${summary ? fmtINR(summary.closing_balance) : "—"}</td>
@@ -457,6 +458,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                   <TableRow className="bg-muted/40">
                     <TableHead className="text-xs">Date & Time (IST)</TableHead>
                     <TableHead className="text-xs">Type</TableHead>
+                    <TableHead className="text-xs">Description</TableHead>
                     <TableHead className="text-xs">Duration</TableHead>
                     <TableHead className="text-xs">Rate</TableHead>
                     {isMale ? (
@@ -476,7 +478,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                 <TableBody>
                   {summary && (
                     <TableRow className="bg-muted/20">
-                      <TableCell className="text-xs text-muted-foreground" colSpan={4}>
+                      <TableCell className="text-xs text-muted-foreground" colSpan={5}>
                         Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
                       </TableCell>
                       <TableCell className="text-xs text-right">—</TableCell>
@@ -498,6 +500,9 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                           <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
                             {typeLabel(row.txn_type, isMale)}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={row.description || ""}>
+                          {row.description || "—"}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {fmtDuration(row.duration_seconds)}
@@ -533,7 +538,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
 
                   {rows.length > 0 && (
                     <TableRow className="bg-muted/60 font-semibold border-t-2">
-                      <TableCell colSpan={4} className="text-xs text-right pr-2">Totals:</TableCell>
+                      <TableCell colSpan={5} className="text-xs text-right pr-2">Totals:</TableCell>
                       {isMale ? (
                         <>
                           <TableCell className="text-xs text-right text-destructive">
