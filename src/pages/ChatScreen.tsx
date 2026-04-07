@@ -2164,8 +2164,8 @@ const ChatScreen = () => {
 
       {/* Blocked by partner warning */}
       {isBlockedByPartner && (
-        <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2">
-          <p className="text-sm text-destructive text-center">
+        <div className="px-4 py-2" style={{ background: 'rgba(198,40,40,0.08)' }}>
+          <p style={{ fontSize: 12, color: '#C62828', textAlign: 'center' }}>
             You cannot send messages to this user.
           </p>
         </div>
@@ -2173,8 +2173,8 @@ const ChatScreen = () => {
 
       {/* Your own block warning */}
       {isBlocked && (
-        <div className="bg-warning/10 border-b border-warning/20 px-4 py-2">
-          <p className="text-sm text-warning text-center">
+        <div className="px-4 py-2" style={{ background: 'rgba(198,40,40,0.08)' }}>
+          <p style={{ fontSize: 12, color: '#C62828', textAlign: 'center' }}>
             You have blocked this user. Unblock to send messages.
           </p>
         </div>
