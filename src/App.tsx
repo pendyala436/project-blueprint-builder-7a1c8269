@@ -198,7 +198,7 @@ const AppShell = () => {
             <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><AdminFinanceDashboard /></ProtectedRoute>} />
             <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><AdminFinanceReports /></ProtectedRoute>} />
             <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><AdminTransactionHistory /></ProtectedRoute>} />
-            <Route path="/admin/statements" element={<ProtectedRoute requiredRole="admin"><AdminStatementsPage /></ProtectedRoute>} />
+            <Route path="/admin/payout-statements" element={<ProtectedRoute requiredRole="admin"><AdminPayoutStatements /></ProtectedRoute>} />
             <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><AdminChatPricing /></ProtectedRoute>} />
             <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><AdminGiftPricing /></ProtectedRoute>} />
             <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><AdminLanguageGroups /></ProtectedRoute>} />
