@@ -367,7 +367,8 @@ const ChatScreen = () => {
   const { setOnlineStatus } = useActivityStatus(currentUserId || null);
   
   // ============= INCOMING CALLS =============
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, currentUserGender);
+  const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, currentUserGender as 'male' | 'female');
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, currentUserGender as 'male' | 'female', walletBalance);
   
   // ============= AUTO-RECONNECT HANDLER =============
   

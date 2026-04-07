@@ -122,7 +122,8 @@ const WomenDashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, "female");
+  const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "female");
+  const { status: callStatus, activeCall, isMuted, isCameraOff, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'female', 0);
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [sameLanguageMen, setSameLanguageMen] = useState<OnlineMan[]>([]);

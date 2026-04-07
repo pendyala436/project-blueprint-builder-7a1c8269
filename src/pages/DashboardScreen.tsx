@@ -153,7 +153,8 @@ const DashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, "male");
+  const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "male");
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'male', walletBalance);
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for language feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
