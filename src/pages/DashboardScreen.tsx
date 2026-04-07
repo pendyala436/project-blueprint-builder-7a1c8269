@@ -57,17 +57,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn, formatChatTime } from "@/lib/utils";
 // ActiveChatsSection removed - chats now handled via EnhancedParallelChatsContainer
 // RandomChatButton removed — not used in WhatsApp-style layout
-import VideoCallMiniButton from "@/components/VideoCallMiniButton";
-import DirectVideoCallButton from "@/components/DirectVideoCallButton";
-import DirectAudioCallButton from "@/components/DirectAudioCallButton";
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 // MenFreeMinutesBadge removed - free minutes feature removed
-import { useIncomingCalls } from "@/hooks/useIncomingCalls";
-import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
+import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
+import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
 import { useChatPricing } from "@/hooks/useChatPricing";
@@ -154,13 +153,14 @@ const DashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, "male");
+  const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "male");
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for language feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
   const userLanguageRef = useRef(userLanguage);
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // Language language code
   const [walletBalance, setWalletBalance] = useState(0);
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'male', walletBalance);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
@@ -1394,29 +1394,15 @@ const DashboardScreen = () => {
                       </Button>
                       {/* Audio Call - same language only */}
                       {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <DirectAudioCallButton
-                          currentUserId={currentUserId}
-                          targetUserId={woman.user_id}
-                          targetName={woman.full_name || "User"}
-                          targetPhoto={woman.photo_url}
-                          walletBalance={walletBalance}
-                          onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                          size="sm"
-                          variant="ghost"
-                          iconOnly={true}
-                        />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
+                          <Phone className="w-3.5 h-3.5 text-primary" />
+                        </Button>
                       )}
                       {/* Video Call - same language only */}
                       {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <DirectVideoCallButton
-                          currentUserId={currentUserId}
-                          targetUserId={woman.user_id}
-                          targetName={woman.full_name || "User"}
-                          targetPhoto={woman.photo_url}
-                          walletBalance={walletBalance}
-                          onBalanceChange={(newBalance) => setWalletBalance(newBalance)}
-                          iconOnly={true}
-                        />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
+                          <Video className="w-3.5 h-3.5 text-primary" />
+                        </Button>
                       )}
                     </div>
                   }
@@ -1766,9 +1752,34 @@ const DashboardScreen = () => {
 
       {/* Chat windows removed — chats are async (WhatsApp-style), accessed via Chats tab */}
 
-      {/* Incoming Video Call Window */}
-      {incomingCall && (
-        <IncomingVideoCallWindow callId={incomingCall.callId} callerUserId={incomingCall.callerUserId} callerName={incomingCall.callerName} callerPhoto={incomingCall.callerPhoto} currentUserId={currentUserId} onClose={clearIncomingCall} />
+      {/* Incoming Call Banner */}
+      {incomingCall && callStatus === 'idle' && (
+        <IncomingCallBanner
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          callType={incomingCall.callType}
+          onAccept={() => {
+            acceptCall(incomingCall.callId, incomingCall.callType, incomingCall.callerUserId, incomingCall.callerName, incomingCall.callerPhoto);
+            clearIncomingCall();
+          }}
+          onDecline={() => {
+            declineCall(incomingCall.callId);
+            clearIncomingCall();
+          }}
+        />
+      )}
+
+      {/* WhatsApp Call Screen */}
+      {(callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'active') && (
+        <WhatsAppCallScreen
+          status={callStatus}
+          activeCall={activeCall}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          onEnd={endCall}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
+        />
       )}
 
       {/* Friends & Blocked Panel */}

@@ -3673,6 +3673,10 @@ export type Database = {
         }
         Returns: Json
       }
+      process_call_billing: {
+        Args: { p_call_id: string; p_call_type?: string }
+        Returns: Json
+      }
       process_chat_billing: {
         Args: { p_minutes: number; p_session_id: string }
         Returns: Json

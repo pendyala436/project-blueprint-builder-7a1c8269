@@ -35,9 +35,11 @@ import { cn, formatChatTime } from "@/lib/utils";
 // RandomChatButton removed - Women cannot initiate chats
 // TeamsChatLayout removed - chats now handled via EnhancedParallelChatsContainer only
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
-import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
 // Chat mode removed - all women are in paid mode by default
-import { useIncomingCalls } from "@/hooks/useIncomingCalls";
+import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
+import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
+import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
@@ -120,7 +122,8 @@ const WomenDashboardScreen = () => {
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, "female");
+  const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "female");
+  const { status: callStatus, activeCall, isMuted, isCameraOff, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'female', 0);
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [sameLanguageMen, setSameLanguageMen] = useState<OnlineMan[]>([]);
@@ -1548,9 +1551,34 @@ const WomenDashboardScreen = () => {
 
       {/* Chat windows removed — chats are async (WhatsApp-style), accessed via Chats tab */}
 
-      {/* Incoming Video Call */}
-      {incomingCall && (
-        <IncomingVideoCallWindow callId={incomingCall.callId} callerUserId={incomingCall.callerUserId} callerName={incomingCall.callerName} callerPhoto={incomingCall.callerPhoto} currentUserId={currentUserId} onClose={clearIncomingCall} />
+      {/* Incoming Call Banner */}
+      {incomingCall && callStatus === 'idle' && (
+        <IncomingCallBanner
+          callerName={incomingCall.callerName}
+          callerPhoto={incomingCall.callerPhoto}
+          callType={incomingCall.callType}
+          onAccept={() => {
+            acceptCall(incomingCall.callId, incomingCall.callType, incomingCall.callerUserId, incomingCall.callerName, incomingCall.callerPhoto);
+            clearIncomingCall();
+          }}
+          onDecline={() => {
+            declineCall(incomingCall.callId);
+            clearIncomingCall();
+          }}
+        />
+      )}
+
+      {/* WhatsApp Call Screen */}
+      {(callStatus === 'connecting' || callStatus === 'active') && (
+        <WhatsAppCallScreen
+          status={callStatus}
+          activeCall={activeCall}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          onEnd={endCall}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
+        />
       )}
 
       {/* Friends & Blocked Panel */}

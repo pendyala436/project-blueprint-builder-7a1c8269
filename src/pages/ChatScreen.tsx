@@ -94,8 +94,6 @@ import { supabase } from "@/integrations/supabase/client";
 // Activity status tracking hook
 import { useActivityStatus } from "@/hooks/useActivityStatus";
 import VoiceMessagePlayer from "@/components/VoiceMessagePlayer";
-import DirectAudioCallButton from "@/components/DirectAudioCallButton";
-import DirectVideoCallButton from "@/components/DirectVideoCallButton";
 import { ChatMessageInput } from "@/components/chat/ChatMessageInput";
 import { classifyError, ERROR_MESSAGES } from "@/lib/errors";
 import { useMessageSound } from "@/hooks/useMessageSound";
@@ -105,8 +103,10 @@ import { ForwardDialog } from "@/components/chat/ForwardDialog";
 import { PinnedMessages } from "@/components/chat/PinnedMessages";
 import { MessageReactions } from "@/components/chat/MessageReactions";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
-import { useIncomingCalls } from "@/hooks/useIncomingCalls";
-import IncomingVideoCallWindow from "@/components/IncomingVideoCallWindow";
+import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
+import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
+import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -367,7 +367,8 @@ const ChatScreen = () => {
   const { setOnlineStatus } = useActivityStatus(currentUserId || null);
   
   // ============= INCOMING CALLS =============
-  const { incomingCall, clearIncomingCall } = useIncomingCalls(currentUserId || null, currentUserGender);
+  const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, currentUserGender as 'male' | 'female');
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, currentUserGender as 'male' | 'female', walletBalance);
   
   // ============= AUTO-RECONNECT HANDLER =============
   
@@ -1869,15 +1870,32 @@ const ChatScreen = () => {
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* ============= INCOMING CALL POPUP ============= */}
-      {incomingCall && (
-        <IncomingVideoCallWindow
-          callId={incomingCall.callId}
-          callerUserId={incomingCall.callerUserId}
+      {/* ============= INCOMING CALL BANNER ============= */}
+      {incomingCall && callStatus === 'idle' && (
+        <IncomingCallBanner
           callerName={incomingCall.callerName}
           callerPhoto={incomingCall.callerPhoto}
-          currentUserId={currentUserId}
-          onClose={clearIncomingCall}
+          callType={incomingCall.callType}
+          onAccept={() => {
+            acceptCall(incomingCall.callId, incomingCall.callType, incomingCall.callerUserId, incomingCall.callerName, incomingCall.callerPhoto);
+            clearIncomingCall();
+          }}
+          onDecline={() => {
+            declineCall(incomingCall.callId);
+            clearIncomingCall();
+          }}
+        />
+      )}
+      {/* ============= WHATSAPP CALL SCREEN ============= */}
+      {(callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'active') && (
+        <WhatsAppCallScreen
+          status={callStatus}
+          activeCall={activeCall}
+          isMuted={isMuted}
+          isCameraOff={isCameraOff}
+          onEnd={endCall}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
         />
       )}
       {/* ============= HEADER SECTION ============= */}
@@ -1942,30 +1960,18 @@ const ChatScreen = () => {
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
           {currentUserGender === "male" && chatPartner && (
           <div className="flex items-center gap-0.5 [&_button]:text-primary-foreground [&_button]:hover:bg-primary-foreground/10">
-            <DirectAudioCallButton
-              currentUserId={currentUserId}
-              targetUserId={chatPartner.userId}
-              targetName={chatPartner.fullName}
-              targetPhoto={chatPartner.avatar}
-              walletBalance={walletBalance}
-              onBalanceChange={(nb) => setWalletBalance(nb)}
-              currentUserGender={currentUserGender}
-              size="icon"
-              variant="ghost"
-              iconOnly={true}
-            />
-            <DirectVideoCallButton
-              currentUserId={currentUserId}
-              targetUserId={chatPartner.userId}
-              targetName={chatPartner.fullName}
-              targetPhoto={chatPartner.avatar}
-              walletBalance={walletBalance}
-              onBalanceChange={(nb) => setWalletBalance(nb)}
-              currentUserGender={currentUserGender}
-              size="icon"
-              variant="ghost"
-              iconOnly={true}
-            />
+            <button
+              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'audio')}
+            >
+              <Phone className="w-5 h-5 text-primary-foreground" />
+            </button>
+            <button
+              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'video')}
+            >
+              <Video className="w-5 h-5 text-primary-foreground" />
+            </button>
           </div>
           )}
           <DropdownMenu>
