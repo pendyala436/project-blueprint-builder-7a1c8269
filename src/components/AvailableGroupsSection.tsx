@@ -187,11 +187,11 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
               >
                 {/* Flower avatar with live ring */}
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-[#128C7E]/10 ring-2 ring-[#25D366]">
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-primary/10 ring-2 ring-accent">
                     {FLOWER_EMOJIS[group.name] || '🌸'}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#25D366] rounded-full flex items-center justify-center">
-                    <Radio className="h-2 w-2 text-white animate-pulse" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center">
+                    <Radio className="h-2 w-2 text-accent-foreground animate-pulse" />
                   </div>
                 </div>
 
