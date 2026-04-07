@@ -109,7 +109,7 @@ const ProfileDetailScreen = lazyRetry(() => import("@/pages/ProfileDetailScreen"
 const GiftSendingScreen = lazyRetry(() => import("@/pages/GiftSendingScreen"));
 const WalletScreen = lazyRetry(() => import("@/pages/WalletScreen"));
 const WomenWalletScreen = lazyRetry(() => import("@/pages/WomenWalletScreen"));
-const TransactionStatementScreen = lazyRetry(() => import("@/pages/TransactionStatementScreen"));
+
 const SettingsScreen = lazyRetry(() => import("@/pages/SettingsScreen"));
 const InstallApp = lazyRetry(() => import("@/pages/InstallApp"));
 
@@ -121,7 +121,7 @@ const AdminChatMonitoring = lazyRetry(() => import("@/pages/AdminChatMonitoring"
 const AdminFinanceDashboard = lazyRetry(() => import("@/pages/AdminFinanceDashboard"));
 const AdminFinanceReports = lazyRetry(() => import("@/pages/AdminFinanceReports"));
 const AdminTransactionHistory = lazyRetry(() => import("@/pages/AdminTransactionHistory"));
-const AdminStatementsPage = lazyRetry(() => import("@/pages/admin/AdminStatementsPage"));
+const AdminPayoutStatements = lazyRetry(() => import("@/pages/AdminPayoutStatements"));
 const AdminChatPricing = lazyRetry(() => import("@/pages/AdminChatPricing"));
 const AdminGiftPricing = lazyRetry(() => import("@/pages/AdminGiftPricing"));
 const AdminLanguageGroups = lazyRetry(() => import("@/pages/AdminLanguageGroups"));
@@ -198,7 +198,7 @@ const AppShell = () => {
             <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><AdminFinanceDashboard /></ProtectedRoute>} />
             <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><AdminFinanceReports /></ProtectedRoute>} />
             <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><AdminTransactionHistory /></ProtectedRoute>} />
-            <Route path="/admin/statements" element={<ProtectedRoute requiredRole="admin"><AdminStatementsPage /></ProtectedRoute>} />
+            <Route path="/admin/payout-statements" element={<ProtectedRoute requiredRole="admin"><AdminPayoutStatements /></ProtectedRoute>} />
             <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><AdminChatPricing /></ProtectedRoute>} />
             <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><AdminGiftPricing /></ProtectedRoute>} />
             <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><AdminLanguageGroups /></ProtectedRoute>} />

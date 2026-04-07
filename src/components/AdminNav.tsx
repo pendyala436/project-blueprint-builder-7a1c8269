@@ -60,7 +60,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
     { title: "Chat Monitoring",   path: "/admin/chat-monitoring", icon: <MessageSquare className="h-4 w-4" /> },
     { title: "Finance",           path: "/admin/finance",        icon: <DollarSign className="h-4 w-4" /> },
     { title: "Transaction History",path: "/admin/transactions",  icon: <History className="h-4 w-4" /> },
-    { title: "Statements",        path: "/admin/statements",     icon: <FileText className="h-4 w-4" /> },
+    { title: "Payout Statements", path: "/admin/payout-statements", icon: <FileText className="h-4 w-4" /> },
     { title: "Finance Reports",   path: "/admin/finance-reports",icon: <FileText className="h-4 w-4" /> },
     { title: "Chat Pricing",      path: "/admin/chat-pricing",   icon: <Clock className="h-4 w-4" /> },
     { title: "Gift Management",   path: "/admin/gifts",          icon: <Gift className="h-4 w-4" /> },
