@@ -433,6 +433,17 @@ const WomenDashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineMen reads from refs; language handlers fetch directly
 
+  // 30-second auto-refresh for online men's wallet balances
+  useEffect(() => {
+    if (!currentUserId) return;
+    const intervalId = setInterval(() => {
+      const lang = currentWomanLanguageRef.current;
+      const country = currentWomanCountryRef.current;
+      if (lang) fetchOnlineMen(lang, country);
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [currentUserId]);
+
   // Eager-load active chats on mount for unread badge
   useEffect(() => {
     if (!currentUserId) return;
