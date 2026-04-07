@@ -488,8 +488,17 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                     <TableHead className="text-xs">Description</TableHead>
                     <TableHead className="text-xs">Duration</TableHead>
                     <TableHead className="text-xs">Rate</TableHead>
-                    <TableHead className="text-xs text-right text-destructive">Debit (₹)</TableHead>
-                    <TableHead className="text-xs text-right text-green-600">Credit (₹)</TableHead>
+                    {isMale ? (
+                      <>
+                        <TableHead className="text-xs text-right text-destructive">Debit (₹)</TableHead>
+                        <TableHead className="text-xs text-right text-green-600">Credit (₹)</TableHead>
+                      </>
+                    ) : (
+                      <>
+                        <TableHead className="text-xs text-right text-green-600">Earned (₹)</TableHead>
+                        <TableHead className="text-xs text-right text-destructive">Deduction (₹)</TableHead>
+                      </>
+                    )}
                     <TableHead className="text-xs text-right">Balance (₹)</TableHead>
                   </TableRow>
                 </TableHeader>
