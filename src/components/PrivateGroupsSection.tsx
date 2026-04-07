@@ -263,7 +263,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 ) : canGoLive ? (
                   <Button
                     size="sm"
-                    className="h-8 text-xs bg-[#25D366] hover:bg-[#128C7E] text-white gap-1 rounded-full px-4"
+                    className="h-8 text-xs bg-accent hover:bg-accent/80 text-accent-foreground gap-1 rounded-full px-4"
                     disabled={goingLive === group.id}
                     onClick={() => handleGoLive(group)}
                   >
