@@ -2361,11 +2361,11 @@ const ChatScreen = () => {
       {/* ============= CAMERA MODAL ============= */}
       {isCameraOpen && (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between p-4">
-            <button onClick={closeCamera} className="p-2 text-white">
+          <div className="flex items-center justify-between" style={{ background: 'rgba(0,0,0,0.6)', padding: '12px 16px' }}>
+            <button onClick={closeCamera} className="p-2" style={{ color: 'white' }}>
               <X className="w-6 h-6" />
             </button>
-            <span className="text-white font-medium">Take Selfie</span>
+            <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>Take Selfie</span>
             <div className="w-10" />
           </div>
           <div className="flex-1 flex items-center justify-center">
@@ -2381,9 +2381,10 @@ const ChatScreen = () => {
           <div className="p-6 flex justify-center">
             <button 
               onClick={captureSelfie}
-              className="w-16 h-16 rounded-full bg-primary border-4 border-primary-foreground flex items-center justify-center"
+              className="flex items-center justify-center"
+              style={{ width: 64, height: 64, borderRadius: '50%', background: WA.headerBg, border: '4px solid rgba(255,255,255,0.8)' }}
             >
-              <Camera className="w-8 h-8 text-primary-foreground" />
+              <Camera className="w-7 h-7" style={{ color: 'white' }} />
             </button>
           </div>
           <canvas ref={canvasRef} className="hidden" />
