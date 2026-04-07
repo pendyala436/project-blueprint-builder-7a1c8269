@@ -496,6 +496,16 @@ const DashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineWomen reads from refs; language handlers fetch directly
 
+  // 30-second auto-refresh for online users' wallet balances
+  useEffect(() => {
+    if (!currentUserId || !userLanguageRef.current) return;
+    const intervalId = setInterval(() => {
+      const lang = userLanguageRef.current;
+      if (lang) fetchOnlineWomen(lang);
+    }, 30000);
+    return () => clearInterval(intervalId);
+  }, [currentUserId]);
+
   // Eager-load active chats on mount for unread badge
   useEffect(() => {
     if (!currentUserId) return;
