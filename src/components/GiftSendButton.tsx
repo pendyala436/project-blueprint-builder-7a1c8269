@@ -80,25 +80,13 @@ export const GiftSendButton = ({
       if (giftsError) throw giftsError;
       setGifts(giftsData || []);
 
-      // Fetch wallet balance - try wallets first (primary), fallback to users_wallet
-      const { data: walletData, error: walletError } = await supabase
+      // Fetch wallet balance from wallets table (single source of truth)
+      const { data: walletData } = await supabase
         .from("wallets")
         .select("balance")
         .eq("user_id", senderId)
         .maybeSingle();
-
-      if (walletError) {
-        console.error("Error fetching wallet from wallets table:", walletError);
-        // Fallback to users_wallet
-        const { data: fallbackData } = await supabase
-          .from("users_wallet")
-          .select("balance")
-          .eq("user_id", senderId)
-          .maybeSingle();
-        setWalletBalance(fallbackData?.balance || 0);
-      } else {
-        setWalletBalance(walletData?.balance || 0);
-      }
+      setWalletBalance(walletData?.balance || 0);
     } catch (error) {
       console.error("Error loading gift data:", error);
       toast.error("Failed to load gifts");
