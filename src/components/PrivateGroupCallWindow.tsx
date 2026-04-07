@@ -624,7 +624,7 @@ export function PrivateGroupCallWindow({
             <div key={msg.id} className="px-1 py-0.5">
               <span className={cn(
                 "font-bold text-xs mr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]",
-                msg.isSelf ? "text-primary" : "text-amber-400"
+                msg.isSelf ? "text-[#25D366]" : "text-amber-400"
               )}>
                 {msg.senderName}:
               </span>
