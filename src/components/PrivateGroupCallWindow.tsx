@@ -530,11 +530,11 @@ export function PrivateGroupCallWindow({
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-10" />
 
       {/* ─── Top Bar (WhatsApp-style) ─────────────────────────────── */}
-      <div className="relative z-20 flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-[#075E54]/90 to-transparent">
+      <div className="relative z-20 flex items-center justify-between px-4 py-2.5 bg-gradient-to-b from-black/70 to-transparent">
         <div className="flex items-center gap-2">
-          <Avatar className="h-9 w-9 ring-2 ring-[#25D366]">
+          <Avatar className="h-9 w-9 ring-2 ring-accent">
             <AvatarImage src={isOwner ? (userPhoto || undefined) : participants.find(p => p.isOwner)?.photo} />
-            <AvatarFallback className="text-xs bg-[#128C7E] text-white">
+            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
               {isOwner ? userName[0] : (participants.find(p => p.isOwner)?.name?.[0] || 'H')}
             </AvatarFallback>
           </Avatar>
@@ -542,7 +542,7 @@ export function PrivateGroupCallWindow({
             <p className="text-white text-sm font-semibold leading-tight">{group.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               {isLive && (
-                <Badge className="bg-[#25D366] text-white text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0">
+                <Badge className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0">
                   <Radio className="h-2.5 w-2.5 animate-pulse" /> LIVE
                 </Badge>
               )}
@@ -555,8 +555,8 @@ export function PrivateGroupCallWindow({
 
         <div className="flex items-center gap-2">
           {isLive && (
-            <Badge variant="outline" className="text-white/90 border-[#25D366]/50 bg-[#075E54]/60 text-[11px] gap-1">
-              <Circle className="h-2 w-2 fill-[#25D366] text-[#25D366] animate-pulse" />
+            <Badge variant="outline" className="text-white/90 border-accent/50 bg-black/40 text-[11px] gap-1">
+              <Circle className="h-2 w-2 fill-accent text-accent animate-pulse" />
               {formatTime(remainingTime)}
             </Badge>
           )}
