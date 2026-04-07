@@ -31,8 +31,8 @@ const RATE_INFO_MEN: Record<string, string> = {
   video_call_charge: "Video Call — ₹8/min",
   audio_call_charge: "Audio Call — ₹6/min",
   group_call_charge: "Group Call — ₹4/min per man",
-  gift_charge: "Gift — 100% deducted",
-  tip_charge: "Tip — 100% deducted",
+  gift_charge: "Gift Sent — 100% deducted",
+  tip_charge: "Tip Sent — 100% deducted",
   recharge: "Wallet Recharge",
   opening_balance: "Opening Balance",
 };
@@ -41,9 +41,9 @@ const RATE_INFO_WOMEN: Record<string, string> = {
   chat: "Chat Earning — ₹2/min",
   video_call: "Video Call Earning — ₹4/min",
   audio_call: "Audio Call Earning — ₹3/min",
-  group_call: "Group Call — ₹0.50/min × men",
-  gift: "Gift Received — 50% credited",
-  tip: "Tip Received — 50% credited",
+  group_call_earning: "Group Call — ₹0.50/min × men",
+  gift_earning: "Gift Received — 50% credited",
+  tip_earning: "Tip Received — 50% credited",
   withdrawal: "Bank Withdrawal",
 };
 
