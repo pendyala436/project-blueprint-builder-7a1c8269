@@ -3991,6 +3991,7 @@ export type Database = {
       }
       purchase_golden_badge: { Args: { p_user_id: string }; Returns: Json }
       r2: { Args: { v: number }; Returns: number }
+      reconcile_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       reset_private_group_counts: { Args: never; Returns: undefined }
       reset_women_wallets_after_snapshot: { Args: never; Returns: Json }
