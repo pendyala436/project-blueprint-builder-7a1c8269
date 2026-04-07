@@ -374,9 +374,11 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
               <Select value={month} onValueChange={setMonth}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {MONTH_NAMES.map((m, i) => (
-                    <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                  ))}
+                  {ALLOWED_MONTHS
+                    .filter(am => am.year === Number(year))
+                    .map(am => (
+                      <SelectItem key={am.month} value={String(am.month)}>{MONTH_NAMES[am.month - 1]}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
