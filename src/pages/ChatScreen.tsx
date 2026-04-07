@@ -2450,43 +2450,53 @@ const ChatScreen = () => {
             onChange={handleFileSelect}
           />
           
-          {/* Attachment and gift buttons row */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30">
+          {/* Attachment and voice row + input */}
+          <div className="flex items-end gap-2" style={{ padding: '6px 8px', background: WA.inputBarBg }}>
             {/* Attachment button with popover */}
             <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-2 rounded-full transition-colors flex-shrink-0"
+                  style={{ color: '#8696A0' }}
                 >
                   <Paperclip className="w-5 h-5" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-48 p-2" side="top" align="start">
-                <div className="space-y-1">
+              <PopoverContent className="w-52 p-1" side="top" align="start" style={{ background: WA.attachSheet }}>
+                <div>
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg text-left"
+                    style={{ padding: '12px 16px' }}
                   >
-                    <Image className="w-5 h-5 text-primary" />
-                    <span className="text-sm">Photo / Video</span>
+                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#5157AE' }}>
+                      <Image className="w-3 h-3" style={{ color: 'white' }} />
+                    </div>
+                    <span style={{ fontSize: 15, color: '#111' }}>Photo / Video</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg text-left"
+                    style={{ padding: '12px 16px' }}
                   >
-                    <FileText className="w-5 h-5 text-info" />
-                    <span className="text-sm">File</span>
+                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#0063CB' }}>
+                      <FileText className="w-3 h-3" style={{ color: 'white' }} />
+                    </div>
+                    <span style={{ fontSize: 15, color: '#111' }}>File</span>
                   </button>
                   <button
                     type="button"
                     onClick={openCamera}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-lg text-left"
+                    style={{ padding: '12px 16px' }}
                   >
-                    <Camera className="w-5 h-5 text-success" />
-                    <span className="text-sm">Selfie</span>
+                    <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: '#009DE2' }}>
+                      <Camera className="w-3 h-3" style={{ color: 'white' }} />
+                    </div>
+                    <span style={{ fontSize: 15, color: '#111' }}>Selfie</span>
                   </button>
                 </div>
               </PopoverContent>
@@ -2501,7 +2511,9 @@ const ChatScreen = () => {
                 disabled={isSending || isBlocked || isBlockedByPartner}
               />
             )}
-          </div>
+
+            {/* Chat input — flex: 1 */}
+            <div className="flex-1">
           
           {/* Issue 2.3: Show explanation when blocked */}
           {(isBlocked || isBlockedByPartner) && (
