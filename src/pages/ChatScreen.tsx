@@ -2392,8 +2392,8 @@ const ChatScreen = () => {
       )}
 
       {/* ============= MESSAGE INPUT AREA ============= */}
-      <footer className="sticky bottom-0 bg-background pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-4xl mx-auto">
+      <footer className="sticky bottom-0 pb-[env(safe-area-inset-bottom)]" style={{ background: WA.inputBarBg }}>
+        <div>
           {/* Selected file preview */}
           {selectedFile && (
             <div className="flex items-center gap-3 p-2 mx-4 mt-2 bg-muted rounded-lg border-b border-border/50">
