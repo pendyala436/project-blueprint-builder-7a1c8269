@@ -126,7 +126,21 @@ export function usePrivateGroupCall({
     // Only add local tracks - host sends video+audio, participants send audio only
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => {
-        pc.addTrack(track, localStream.current!);
+        const sender = pc.addTrack(track, localStream.current!);
+        // Set WhatsApp-quality bitrate constraints
+        try {
+          const params = sender.getParameters();
+          if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+          }
+          if (track.kind === 'video') {
+            params.encodings[0].maxBitrate = 1_500_000; // 1.5 Mbps for 720p
+            params.encodings[0].maxFramerate = 30;
+          } else if (track.kind === 'audio') {
+            params.encodings[0].maxBitrate = 64_000; // 64 kbps Opus
+          }
+          sender.setParameters(params).catch(() => {});
+        } catch (_) { /* browser may not support */ }
       });
     }
 
