@@ -2396,31 +2396,39 @@ const ChatScreen = () => {
         <div>
           {/* Selected file preview */}
           {selectedFile && (
-            <div className="flex items-center gap-3 p-2 mx-4 mt-2 bg-muted rounded-lg border-b border-border/50">
+            <div className="flex items-center gap-3" style={{
+              background: WA.previewBarBg,
+              borderLeft: `3px solid ${WA.previewBorder}`,
+              borderRadius: 4,
+              padding: '8px 12px',
+              margin: '0 0 4px 0',
+            }}>
               {previewUrl ? (
                 <img src={previewUrl} alt="Preview" className="w-12 h-12 rounded object-cover" />
               ) : (
-                <div className="w-12 h-12 rounded bg-primary/10 flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded flex items-center justify-center" style={{ background: 'rgba(7,94,84,0.1)' }}>
+                  <FileText className="w-6 h-6" style={{ color: WA.headerBg }} />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p style={{ fontSize: 14, fontWeight: 500 }} className="truncate">{selectedFile.name}</p>
+                <p style={{ fontSize: 12, color: WA.metaColor }}>
                   {selectedFile.size < 1024 ? `${selectedFile.size} B` : selectedFile.size < 1024 * 1024 ? `${(selectedFile.size / 1024).toFixed(1)} KB` : `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`}
                 </p>
               </div>
               <button
                 onClick={handleSendWithAttachment}
                 disabled={isSending || isUploading}
-                className="p-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                className="p-2 rounded-full transition-colors disabled:opacity-50"
+                style={{ background: WA.headerBg, color: 'white' }}
                 title="Send"
               >
                 {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </button>
               <button 
                 onClick={cancelSelectedFile}
-                className="p-1.5 hover:bg-muted-foreground/10 rounded-full"
+                className="p-1.5 rounded-full"
+                style={{ color: WA.metaColor }}
               >
                 <X className="w-4 h-4" />
               </button>
