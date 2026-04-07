@@ -131,7 +131,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
     setActiveGroupVideo(null);
   };
 
-  if (isLoading) return <div className="animate-pulse h-32 bg-[#E5DDD5]/30 rounded-lg" />;
+  if (isLoading) return <div className="animate-pulse h-32 bg-muted/30 rounded-lg" />;
 
   const minBalance = RATE_PER_MINUTE * MIN_BALANCE_MINUTES;
   const hasEnoughBalance = walletBalance >= minBalance;
