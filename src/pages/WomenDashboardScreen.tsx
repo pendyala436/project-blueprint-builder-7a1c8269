@@ -433,16 +433,33 @@ const WomenDashboardScreen = () => {
     };
   }, [currentUserId]); // stable — throttledFetchOnlineMen reads from refs; language handlers fetch directly
 
-  // 30-second auto-refresh for online men's wallet balances
+  // 5-second lightweight wallet balance refresh for online men
   useEffect(() => {
     if (!currentUserId) return;
-    const intervalId = setInterval(() => {
-      const lang = currentWomanLanguageRef.current;
-      const country = currentWomanCountryRef.current;
-      if (lang) fetchOnlineMen(lang, country);
-    }, 30000);
+    const intervalId = setInterval(async () => {
+      // Get all currently displayed men user IDs
+      const allMenIds = [...rechargedMen, ...nonRechargedMen].map(m => m.userId);
+      if (allMenIds.length === 0) return;
+      try {
+        const { data } = await supabase
+          .from("wallets")
+          .select("user_id, balance")
+          .in("user_id", allMenIds);
+        if (!data || data.length === 0) return;
+        const balanceMap = new Map(data.map((w: any) => [w.user_id, Number(w.balance) || 0]));
+        const updateList = (list: OnlineMan[]) =>
+          list.map(m => {
+            const newBal = balanceMap.get(m.userId);
+            return newBal !== undefined ? { ...m, walletBalance: newBal, hasRecharged: newBal > 0 } : m;
+          });
+        setRechargedMen(prev => updateList(prev));
+        setNonRechargedMen(prev => updateList(prev));
+        setSameLanguageMen(prev => updateList(prev));
+        setOtherLanguageMen(prev => updateList(prev));
+      } catch { /* silent */ }
+    }, 5000);
     return () => clearInterval(intervalId);
-  }, [currentUserId]);
+  }, [currentUserId, rechargedMen.length, nonRechargedMen.length]);
 
   // Eager-load active chats on mount for unread badge
   useEffect(() => {
