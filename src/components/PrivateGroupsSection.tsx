@@ -212,7 +212,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                 <div className="flex items-center gap-1.5">
                   <span className="font-semibold text-sm text-foreground truncate">{group.name}</span>
                   {isLive && (
-                    <Badge className="bg-[#25D366] text-white text-[9px] h-4 px-1.5 border-0 gap-0.5 shrink-0">
+                    <Badge className="bg-accent text-accent-foreground text-[9px] h-4 px-1.5 border-0 gap-0.5 shrink-0">
                       <Radio className="h-2 w-2 animate-pulse" /> LIVE
                     </Badge>
                   )}
