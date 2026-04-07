@@ -2357,40 +2357,6 @@ const ChatScreen = () => {
           <div ref={messagesEndRef} />
         </div>
       </main>
-
-      {/* ============= CAMERA MODAL ============= */}
-      {isCameraOpen && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between" style={{ background: 'rgba(0,0,0,0.6)', padding: '12px 16px' }}>
-            <button onClick={closeCamera} className="p-2" style={{ color: 'white' }}>
-              <X className="w-6 h-6" />
-            </button>
-            <span style={{ color: 'white', fontSize: 16, fontWeight: 500 }}>Take Selfie</span>
-            <div className="w-10" />
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              className="max-w-full max-h-full object-cover"
-              style={{ transform: "scaleX(-1)" }}
-            />
-          </div>
-          <div className="p-6 flex justify-center">
-            <button 
-              onClick={captureSelfie}
-              className="flex items-center justify-center"
-              style={{ width: 64, height: 64, borderRadius: '50%', background: WA.headerBg, border: '4px solid rgba(255,255,255,0.8)' }}
-            >
-              <Camera className="w-7 h-7" style={{ color: 'white' }} />
-            </button>
-          </div>
-          <canvas ref={canvasRef} className="hidden" />
-        </div>
-      )}
-
       {/* ============= MESSAGE INPUT AREA ============= */}
       <footer className="sticky bottom-0 pb-[env(safe-area-inset-bottom)]" style={{ background: WA.inputBarBg }}>
         <div>
