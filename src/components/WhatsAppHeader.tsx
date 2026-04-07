@@ -92,10 +92,15 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+                className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
                 aria-label="More options"
               >
                 <MoreVertical className="w-[18px] h-[18px] text-primary-foreground" />
+                {(unreadAdminMessages + unreadAdminChat) > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-0.5">
+                    {(unreadAdminMessages + unreadAdminChat) > 9 ? "9+" : (unreadAdminMessages + unreadAdminChat)}
+                  </span>
+                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
