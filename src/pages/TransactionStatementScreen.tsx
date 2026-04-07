@@ -377,7 +377,7 @@ const TransactionStatementScreen = () => {
                     {/* Opening balance row */}
                     {summary && (
                       <TableRow className="bg-muted/20">
-                        <TableCell className="text-xs text-muted-foreground" colSpan={4}>
+                        <TableCell className="text-xs text-muted-foreground" colSpan={6}>
                           Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
                         </TableCell>
                         <TableCell className="text-xs text-right">—</TableCell>
@@ -389,7 +389,6 @@ const TransactionStatementScreen = () => {
                     )}
 
                     {rows.map((row, i) => {
-                      // Convert UTC to IST for display
                       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
 
                       return (
@@ -402,7 +401,13 @@ const TransactionStatementScreen = () => {
                               {typeLabel(row.txn_type, isMale)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {fmtTimeIST(row.start_time) || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            {fmtTimeIST(row.end_time) || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                             {fmtDuration(row.duration_seconds)}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
