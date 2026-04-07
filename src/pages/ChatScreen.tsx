@@ -112,6 +112,31 @@ import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // Default fallback only used if database is unavailable
 const DEFAULT_MAX_PARALLEL_CHATS = 3;
 
+// ============= WHATSAPP COLOR TOKENS =============
+const WA = {
+  headerBg      : '#075E54',
+  headerText    : '#FFFFFF',
+  headerSub     : '#B2DFDB',
+  chatBg        : '#E5DDD5',
+  sentBubble    : '#DCF8C6',
+  sentText      : '#111111',
+  recvBubble    : '#FFFFFF',
+  recvText      : '#111111',
+  subtitleColor : '#888888',
+  metaColor     : '#999999',
+  tickRead      : '#4FC3F7',
+  tickSent      : '#B0BEC5',
+  inputBg       : '#F0F0F0',
+  inputBarBg    : '#FFFFFF',
+  dateSepBg     : 'rgba(255,255,255,0.75)',
+  dateSepText   : '#555555',
+  attachSheet   : '#FFFFFF',
+  previewBarBg  : '#F0FBF8',
+  previewBorder : '#075E54',
+  onlineDot     : '#4CAF50',
+  offlineDot    : '#9E9E9E',
+};
+
 /**
  * Message Interface
  * 
