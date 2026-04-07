@@ -370,13 +370,18 @@ const ChatScreen = () => {
   
   // Map temp message IDs to real DB IDs for translation resolution
   const tempToRealIdRef = useRef<Map<string, string>>(new Map());
+  const walletChannelRef = useRef<any>(null);
 
-  // Cleanup camera stream on unmount
+  // Cleanup camera stream and wallet channel on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+      }
+      if (walletChannelRef.current) {
+        supabase.removeChannel(walletChannelRef.current);
+        walletChannelRef.current = null;
       }
     };
   }, []);
@@ -918,7 +923,7 @@ const ChatScreen = () => {
           .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'users_wallet',  // BUG-VID-03 FIX: correct table name
+            table: 'users_wallet',
             filter: `user_id=eq.${user.id}`,
           }, (payload: any) => {
             if (payload.new?.balance !== undefined) {
@@ -927,10 +932,8 @@ const ChatScreen = () => {
           })
           .subscribe();
 
-        // Cleanup wallet subscription when component unmounts
-        return () => {
-          supabase.removeChannel(walletChannel);
-        };
+        // Store channel ref for cleanup (do NOT return here — it would abort initializeChat)
+        walletChannelRef.current = walletChannel;
       }
 
       // ============= FETCH PARTNER PROFILE =============
