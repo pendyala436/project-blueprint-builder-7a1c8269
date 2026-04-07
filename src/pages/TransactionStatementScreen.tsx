@@ -28,7 +28,14 @@ import { cn } from "@/lib/utils";
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
-const YEARS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i);
+
+// Build last 6 calendar months (including current) — matches TransactionStatementTab
+const ALLOWED_MONTHS: { year: number; month: number }[] = [];
+for (let i = 0; i < 6; i++) {
+  const d = new Date(CURRENT_YEAR, CURRENT_MONTH - 1 - i, 1);
+  ALLOWED_MONTHS.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+}
+const YEARS = [...new Set(ALLOWED_MONTHS.map(m => m.year))];
 
 // ─── Rate labels ────────────────────────────────────────────────────────────
 const RATE_INFO_MEN: Record<string, string> = {
