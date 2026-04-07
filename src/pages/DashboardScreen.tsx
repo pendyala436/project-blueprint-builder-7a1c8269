@@ -62,6 +62,7 @@ import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsCo
 import { AvailableGroupsSection } from "@/components/AvailableGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
+import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 // MenFreeMinutesBadge removed - free minutes feature removed
 import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
 import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
@@ -239,6 +240,8 @@ const DashboardScreen = () => {
     findNextAvailableWoman, 
     initiateReconnect 
   } = useAutoReconnect(currentUserId, userLanguage);
+
+  const { unreadMessages: unreadAdminMessages, unreadChat: unreadAdminChat } = useAdminUnreadCounts(currentUserId || null);
 
   // Men's free chat minutes removed - feature deprecated
 
@@ -1684,6 +1687,8 @@ const DashboardScreen = () => {
         onFriends={() => setShowFriendsPanel(true)}
         onSettings={() => navigate('/settings')}
         onLogout={handleLogout}
+        unreadAdminMessages={unreadAdminMessages}
+        unreadAdminChat={unreadAdminChat}
         unreadNotifications={stats.unreadNotifications}
         onNotifications={() => {
           setActiveTab("online");

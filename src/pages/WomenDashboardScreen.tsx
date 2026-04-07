@@ -43,6 +43,7 @@ import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
 import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
+import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMessageSound } from "@/hooks/useMessageSound";
@@ -148,6 +149,7 @@ const WomenDashboardScreen = () => {
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
   const [showKYCForm, setShowKYCForm] = useState(false);
+  const { unreadMessages: unreadAdminMessages, unreadChat: unreadAdminChat } = useAdminUnreadCounts(currentUserId || null);
   const [activeTab, setActiveTab] = useState("online");
   const matchesFetchedRef = useRef(false);
   const chatsFetchedRef = useRef(false);
@@ -1576,6 +1578,8 @@ const WomenDashboardScreen = () => {
         onFriends={() => setShowFriendsPanel(true)}
         onSettings={() => navigate('/settings')}
         onLogout={handleLogout}
+        unreadAdminMessages={unreadAdminMessages}
+        unreadAdminChat={unreadAdminChat}
         unreadNotifications={stats.unreadNotifications}
         onNotifications={() => setActiveTab("online")}
         showKYC={isIndianWoman}

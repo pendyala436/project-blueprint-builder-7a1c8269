@@ -26,6 +26,10 @@ interface WhatsAppHeaderProps {
   /** Women-only: show KYC button */
   showKYC?: boolean;
   onKYC?: () => void;
+  /** Unread admin message count */
+  unreadAdminMessages?: number;
+  /** Unread admin chat count */
+  unreadAdminChat?: number;
 }
 
 export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
@@ -40,6 +44,8 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
   onNotifications,
   showKYC,
   onKYC,
+  unreadAdminMessages = 0,
+  unreadAdminChat = 0,
 }) => {
   return (
     <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
@@ -86,18 +92,33 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+                className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
                 aria-label="More options"
               >
                 <MoreVertical className="w-[18px] h-[18px] text-primary-foreground" />
+                {(unreadAdminMessages + unreadAdminChat) > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-0.5">
+                    {(unreadAdminMessages + unreadAdminChat) > 9 ? "9+" : (unreadAdminMessages + unreadAdminChat)}
+                  </span>
+                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={onAdminMessages} className="gap-2">
                 <Mail className="w-4 h-4" /> Admin Messages
+                {unreadAdminMessages > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadAdminMessages > 99 ? "99+" : unreadAdminMessages}
+                  </span>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onAdminChat} className="gap-2">
                 <Shield className="w-4 h-4" /> Chat with Admin
+                {unreadAdminChat > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    {unreadAdminChat > 99 ? "99+" : unreadAdminChat}
+                  </span>
+                )}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onFriends} className="gap-2">
                 <Users2 className="w-4 h-4" /> Friends & Blocked
