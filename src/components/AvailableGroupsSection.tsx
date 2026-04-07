@@ -199,7 +199,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-sm text-foreground truncate">{group.name}</span>
-                    <Badge className="bg-[#25D366] text-white text-[9px] h-4 px-1.5 border-0 shrink-0">
+                    <Badge className="bg-accent text-accent-foreground text-[9px] h-4 px-1.5 border-0 shrink-0">
                       LIVE
                     </Badge>
                   </div>
