@@ -1960,30 +1960,18 @@ const ChatScreen = () => {
           {/* Audio & Video Call Buttons - Only men can initiate calls */}
           {currentUserGender === "male" && chatPartner && (
           <div className="flex items-center gap-0.5 [&_button]:text-primary-foreground [&_button]:hover:bg-primary-foreground/10">
-            <DirectAudioCallButton
-              currentUserId={currentUserId}
-              targetUserId={chatPartner.userId}
-              targetName={chatPartner.fullName}
-              targetPhoto={chatPartner.avatar}
-              walletBalance={walletBalance}
-              onBalanceChange={(nb) => setWalletBalance(nb)}
-              currentUserGender={currentUserGender}
-              size="icon"
-              variant="ghost"
-              iconOnly={true}
-            />
-            <DirectVideoCallButton
-              currentUserId={currentUserId}
-              targetUserId={chatPartner.userId}
-              targetName={chatPartner.fullName}
-              targetPhoto={chatPartner.avatar}
-              walletBalance={walletBalance}
-              onBalanceChange={(nb) => setWalletBalance(nb)}
-              currentUserGender={currentUserGender}
-              size="icon"
-              variant="ghost"
-              iconOnly={true}
-            />
+            <button
+              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'audio')}
+            >
+              <Phone className="w-5 h-5 text-primary-foreground" />
+            </button>
+            <button
+              className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+              onClick={() => initiateCall(chatPartner.userId, chatPartner.fullName, chatPartner.avatar, 'video')}
+            >
+              <Video className="w-5 h-5 text-primary-foreground" />
+            </button>
           </div>
           )}
           <DropdownMenu>
