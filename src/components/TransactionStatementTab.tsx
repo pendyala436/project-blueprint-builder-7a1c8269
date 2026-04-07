@@ -508,25 +508,12 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                         <TableCell className="text-xs text-muted-foreground">
                           {row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—"}
                         </TableCell>
-                        {isMale ? (
-                          <>
-                            <TableCell className="text-xs text-right font-medium text-destructive">
-                              {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
-                            </TableCell>
-                            <TableCell className="text-xs text-right font-medium text-green-600">
-                              {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
-                            </TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell className="text-xs text-right font-medium text-green-600">
-                              {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
-                            </TableCell>
-                            <TableCell className="text-xs text-right font-medium text-destructive">
-                              {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
-                            </TableCell>
-                          </>
-                        )}
+                        <TableCell className="text-xs text-right font-medium text-destructive">
+                          {Number(row.debit) > 0 ? fmtINR(row.debit) : "—"}
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-medium text-green-600">
+                          {Number(row.credit) > 0 ? fmtINR(row.credit) : "—"}
+                        </TableCell>
                         <TableCell className="text-xs text-right font-semibold">
                           {fmtINR(row.running_balance)}
                         </TableCell>
