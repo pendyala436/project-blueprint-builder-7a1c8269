@@ -179,7 +179,7 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
     const title = isMale ? "Wallet Statement" : "Earnings Statement";
     const header = `${title} — ${monthName} ${year}`;
 
-    const headerRow = ["Date & Time (IST)", "Type", "Description", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"];
+    const headerRow = ["Date & Time (IST)", "Type", "Description", "Start Time", "End Time", "Duration", "Rate", "Debit (₹)", "Credit (₹)", "Balance (₹)"];
 
     const dataRows = rows.map(row => {
       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
@@ -187,6 +187,8 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
         format(istDate, "dd MMM yyyy HH:mm"),
         typeLabel(row.txn_type, isMale),
         row.description || "—",
+        fmtTimeIST(row.start_time) || "—",
+        fmtTimeIST(row.end_time) || "—",
         fmtDuration(row.duration_seconds),
         row.rate_per_minute ? `₹${Number(row.rate_per_minute).toFixed(2)}/min` : "—",
         Number(row.debit) > 0 ? Number(row.debit).toFixed(2) : "—",
