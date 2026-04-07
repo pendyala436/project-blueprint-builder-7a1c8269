@@ -78,7 +78,7 @@ const WalletScreen = () => {
       setUserId(session.user.id);
 
       const { data: walletData, error } = await supabase
-        .from("users_wallet")
+        .from("wallets")
         .select("balance, currency")
         .eq("user_id", session.user.id)
         .maybeSingle();
