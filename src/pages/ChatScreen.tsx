@@ -2185,16 +2185,19 @@ const ChatScreen = () => {
       {/* Translation happens automatically via realtime subscription */}
 
       {/* ============= MESSAGES AREA ============= */}
-      <main className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <main className="flex-1 overflow-y-auto wa-chat-scroll px-3 py-2" style={{ background: WA.chatBg }}>
+        <div className="space-y-1">
           {/* Iterate through date groups */}
           {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-            <div key={date} className="space-y-3">
+            <div key={date} className="space-y-1">
               {/* Date separator label */}
-              <div className="flex justify-center">
-                <span className="px-3 py-1 rounded-full bg-muted text-xs text-muted-foreground">
+              <div className="flex justify-center my-2">
+                <div
+                  className="px-3 py-1 rounded-lg shadow-sm"
+                  style={{ background: WA.dateSepBg, color: WA.dateSepText, fontSize: 11, fontWeight: 500 }}
+                >
                   {date}
-                </span>
+                </div>
               </div>
 
               {/* Messages for this date */}
@@ -2236,50 +2239,85 @@ const ChatScreen = () => {
                     onPinToggle={handlePinToggle}
                   >
                     <div
-                      className={`flex ${isMine ? "justify-end" : "justify-start"} animate-slide-up`}
-                      style={{ animationDelay: `${index * 0.05}s` }}
+                      className={`flex ${isMine ? "justify-end" : "justify-start"} mb-[2px]`}
                     >
-                      <div className={`flex items-end gap-2 max-w-[80%] ${isMine ? "flex-row-reverse" : ""}`}>
+                      <div className={`flex items-end gap-1 ${isMine ? "flex-row-reverse" : ""}`} style={{ maxWidth: '72%' }}>
                         {!isMine && (
                           <div className="w-8 flex-shrink-0">
                             {showAvatar && chatPartner?.avatar ? (
                               <img src={chatPartner.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
                             ) : showAvatar ? (
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                                <span className="text-xs font-bold text-primary">{chatPartner?.fullName.charAt(0).toUpperCase()}</span>
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#DDD' }}>
+                                <span className="text-xs font-bold" style={{ color: '#555' }}>{chatPartner?.fullName.charAt(0).toUpperCase()}</span>
                               </div>
-                            ) : null}
+                            ) : <div className="w-8" />}
                           </div>
                         )}
-                        <div className="space-y-1">
-                          <span className={`text-[10px] font-semibold px-1 block ${isMine ? "text-primary text-right" : "text-emerald-600 dark:text-emerald-400 text-left"}`}>
-                            {isMine ? "You" : chatPartner?.fullName}
-                            {message.isForwarded && <span className="text-muted-foreground/60 font-normal ms-1">↗ Forwarded</span>}
-                          </span>
+                        <div>
+                          {message.isForwarded && (
+                            <span style={{ fontSize: 11, color: WA.metaColor, fontStyle: 'italic' }} className="block mb-0.5 px-1">↗ Forwarded</span>
+                          )}
 
                           {/* Reply quote */}
                           {message.replyToText && (
                             <ReplyPreview replyToText={message.replyToText} replyToSender={message.replyToSender || ''} isOwn={isMine} compact />
                           )}
 
-                          {voiceUrl && <ResolvedVoicePlayer voiceUrl={voiceUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
-                          {attachmentUrl && <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />}
+                          {voiceUrl && (
+                            <div style={{
+                              background: isMine ? WA.sentBubble : WA.recvBubble,
+                              borderRadius: isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                              padding: '6px 10px 4px 10px',
+                              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                            }}>
+                              <ResolvedVoicePlayer voiceUrl={voiceUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
+                            </div>
+                          )}
+                          {attachmentUrl && (
+                            <div style={{
+                              borderRadius: isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                              overflow: 'hidden',
+                              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                            }}>
+                              <ChatAttachment url={attachmentUrl} isMine={isMine} resolveUrl={resolveAttachmentUrl} />
+                            </div>
+                          )}
                           
                           {displayText && !displayText.startsWith("📷") && !displayText.startsWith("📎") && !voiceUrl && (
-                            <div className={`px-4 py-2.5 rounded-2xl shadow-sm border ${isMine ? "bg-primary/5 border-primary/20 rounded-br-md" : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 rounded-bl-md"}`}>
+                            <div style={{
+                              background: isMine ? WA.sentBubble : WA.recvBubble,
+                              borderRadius: isMine ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
+                              padding: '6px 10px 4px 10px',
+                              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+                            }}>
                               {message.isTranslating ? (
                                 <div className="flex items-center gap-1.5 py-1">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">Translating...</span>
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: WA.metaColor }} />
+                                  <span style={{ fontSize: 12, color: WA.metaColor }}>Translating...</span>
                                 </div>
                               ) : (
                                 <>
-                                  <p className={`text-sm whitespace-pre-wrap break-words unicode-text ${isMine ? "text-primary dark:text-primary" : "text-emerald-800 dark:text-emerald-200"}`} dir="auto">{displayText}</p>
+                                  <p className="whitespace-pre-wrap break-words unicode-text" style={{ fontSize: 14, color: isMine ? WA.sentText : WA.recvText }} dir="auto">{displayText}</p>
                                   {englishSubtitle && englishSubtitle.toLowerCase() !== displayText.toLowerCase() && (
-                                    <p className="text-[10px] mt-1 text-muted-foreground/70 italic whitespace-pre-wrap break-words" dir="ltr">english: {englishSubtitle.toLowerCase()}</p>
+                                    <p className="whitespace-pre-wrap break-words" style={{ fontSize: 10, color: WA.subtitleColor, fontStyle: 'italic', marginTop: 2 }} dir="ltr">english: {englishSubtitle.toLowerCase()}</p>
                                   )}
                                 </>
                               )}
+                              {/* Meta row */}
+                              <div className="flex items-center justify-end gap-[3px]" style={{ marginTop: 2 }}>
+                                <span style={{ fontSize: 11, color: WA.metaColor }}>{formatTime(message.createdAt)}</span>
+                                {message.isEdited && <span style={{ fontSize: 10, color: WA.metaColor, fontStyle: 'italic' }}>edited</span>}
+                                {message.isPinned && <Pin className="w-3 h-3" style={{ color: WA.headerBg }} />}
+                                {isMine && (message.isRead ? <CheckCheck className="w-[14px] h-[14px]" style={{ color: WA.tickRead }} /> : <Check className="w-[14px] h-[14px]" style={{ color: WA.tickSent }} />)}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Meta row for voice/attachment-only messages */}
+                          {(voiceUrl || attachmentUrl) && (!displayText || displayText.startsWith("📷") || displayText.startsWith("📎")) && (
+                            <div className="flex items-center justify-end gap-[3px] px-1" style={{ marginTop: 2 }}>
+                              <span style={{ fontSize: 11, color: WA.metaColor }}>{formatTime(message.createdAt)}</span>
+                              {isMine && (message.isRead ? <CheckCheck className="w-[14px] h-[14px]" style={{ color: WA.tickRead }} /> : <Check className="w-[14px] h-[14px]" style={{ color: WA.tickSent }} />)}
                             </div>
                           )}
 
@@ -2287,13 +2325,6 @@ const ChatScreen = () => {
                           {message.reactions && message.reactions.length > 0 && (
                             <MessageReactions reactions={message.reactions} onToggle={(emoji) => handleReaction(message.id, emoji)} isOwn={isMine} />
                           )}
-
-                          <div className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-                            <span className="text-xs text-muted-foreground">{formatTime(message.createdAt)}</span>
-                            {message.isEdited && <span className="text-[10px] text-muted-foreground italic">edited</span>}
-                            {message.isPinned && <Pin className="w-3 h-3 text-primary" />}
-                            {isMine && (message.isRead ? <CheckCheck className="w-3.5 h-3.5 text-info" /> : <Check className="w-3.5 h-3.5 text-muted-foreground" />)}
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -2303,6 +2334,25 @@ const ChatScreen = () => {
             </div>
           ))}
           
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="flex justify-start mb-[2px]">
+              <div style={{
+                background: WA.recvBubble,
+                borderRadius: '8px 8px 8px 2px',
+                padding: '10px 14px',
+                display: 'inline-flex',
+                gap: 4,
+                alignItems: 'center',
+                boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
+              }}>
+                <span className="wa-typing-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#999', animationDelay: '0s' }} />
+                <span className="wa-typing-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#999', animationDelay: '0.2s' }} />
+                <span className="wa-typing-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: '#999', animationDelay: '0.4s' }} />
+              </div>
+            </div>
+          )}
+
           {/* Invisible element at bottom for auto-scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
