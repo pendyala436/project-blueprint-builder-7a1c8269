@@ -28,7 +28,14 @@ import { cn } from "@/lib/utils";
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
-const YEARS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i);
+
+// Build last 6 calendar months (including current) — matches TransactionStatementTab
+const ALLOWED_MONTHS: { year: number; month: number }[] = [];
+for (let i = 0; i < 6; i++) {
+  const d = new Date(CURRENT_YEAR, CURRENT_MONTH - 1 - i, 1);
+  ALLOWED_MONTHS.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+}
+const YEARS = [...new Set(ALLOWED_MONTHS.map(m => m.year))];
 
 // ─── Rate labels ────────────────────────────────────────────────────────────
 const RATE_INFO_MEN: Record<string, string> = {
@@ -248,9 +255,11 @@ const TransactionStatementScreen = () => {
                 <Select value={month} onValueChange={setMonth}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {MONTH_NAMES.map((m, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                    ))}
+                    {ALLOWED_MONTHS
+                      .filter(am => am.year === Number(year))
+                      .map(am => (
+                        <SelectItem key={am.month} value={String(am.month)}>{MONTH_NAMES[am.month - 1]}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

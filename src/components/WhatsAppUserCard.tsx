@@ -107,8 +107,10 @@ export const WhatsAppUserCard: React.FC<WhatsAppUserCardProps> = ({
               {[state, country].filter(Boolean).join(", ")}
             </span>
           )}
-          {walletBalance !== undefined && walletBalance > 0 && (
-            <span className="text-primary font-semibold">₹{Math.round(walletBalance).toLocaleString('en-IN')}</span>
+          {walletBalance !== undefined && (
+            <span className={cn("font-semibold", walletBalance > 0 ? "text-primary" : "text-muted-foreground")}>
+              ₹{Math.round(walletBalance).toLocaleString('en-IN')}
+            </span>
           )}
         </div>
         {subtitle && (
