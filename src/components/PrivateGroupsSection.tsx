@@ -147,7 +147,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
   }, [groups]);
 
   if (isLoading) {
-    return <div className="animate-pulse h-32 bg-[#E5DDD5]/30 rounded-lg" />;
+    return <div className="animate-pulse h-32 bg-muted/30 rounded-lg" />;
   }
 
   const isHostOfAny = groups.some(g => g.current_host_id === currentUserId && g.is_live);
