@@ -121,7 +121,7 @@ const AdminChatMonitoring = lazyRetry(() => import("@/pages/AdminChatMonitoring"
 const AdminFinanceDashboard = lazyRetry(() => import("@/pages/AdminFinanceDashboard"));
 const AdminFinanceReports = lazyRetry(() => import("@/pages/AdminFinanceReports"));
 const AdminTransactionHistory = lazyRetry(() => import("@/pages/AdminTransactionHistory"));
-const AdminStatementsPage = lazyRetry(() => import("@/pages/admin/AdminStatementsPage"));
+const AdminPayoutStatements = lazyRetry(() => import("@/pages/AdminPayoutStatements"));
 const AdminChatPricing = lazyRetry(() => import("@/pages/AdminChatPricing"));
 const AdminGiftPricing = lazyRetry(() => import("@/pages/AdminGiftPricing"));
 const AdminLanguageGroups = lazyRetry(() => import("@/pages/AdminLanguageGroups"));
