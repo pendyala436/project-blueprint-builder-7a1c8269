@@ -154,13 +154,13 @@ const DashboardScreen = () => {
   const [userName, setUserName] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "male");
-  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'male', walletBalance);
   const [userCountry, setUserCountry] = useState("IN");
   const [userCountryName, setUserCountryName] = useState(""); // Full country name for language feature
   const [userLanguage, setUserLanguage] = useState("English"); // User's primary language
   const userLanguageRef = useRef(userLanguage);
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // Language language code
   const [walletBalance, setWalletBalance] = useState(0);
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'male', walletBalance);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
