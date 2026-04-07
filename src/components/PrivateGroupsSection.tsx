@@ -67,8 +67,8 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     let preStream: MediaStream | null = null;
     try {
       preStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 48000 },
       });
     } catch (mediaErr) {
       console.error('[PrivateGroups] Pre-acquire media failed:', mediaErr);
