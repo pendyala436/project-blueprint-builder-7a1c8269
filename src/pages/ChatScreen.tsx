@@ -1924,7 +1924,7 @@ const ChatScreen = () => {
         />
       )}
       {/* ============= HEADER SECTION ============= */}
-      <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-50 pt-[env(safe-area-inset-top)]" style={{ background: WA.headerBg }}>
         <div className="px-3 py-2.5 flex items-center gap-3">
           {/* Back button */}
           <button 
@@ -1932,9 +1932,10 @@ const ChatScreen = () => {
               const dashboardPath = currentUserGender === "female" ? "/women-dashboard" : "/dashboard";
               window.history.length > 1 ? navigate(-1) : navigate(dashboardPath);
             }}
-            className="p-1.5 rounded-full hover:bg-primary-foreground/10 transition-colors"
+            className="p-1.5 rounded-full transition-colors"
+            style={{ color: WA.headerText }}
           >
-            <ArrowLeft className="w-5 h-5 text-primary-foreground" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           
           {/* Chat partner info - clickable to view profile */}
@@ -1949,25 +1950,30 @@ const ChatScreen = () => {
                   <img 
                     src={chatPartner.avatar} 
                     alt={chatPartner.fullName}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-primary-foreground/20"
+                    className="w-10 h-10 rounded-full object-cover"
+                    style={{ border: '2px solid rgba(255,255,255,0.2)' }}
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary-foreground">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                    <span className="text-lg font-bold" style={{ color: WA.headerText }}>
                       {chatPartner.fullName.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-primary ${
-                  chatPartner.isOnline ? "bg-online" : "bg-muted-foreground"
-                }`} />
+                <div
+                  className="absolute -bottom-0.5 -right-0.5 w-[10px] h-[10px] rounded-full"
+                  style={{
+                    background: chatPartner.isOnline ? WA.onlineDot : WA.offlineDot,
+                    border: `2px solid ${WA.headerBg}`,
+                  }}
+                />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-primary-foreground truncate">{chatPartner.fullName}</p>
-                <p className="text-xs text-primary-foreground/70 flex items-center gap-1">
+                <p className="truncate" style={{ fontSize: 15, fontWeight: 500, color: WA.headerText }}>{chatPartner.fullName}</p>
+                <p className="flex items-center gap-1" style={{ fontSize: 12, color: WA.headerSub }}>
                   {chatPartner.isOnline ? (
-                    <span className="text-primary-foreground/90">Online</span>
+                    <span style={{ color: WA.headerSub }}>Online</span>
                   ) : (
                     <span>Offline</span>
                   )}
