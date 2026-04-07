@@ -246,7 +246,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                   <div className="flex flex-col gap-1">
                     <Button
                       size="sm"
-                      className="h-7 text-[11px] bg-[#128C7E] hover:bg-[#075E54] text-white gap-1"
+                      className="h-7 text-[11px] bg-primary hover:bg-primary/80 text-primary-foreground gap-1"
                       onClick={() => setActiveGroup(group)}
                     >
                       Open
