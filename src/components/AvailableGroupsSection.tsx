@@ -57,7 +57,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         }
         fetchGroups();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users_wallet', filter: `user_id=eq.${currentUserId}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${currentUserId}` }, () => {
         fetchWalletBalance();
       })
       .subscribe();
