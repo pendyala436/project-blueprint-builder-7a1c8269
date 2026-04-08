@@ -1,7 +1,6 @@
 /**
  * TransactionStatementScreen.tsx — User-facing monthly statement
- * Men tab  → ledger_transactions (debits: chat/video/audio/group/gift/tip, credits: recharges)
- * Women tab → women_earnings (credits) + withdrawal_requests (debits)
+ * Rates fetched dynamically from chat_pricing table (single source of truth)
  * Uses get_my_statement_summary + get_my_statement_detail RPCs
  */
 
@@ -29,7 +28,6 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 
-// Build last 6 calendar months (including current) — matches TransactionStatementTab
 const ALLOWED_MONTHS: { year: number; month: number }[] = [];
 for (let i = 0; i < 6; i++) {
   const d = new Date(CURRENT_YEAR, CURRENT_MONTH - 1 - i, 1);
@@ -37,27 +35,50 @@ for (let i = 0; i < 6; i++) {
 }
 const YEARS = [...new Set(ALLOWED_MONTHS.map(m => m.year))];
 
-// ─── Rate labels ────────────────────────────────────────────────────────────
-const RATE_INFO_MEN: Record<string, string> = {
-  chat_charge:       "Chat — ₹4/min",
-  video_call_charge: "Video Call — ₹8/min",
-  audio_call_charge: "Audio Call — ₹6/min",
-  group_call_charge: "Group Call — ₹4/min per man",
-  gift_charge:       "Gift — 100% deducted",
-  tip_charge:        "Tip — 100% deducted",
-  recharge:          "Wallet Recharge",
-  opening_balance:   "Opening Balance",
+// ─── Pricing (fetched from DB) ─────────────────────────────────────────────
+interface ChatPricing {
+  rate_per_minute: number;
+  women_earning_rate: number;
+  video_rate_per_minute: number;
+  video_women_earning_rate: number;
+  audio_rate_per_minute: number;
+  audio_women_earning_rate: number;
+  group_call_rate_per_minute: number;
+  group_call_women_earning_rate: number;
+  gift_women_percent: number;
+}
+
+const DEFAULT_PRICING: ChatPricing = {
+  rate_per_minute: 4, women_earning_rate: 2,
+  video_rate_per_minute: 8, video_women_earning_rate: 4,
+  audio_rate_per_minute: 6, audio_women_earning_rate: 3,
+  group_call_rate_per_minute: 4, group_call_women_earning_rate: 0.50,
+  gift_women_percent: 50,
 };
 
-const RATE_INFO_WOMEN: Record<string, string> = {
-  chat:       "Chat Earning — ₹2/min",
-  video_call: "Video Call Earning — ₹4/min",
-  audio_call: "Audio Call Earning — ₹3/min",
-  group_call: "Group Call — ₹0.50/min × men",
-  gift:       "Gift Received — 50% credited",
-  tip:        "Tip Received — 50% credited",
-  withdrawal: "Bank Withdrawal",
-};
+function buildRateLabels(p: ChatPricing, isMale: boolean): Record<string, string> {
+  if (isMale) {
+    return {
+      chat_charge: `Chat — ₹${p.rate_per_minute}/min`,
+      video_call_charge: `Video Call — ₹${p.video_rate_per_minute}/min`,
+      audio_call_charge: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
+      group_call_charge: `Group Call — ₹${p.group_call_rate_per_minute}/min per man`,
+      gift_charge: "Gift Sent — 100% deducted",
+      tip_charge: "Tip Sent — 100% deducted",
+      recharge: "Wallet Recharge",
+      opening_balance: "Opening Balance",
+    };
+  }
+  return {
+    chat: `Chat Earning — ₹${p.women_earning_rate}/min`,
+    video_call: `Video Call Earning — ₹${p.video_women_earning_rate}/min`,
+    audio_call: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
+    group_call: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
+    gift: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    tip: `Tip Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    withdrawal: "Bank Withdrawal",
+  };
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface Summary {
@@ -91,8 +112,9 @@ interface TxRow {
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const totalMin = Math.floor(sec / 60);
-  const remainSec = sec % 60;
+  const totalSec = Math.round(sec);
+  const totalMin = Math.floor(totalSec / 60);
+  const remainSec = totalSec % 60;
   if (totalMin === 0) return `${remainSec} sec`;
   if (remainSec === 0) return `${totalMin} min`;
   return `${totalMin} min ${remainSec} sec`;
@@ -101,10 +123,6 @@ const fmtTimeIST = (dateStr: string | null) => {
   if (!dateStr) return null;
   const ist = new Date(new Date(dateStr).getTime() + 5.5 * 60 * 60 * 1000);
   return format(ist, "HH:mm:ss");
-};
-const typeLabel = (t: string, isMale: boolean) => {
-  const map = isMale ? RATE_INFO_MEN : RATE_INFO_WOMEN;
-  return map[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -119,20 +137,32 @@ const TransactionStatementScreen = () => {
   const [rows, setRows] = useState<TxRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [pricing, setPricing] = useState<ChatPricing>(DEFAULT_PRICING);
 
-  // Detect gender on mount
+  // Detect gender + fetch pricing on mount
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) { navigate("/"); return; }
-      const { data } = await supabase
-        .from("profiles")
-        .select("gender")
-        .eq("user_id", session.user.id)
-        .single();
-      if (data?.gender) setGender(data.gender);
+
+      const [profileRes, pricingRes] = await Promise.all([
+        supabase.from("profiles").select("gender").eq("user_id", session.user.id).single(),
+        supabase.from("chat_pricing")
+          .select("rate_per_minute, women_earning_rate, video_rate_per_minute, video_women_earning_rate, audio_rate_per_minute, audio_women_earning_rate, group_call_rate_per_minute, group_call_women_earning_rate, gift_women_percent")
+          .eq("is_active", true).limit(1).maybeSingle(),
+      ]);
+
+      if (profileRes.data?.gender) setGender(profileRes.data.gender);
+      if (pricingRes.data) setPricing(pricingRes.data as ChatPricing);
     })();
   }, [navigate]);
+
+  const isMale = gender === "male";
+  const rateLabels = buildRateLabels(pricing, isMale);
+  const typeLabel = (t: string) => rateLabels[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min · Gift/Tip 100%`;
+  const womenRateText = `Chat ₹${pricing.women_earning_rate}/min · Video ₹${pricing.video_women_earning_rate}/min · Audio ₹${pricing.audio_women_earning_rate}/min · Group ₹${pricing.group_call_women_earning_rate}/min×men · Gift/Tip ${pricing.gift_women_percent}% (platform keeps ${100 - pricing.gift_women_percent}%)`;
 
   // Load statement
   const loadStatement = useCallback(async () => {
@@ -143,7 +173,6 @@ const TransactionStatementScreen = () => {
     setRows([]);
 
     try {
-      // Parallel fetch summary + detail
       const [sumRes, detRes] = await Promise.all([
         supabase.rpc("get_my_statement_summary", {
           p_year: parseInt(year),
@@ -170,7 +199,6 @@ const TransactionStatementScreen = () => {
         throw detRes.error;
       }
 
-      // Atomic: set both together so partial state is never visible
       setSummary(sumData);
       setRows((detRes.data as TxRow[]) || []);
     } catch (err: any) {
@@ -182,8 +210,6 @@ const TransactionStatementScreen = () => {
   }, [gender, year, month]);
 
   useEffect(() => { loadStatement(); }, [loadStatement]);
-
-  const isMale = gender === "male";
 
   return (
     <div className="min-h-screen bg-background">
@@ -210,7 +236,7 @@ const TransactionStatementScreen = () => {
           </Badge>
         </div>
 
-        {/* Rate reference */}
+        {/* Rate reference — dynamic from DB */}
         <Card className={cn(
           "border text-xs",
           isMale
@@ -225,21 +251,21 @@ const TransactionStatementScreen = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 text-muted-foreground">
               {isMale ? (
                 <>
-                  <span>💬 Chat: ₹4/min</span>
-                  <span>📹 Video: ₹8/min</span>
-                  <span>📞 Audio: ₹6/min</span>
-                  <span>👥 Group: ₹4/min</span>
+                  <span>💬 Chat: ₹{pricing.rate_per_minute}/min</span>
+                  <span>📹 Video: ₹{pricing.video_rate_per_minute}/min</span>
+                  <span>📞 Audio: ₹{pricing.audio_rate_per_minute}/min</span>
+                  <span>👥 Group: ₹{pricing.group_call_rate_per_minute}/min</span>
                   <span>🎁 Gift: 100%</span>
                   <span>💰 Tip: 100%</span>
                 </>
               ) : (
                 <>
-                  <span>💬 Chat: ₹2/min</span>
-                  <span>📹 Video: ₹4/min</span>
-                  <span>📞 Audio: ₹3/min</span>
-                  <span>👥 Group: ₹0.50/min×men</span>
-                  <span>🎁 Gift: 50%</span>
-                  <span>💰 Tip: 50%</span>
+                  <span>💬 Chat: ₹{pricing.women_earning_rate}/min</span>
+                  <span>📹 Video: ₹{pricing.video_women_earning_rate}/min</span>
+                  <span>📞 Audio: ₹{pricing.audio_women_earning_rate}/min</span>
+                  <span>👥 Group: ₹{pricing.group_call_women_earning_rate}/min×men</span>
+                  <span>🎁 Gift: {pricing.gift_women_percent}% (platform {100 - pricing.gift_women_percent}%)</span>
+                  <span>💰 Tip: {pricing.gift_women_percent}% (platform {100 - pricing.gift_women_percent}%)</span>
                 </>
               )}
             </div>
@@ -398,7 +424,7 @@ const TransactionStatementScreen = () => {
                           </TableCell>
                           <TableCell className="text-xs">
                             <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
-                              {typeLabel(row.txn_type, isMale)}
+                              {typeLabel(row.txn_type)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
@@ -476,25 +502,20 @@ const TransactionStatementScreen = () => {
 
             {/* Footer disclaimer */}
             <div className="px-4 py-3 border-t text-[10px] text-muted-foreground text-center space-y-0.5">
-              <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30).</p>
-              <p>
-                {isMale
-                  ? "Rates: Chat ₹4/min · Video ₹8/min · Audio ₹6/min · Group ₹4/min · Gift/Tip 100%. No overcharging — exact session duration × rate."
-                  : "Rates: Chat ₹2/min · Video ₹4/min · Audio ₹3/min · Group ₹0.50/min×men · Gift/Tip 50%. No undercharging — exact session duration × rate."}
-              </p>
+              <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration = exact seconds ÷ 60.</p>
+              <p>Rates: {isMale ? menRateText : womenRateText}.</p>
+              <p>{isMale
+                ? "No overcharging — exact session duration × rate."
+                : "No undercharging — exact session duration × rate."}</p>
             </div>
           </CardContent>
         </Card>
 
         {/* Navigation */}
-        <div className="flex justify-center gap-3 pb-6">
-          <Button variant="outline" size="sm" onClick={() => navigate(isMale ? "/wallet" : "/women-wallet")} className="gap-1.5">
-            <Wallet className="h-3.5 w-3.5" />
-            {isMale ? "Back to Wallet" : "Back to Earnings"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate(isMale ? "/dashboard" : "/women-dashboard")} className="gap-1.5">
-            <Home className="h-3.5 w-3.5" />
-            Dashboard
+        <div className="flex justify-center gap-4 pb-8">
+          <Button variant="outline" onClick={() => navigate(isMale ? "/dashboard" : "/women-dashboard")} className="gap-2">
+            <Home className="h-4 w-4" />
+            Back to Dashboard
           </Button>
         </div>
       </div>

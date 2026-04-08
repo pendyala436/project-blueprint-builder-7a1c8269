@@ -1,6 +1,7 @@
 /**
  * TransactionStatementTab — Embeddable transaction statement for dashboard tabs
  * Supports PDF, Word, and Excel export
+ * Rates fetched dynamically from chat_pricing table (single source of truth)
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -25,7 +26,6 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 
-// Build last 6 calendar months (including current)
 const ALLOWED_MONTHS: { year: number; month: number }[] = [];
 for (let i = 0; i < 6; i++) {
   const d = new Date(CURRENT_YEAR, CURRENT_MONTH - 1 - i, 1);
@@ -33,38 +33,60 @@ for (let i = 0; i < 6; i++) {
 }
 const YEARS = [...new Set(ALLOWED_MONTHS.map(m => m.year))];
 
-const RATE_INFO_MEN: Record<string, string> = {
-  chat_charge: "Chat — ₹4/min",
-  chat_debit: "Chat — ₹4/min",
-  video_call_charge: "Video Call — ₹8/min",
-  video_debit: "Video Call — ₹8/min",
-  audio_call_charge: "Audio Call — ₹6/min",
-  audio_debit: "Audio Call — ₹6/min",
-  group_call_charge: "Group Call — ₹4/min per man",
-  gift_charge: "Gift Sent — 100% deducted",
-  gift_debit: "Gift Sent — 100% deducted",
-  tip_charge: "Tip Sent — 100% deducted",
-  recharge: "Wallet Recharge",
-  opening_balance: "Opening Balance",
-  debit: "Charge",
-  credit: "Recharge",
+// ─── Pricing state (fetched from DB) ─────────────────────────────────────────
+interface ChatPricing {
+  rate_per_minute: number;
+  women_earning_rate: number;
+  video_rate_per_minute: number;
+  video_women_earning_rate: number;
+  audio_rate_per_minute: number;
+  audio_women_earning_rate: number;
+  group_call_rate_per_minute: number;
+  group_call_women_earning_rate: number;
+  gift_women_percent: number;
+}
+
+const DEFAULT_PRICING: ChatPricing = {
+  rate_per_minute: 4, women_earning_rate: 2,
+  video_rate_per_minute: 8, video_women_earning_rate: 4,
+  audio_rate_per_minute: 6, audio_women_earning_rate: 3,
+  group_call_rate_per_minute: 4, group_call_women_earning_rate: 0.50,
+  gift_women_percent: 50,
 };
 
-const RATE_INFO_WOMEN: Record<string, string> = {
-  chat: "Chat Earning — ₹2/min",
-  chat_credit: "Chat Earning — ₹2/min",
-  video_call: "Video Call Earning — ₹4/min",
-  video_credit: "Video Call Earning — ₹4/min",
-  audio_call: "Audio Call Earning — ₹3/min",
-  audio_credit: "Audio Call Earning — ₹3/min",
-  group_call_earning: "Group Call Earning",
-  group_call: "Group Call Earning",
-  gift_earning: "Gift Received — 50% credited",
-  gift_credit: "Gift Received — 50% credited",
-  tip_earning: "Tip Received — 50% credited",
-  withdrawal: "Bank Withdrawal",
-  payout: "Bank Withdrawal",
-};
+function buildRateLabels(p: ChatPricing, isMale: boolean): Record<string, string> {
+  if (isMale) {
+    return {
+      chat_charge: `Chat — ₹${p.rate_per_minute}/min`,
+      chat_debit: `Chat — ₹${p.rate_per_minute}/min`,
+      video_call_charge: `Video Call — ₹${p.video_rate_per_minute}/min`,
+      video_debit: `Video Call — ₹${p.video_rate_per_minute}/min`,
+      audio_call_charge: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
+      audio_debit: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
+      group_call_charge: `Group Call — ₹${p.group_call_rate_per_minute}/min per man`,
+      gift_charge: "Gift Sent — 100% deducted",
+      gift_debit: "Gift Sent — 100% deducted",
+      tip_charge: "Tip Sent — 100% deducted",
+      recharge: "Wallet Recharge",
+      opening_balance: "Opening Balance",
+    };
+  }
+  return {
+    chat: `Chat Earning — ₹${p.women_earning_rate}/min`,
+    chat_credit: `Chat Earning — ₹${p.women_earning_rate}/min`,
+    video_call: `Video Call Earning — ₹${p.video_women_earning_rate}/min`,
+    video_credit: `Video Call Earning — ₹${p.video_women_earning_rate}/min`,
+    audio_call: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
+    audio_credit: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
+    group_call_earning: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
+    group_call: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
+    gift_earning: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    gift_credit: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    tip_earning: `Tip Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    withdrawal: "Bank Withdrawal",
+    payout: "Bank Withdrawal",
+  };
+}
 
 interface Summary {
   success: boolean;
@@ -96,8 +118,9 @@ interface TxRow {
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const totalMin = Math.floor(sec / 60);
-  const remainSec = sec % 60;
+  const totalSec = Math.round(sec);
+  const totalMin = Math.floor(totalSec / 60);
+  const remainSec = totalSec % 60;
   if (totalMin === 0) return `${remainSec} sec`;
   if (remainSec === 0) return `${totalMin} min`;
   return `${totalMin} min ${remainSec} sec`;
@@ -106,10 +129,6 @@ const fmtTimeIST = (dateStr: string | null) => {
   if (!dateStr) return null;
   const ist = new Date(new Date(dateStr).getTime() + 5.5 * 60 * 60 * 1000);
   return format(ist, "HH:mm:ss");
-};
-const typeLabel = (t: string, isMale: boolean) => {
-  const map = isMale ? RATE_INFO_MEN : RATE_INFO_WOMEN;
-  return map[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 };
 
 interface TransactionStatementTabProps {
@@ -125,6 +144,23 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [pricing, setPricing] = useState<ChatPricing>(DEFAULT_PRICING);
+
+  // Fetch pricing from DB once
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("chat_pricing")
+        .select("rate_per_minute, women_earning_rate, video_rate_per_minute, video_women_earning_rate, audio_rate_per_minute, audio_women_earning_rate, group_call_rate_per_minute, group_call_women_earning_rate, gift_women_percent")
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (data) setPricing(data as ChatPricing);
+    })();
+  }, []);
+
+  const rateLabels = buildRateLabels(pricing, isMale);
+  const typeLabel = (t: string) => rateLabels[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
   const loadStatement = useCallback(async () => {
     setLoading(true);
@@ -159,7 +195,6 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
         throw detRes.error;
       }
 
-      // Atomic: set both together so partial state is never visible
       setSummary(sumData);
       setRows((detRes.data as TxRow[]) || []);
     } catch (err: any) {
@@ -171,6 +206,10 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
   }, [year, month]);
 
   useEffect(() => { loadStatement(); }, [loadStatement]);
+
+  // ─── Rate display helpers ─────────────────────────────────────────────────
+  const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min · Gift/Tip 100%`;
+  const womenRateText = `Chat ₹${pricing.women_earning_rate}/min · Video ₹${pricing.video_women_earning_rate}/min · Audio ₹${pricing.audio_women_earning_rate}/min · Group ₹${pricing.group_call_women_earning_rate}/min×men · Gift/Tip ${pricing.gift_women_percent}% (platform keeps ${100 - pricing.gift_women_percent}%)`;
 
   // ─── Export helpers ───────────────────────────────────────────────────
 
@@ -185,7 +224,7 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
       const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
       return [
         format(istDate, "dd MMM yyyy HH:mm"),
-        typeLabel(row.txn_type, isMale),
+        typeLabel(row.txn_type),
         row.description || "—",
         fmtTimeIST(row.start_time) || "—",
         fmtTimeIST(row.end_time) || "—",
@@ -226,7 +265,6 @@ const TransactionStatementTab = ({ gender }: TransactionStatementTabProps) => {
     try {
       const { header, headerRow, dataRows, monthName } = getExportData();
 
-      // Build a printable HTML document and trigger print-to-PDF
       const htmlContent = `
 <!DOCTYPE html>
 <html><head>
@@ -277,10 +315,9 @@ ${rows.length > 0 ? `<tr class="totals">
 </table>
 
 <div class="footer">
-  <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30).</p>
-  <p>${isMale
-    ? "Rates: Chat ₹4/min · Video ₹8/min · Audio ₹6/min · Group ₹4/min · Gift/Tip 100%."
-    : "Rates: Chat ₹2/min · Video ₹4/min · Audio ₹3/min · Group ₹0.50/min×men · Gift/Tip 50%."}</p>
+  <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration = exact seconds ÷ 60.</p>
+  <p>Rates: ${isMale ? menRateText : womenRateText}.</p>
+  <p>${isMale ? "No overcharging — exact session duration × rate." : "No undercharging — exact session duration × rate."}</p>
 </div>
 </body></html>`;
 
@@ -318,6 +355,7 @@ ${rows.length > 0 ? `<tr class="totals">
 ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale ? "Charged" : "Earned"}:</b> ${fmtINR(isMale ? summary.total_debit : summary.total_credit)} | <b>${isMale ? "Recharged" : "Withdrawn"}:</b> ${fmtINR(isMale ? summary.total_credit : summary.total_debit)} | <b>Closing:</b> ${fmtINR(summary.closing_balance)}</p>` : ""}
 <table><thead><tr>${headerRow.map(h => `<th>${h}</th>`).join("")}</tr></thead>
 <tbody>${dataRows.map(r => `<tr>${r.map((c, i) => `<td${i >= 4 ? ' class="text-right"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>
+<p style="font-size:8pt;color:#999;margin-top:12px;">Rates: ${isMale ? menRateText : womenRateText}. Duration = exact seconds ÷ 60.</p>
 </body></html>`;
 
       const blob = new Blob(["\ufeff", wordHtml], { type: "application/msword" });
@@ -349,7 +387,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
         <h2 className="text-lg font-bold">{isMale ? "Wallet Statement" : "Earnings Statement"}</h2>
       </div>
 
-      {/* Rate reference */}
+      {/* Rate reference — dynamic from DB */}
       <Card className={cn(
         "border text-xs",
         isMale
@@ -364,21 +402,21 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 text-muted-foreground">
             {isMale ? (
               <>
-                <span>💬 Chat: ₹4/min</span>
-                <span>📹 Video: ₹8/min</span>
-                <span>📞 Audio: ₹6/min</span>
-                <span>👥 Group: ₹4/min</span>
+                <span>💬 Chat: ₹{pricing.rate_per_minute}/min</span>
+                <span>📹 Video: ₹{pricing.video_rate_per_minute}/min</span>
+                <span>📞 Audio: ₹{pricing.audio_rate_per_minute}/min</span>
+                <span>👥 Group: ₹{pricing.group_call_rate_per_minute}/min</span>
                 <span>🎁 Gift: 100%</span>
                 <span>💰 Tip: 100%</span>
               </>
             ) : (
               <>
-                <span>💬 Chat: ₹2/min</span>
-                <span>📹 Video: ₹4/min</span>
-                <span>📞 Audio: ₹3/min</span>
-                <span>👥 Group: ₹0.50/min×men</span>
-                <span>🎁 Gift: 50%</span>
-                <span>💰 Tip: 50%</span>
+                <span>💬 Chat: ₹{pricing.women_earning_rate}/min</span>
+                <span>📹 Video: ₹{pricing.video_women_earning_rate}/min</span>
+                <span>📞 Audio: ₹{pricing.audio_women_earning_rate}/min</span>
+                <span>👥 Group: ₹{pricing.group_call_women_earning_rate}/min×men</span>
+                <span>🎁 Gift: {pricing.gift_women_percent}% (platform {100 - pricing.gift_women_percent}%)</span>
+                <span>💰 Tip: {pricing.gift_women_percent}% (platform {100 - pricing.gift_women_percent}%)</span>
               </>
             )}
           </div>
@@ -538,7 +576,7 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
                          </TableCell>
                          <TableCell className="text-xs">
                            <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
-                             {typeLabel(row.txn_type, isMale)}
+                             {typeLabel(row.txn_type)}
                            </Badge>
                          </TableCell>
                          <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={row.description || ""}>
@@ -615,12 +653,11 @@ ${summary ? `<p><b>Opening:</b> ${fmtINR(summary.opening_balance)} | <b>${isMale
           )}
 
           <div className="px-4 py-3 border-t text-[10px] text-muted-foreground text-center space-y-0.5">
-            <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30).</p>
-            <p>
-              {isMale
-                ? "Rates: Chat ₹4/min · Video ₹8/min · Audio ₹6/min · Group ₹4/min · Gift/Tip 100%. No overcharging — exact session duration × rate."
-                : "Rates: Chat ₹2/min · Video ₹4/min · Audio ₹3/min · Group ₹0.50/min×men · Gift/Tip 50%. No undercharging — exact session duration × rate."}
-            </p>
+            <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration = exact seconds ÷ 60.</p>
+            <p>Rates: {isMale ? menRateText : womenRateText}.</p>
+            <p>{isMale
+              ? "No overcharging — exact session duration × rate."
+              : "No undercharging — exact session duration × rate."}</p>
           </div>
         </CardContent>
       </Card>
