@@ -130,7 +130,8 @@ export const useMiniChatBilling = ({
         await supabase
           .from("active_chat_sessions")
           .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "inactivity_timeout" })
-          .eq("id", sessionId);
+          .eq("id", sessionId)
+          .neq("status", "ended");
       } catch (error) {
         console.error("Error during inactivity close:", error);
       }
