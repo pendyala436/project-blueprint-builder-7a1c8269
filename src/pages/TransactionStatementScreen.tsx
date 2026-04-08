@@ -157,7 +157,7 @@ const fmtDuration = (sec: number | null) => {
 };
 const fmtTimeIST = (dateStr: string | null) => {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return new Date(dateStr).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour12: false, hour: "2-digit", minute: "2-digit" });
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
