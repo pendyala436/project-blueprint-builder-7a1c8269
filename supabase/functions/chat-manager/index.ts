@@ -1649,10 +1649,10 @@ serve(async (req) => {
                       counterparty_id: session.woman_user_id,
                       session_id: session.id,
                       rate_per_minute: finalRate,
-                      duration_seconds: wholeMinutesRemaining * 60,
-                      description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`
+                      duration_seconds: Math.floor(secondsRemaining),
+                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalRate}/min`
                     });
-                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
+                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(3)} min`);
                   }
                 }
               }
