@@ -364,7 +364,7 @@ async function endChatsWithRechargedMen(userId: string) {
 
     const manIds = sessions.map(s => s.man_user_id);
     const { data: wallets } = await supabase
-      .from("users_wallet")
+      .from("wallets")
       .select("user_id, balance")
       .in("user_id", manIds);
 

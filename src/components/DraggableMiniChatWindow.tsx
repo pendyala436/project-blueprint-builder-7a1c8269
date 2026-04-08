@@ -218,7 +218,7 @@ const DraggableMiniChatWindow = ({
       try {
         if (userGender === "male") {
           const { data: wallet } = await supabase
-            .from("users_wallet")
+            .from("wallets")
             .select("balance")
             .eq("user_id", currentUserId)
             .maybeSingle();

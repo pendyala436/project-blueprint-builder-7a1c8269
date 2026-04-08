@@ -445,7 +445,7 @@ export function usePrivateGroupCall({
     const minBalance = costPerMinute * 5; // Need at least 5 minutes worth
 
     const { data: wallet } = await supabase
-      .from('users_wallet')
+      .from('wallets')
       .select('balance')
       .eq('user_id', currentUserId)
       .maybeSingle();
