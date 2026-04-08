@@ -199,7 +199,7 @@ const TransactionStatementScreen = () => {
   const isMale = gender === "male";
   const rateLabels = buildRateLabels(pricing, isMale);
   const typeLabel = (txnType: string, description?: string | null, rate?: number | null) => {
-    // For generic "earning" type, infer from description or rate
+    // For generic "earning" type, infer from description or rate (women)
     if (txnType === "earning" && !isMale) {
       if (description) {
         const dl = description.toLowerCase();
@@ -209,7 +209,6 @@ const TransactionStatementScreen = () => {
         if (dl.includes("gift")) return `Gift Received — ${pricing.gift_women_percent}% credited`;
         if (dl.includes("chat")) return `Chat Earning — ₹${pricing.women_earning_rate}/min`;
       }
-      // Fallback: infer from rate_per_minute
       if (rate) {
         if (rate === pricing.video_women_earning_rate) return `Video Call Earning — ₹${rate}/min`;
         if (rate === pricing.audio_women_earning_rate) return `Audio Call Earning — ₹${rate}/min`;
@@ -217,6 +216,17 @@ const TransactionStatementScreen = () => {
         if (rate === pricing.women_earning_rate) return `Chat Earning — ₹${rate}/min`;
       }
       return "Session Earning";
+    }
+    // For generic "debit"/"credit" from wallet_transactions, infer from description
+    if ((txnType === "debit" || txnType === "credit") && description) {
+      const dl = description.toLowerCase();
+      if (dl.includes("gift") || dl.includes("tip")) return isMale ? "Gift/Tip Sent" : "Gift/Tip Received";
+      if (dl.includes("recharge")) return "Wallet Recharge";
+      if (dl.includes("withdrawal")) return "Bank Withdrawal";
+      if (dl.includes("video")) return isMale ? `Video Call — ₹${pricing.video_rate_per_minute}/min` : `Video Earning`;
+      if (dl.includes("audio")) return isMale ? `Audio Call — ₹${pricing.audio_rate_per_minute}/min` : `Audio Earning`;
+      if (dl.includes("group")) return isMale ? `Group Call — ₹${pricing.group_call_rate_per_minute}/min` : `Group Earning`;
+      if (dl.includes("chat")) return isMale ? `Chat — ₹${pricing.rate_per_minute}/min` : `Chat Earning`;
     }
     return rateLabels[txnType] || txnType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   };
