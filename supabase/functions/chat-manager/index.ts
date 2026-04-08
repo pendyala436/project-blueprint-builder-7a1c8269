@@ -1534,13 +1534,13 @@ serve(async (req) => {
           })
           .eq("chat_id", chat_id);
 
-        console.log(`Heartbeat processed: ${chat_id}, ${wholeMinutes} min billed, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
+        console.log(`Heartbeat processed: ${chat_id}, ${fractionalMinutes.toFixed(3)} min billed, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
 
         return new Response(
           JSON.stringify({
             success: true, 
             billing_started: true,
-            minutes_elapsed: wholeMinutes,
+            minutes_elapsed: fractionalMinutes,
             men_charged: menCharge,
             women_earned: womenEarnings,
             remaining_balance: newBalance
