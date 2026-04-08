@@ -112,8 +112,9 @@ export interface SessionBalanceCheck {
 // Pricing constants
 export const PRICING = {
   chat: { man: 4, woman: 2, platform: 2 },
+  audio_call: { man: 6, woman: 3, platform: 3 },
   video_call: { man: 8, woman: 4, platform: 4 },
-  private_group_call: { man: 4, woman: 2, platform: 2 },
+  private_group_call: { man: 4, woman: 0.50, platform: 3.50 },
 } as const;
 
 // ─── Wallet Functions ─────────────────────────────────────────────────────────
