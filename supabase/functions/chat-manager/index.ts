@@ -1396,9 +1396,9 @@ serve(async (req) => {
           );
         }
 
-        // Calculate charges for whole minutes
-        const menCharge = wholeMinutes * session.rate_per_minute;
-        const newTotalMinutes = session.total_minutes + wholeMinutes;
+        // Calculate charges for fractional minutes (per-second precision)
+        const menCharge = fractionalMinutes * session.rate_per_minute;
+        const newTotalMinutes = session.total_minutes + fractionalMinutes;
         
         if (!isSuperUser && (!wallet || wallet.balance < menCharge)) {
           // End chat due to insufficient balance - auto-disconnect
