@@ -484,7 +484,7 @@ const TransactionStatementScreen = () => {
                           </TableCell>
                           <TableCell className="text-xs">
                             <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
-                              {typeLabel(row.txn_type)}
+                              {typeLabel(row.txn_type, row.description, row.rate_per_minute)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
