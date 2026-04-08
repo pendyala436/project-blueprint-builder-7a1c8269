@@ -1516,7 +1516,7 @@ serve(async (req) => {
               session_id: session.id,
               rate_per_minute: womenEarningRate,
               duration_seconds: Math.floor(secondsElapsed),
-              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
             }),
             // Credit woman's wallet balance
             ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
