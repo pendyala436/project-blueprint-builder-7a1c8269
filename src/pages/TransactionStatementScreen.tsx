@@ -198,7 +198,28 @@ const TransactionStatementScreen = () => {
 
   const isMale = gender === "male";
   const rateLabels = buildRateLabels(pricing, isMale);
-  const typeLabel = (t: string) => rateLabels[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const typeLabel = (txnType: string, description?: string | null, rate?: number | null) => {
+    // For generic "earning" type, infer from description or rate
+    if (txnType === "earning" && !isMale) {
+      if (description) {
+        const dl = description.toLowerCase();
+        if (dl.includes("video")) return `Video Call Earning — ₹${pricing.video_women_earning_rate}/min`;
+        if (dl.includes("audio")) return `Audio Call Earning — ₹${pricing.audio_women_earning_rate}/min`;
+        if (dl.includes("group")) return `Group Call Earning — ₹${pricing.group_call_women_earning_rate}/min × men`;
+        if (dl.includes("gift")) return `Gift Received — ${pricing.gift_women_percent}% credited`;
+        if (dl.includes("chat")) return `Chat Earning — ₹${pricing.women_earning_rate}/min`;
+      }
+      // Fallback: infer from rate_per_minute
+      if (rate) {
+        if (rate === pricing.video_women_earning_rate) return `Video Call Earning — ₹${rate}/min`;
+        if (rate === pricing.audio_women_earning_rate) return `Audio Call Earning — ₹${rate}/min`;
+        if (rate === pricing.group_call_women_earning_rate) return `Group Call Earning — ₹${rate}/min × men`;
+        if (rate === pricing.women_earning_rate) return `Chat Earning — ₹${rate}/min`;
+      }
+      return "Session Earning";
+    }
+    return rateLabels[txnType] || txnType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  };
 
   const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min (each man) · Gift/Tip 100%`;
   const womenRateText = `Chat ₹${pricing.women_earning_rate}/min · Video ₹${pricing.video_women_earning_rate}/min · Audio ₹${pricing.audio_women_earning_rate}/min · Group ₹${pricing.group_call_women_earning_rate}/min×men · Gift/Tip ${pricing.gift_women_percent}% (platform keeps ${100 - pricing.gift_women_percent}%)`;
