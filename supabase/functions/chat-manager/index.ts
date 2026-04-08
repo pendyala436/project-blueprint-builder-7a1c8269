@@ -1625,7 +1625,7 @@ serve(async (req) => {
                 endWomanIsIndian = endFemaleProfile?.is_indian === true;
               }
 
-              const finalWomenEarning = endWomanIsIndian ? wholeMinutesRemaining * finalWomenRate : 0;
+              const finalWomenEarning = endWomanIsIndian ? fractionalMinutesRemaining * finalWomenRate : 0;
 
               const isManSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
 
