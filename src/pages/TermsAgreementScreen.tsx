@@ -723,8 +723,8 @@ const TermsAgreementScreen = () => {
         }
       }
 
-      // Create wallet for user (unified users_wallet table)
-      await supabase.from("users_wallet").upsert({
+      // Create wallet for user (unified wallets table)
+      await supabase.from("wallets").upsert({
         user_id: user.id,
         balance: 0,
         currency: "INR",
