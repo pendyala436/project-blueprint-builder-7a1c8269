@@ -1686,7 +1686,7 @@ serve(async (req) => {
 
               // Update session totals
               await supabase.from("active_chat_sessions").update({
-                total_minutes: session.total_minutes + wholeMinutesRemaining,
+                total_minutes: session.total_minutes + fractionalMinutesRemaining,
                 total_earned: session.total_earned + finalWomenEarning
               }).eq("chat_id", chat_id);
 
