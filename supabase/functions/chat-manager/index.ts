@@ -1505,7 +1505,7 @@ serve(async (req) => {
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
-              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
             }),
             supabase.from("ledger_transactions").insert({
               user_id: session.woman_user_id,
