@@ -7,9 +7,10 @@ import { classifyError, logError } from "@/lib/errors";
  * Ledger is append-only: no UPDATE or DELETE on ledger_transactions.
  *
  * Pricing:
- *   Chat:            Man ₹4/min  | Woman ₹2/min | Platform ₹2
- *   Video Call:      Man ₹8/min  | Woman ₹4/min | Platform ₹4
- *   Group Call:      Man ₹4/min  | Woman ₹2/man/min | Platform ₹2/man
+ *   Chat:            Man ₹4/min  | Woman ₹2/min   | Platform ₹2
+ *   Audio Call:      Man ₹6/min  | Woman ₹3/min   | Platform ₹3
+ *   Video Call:      Man ₹8/min  | Woman ₹4/min   | Platform ₹4
+ *   Group Call:      Man ₹4/min  | Woman ₹0.50/man/min | Platform ₹3.50/man
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -17,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Gender = 'men' | 'women';
-export type SessionType = 'chat' | 'video_call' | 'private_group_call';
+export type SessionType = 'chat' | 'audio_call' | 'video_call' | 'private_group_call';
 export type TransactionType =
   | 'recharge'
   | 'chat_charge'
@@ -111,8 +112,9 @@ export interface SessionBalanceCheck {
 // Pricing constants
 export const PRICING = {
   chat: { man: 4, woman: 2, platform: 2 },
+  audio_call: { man: 6, woman: 3, platform: 3 },
   video_call: { man: 8, woman: 4, platform: 4 },
-  private_group_call: { man: 4, woman: 2, platform: 2 },
+  private_group_call: { man: 4, woman: 0.50, platform: 3.50 },
 } as const;
 
 // ─── Wallet Functions ─────────────────────────────────────────────────────────

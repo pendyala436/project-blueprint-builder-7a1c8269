@@ -4,9 +4,10 @@
  * Hidden: Transaction/earnings history (admin-only via /admin/statements)
  *
  * Earnings come from women_earnings table:
- *   Text chat  → ₹2/min per man chatting
+ *   Text chat  → ₹2/min
+ *   Audio call → ₹3/min
  *   Video call → ₹4/min
- *   Group call → ₹2/min per man in call
+ *   Group call → ₹0.50/min per man in call
  */
 
 import { useState, useEffect } from "react";
