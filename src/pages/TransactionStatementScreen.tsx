@@ -152,12 +152,8 @@ interface TxRow {
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const totalSec = Math.round(sec);
-  const totalMin = Math.floor(totalSec / 60);
-  const remainSec = totalSec % 60;
-  if (totalMin === 0) return `${remainSec} sec`;
-  if (remainSec === 0) return `${totalMin} min`;
-  return `${totalMin} min ${remainSec} sec`;
+  const totalMin = Math.ceil(sec / 60);
+  return `${totalMin} min`;
 };
 const fmtTimeIST = (dateStr: string | null) => {
   if (!dateStr) return null;
