@@ -200,7 +200,7 @@ const TransactionStatementScreen = () => {
   const rateLabels = buildRateLabels(pricing, isMale);
   const typeLabel = (t: string) => rateLabels[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 
-  const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min · Gift/Tip 100%`;
+  const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min (each man) · Gift/Tip 100%`;
   const womenRateText = `Chat ₹${pricing.women_earning_rate}/min · Video ₹${pricing.video_women_earning_rate}/min · Audio ₹${pricing.audio_women_earning_rate}/min · Group ₹${pricing.group_call_women_earning_rate}/min×men · Gift/Tip ${pricing.gift_women_percent}% (platform keeps ${100 - pricing.gift_women_percent}%)`;
 
   // Load statement
