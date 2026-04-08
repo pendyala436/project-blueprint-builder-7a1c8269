@@ -1586,10 +1586,10 @@ serve(async (req) => {
           const now = new Date();
           const lastActivity = new Date(session.last_activity_at);
           const secondsRemaining = (now.getTime() - lastActivity.getTime()) / 1000;
-          const wholeMinutesRemaining = Math.floor(secondsRemaining / 60);
+          const fractionalMinutesRemaining = secondsRemaining / 60;
 
-          // Only bill if at least 1 whole minute and session was actively billing
-          if (wholeMinutesRemaining >= 1 && session.status === "active") {
+          // Only bill if there's billable time and session was actively billing
+          if (fractionalMinutesRemaining > 0 && session.status === "active") {
             // Check both parties messaged (billing prerequisite)
             const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
               supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.man_user_id).limit(1),
