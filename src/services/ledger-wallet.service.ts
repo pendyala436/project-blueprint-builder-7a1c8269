@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Gender = 'men' | 'women';
-export type SessionType = 'chat' | 'video_call' | 'private_group_call';
+export type SessionType = 'chat' | 'audio_call' | 'video_call' | 'private_group_call';
 export type TransactionType =
   | 'recharge'
   | 'chat_charge'
