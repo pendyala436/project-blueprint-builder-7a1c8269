@@ -1450,7 +1450,7 @@ serve(async (req) => {
               success: true,
               billing_started: true,
               super_user: true,
-              minutes_elapsed: wholeMinutes,
+              minutes_elapsed: fractionalMinutes,
               women_earned: womenEarnings,
               woman_is_indian: womanIsIndian,
               message: "Super user - no charge applied"
