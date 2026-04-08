@@ -417,7 +417,7 @@ const TransactionStatementScreen = () => {
                     {/* Opening balance row */}
                     {summary && (
                       <TableRow className="bg-muted/20">
-                        <TableCell className="text-xs text-muted-foreground" colSpan={isMale ? 8 : 8}>
+                        <TableCell className="text-xs text-muted-foreground" colSpan={6}>
                           Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
                         </TableCell>
                         <TableCell className="text-xs text-right">—</TableCell>
