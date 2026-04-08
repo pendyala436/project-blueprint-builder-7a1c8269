@@ -1492,8 +1492,8 @@ serve(async (req) => {
             counterparty_id: session.woman_user_id,
             session_id: session.id,
             rate_per_minute: session.rate_per_minute,
-            duration_seconds: wholeMinutes * 60,
-            description: `Chat debit - ${wholeMinutes} min at ₹${session.rate_per_minute}/min`
+            duration_seconds: Math.floor(secondsElapsed),
+            description: `Chat debit - ${fractionalMinutes.toFixed(3)} min at ₹${session.rate_per_minute}/min`
           });
 
         // Only Indian women earn from chats
