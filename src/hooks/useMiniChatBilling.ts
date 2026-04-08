@@ -127,11 +127,9 @@ export const useMiniChatBilling = ({
       setInactiveWarning(null);
       stopBillingTimers();
       try {
-        await supabase
-          .from("active_chat_sessions")
-          .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "inactivity_timeout" })
-          .eq("id", sessionId)
-          .neq("status", "ended");
+        await supabase.functions.invoke("chat-manager", {
+          body: { action: "end_chat", chat_id: chatId, end_reason: "inactivity_timeout" }
+        });
       } catch (error) {
         console.error("Error during inactivity close:", error);
       }

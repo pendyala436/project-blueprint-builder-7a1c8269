@@ -20,7 +20,7 @@ import {
   ArrowLeft, Home, FileText, IndianRupee, RefreshCw,
   TrendingDown, TrendingUp, Calendar, Wallet,
 } from "lucide-react";
-import { format } from "date-fns";
+
 import { cn } from "@/lib/utils";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -136,8 +136,7 @@ const fmtDuration = (sec: number | null) => {
 };
 const fmtTimeIST = (dateStr: string | null) => {
   if (!dateStr) return null;
-  const ist = new Date(new Date(dateStr).getTime() + 5.5 * 60 * 60 * 1000);
-  return format(ist, "HH:mm:ss");
+  return new Date(dateStr).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -418,7 +417,7 @@ const TransactionStatementScreen = () => {
                     {/* Opening balance row */}
                     {summary && (
                       <TableRow className="bg-muted/20">
-                        <TableCell className="text-xs text-muted-foreground" colSpan={isMale ? 8 : 8}>
+                        <TableCell className="text-xs text-muted-foreground" colSpan={6}>
                           Opening Balance — {MONTH_NAMES[parseInt(month) - 1]} {year}
                         </TableCell>
                         <TableCell className="text-xs text-right">—</TableCell>
@@ -430,12 +429,12 @@ const TransactionStatementScreen = () => {
                     )}
 
                     {rows.map((row, i) => {
-                      const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
+                      const istDateStr = new Date(row.txn_date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 
                       return (
                         <TableRow key={i} className="hover:bg-muted/30">
                           <TableCell className="text-xs whitespace-nowrap">
-                            {format(istDate, "dd MMM yyyy HH:mm")}
+                            {istDateStr}
                           </TableCell>
                           <TableCell className="text-xs">
                             <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
