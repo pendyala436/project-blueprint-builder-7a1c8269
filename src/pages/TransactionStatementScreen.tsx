@@ -429,12 +429,12 @@ const TransactionStatementScreen = () => {
                     )}
 
                     {rows.map((row, i) => {
-                      const istDate = new Date(new Date(row.txn_date).getTime() + 5.5 * 60 * 60 * 1000);
+                      const istDateStr = new Date(row.txn_date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
 
                       return (
                         <TableRow key={i} className="hover:bg-muted/30">
                           <TableCell className="text-xs whitespace-nowrap">
-                            {format(istDate, "dd MMM yyyy HH:mm")}
+                            {istDateStr}
                           </TableCell>
                           <TableCell className="text-xs">
                             <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
