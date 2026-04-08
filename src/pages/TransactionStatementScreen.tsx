@@ -57,23 +57,43 @@ const DEFAULT_PRICING: ChatPricing = {
 };
 
 function buildRateLabels(p: ChatPricing, isMale: boolean): Record<string, string> {
+  // Shared labels used by both genders
+  const shared: Record<string, string> = {
+    opening_balance: "Opening Balance",
+    monthly_closing: "Monthly Closing",
+  };
+
   if (isMale) {
     return {
+      ...shared,
+      // Ledger types (actual DB values)
       chat_charge: `Chat — ₹${p.rate_per_minute}/min`,
-      chat_debit: `Chat — ₹${p.rate_per_minute}/min`,
       video_call_charge: `Video Call — ₹${p.video_rate_per_minute}/min`,
-      video_debit: `Video Call — ₹${p.video_rate_per_minute}/min`,
       audio_call_charge: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
+      group_call_charge: `Group Call — ₹${p.group_call_rate_per_minute}/min (each man)`,
+      recharge: "Wallet Recharge",
+      // Alternate naming from different sources
+      chat_debit: `Chat — ₹${p.rate_per_minute}/min`,
+      video_debit: `Video Call — ₹${p.video_rate_per_minute}/min`,
       audio_debit: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
-      group_call_charge: `Group Call — ₹${p.group_call_rate_per_minute}/min per man`,
+      // Gift/tip (men send)
       gift_charge: "Gift Sent — 100% deducted",
       gift_debit: "Gift Sent — 100% deducted",
+      gift: "Gift Sent — 100% deducted",
       tip_charge: "Tip Sent — 100% deducted",
-      recharge: "Wallet Recharge",
-      opening_balance: "Opening Balance",
+      tip: "Tip Sent — 100% deducted",
+      // wallet_transactions fallback (type='debit' with no transaction_type)
+      debit: "Session Charge",
+      credit: "Wallet Recharge",
+      // earning type should not appear for men but handle gracefully
+      earning: "Adjustment Credit",
     };
   }
   return {
+    ...shared,
+    // Primary ledger type for women earnings
+    earning: "Session Earning",
+    // women_earnings earning_type values
     chat: `Chat Earning — ₹${p.women_earning_rate}/min`,
     chat_earning: `Chat Earning — ₹${p.women_earning_rate}/min`,
     chat_credit: `Chat Earning — ₹${p.women_earning_rate}/min`,
@@ -85,13 +105,18 @@ function buildRateLabels(p: ChatPricing, isMale: boolean): Record<string, string
     audio_credit: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
     group_call: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
     group_call_earning: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
-    gift: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
-    gift_earning: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
-    gift_credit: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
-    tip: `Tip Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
-    tip_earning: `Tip Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    // Gift/tip (women receive)
+    gift: `Gift Received — ${p.gift_women_percent}% credited`,
+    gift_earning: `Gift Received — ${p.gift_women_percent}% credited`,
+    gift_credit: `Gift Received — ${p.gift_women_percent}% credited`,
+    tip: `Tip Received — ${p.gift_women_percent}% credited`,
+    tip_earning: `Tip Received — ${p.gift_women_percent}% credited`,
+    // Withdrawals
     withdrawal: "Bank Withdrawal",
     payout: "Bank Withdrawal",
+    // wallet_transactions fallback
+    debit: "Withdrawal / Deduction",
+    credit: "Session Earning",
   };
 }
 
@@ -173,9 +198,40 @@ const TransactionStatementScreen = () => {
 
   const isMale = gender === "male";
   const rateLabels = buildRateLabels(pricing, isMale);
-  const typeLabel = (t: string) => rateLabels[t] || t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const typeLabel = (txnType: string, description?: string | null, rate?: number | null) => {
+    // For generic "earning" type, infer from description or rate (women)
+    if (txnType === "earning" && !isMale) {
+      if (description) {
+        const dl = description.toLowerCase();
+        if (dl.includes("video")) return `Video Call Earning — ₹${pricing.video_women_earning_rate}/min`;
+        if (dl.includes("audio")) return `Audio Call Earning — ₹${pricing.audio_women_earning_rate}/min`;
+        if (dl.includes("group")) return `Group Call Earning — ₹${pricing.group_call_women_earning_rate}/min × men`;
+        if (dl.includes("gift")) return `Gift Received — ${pricing.gift_women_percent}% credited`;
+        if (dl.includes("chat")) return `Chat Earning — ₹${pricing.women_earning_rate}/min`;
+      }
+      if (rate) {
+        if (rate === pricing.video_women_earning_rate) return `Video Call Earning — ₹${rate}/min`;
+        if (rate === pricing.audio_women_earning_rate) return `Audio Call Earning — ₹${rate}/min`;
+        if (rate === pricing.group_call_women_earning_rate) return `Group Call Earning — ₹${rate}/min × men`;
+        if (rate === pricing.women_earning_rate) return `Chat Earning — ₹${rate}/min`;
+      }
+      return "Session Earning";
+    }
+    // For generic "debit"/"credit" from wallet_transactions, infer from description
+    if ((txnType === "debit" || txnType === "credit") && description) {
+      const dl = description.toLowerCase();
+      if (dl.includes("gift") || dl.includes("tip")) return isMale ? "Gift/Tip Sent" : "Gift/Tip Received";
+      if (dl.includes("recharge")) return "Wallet Recharge";
+      if (dl.includes("withdrawal")) return "Bank Withdrawal";
+      if (dl.includes("video")) return isMale ? `Video Call — ₹${pricing.video_rate_per_minute}/min` : `Video Earning`;
+      if (dl.includes("audio")) return isMale ? `Audio Call — ₹${pricing.audio_rate_per_minute}/min` : `Audio Earning`;
+      if (dl.includes("group")) return isMale ? `Group Call — ₹${pricing.group_call_rate_per_minute}/min` : `Group Earning`;
+      if (dl.includes("chat")) return isMale ? `Chat — ₹${pricing.rate_per_minute}/min` : `Chat Earning`;
+    }
+    return rateLabels[txnType] || txnType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  };
 
-  const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min · Gift/Tip 100%`;
+  const menRateText = `Chat ₹${pricing.rate_per_minute}/min · Video ₹${pricing.video_rate_per_minute}/min · Audio ₹${pricing.audio_rate_per_minute}/min · Group ₹${pricing.group_call_rate_per_minute}/min (each man) · Gift/Tip 100%`;
   const womenRateText = `Chat ₹${pricing.women_earning_rate}/min · Video ₹${pricing.video_women_earning_rate}/min · Audio ₹${pricing.audio_women_earning_rate}/min · Group ₹${pricing.group_call_women_earning_rate}/min×men · Gift/Tip ${pricing.gift_women_percent}% (platform keeps ${100 - pricing.gift_women_percent}%)`;
 
   // Load statement
@@ -268,7 +324,7 @@ const TransactionStatementScreen = () => {
                   <span>💬 Chat: ₹{pricing.rate_per_minute}/min</span>
                   <span>📹 Video: ₹{pricing.video_rate_per_minute}/min</span>
                   <span>📞 Audio: ₹{pricing.audio_rate_per_minute}/min</span>
-                  <span>👥 Group: ₹{pricing.group_call_rate_per_minute}/min</span>
+                  <span>👥 Group: ₹{pricing.group_call_rate_per_minute}/min (each man)</span>
                   <span>🎁 Gift: 100%</span>
                   <span>💰 Tip: 100%</span>
                 </>
@@ -438,7 +494,7 @@ const TransactionStatementScreen = () => {
                           </TableCell>
                           <TableCell className="text-xs">
                             <Badge variant="outline" className="text-[10px] font-normal whitespace-nowrap">
-                              {typeLabel(row.txn_type)}
+                              {typeLabel(row.txn_type, row.description, row.rate_per_minute)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
