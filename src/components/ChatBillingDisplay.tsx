@@ -59,8 +59,8 @@ const ChatBillingDisplay = ({
   const sessionStarted = useRef(false);
   const loadInProgress = useRef(false);
 
-  const MESSAGE_INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
-  const WARNING_THRESHOLD = 120000; // 2 minutes - show warning
+  const MESSAGE_INACTIVITY_TIMEOUT = 120000; // 2 minutes in ms (spec: billing stops after 2min idle)
+  const WARNING_THRESHOLD = 60000; // 1 minute - show warning
 
   // Gender check moved after all hooks - render null at the bottom
   const isWrongGender = userGender !== "male";

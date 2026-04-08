@@ -1364,11 +1364,10 @@ serve(async (req) => {
           );
         }
 
-        // Bill exactly in whole minutes (floor), carry forward remainder via last_activity_at
-        const wholeMinutes = Math.floor(secondsElapsed / 60);
-        const billedSeconds = wholeMinutes * 60;
-        // Set last_activity_at to lastActivity + billedSeconds (NOT now) so remainder carries forward
-        const newLastActivity = new Date(lastActivity.getTime() + billedSeconds * 1000);
+        // Bill fractional minutes (per-second precision: seconds / 60) per spec
+        const fractionalMinutes = secondsElapsed / 60;
+        // Advance last_activity_at to now (no remainder carry-forward needed with per-second precision)
+        const newLastActivity = new Date(lastActivity.getTime() + Math.floor(secondsElapsed) * 1000);
 
         // RACE CONDITION GUARD: Atomically update last_activity_at only if it hasn't changed
         // This prevents two concurrent heartbeats from both billing for the same period
