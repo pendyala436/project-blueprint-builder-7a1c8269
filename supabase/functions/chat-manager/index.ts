@@ -1666,7 +1666,7 @@ serve(async (req) => {
                     chat_session_id: session.id,
                     amount: finalWomenEarning,
                     earning_type: "chat",
-                    description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
+                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalWomenRate}/min`
                   }),
                   supabase.from("ledger_transactions").insert({
                     user_id: session.woman_user_id,
@@ -1676,8 +1676,8 @@ serve(async (req) => {
                     counterparty_id: session.man_user_id,
                     session_id: session.id,
                     rate_per_minute: finalWomenRate,
-                    duration_seconds: wholeMinutesRemaining * 60,
-                    description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
+                    duration_seconds: Math.floor(secondsRemaining),
+                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalWomenRate}/min`
                   }),
                   // Credit woman's wallet balance
                   ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: finalWomenEarning })] : [])
