@@ -3823,18 +3823,31 @@ export type Database = {
         }
         Returns: Json
       }
-      ledger_bill_session: {
-        Args: {
-          p_man_charge: number
-          p_man_id: string
-          p_minute_number: number
-          p_session_id: string
-          p_session_type: string
-          p_woman_earn: number
-          p_woman_id: string
-        }
-        Returns: Json
-      }
+      ledger_bill_session:
+        | {
+            Args: {
+              p_man_charge: number
+              p_man_id: string
+              p_minute_number: number
+              p_session_id: string
+              p_session_type: string
+              p_woman_earn: number
+              p_woman_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_man_charge: number
+              p_man_id: string
+              p_minute_number: number
+              p_session_id: string
+              p_session_type: string
+              p_woman_earn: number
+              p_woman_id: string
+            }
+            Returns: Json
+          }
       ledger_recharge: {
         Args: {
           p_amount: number
@@ -3999,6 +4012,22 @@ export type Database = {
       reset_private_group_counts: { Args: never; Returns: undefined }
       reset_women_wallets_after_snapshot: { Args: never; Returns: Json }
       revert_busy_to_online: { Args: { p_user_id: string }; Returns: undefined }
+      safe_ledger_insert: {
+        Args: {
+          p_counterparty_id: string
+          p_credit: number
+          p_debit: number
+          p_description: string
+          p_duration_seconds: number
+          p_entry_type: string
+          p_rate: number
+          p_ref_key: string
+          p_session_id: string
+          p_timestamp?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
