@@ -652,6 +652,17 @@ export function usePrivateGroupCall({
           pc.close();
           peerConnections.current.delete(key);
         }
+
+        // Mark participant as no longer having access so billing stops immediately
+        supabase
+          .from('group_memberships')
+          .update({ has_access: false })
+          .eq('group_id', groupId)
+          .eq('user_id', key)
+          .then(({ error }) => {
+            if (error) console.warn('[GROUP] Failed to revoke access on leave:', error);
+            else console.log('[GROUP] Revoked has_access for departed participant:', key);
+          });
         
         onParticipantLeave?.(key, 'left');
         
