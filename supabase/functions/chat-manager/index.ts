@@ -1648,7 +1648,7 @@ serve(async (req) => {
                       session_id: session.id,
                       rate_per_minute: finalRate,
                       duration_seconds: Math.floor(secondsRemaining),
-                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalRate}/min`
+                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalRate}/min`
                     });
                     console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(3)} min`);
                   }
