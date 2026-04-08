@@ -20,7 +20,7 @@ import {
   ArrowLeft, Home, FileText, IndianRupee, RefreshCw,
   TrendingDown, TrendingUp, Calendar, Wallet,
 } from "lucide-react";
-import { format } from "date-fns";
+
 import { cn } from "@/lib/utils";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
