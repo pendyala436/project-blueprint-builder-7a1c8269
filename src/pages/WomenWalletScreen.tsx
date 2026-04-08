@@ -91,7 +91,7 @@ const WomenWalletScreen = () => {
         .maybeSingle();
       if (pricing) setMinWithdrawal(Number(pricing.min_withdrawal_balance) || 100);
 
-      // users_wallet.balance is the single source of truth for women's wallet.
+      // wallets.balance is the single source of truth for women's wallet.
       // It is incremented directly on every session earning credit (chat, video, group call).
       // No history list shown — only balance + pending withdrawals.
       const { data: balanceData, error: balanceError } = await supabase.rpc(
@@ -102,7 +102,7 @@ const WomenWalletScreen = () => {
         return;
       }
       const bd = balanceData as Record<string, number> | null;
-      // balance = users_wallet.balance (direct, not computed from women_earnings sum)
+      // balance = wallets.balance (direct, not computed from women_earnings sum)
       setTotalEarnings(Number(bd?.total_earnings) || 0);
       setAvailableBalance(Number(bd?.available_balance) || 0);
       setPendingWithdrawals(Number(bd?.pending_withdrawals) || 0);
