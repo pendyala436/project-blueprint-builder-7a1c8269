@@ -1491,7 +1491,7 @@ serve(async (req) => {
             session_id: session.id,
             rate_per_minute: session.rate_per_minute,
             duration_seconds: Math.floor(secondsElapsed),
-            description: `Chat debit - ${fractionalMinutes.toFixed(3)} min at ₹${session.rate_per_minute}/min`
+            description: `Chat debit - ${fractionalMinutes.toFixed(1)} min at ₹${session.rate_per_minute}/min`
           });
 
         // Only Indian women earn from chats
