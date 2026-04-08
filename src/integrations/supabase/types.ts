@@ -2894,6 +2894,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          description: string | null
           gateway_transaction_id: string | null
           id: string
           payment_gateway: string
@@ -2903,6 +2904,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          description?: string | null
           gateway_transaction_id?: string | null
           id?: string
           payment_gateway?: string
@@ -2912,6 +2914,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          description?: string | null
           gateway_transaction_id?: string | null
           id?: string
           payment_gateway?: string
