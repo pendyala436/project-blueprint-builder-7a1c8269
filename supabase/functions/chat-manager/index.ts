@@ -1427,7 +1427,7 @@ serve(async (req) => {
                 chat_session_id: session.id,
                 amount: womenEarnings,
                 earning_type: "chat",
-                description: `Chat earning (super user) - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
+                description: `Chat earning (super user) - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
               }),
               ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
             ]);
@@ -1491,7 +1491,7 @@ serve(async (req) => {
             session_id: session.id,
             rate_per_minute: session.rate_per_minute,
             duration_seconds: Math.floor(secondsElapsed),
-            description: `Chat debit - ${fractionalMinutes.toFixed(3)} min at ₹${session.rate_per_minute}/min`
+            description: `Chat debit - ${fractionalMinutes.toFixed(1)} min at ₹${session.rate_per_minute}/min`
           });
 
         // Only Indian women earn from chats
@@ -1505,7 +1505,7 @@ serve(async (req) => {
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
-              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
             }),
             supabase.from("ledger_transactions").insert({
               user_id: session.woman_user_id,
@@ -1516,7 +1516,7 @@ serve(async (req) => {
               session_id: session.id,
               rate_per_minute: womenEarningRate,
               duration_seconds: Math.floor(secondsElapsed),
-              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
             }),
             // Credit woman's wallet balance
             ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
@@ -1648,9 +1648,9 @@ serve(async (req) => {
                       session_id: session.id,
                       rate_per_minute: finalRate,
                       duration_seconds: Math.floor(secondsRemaining),
-                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalRate}/min`
+                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalRate}/min`
                     });
-                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(3)} min`);
+                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(1)} min`);
                   }
                 }
               }
@@ -1664,7 +1664,7 @@ serve(async (req) => {
                     chat_session_id: session.id,
                     amount: finalWomenEarning,
                     earning_type: "chat",
-                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalWomenRate}/min`
+                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalWomenRate}/min`
                   }),
                   supabase.from("ledger_transactions").insert({
                     user_id: session.woman_user_id,
@@ -1675,7 +1675,7 @@ serve(async (req) => {
                     session_id: session.id,
                     rate_per_minute: finalWomenRate,
                     duration_seconds: Math.floor(secondsRemaining),
-                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalWomenRate}/min`
+                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalWomenRate}/min`
                   }),
                   // Credit woman's wallet balance
                   ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: finalWomenEarning })] : [])
