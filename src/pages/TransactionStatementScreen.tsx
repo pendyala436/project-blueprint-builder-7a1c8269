@@ -60,10 +60,14 @@ function buildRateLabels(p: ChatPricing, isMale: boolean): Record<string, string
   if (isMale) {
     return {
       chat_charge: `Chat — ₹${p.rate_per_minute}/min`,
+      chat_debit: `Chat — ₹${p.rate_per_minute}/min`,
       video_call_charge: `Video Call — ₹${p.video_rate_per_minute}/min`,
+      video_debit: `Video Call — ₹${p.video_rate_per_minute}/min`,
       audio_call_charge: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
+      audio_debit: `Audio Call — ₹${p.audio_rate_per_minute}/min`,
       group_call_charge: `Group Call — ₹${p.group_call_rate_per_minute}/min per man`,
       gift_charge: "Gift Sent — 100% deducted",
+      gift_debit: "Gift Sent — 100% deducted",
       tip_charge: "Tip Sent — 100% deducted",
       recharge: "Wallet Recharge",
       opening_balance: "Opening Balance",
@@ -71,12 +75,23 @@ function buildRateLabels(p: ChatPricing, isMale: boolean): Record<string, string
   }
   return {
     chat: `Chat Earning — ₹${p.women_earning_rate}/min`,
+    chat_earning: `Chat Earning — ₹${p.women_earning_rate}/min`,
+    chat_credit: `Chat Earning — ₹${p.women_earning_rate}/min`,
     video_call: `Video Call Earning — ₹${p.video_women_earning_rate}/min`,
+    video_earning: `Video Call Earning — ₹${p.video_women_earning_rate}/min`,
+    video_credit: `Video Call Earning — ₹${p.video_women_earning_rate}/min`,
     audio_call: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
+    audio_earning: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
+    audio_credit: `Audio Call Earning — ₹${p.audio_women_earning_rate}/min`,
     group_call: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
+    group_call_earning: `Group Call Earning — ₹${p.group_call_women_earning_rate}/min × men`,
     gift: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    gift_earning: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    gift_credit: `Gift Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
     tip: `Tip Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
+    tip_earning: `Tip Received — ${p.gift_women_percent}% credited (platform keeps ${100 - p.gift_women_percent}%)`,
     withdrawal: "Bank Withdrawal",
+    payout: "Bank Withdrawal",
   };
 }
 
