@@ -928,6 +928,18 @@ export function usePrivateGroupCall({
     if (timerRef.current) clearInterval(timerRef.current);
     if (billingRef.current) clearInterval(billingRef.current);
 
+    // If participant (not host), revoke own access so billing stops
+    if (!isOwner && groupId && currentUserId) {
+      supabase
+        .from('group_memberships')
+        .update({ has_access: false })
+        .eq('group_id', groupId)
+        .eq('user_id', currentUserId)
+        .then(({ error }) => {
+          if (error) console.warn('[GROUP] Failed to revoke own access on cleanup:', error);
+        });
+    }
+
     // Stop local tracks
     localStream.current?.getTracks().forEach(track => track.stop());
     localStream.current = null;
