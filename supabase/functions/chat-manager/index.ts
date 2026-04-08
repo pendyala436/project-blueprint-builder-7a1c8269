@@ -1419,7 +1419,7 @@ serve(async (req) => {
         // Super users don't get charged but Indian women still earn
         if (isSuperUser) {
           // Only credit Indian women
-          const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
+          const womenEarnings = womanIsIndian ? fractionalMinutes * womenEarningRate : 0;
           
           if (womenEarnings > 0) {
             const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
@@ -1429,7 +1429,7 @@ serve(async (req) => {
                 chat_session_id: session.id,
                 amount: womenEarnings,
                 earning_type: "chat",
-                description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
+                description: `Chat earning (super user) - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
               }),
               ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
             ]);
