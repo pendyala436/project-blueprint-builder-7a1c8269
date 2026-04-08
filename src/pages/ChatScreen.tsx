@@ -923,7 +923,7 @@ const ChatScreen = () => {
           .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
-            table: 'users_wallet',
+            table: 'wallets',
             filter: `user_id=eq.${user.id}`,
           }, (payload: any) => {
             if (payload.new?.balance !== undefined) {

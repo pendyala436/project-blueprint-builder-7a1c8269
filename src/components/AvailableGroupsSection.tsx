@@ -57,7 +57,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         }
         fetchGroups();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'users_wallet', filter: `user_id=eq.${currentUserId}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${currentUserId}` }, () => {
         fetchWalletBalance();
       })
       .subscribe();
@@ -81,7 +81,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchWalletBalance = async () => {
     try {
-      const { data } = await supabase.from('users_wallet').select('balance').eq('user_id', currentUserId).single();
+      const { data } = await supabase.from('wallets').select('balance').eq('user_id', currentUserId).single();
       if (data) setWalletBalance(data.balance);
     } catch (err) { console.error('[AvailableGroups] fetchWalletBalance error:', err); }
   };

@@ -30,7 +30,7 @@ const ChatEarningsDisplay = ({
   const [earningBadgeType, setEarningBadgeType] = useState<string | null>(null);
   const inactivityInterval = useRef<NodeJS.Timeout | null>(null);
   
-  const INACTIVITY_TIMEOUT = 180000; // 3 minutes in ms
+  const INACTIVITY_TIMEOUT = 120000; // 2 minutes in ms (spec: billing stops after 2min idle)
 
   // Gender check moved after all hooks - render null below
   const isWrongGender = userGender !== "female";

@@ -1345,30 +1345,27 @@ serve(async (req) => {
           .eq("user_id", session.man_user_id)
           .maybeSingle();
 
-        // MINUTE-WISE BILLING: Only bill when >= 60 seconds have elapsed
-        // This prevents fractional/incremental entries and ensures exactly 1 entry per minute
-        if (secondsElapsed < 60) {
-          console.log(`[HEARTBEAT] Only ${secondsElapsed.toFixed(0)}s elapsed for chat ${chat_id} - waiting for full minute`);
+        // Per-second precision billing: bill any elapsed time (no minimum threshold)
+        if (secondsElapsed < 1) {
           return new Response(
             JSON.stringify({
-            success: true,
-            billing_started: true,
-            minutes_elapsed: 0,
-            men_charged: 0,
-            women_earned: 0,
-            remaining_balance: wallet?.balance ?? 0,
-            waiting_for_full_minute: true,
-            seconds_elapsed: Math.floor(secondsElapsed)
+              success: true,
+              billing_started: true,
+              minutes_elapsed: 0,
+              men_charged: 0,
+              women_earned: 0,
+              remaining_balance: wallet?.balance ?? 0,
+              waiting: true,
+              seconds_elapsed: 0
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Bill exactly in whole minutes (floor), carry forward remainder via last_activity_at
-        const wholeMinutes = Math.floor(secondsElapsed / 60);
-        const billedSeconds = wholeMinutes * 60;
-        // Set last_activity_at to lastActivity + billedSeconds (NOT now) so remainder carries forward
-        const newLastActivity = new Date(lastActivity.getTime() + billedSeconds * 1000);
+        // Bill fractional minutes (per-second precision: seconds / 60) per spec
+        const fractionalMinutes = secondsElapsed / 60;
+        // Advance last_activity_at to now (no remainder carry-forward needed with per-second precision)
+        const newLastActivity = new Date(lastActivity.getTime() + Math.floor(secondsElapsed) * 1000);
 
         // RACE CONDITION GUARD: Atomically update last_activity_at only if it hasn't changed
         // This prevents two concurrent heartbeats from both billing for the same period
@@ -1397,9 +1394,9 @@ serve(async (req) => {
           );
         }
 
-        // Calculate charges for whole minutes
-        const menCharge = wholeMinutes * session.rate_per_minute;
-        const newTotalMinutes = session.total_minutes + wholeMinutes;
+        // Calculate charges for fractional minutes (per-second precision)
+        const menCharge = fractionalMinutes * session.rate_per_minute;
+        const newTotalMinutes = session.total_minutes + fractionalMinutes;
         
         if (!isSuperUser && (!wallet || wallet.balance < menCharge)) {
           // End chat due to insufficient balance - auto-disconnect
@@ -1420,7 +1417,7 @@ serve(async (req) => {
         // Super users don't get charged but Indian women still earn
         if (isSuperUser) {
           // Only credit Indian women
-          const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
+          const womenEarnings = womanIsIndian ? fractionalMinutes * womenEarningRate : 0;
           
           if (womenEarnings > 0) {
             const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
@@ -1430,7 +1427,7 @@ serve(async (req) => {
                 chat_session_id: session.id,
                 amount: womenEarnings,
                 earning_type: "chat",
-                description: `Chat earning (super user) - ${wholeMinutes} min at ₹${womenEarningRate}/min`
+                description: `Chat earning (super user) - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
               }),
               ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
             ]);
@@ -1451,7 +1448,7 @@ serve(async (req) => {
               success: true,
               billing_started: true,
               super_user: true,
-              minutes_elapsed: wholeMinutes,
+              minutes_elapsed: fractionalMinutes,
               women_earned: womenEarnings,
               woman_is_indian: womanIsIndian,
               message: "Super user - no charge applied"
@@ -1493,12 +1490,12 @@ serve(async (req) => {
             counterparty_id: session.woman_user_id,
             session_id: session.id,
             rate_per_minute: session.rate_per_minute,
-            duration_seconds: wholeMinutes * 60,
-            description: `Chat debit - ${wholeMinutes} min at ₹${session.rate_per_minute}/min`
+            duration_seconds: Math.floor(secondsElapsed),
+            description: `Chat debit - ${fractionalMinutes.toFixed(3)} min at ₹${session.rate_per_minute}/min`
           });
 
         // Only Indian women earn from chats
-        const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
+        const womenEarnings = womanIsIndian ? fractionalMinutes * womenEarningRate : 0;
         
         if (womenEarnings > 0) {
           const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
@@ -1508,7 +1505,7 @@ serve(async (req) => {
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
-              description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
             }),
             supabase.from("ledger_transactions").insert({
               user_id: session.woman_user_id,
@@ -1518,8 +1515,8 @@ serve(async (req) => {
               counterparty_id: session.man_user_id,
               session_id: session.id,
               rate_per_minute: womenEarningRate,
-              duration_seconds: wholeMinutes * 60,
-              description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
+              duration_seconds: Math.floor(secondsElapsed),
+              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
             }),
             // Credit woman's wallet balance
             ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
@@ -1535,13 +1532,13 @@ serve(async (req) => {
           })
           .eq("chat_id", chat_id);
 
-        console.log(`Heartbeat processed: ${chat_id}, ${wholeMinutes} min billed, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
+        console.log(`Heartbeat processed: ${chat_id}, ${fractionalMinutes.toFixed(3)} min billed, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
 
         return new Response(
           JSON.stringify({
             success: true, 
             billing_started: true,
-            minutes_elapsed: wholeMinutes,
+            minutes_elapsed: fractionalMinutes,
             men_charged: menCharge,
             women_earned: womenEarnings,
             remaining_balance: newBalance
@@ -1587,10 +1584,10 @@ serve(async (req) => {
           const now = new Date();
           const lastActivity = new Date(session.last_activity_at);
           const secondsRemaining = (now.getTime() - lastActivity.getTime()) / 1000;
-          const wholeMinutesRemaining = Math.floor(secondsRemaining / 60);
+          const fractionalMinutesRemaining = secondsRemaining / 60;
 
-          // Only bill if at least 1 whole minute and session was actively billing
-          if (wholeMinutesRemaining >= 1 && session.status === "active") {
+          // Only bill if there's billable time and session was actively billing
+          if (fractionalMinutesRemaining > 0 && session.status === "active") {
             // Check both parties messaged (billing prerequisite)
             const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
               supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.man_user_id).limit(1),
@@ -1606,7 +1603,7 @@ serve(async (req) => {
 
               const finalRate = endPricing?.rate_per_minute || session.rate_per_minute || 4;
               const finalWomenRate = endPricing?.women_earning_rate || 2;
-              const finalMenCharge = wholeMinutesRemaining * finalRate;
+              const finalMenCharge = fractionalMinutesRemaining * finalRate;
 
               // Check if the woman is Indian (only Indian women earn)
               let endWomanIsIndian = false;
@@ -1626,7 +1623,7 @@ serve(async (req) => {
                 endWomanIsIndian = endFemaleProfile?.is_indian === true;
               }
 
-              const finalWomenEarning = endWomanIsIndian ? wholeMinutesRemaining * finalWomenRate : 0;
+              const finalWomenEarning = endWomanIsIndian ? fractionalMinutesRemaining * finalWomenRate : 0;
 
               const isManSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
 
@@ -1650,10 +1647,10 @@ serve(async (req) => {
                       counterparty_id: session.woman_user_id,
                       session_id: session.id,
                       rate_per_minute: finalRate,
-                      duration_seconds: wholeMinutesRemaining * 60,
-                      description: `Chat debit - ${wholeMinutesRemaining} min at ₹${finalRate}/min`
+                      duration_seconds: Math.floor(secondsRemaining),
+                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalRate}/min`
                     });
-                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${wholeMinutesRemaining} min`);
+                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(3)} min`);
                   }
                 }
               }
@@ -1667,7 +1664,7 @@ serve(async (req) => {
                     chat_session_id: session.id,
                     amount: finalWomenEarning,
                     earning_type: "chat",
-                    description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
+                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalWomenRate}/min`
                   }),
                   supabase.from("ledger_transactions").insert({
                     user_id: session.woman_user_id,
@@ -1677,8 +1674,8 @@ serve(async (req) => {
                     counterparty_id: session.man_user_id,
                     session_id: session.id,
                     rate_per_minute: finalWomenRate,
-                    duration_seconds: wholeMinutesRemaining * 60,
-                    description: `Chat earning - ${wholeMinutesRemaining} min at ₹${finalWomenRate}/min`
+                    duration_seconds: Math.floor(secondsRemaining),
+                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(3)} min at ₹${finalWomenRate}/min`
                   }),
                   // Credit woman's wallet balance
                   ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: finalWomenEarning })] : [])
@@ -1687,7 +1684,7 @@ serve(async (req) => {
 
               // Update session totals
               await supabase.from("active_chat_sessions").update({
-                total_minutes: session.total_minutes + wholeMinutesRemaining,
+                total_minutes: session.total_minutes + fractionalMinutesRemaining,
                 total_earned: session.total_earned + finalWomenEarning
               }).eq("chat_id", chat_id);
 

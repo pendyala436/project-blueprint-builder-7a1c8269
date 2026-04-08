@@ -58,7 +58,7 @@ export const useMiniChatBilling = ({
 
         if (userGender === "male") {
           const { data: wallet } = await supabase
-            .from("users_wallet")
+            .from("wallets")
             .select("balance")
             .eq("user_id", currentUserId)
             .maybeSingle();
@@ -130,7 +130,8 @@ export const useMiniChatBilling = ({
         await supabase
           .from("active_chat_sessions")
           .update({ status: "ended", ended_at: new Date().toISOString(), end_reason: "inactivity_timeout" })
-          .eq("id", sessionId);
+          .eq("id", sessionId)
+          .neq("status", "ended");
       } catch (error) {
         console.error("Error during inactivity close:", error);
       }
