@@ -1497,7 +1497,7 @@ serve(async (req) => {
           });
 
         // Only Indian women earn from chats
-        const womenEarnings = womanIsIndian ? wholeMinutes * womenEarningRate : 0;
+        const womenEarnings = womanIsIndian ? fractionalMinutes * womenEarningRate : 0;
         
         if (womenEarnings > 0) {
           const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
@@ -1507,7 +1507,7 @@ serve(async (req) => {
               chat_session_id: session.id,
               amount: womenEarnings,
               earning_type: "chat",
-              description: `Chat earning - ${wholeMinutes} min at ₹${womenEarningRate}/min`
+              description: `Chat earning - ${fractionalMinutes.toFixed(3)} min at ₹${womenEarningRate}/min`
             }),
             supabase.from("ledger_transactions").insert({
               user_id: session.woman_user_id,
