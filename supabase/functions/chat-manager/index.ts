@@ -1605,7 +1605,7 @@ serve(async (req) => {
 
               const finalRate = endPricing?.rate_per_minute || session.rate_per_minute || 4;
               const finalWomenRate = endPricing?.women_earning_rate || 2;
-              const finalMenCharge = wholeMinutesRemaining * finalRate;
+              const finalMenCharge = fractionalMinutesRemaining * finalRate;
 
               // Check if the woman is Indian (only Indian women earn)
               let endWomanIsIndian = false;
