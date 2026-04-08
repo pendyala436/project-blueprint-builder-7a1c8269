@@ -359,8 +359,8 @@ const MiniChatWindow = ({
       const timeSinceActivity = Date.now() - lastActivityTime;
       
       if (timeSinceActivity >= IDLE_WARNING_MS && timeSinceActivity < IDLE_CLOSE_TIMEOUT_MS) {
-        const remainingSecs = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Chat closes in ${remainingSecs}s - send a message!`);
+        const remainingMins = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 60000);
+        setInactiveWarning(`Chat closes in ${remainingMins} min - send a message!`);
       } else {
         setInactiveWarning(null);
       }
@@ -862,7 +862,7 @@ const MiniChatWindow = ({
             </div>
             {isFreeChatMode && (
               <Badge variant="outline" className="text-[9px] h-4 px-1 border-amber-400 text-amber-600">
-                ⏱ Free {Math.floor(freeChatRemainingSeconds / 60)}:{String(freeChatRemainingSeconds % 60).padStart(2, '0')}
+                ⏱ Free {Math.ceil(freeChatRemainingSeconds / 60)} min
               </Badge>
             )}
             {billingStarted && (

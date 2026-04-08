@@ -243,11 +243,11 @@ const ChatBillingDisplay = ({
 
           // Show warning at 2 minutes
           if (womanInactive >= WARNING_THRESHOLD && womanInactive < MESSAGE_INACTIVITY_TIMEOUT) {
-            const remainingSecs = Math.ceil((MESSAGE_INACTIVITY_TIMEOUT - womanInactive) / 1000);
-            setInactiveWarning(`Partner hasn't replied. Chat will end in ${remainingSecs}s`);
+            const remainingMins = Math.ceil((MESSAGE_INACTIVITY_TIMEOUT - womanInactive) / 60000);
+            setInactiveWarning(`Partner hasn't replied. Chat will end in ${remainingMins} min`);
           } else if (manInactive >= WARNING_THRESHOLD && manInactive < MESSAGE_INACTIVITY_TIMEOUT) {
-            const remainingSecs = Math.ceil((MESSAGE_INACTIVITY_TIMEOUT - manInactive) / 1000);
-            setInactiveWarning(`You haven't replied. Chat will end in ${remainingSecs}s`);
+            const remainingMins = Math.ceil((MESSAGE_INACTIVITY_TIMEOUT - manInactive) / 60000);
+            setInactiveWarning(`You haven't replied. Chat will end in ${remainingMins} min`);
           } else {
             setInactiveWarning(null);
           }

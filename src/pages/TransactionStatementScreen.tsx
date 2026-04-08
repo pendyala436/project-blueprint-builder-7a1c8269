@@ -152,12 +152,8 @@ interface TxRow {
 const fmtINR = (v: number) => `₹${Number(v).toFixed(2)}`;
 const fmtDuration = (sec: number | null) => {
   if (!sec || sec <= 0) return "—";
-  const totalSec = Math.round(sec);
-  const totalMin = Math.floor(totalSec / 60);
-  const remainSec = totalSec % 60;
-  if (totalMin === 0) return `${remainSec} sec`;
-  if (remainSec === 0) return `${totalMin} min`;
-  return `${totalMin} min ${remainSec} sec`;
+  const totalMin = Math.ceil(sec / 60);
+  return `${totalMin} min`;
 };
 const fmtTimeIST = (dateStr: string | null) => {
   if (!dateStr) return null;
@@ -572,7 +568,7 @@ const TransactionStatementScreen = () => {
 
             {/* Footer disclaimer */}
             <div className="px-4 py-3 border-t text-[10px] text-muted-foreground text-center space-y-0.5">
-              <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration = exact seconds ÷ 60.</p>
+              <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration in minutes.</p>
               <p>Rates: {isMale ? menRateText : womenRateText}.</p>
               <p>{isMale
                 ? "No overcharging — exact session duration × rate."

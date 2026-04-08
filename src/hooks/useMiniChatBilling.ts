@@ -114,8 +114,8 @@ export const useMiniChatBilling = ({
     const warningInterval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
       if (timeSinceActivity > IDLE_WARNING_MS && timeSinceActivity < IDLE_CLOSE_TIMEOUT_MS) {
-        const remainingSeconds = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 1000);
-        setInactiveWarning(`Chat closes in ${remainingSeconds}s - send a message!`);
+        const remainingMins = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 60000);
+        setInactiveWarning(`Chat closes in ${remainingMins} min - send a message!`);
       } else {
         setInactiveWarning(null);
       }

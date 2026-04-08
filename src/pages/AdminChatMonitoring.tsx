@@ -92,9 +92,8 @@ const LiveDuration = ({ startedAt }: { startedAt: string | null }) => {
       const now = new Date();
       const start = new Date(startedAt);
       const totalSec = differenceInSeconds(now, start);
-      const mins = Math.floor(totalSec / 60);
-      const secs = totalSec % 60;
-      setElapsed(`${mins}m ${secs.toString().padStart(2, "0")}s`);
+      const mins = Math.ceil(totalSec / 60);
+      setElapsed(`${mins} min`);
     };
     tick();
     const id = setInterval(tick, 1000);
