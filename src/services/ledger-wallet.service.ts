@@ -7,9 +7,10 @@ import { classifyError, logError } from "@/lib/errors";
  * Ledger is append-only: no UPDATE or DELETE on ledger_transactions.
  *
  * Pricing:
- *   Chat:            Man ₹4/min  | Woman ₹2/min | Platform ₹2
- *   Video Call:      Man ₹8/min  | Woman ₹4/min | Platform ₹4
- *   Group Call:      Man ₹4/min  | Woman ₹2/man/min | Platform ₹2/man
+ *   Chat:            Man ₹4/min  | Woman ₹2/min   | Platform ₹2
+ *   Audio Call:      Man ₹6/min  | Woman ₹3/min   | Platform ₹3
+ *   Video Call:      Man ₹8/min  | Woman ₹4/min   | Platform ₹4
+ *   Group Call:      Man ₹4/min  | Woman ₹0.50/man/min | Platform ₹3.50/man
  */
 
 import { supabase } from '@/integrations/supabase/client';
