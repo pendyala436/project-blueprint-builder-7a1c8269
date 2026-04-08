@@ -54,9 +54,8 @@ export const WhatsAppCallScreen = ({
   }, [status]);
 
   const fmtDuration = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    const m = Math.ceil(s / 60);
+    return `${m} min`;
   };
 
   if (!activeCall || status === 'idle' || status === 'ended') return null;
