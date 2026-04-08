@@ -568,7 +568,7 @@ const TransactionStatementScreen = () => {
 
             {/* Footer disclaimer */}
             <div className="px-4 py-3 border-t text-[10px] text-muted-foreground text-center space-y-0.5">
-              <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration = exact seconds ÷ 60.</p>
+              <p>System-generated statement. Currency: INR. All timestamps shown in IST (UTC+5:30). Duration in minutes.</p>
               <p>Rates: {isMale ? menRateText : womenRateText}.</p>
               <p>{isMale
                 ? "No overcharging — exact session duration × rate."
