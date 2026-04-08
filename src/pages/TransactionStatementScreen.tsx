@@ -293,7 +293,7 @@ const TransactionStatementScreen = () => {
                   <span>💬 Chat: ₹{pricing.rate_per_minute}/min</span>
                   <span>📹 Video: ₹{pricing.video_rate_per_minute}/min</span>
                   <span>📞 Audio: ₹{pricing.audio_rate_per_minute}/min</span>
-                  <span>👥 Group: ₹{pricing.group_call_rate_per_minute}/min</span>
+                  <span>👥 Group: ₹{pricing.group_call_rate_per_minute}/min (each man)</span>
                   <span>🎁 Gift: 100%</span>
                   <span>💰 Tip: 100%</span>
                 </>
