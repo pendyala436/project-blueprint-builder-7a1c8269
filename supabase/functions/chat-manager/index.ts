@@ -1345,20 +1345,18 @@ serve(async (req) => {
           .eq("user_id", session.man_user_id)
           .maybeSingle();
 
-        // MINUTE-WISE BILLING: Only bill when >= 60 seconds have elapsed
-        // This prevents fractional/incremental entries and ensures exactly 1 entry per minute
-        if (secondsElapsed < 60) {
-          console.log(`[HEARTBEAT] Only ${secondsElapsed.toFixed(0)}s elapsed for chat ${chat_id} - waiting for full minute`);
+        // Per-second precision billing: bill any elapsed time (no minimum threshold)
+        if (secondsElapsed < 1) {
           return new Response(
             JSON.stringify({
-            success: true,
-            billing_started: true,
-            minutes_elapsed: 0,
-            men_charged: 0,
-            women_earned: 0,
-            remaining_balance: wallet?.balance ?? 0,
-            waiting_for_full_minute: true,
-            seconds_elapsed: Math.floor(secondsElapsed)
+              success: true,
+              billing_started: true,
+              minutes_elapsed: 0,
+              men_charged: 0,
+              women_earned: 0,
+              remaining_balance: wallet?.balance ?? 0,
+              waiting: true,
+              seconds_elapsed: 0
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
