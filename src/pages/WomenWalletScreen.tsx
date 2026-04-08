@@ -102,7 +102,7 @@ const WomenWalletScreen = () => {
         return;
       }
       const bd = balanceData as Record<string, number> | null;
-      // balance = users_wallet.balance (direct, not computed from women_earnings sum)
+      // balance = wallets.balance (direct, not computed from women_earnings sum)
       setTotalEarnings(Number(bd?.total_earnings) || 0);
       setAvailableBalance(Number(bd?.available_balance) || 0);
       setPendingWithdrawals(Number(bd?.pending_withdrawals) || 0);
