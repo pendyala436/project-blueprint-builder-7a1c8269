@@ -324,8 +324,8 @@ h1{font-size:18pt;margin-bottom:4pt}
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">End</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Duration</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Rate</th>
-                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Debit (₹)</th>
-                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Credit (₹)</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">{DEBIT_COL}</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">{CREDIT_COL}</th>
                 <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Balance (₹)</th>
               </tr>
             </thead>
