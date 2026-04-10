@@ -106,9 +106,6 @@ const MatchingScreen = lazyRetry(() => import("@/pages/MatchingScreen"));
 const MatchDiscoveryScreen = lazyRetry(() => import("@/pages/MatchDiscoveryScreen"));
 const OnlineUsersScreen = lazyRetry(() => import("@/pages/OnlineUsersScreen"));
 const ProfileDetailScreen = lazyRetry(() => import("@/pages/ProfileDetailScreen"));
-const GiftSendingScreen = lazyRetry(() => import("@/pages/GiftSendingScreen"));
-const WalletScreen = lazyRetry(() => import("@/pages/WalletScreen"));
-const WomenWalletScreen = lazyRetry(() => import("@/pages/WomenWalletScreen"));
 
 const SettingsScreen = lazyRetry(() => import("@/pages/SettingsScreen"));
 const InstallApp = lazyRetry(() => import("@/pages/InstallApp"));
@@ -118,12 +115,6 @@ const AdminDashboard = lazyRetry(() => import("@/pages/AdminDashboard"));
 const AdminUserManagement = lazyRetry(() => import("@/pages/AdminUserManagement"));
 const AdminAnalyticsDashboard = lazyRetry(() => import("@/pages/AdminAnalyticsDashboard"));
 const AdminChatMonitoring = lazyRetry(() => import("@/pages/AdminChatMonitoring"));
-const AdminFinanceDashboard = lazyRetry(() => import("@/pages/AdminFinanceDashboard"));
-const AdminFinanceReports = lazyRetry(() => import("@/pages/AdminFinanceReports"));
-const AdminTransactionHistory = lazyRetry(() => import("@/pages/AdminTransactionHistory"));
-const AdminPayoutStatements = lazyRetry(() => import("@/pages/AdminPayoutStatements"));
-const AdminChatPricing = lazyRetry(() => import("@/pages/AdminChatPricing"));
-const AdminGiftPricing = lazyRetry(() => import("@/pages/AdminGiftPricing"));
 const AdminLanguageGroups = lazyRetry(() => import("@/pages/AdminLanguageGroups"));
 const AdminLanguageLimits = lazyRetry(() => import("@/pages/AdminLanguageLimits"));
 const AdminKYCManagement = lazyRetry(() => import("@/pages/AdminKYCManagement"));
@@ -183,10 +174,6 @@ const AppShell = () => {
             <Route path="/match-discovery" element={<ProtectedRoute><MatchDiscoveryScreen /></ProtectedRoute>} />
             <Route path="/online-users" element={<ProtectedRoute><OnlineUsersScreen /></ProtectedRoute>} />
             <Route path="/profile/:userId" element={<ProtectedRoute><ProfileDetailScreen /></ProtectedRoute>} />
-            <Route path="/send-gift/:receiverId" element={<ProtectedRoute><GiftSendingScreen /></ProtectedRoute>} />
-            <Route path="/wallet" element={<ProtectedRoute><WalletScreen /></ProtectedRoute>} />
-            <Route path="/women-wallet" element={<ProtectedRoute requiredRole="female"><WomenWalletScreen /></ProtectedRoute>} />
-            {/* Statement removed - now embedded in dashboard tabs */}
             <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
             <Route path="/install" element={<RouteSuspense><InstallApp /></RouteSuspense>} />
 
@@ -195,12 +182,6 @@ const AppShell = () => {
             <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><AdminUserManagement /></ProtectedRoute>} />
             <Route path="/admin/analytics" element={<ProtectedRoute requiredRole="admin"><AdminAnalyticsDashboard /></ProtectedRoute>} />
             <Route path="/admin/chat-monitoring" element={<ProtectedRoute requiredRole="admin"><AdminChatMonitoring /></ProtectedRoute>} />
-            <Route path="/admin/finance" element={<ProtectedRoute requiredRole="admin"><AdminFinanceDashboard /></ProtectedRoute>} />
-            <Route path="/admin/finance-reports" element={<ProtectedRoute requiredRole="admin"><AdminFinanceReports /></ProtectedRoute>} />
-            <Route path="/admin/transactions" element={<ProtectedRoute requiredRole="admin"><AdminTransactionHistory /></ProtectedRoute>} />
-            <Route path="/admin/payout-statements" element={<ProtectedRoute requiredRole="admin"><AdminPayoutStatements /></ProtectedRoute>} />
-            <Route path="/admin/chat-pricing" element={<ProtectedRoute requiredRole="admin"><AdminChatPricing /></ProtectedRoute>} />
-            <Route path="/admin/gifts" element={<ProtectedRoute requiredRole="admin"><AdminGiftPricing /></ProtectedRoute>} />
             <Route path="/admin/languages" element={<ProtectedRoute requiredRole="admin"><AdminLanguageGroups /></ProtectedRoute>} />
             <Route path="/admin/language-limits" element={<ProtectedRoute requiredRole="admin"><AdminLanguageLimits /></ProtectedRoute>} />
             <Route path="/admin/kyc" element={<ProtectedRoute requiredRole="admin"><AdminKYCManagement /></ProtectedRoute>} />
