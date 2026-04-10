@@ -1508,15 +1508,20 @@ const DashboardScreen = () => {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-sm text-foreground truncate">{chat.partnerName}</span>
-                <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                <span className={cn("text-sm truncate", chat.unreadCount > 0 ? "font-bold text-foreground" : "font-semibold text-foreground")}>{chat.partnerName}</span>
+                <span className={cn("text-[10px] flex-shrink-0 ml-2", chat.unreadCount > 0 ? "text-[#25D366] font-semibold" : "text-muted-foreground")}>
                   {formatChatTime(chat.lastMessageAt)}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-0.5">
-                <p className="text-xs text-muted-foreground truncate">{chat.lastMessage || "No messages yet"}</p>
+                <p className={cn("text-xs truncate flex items-center gap-1", chat.unreadCount > 0 ? "text-foreground font-medium" : "text-muted-foreground")}>
+                  {chat.lastMessageSenderId === currentUserId && chat.lastMessage && (
+                    <span className="text-[#4FC3F7] flex-shrink-0">✓✓</span>
+                  )}
+                  {chat.lastMessageSenderId === currentUserId ? `You: ${chat.lastMessage}` : chat.lastMessage || "No messages yet"}
+                </p>
                 {chat.unreadCount > 0 && (
-                  <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 flex-shrink-0 ml-2">
+                  <span className="min-w-[20px] h-[20px] rounded-full bg-[#25D366] text-white text-[11px] font-bold flex items-center justify-center px-1.5 flex-shrink-0 ml-2">
                     {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
                   </span>
                 )}
