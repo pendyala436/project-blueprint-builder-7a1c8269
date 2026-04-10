@@ -58,6 +58,7 @@ const kycSchema = z.object({
   account_number: z.string().min(9, "Valid account number required").max(18),
   ifsc_code: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format"),
   account_type: z.string().default("savings"),
+  upi_id: z.string().regex(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/, "Invalid UPI ID format (e.g. name@upi)").optional().or(z.literal("")),
 
   // Section 7: Nominee Details
   nominee_name: z.string().optional(),
@@ -164,6 +165,7 @@ export function WomenKYCForm() {
       account_number: "",
       ifsc_code: "",
       account_type: "savings",
+      upi_id: "",
       aadhaar_number: "",
       id_type: "pan",
       id_number: "",
