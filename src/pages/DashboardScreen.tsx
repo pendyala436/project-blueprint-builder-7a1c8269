@@ -427,6 +427,11 @@ const DashboardScreen = () => {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'ledger_transactions', filter: `user_id=eq.${currentUserId}` },
+        () => { loadWalletBalance(); }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'women_availability' },
         () => { throttledFetchOnlineWomen(); }
       )
