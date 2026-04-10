@@ -891,14 +891,7 @@ const MiniChatWindow = ({
           
           {areButtonsExpanded && (
             <>
-              {userGender === "male" && (
-                <GiftSendButton
-                  senderId={currentUserId}
-                  receiverId={partnerId}
-                  receiverName={partnerName}
-                  disabled={!billingStarted}
-                />
-              )}
+              {/* GiftSendButton removed — billing system removed */}
               <ChatRelationshipActions
                 currentUserId={currentUserId}
                 targetUserId={partnerId}
