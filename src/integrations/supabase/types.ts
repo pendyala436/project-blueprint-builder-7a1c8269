@@ -4022,7 +4022,7 @@ export type Database = {
           p_rate: number
           p_ref_key: string
           p_session_id: string
-          p_timestamp?: string
+          p_timestamp: string
           p_user_id: string
         }
         Returns: undefined
