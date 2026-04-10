@@ -70,7 +70,7 @@ import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
-// useChatPricing removed — billing system removed
+import { useChatPricing } from '@/hooks/useChatPricing';
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
@@ -231,10 +231,8 @@ const DashboardScreen = () => {
     hasBio: false,
   });
 
-  // Chat pricing removed — billing system removed
-  const pricing = { ratePerMinute: 0, audioRatePerMinute: 0, videoRatePerMinute: 0, groupCallRatePerMinute: 0 };
-  const hasSufficientBalance = () => true;
-  const formatPrice = (v: number) => `₹${v}`;
+  // Chat pricing from database
+  const { pricing, hasSufficientBalance, formatPrice } = useChatPricing();
   
   // Auto-reconnect functionality
   const { 
