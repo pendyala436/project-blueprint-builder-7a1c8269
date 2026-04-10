@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-// useChatPricing removed — billing system removed
+import { ICE_SERVERS } from '@/lib/iceServers';
 
 export type CallType = 'audio' | 'video';
 export type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'active' | 'ended';
@@ -17,11 +17,6 @@ export interface ActiveCall {
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
 }
-
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-];
 
 export const useWhatsAppCall = (
   currentUserId: string | null,
@@ -43,6 +38,7 @@ export const useWhatsAppCall = (
   const startTimeRef = useRef<Date | null>(null);
   const statusRef = useRef<CallStatus>('idle');
   const endingRef = useRef(false);
+  const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
 
   const setStatusSync = useCallback((s: CallStatus) => {
     statusRef.current = s;
@@ -63,6 +59,7 @@ export const useWhatsAppCall = (
     ringTimerRef.current = null;
     startTimeRef.current = null;
     endingRef.current = false;
+    iceCandidateQueueRef.current = [];
     setIsMuted(false);
     setIsCameraOff(false);
     setStatusSync('idle');
@@ -78,8 +75,36 @@ export const useWhatsAppCall = (
     });
   };
 
+  // Flush queued ICE candidates once remoteDescription is set
+  const flushIceCandidateQueue = useCallback(async () => {
+    const pc = pcRef.current;
+    if (!pc || !pc.remoteDescription) return;
+    const queue = iceCandidateQueueRef.current.splice(0);
+    for (const candidate of queue) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.warn('[WhatsAppCall] Failed to add queued ICE candidate:', e);
+      }
+    }
+  }, []);
+
+  const handleIceCandidate = useCallback(async (candidate: RTCIceCandidateInit) => {
+    const pc = pcRef.current;
+    if (!pc || !pc.remoteDescription) {
+      // Queue it until remoteDescription is set
+      iceCandidateQueueRef.current.push(candidate);
+      return;
+    }
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (e) {
+      console.warn('[WhatsAppCall] addIceCandidate error:', e);
+    }
+  }, []);
+
   const createPC = useCallback((callId: string, callType: CallType): RTCPeerConnection => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection(ICE_SERVERS);
 
     pc.onicecandidate = ({ candidate }) => {
       if (!candidate || !channelRef.current) return;
@@ -96,21 +121,31 @@ export const useWhatsAppCall = (
     };
 
     pc.onconnectionstatechange = () => {
+      console.log('[WhatsAppCall] connectionState:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         startTimeRef.current = new Date();
         setStatusSync('active');
         setActiveCall(prev => prev ? { ...prev, startedAt: startTimeRef.current } : prev);
-        // Update DB to active
         supabase.from('video_call_sessions')
           .update({ status: 'active', started_at: new Date().toISOString() })
           .eq('call_id', callId)
           .then(() => {});
       }
-      if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+      if (['disconnected', 'failed'].includes(pc.connectionState)) {
+        // Try ICE restart on disconnected before giving up
+        if (pc.connectionState === 'disconnected') {
+          console.log('[WhatsAppCall] Attempting ICE restart...');
+          pc.restartIce();
+          return;
+        }
         if (!endingRef.current) {
           doEndCall(callId, callType);
         }
       }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log('[WhatsAppCall] iceConnectionState:', pc.iceConnectionState);
     };
 
     return pc;
@@ -127,7 +162,6 @@ export const useWhatsAppCall = (
       .update({ status: 'completed', ended_at: new Date().toISOString() })
       .eq('call_id', callId);
 
-    // Trigger billing (idempotent)
     try {
       await supabase.rpc('process_call_billing', {
         p_call_id: callId,
@@ -176,12 +210,13 @@ export const useWhatsAppCall = (
     let stream: MediaStream;
     try {
       stream = await acquireMedia(callType);
-    } catch {
-      toast({
-        title: 'Permission denied',
-        description: `Allow microphone${callType === 'video' ? ' and camera' : ''} access.`,
-        variant: 'destructive'
-      });
+    } catch (err: any) {
+      const msg = err?.name === 'NotFoundError'
+        ? 'No microphone/camera found. Please connect your device.'
+        : err?.name === 'NotReadableError'
+          ? 'Device in use by another app. Please close other apps.'
+          : `Allow microphone${callType === 'video' ? ' and camera' : ''} access.`;
+      toast({ title: 'Permission denied', description: msg, variant: 'destructive' });
       return;
     }
     localStreamRef.current = stream;
@@ -214,6 +249,7 @@ export const useWhatsAppCall = (
     channelRef.current = ch;
 
     ch.on('broadcast', { event: 'call_answered' }, async () => {
+      if (statusRef.current !== 'calling') return; // Prevent duplicate handling
       setStatusSync('connecting');
       const pc = createPC(callId, callType);
       pcRef.current = pc;
@@ -226,15 +262,14 @@ export const useWhatsAppCall = (
     ch.on('broadcast', { event: 'answer' }, async ({ payload }: any) => {
       try {
         await pcRef.current?.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+        await flushIceCandidateQueue();
       } catch (e) {
         console.error('[WhatsAppCall] setRemoteDescription error:', e);
       }
     });
 
     ch.on('broadcast', { event: 'ice_candidate' }, async ({ payload }: any) => {
-      try {
-        await pcRef.current?.addIceCandidate(new RTCIceCandidate(payload.candidate));
-      } catch {}
+      await handleIceCandidate(payload.candidate);
     });
 
     ch.on('broadcast', { event: 'call_declined' }, () => {
@@ -265,7 +300,7 @@ export const useWhatsAppCall = (
         cleanup();
       }
     }, 60_000);
-  }, [currentUserId, currentUserGender, walletBalance, pricing, toast, cleanup, createPC, setStatusSync]);
+  }, [currentUserId, currentUserGender, walletBalance, pricing, toast, cleanup, createPC, setStatusSync, flushIceCandidateQueue, handleIceCandidate]);
 
   const acceptCall = useCallback(async (
     callId: string,
@@ -277,13 +312,11 @@ export const useWhatsAppCall = (
     let stream: MediaStream;
     try {
       stream = await acquireMedia(callType);
-    } catch {
-      toast({
-        title: 'Permission denied',
-        description: `Allow microphone${callType === 'video' ? ' and camera' : ''} to accept.`,
-        variant: 'destructive'
-      });
-      // Decline if can't get media
+    } catch (err: any) {
+      const msg = err?.name === 'NotFoundError'
+        ? 'No microphone/camera found.'
+        : `Allow microphone${callType === 'video' ? ' and camera' : ''} to accept.`;
+      toast({ title: 'Permission denied', description: msg, variant: 'destructive' });
       await supabase.from('video_call_sessions')
         .update({ status: 'declined', ended_at: new Date().toISOString() })
         .eq('call_id', callId);
@@ -310,15 +343,14 @@ export const useWhatsAppCall = (
       pcRef.current = pc;
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
       await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+      await flushIceCandidateQueue();
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       ch.send({ type: 'broadcast', event: 'answer', payload: { sdp: pc.localDescription } });
     });
 
     ch.on('broadcast', { event: 'ice_candidate' }, async ({ payload }: any) => {
-      try {
-        await pcRef.current?.addIceCandidate(new RTCIceCandidate(payload.candidate));
-      } catch {}
+      await handleIceCandidate(payload.candidate);
     });
 
     ch.on('broadcast', { event: 'call_ended' }, () => {
@@ -331,14 +363,21 @@ export const useWhatsAppCall = (
       cleanup();
     });
 
+    // Subscribe first, THEN notify initiator to avoid race
     await ch.subscribe();
 
-    // Notify initiator
+    // Small delay to ensure channel is fully ready before notifying
+    await new Promise(r => setTimeout(r, 300));
     ch.send({ type: 'broadcast', event: 'call_answered', payload: {} });
-  }, [toast, cleanup, createPC, doEndCall, setStatusSync]);
+  }, [toast, cleanup, createPC, doEndCall, setStatusSync, flushIceCandidateQueue, handleIceCandidate]);
 
   const declineCall = useCallback(async (callId: string) => {
-    channelRef.current?.send({ type: 'broadcast', event: 'call_declined', payload: {} });
+    // Subscribe to channel briefly to send decline signal
+    const ch = supabase.channel(`call:${callId}`);
+    await ch.subscribe();
+    ch.send({ type: 'broadcast', event: 'call_declined', payload: {} });
+    setTimeout(() => supabase.removeChannel(ch), 1000);
+
     await supabase.from('video_call_sessions')
       .update({ status: 'declined', ended_at: new Date().toISOString() })
       .eq('call_id', callId);
