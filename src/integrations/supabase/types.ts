@@ -3631,47 +3631,23 @@ export type Database = {
         }[]
       }
       get_dashboard_stats: { Args: { p_user_id: string }; Returns: Json }
-      get_ledger_statement:
-        | {
-            Args: {
-              p_from_date?: string
-              p_to_date?: string
-              p_user_id: string
-            }
-            Returns: {
-              counterparty_id: string
-              created_at: string
-              credit: number
-              debit: number
-              description: string
-              duration_seconds: number
-              id: string
-              rate_per_minute: number
-              reference_id: string
-              running_balance: number
-              session_id: string
-              transaction_type: string
-            }[]
-          }
-        | {
-            Args: {
-              p_from_date?: string
-              p_to_date?: string
-              p_user_id: string
-            }
-            Returns: {
-              counterparty_id: string
-              created_at: string
-              credit: number
-              debit: number
-              description: string
-              id: string
-              reference_id: string
-              running_balance: number
-              session_id: string
-              transaction_type: string
-            }[]
-          }
+      get_ledger_statement: {
+        Args: { p_from_date?: string; p_to_date?: string; p_user_id: string }
+        Returns: {
+          counterparty_id: string
+          created_at: string
+          credit: number
+          debit: number
+          description: string
+          duration_seconds: number
+          id: string
+          rate_per_minute: number
+          reference_id: string
+          running_balance: number
+          session_id: string
+          transaction_type: string
+        }[]
+      }
       get_men_transaction_history:
         | { Args: { p_user_id: string }; Returns: Json }
         | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
