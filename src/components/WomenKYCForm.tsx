@@ -307,6 +307,7 @@ export function WomenKYCForm() {
         account_number: data.account_number.trim(),
         ifsc_code: data.ifsc_code.toUpperCase().trim(),
         account_type: data.account_type || "savings",
+        upi_id: data.upi_id?.trim() || null,
         aadhaar_number: data.aadhaar_number.trim(),
         aadhaar_front_url: aadhaarFrontUrl,
         aadhaar_back_url: aadhaarBackUrl,
