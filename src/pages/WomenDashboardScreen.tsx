@@ -117,8 +117,7 @@ interface BiggestEarner {
 const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  // Plain English helper - no translation, returns fallback directly
-  
+  const { pricing } = useChatPricing();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
@@ -1468,6 +1467,17 @@ const WomenDashboardScreen = () => {
           <Button variant="outline" size="sm" className="gap-1 text-primary border-primary/30" onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}>
             <IndianRupee className="w-3.5 h-3.5" />Withdraw
           </Button>
+        </div>
+      </div>
+
+      {/* Earning Rate Card */}
+      <div className="px-4 py-3 border-b border-border/30">
+        <p className="text-xs font-semibold text-muted-foreground mb-2">Your Earning Rates</p>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Chat</span><span className="font-semibold">{formatLocalCurrency(pricing.womenEarningRate)}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Audio</span><span className="font-semibold">{formatLocalCurrency(pricing.audioWomenEarningRate)}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Video</span><span className="font-semibold">{formatLocalCurrency(pricing.videoWomenEarningRate)}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Group</span><span className="font-semibold">{formatLocalCurrency(pricing.groupCallWomenEarningRate)}/min</span></div>
         </div>
       </div>
 
