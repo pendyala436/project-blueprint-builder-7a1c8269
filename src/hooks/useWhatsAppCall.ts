@@ -39,6 +39,7 @@ export const useWhatsAppCall = (
   const statusRef = useRef<CallStatus>('idle');
   const endingRef = useRef(false);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const doEndCallRef = useRef<(callId: string, callType: CallType) => Promise<void>>();
 
   const setStatusSync = useCallback((s: CallStatus) => {
     statusRef.current = s;
