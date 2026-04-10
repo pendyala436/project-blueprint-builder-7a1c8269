@@ -97,7 +97,7 @@ const WalletScreen = () => {
           <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
         </TabsList>
         <TabsContent value="statement" className="flex-1">
-          <StatementTab userId={userIdRef.current} />
+          <StatementTab userId={userIdRef.current} gender="male" />
         </TabsContent>
       </Tabs>
     </div>

@@ -1737,7 +1737,7 @@ const DashboardScreen = () => {
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "wallet" && renderWalletTab()}
-      {activeTab === "statement" && <StatementTab userId={currentUserId} />}
+      {activeTab === "statement" && <StatementTab userId={currentUserId} gender="male" />}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}

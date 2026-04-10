@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 interface StatementTabProps {
   userId: string;
+  gender?: 'male' | 'female';
 }
 
 const SESSION_TYPES = ['chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge',
@@ -98,9 +99,16 @@ const buildTableRows = (rows: StatementRow[]) =>
     balance: row.running_balance?.toFixed(2) ?? '—',
   }));
 
-const HEADERS = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate', 'Debit (₹)', 'Credit (₹)', 'Balance (₹)'];
+const STATIC_HEADERS_PREFIX = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate'];
 
-export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
+export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'male' }) => {
+  const isMale = gender === 'male';
+  const DEBIT_LABEL = isMale ? 'TOTAL CHARGED' : 'TOTAL WITHDRAWN';
+  const CREDIT_LABEL = isMale ? 'TOTAL RECHARGED' : 'TOTAL EARNED';
+  const DEBIT_COL = isMale ? 'Debit (₹)' : 'Withdrawn (₹)';
+  const CREDIT_COL = isMale ? 'Credit (₹)' : 'Earned (₹)';
+  const TITLE = isMale ? '💰 Wallet Statement' : '💰 Earnings Statement';
+  const HEADERS = [...STATIC_HEADERS_PREFIX, DEBIT_COL, CREDIT_COL, 'Balance (₹)'];
   const [statement, setStatement] = useState<StatementRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
@@ -131,7 +139,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     doc.setFontSize(18);
-    doc.text('Wallet Statement', 14, 16);
+    doc.text(isMale ? 'Wallet Statement' : 'Earnings Statement', 14, 16);
     doc.setFontSize(10);
     doc.text(`${dateRange.from} to ${dateRange.to}  •  Currency: INR  •  Timestamps in IST (UTC+5:30)`, 14, 23);
 
@@ -139,8 +147,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     doc.setFontSize(9);
     const cols = [
       { label: 'OPENING BALANCE', value: `₹${summary.openingBalance.toFixed(2)}` },
-      { label: 'TOTAL CHARGED', value: `₹${summary.totalDebit.toFixed(2)}` },
-      { label: 'TOTAL RECHARGED', value: `₹${summary.totalCredit.toFixed(2)}` },
+      { label: DEBIT_LABEL, value: `₹${summary.totalDebit.toFixed(2)}` },
+      { label: CREDIT_LABEL, value: `₹${summary.totalCredit.toFixed(2)}` },
       { label: 'CLOSING BALANCE', value: `₹${summary.closingBalance.toFixed(2)}` },
     ];
     const colW = 60;
@@ -172,10 +180,10 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
   const exportExcel = () => {
     if (!statement.length) return;
     const wsData = [
-      ['Wallet Statement'],
+      [isMale ? 'Wallet Statement' : 'Earnings Statement'],
       [`Period: ${dateRange.from} to ${dateRange.to}`, '', 'Currency: INR', '', 'Timestamps in IST (UTC+5:30)'],
       [],
-      ['OPENING BALANCE', `₹${summary.openingBalance.toFixed(2)}`, '', 'TOTAL CHARGED', `₹${summary.totalDebit.toFixed(2)}`, '', 'TOTAL RECHARGED', `₹${summary.totalCredit.toFixed(2)}`, '', 'CLOSING BALANCE', `₹${summary.closingBalance.toFixed(2)}`],
+      ['OPENING BALANCE', `₹${summary.openingBalance.toFixed(2)}`, '', DEBIT_LABEL, `₹${summary.totalDebit.toFixed(2)}`, '', CREDIT_LABEL, `₹${summary.totalCredit.toFixed(2)}`, '', 'CLOSING BALANCE', `₹${summary.closingBalance.toFixed(2)}`],
       [],
       HEADERS,
       ...tableRows.map(r => [r.sno, r.date, r.type, r.description, r.startTime, r.endTime, r.duration, r.rate, r.debit, r.credit, r.balance]),
@@ -202,12 +210,12 @@ th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}
 th{background:#6366F1;color:#fff;font-weight:bold}
 h1{font-size:18pt;margin-bottom:4pt}
 </style></head><body>
-<h1>Wallet Statement</h1>
+<h1>${isMale ? 'Wallet Statement' : 'Earnings Statement'}</h1>
 <p>${dateRange.from} to ${dateRange.to} • Currency: INR • Timestamps in IST (UTC+5:30)</p>
 <table><tr>
 <td style="background:#f3f4f6;padding:8px"><small>OPENING BALANCE</small><br><b>₹${summary.openingBalance.toFixed(2)}</b></td>
-<td style="background:#f3f4f6;padding:8px"><small>TOTAL CHARGED</small><br><b>₹${summary.totalDebit.toFixed(2)}</b></td>
-<td style="background:#f3f4f6;padding:8px"><small>TOTAL RECHARGED</small><br><b>₹${summary.totalCredit.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>${DEBIT_LABEL}</small><br><b>₹${summary.totalDebit.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>${CREDIT_LABEL}</small><br><b>₹${summary.totalCredit.toFixed(2)}</b></td>
 <td style="background:#f3f4f6;padding:8px"><small>CLOSING BALANCE</small><br><b>₹${summary.closingBalance.toFixed(2)}</b></td>
 </tr></table>
 <br>
@@ -239,7 +247,7 @@ h1{font-size:18pt;margin-bottom:4pt}
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/30 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">💰 Wallet Statement</h2>
+          <h2 className="text-sm font-semibold text-foreground">{TITLE}</h2>
           <p className="text-xs text-muted-foreground">{statement.length} transactions • Currency: INR</p>
         </div>
         <div className="flex gap-1">
@@ -285,8 +293,8 @@ h1{font-size:18pt;margin-bottom:4pt}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-border/30">
           {[
             { label: 'OPENING BALANCE', value: summary.openingBalance },
-            { label: 'TOTAL CHARGED', value: summary.totalDebit },
-            { label: 'TOTAL RECHARGED', value: summary.totalCredit },
+            { label: DEBIT_LABEL, value: summary.totalDebit },
+            { label: CREDIT_LABEL, value: summary.totalCredit },
             { label: 'CLOSING BALANCE', value: summary.closingBalance },
           ].map((item, i) => (
             <div key={i} className={cn('text-center py-3', i < 3 && 'border-r border-border/30')}>
@@ -316,8 +324,8 @@ h1{font-size:18pt;margin-bottom:4pt}
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">End</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Duration</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Rate</th>
-                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Debit (₹)</th>
-                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Credit (₹)</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">{DEBIT_COL}</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">{CREDIT_COL}</th>
                 <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Balance (₹)</th>
               </tr>
             </thead>
