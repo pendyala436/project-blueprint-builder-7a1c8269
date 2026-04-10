@@ -37,11 +37,11 @@ const getTypeLabel = (type: string) => {
 
 const isCredit = (type: string) => CREDIT_TYPES.includes(type);
 
-/** Per spec §11.6: read stored duration_seconds, FLOOR to minutes. Gifts/recharges show "—". */
+/** Per spec: read stored duration_seconds, show exact minutes (no rounding). Gifts/recharges show "—". */
 const getDurationDisplay = (row: StatementRow): string => {
   if (!SESSION_TYPES.includes(row.transaction_type)) return '—';
   if (row.duration_seconds == null) return '—';
-  const minutes = Math.floor(row.duration_seconds / 60);
+  const minutes = (row.duration_seconds / 60).toFixed(1);
   return `${minutes} min`;
 };
 
@@ -82,8 +82,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     const ob = statement.length > 0
       ? statement[statement.length - 1].running_balance - statement[statement.length - 1].credit + statement[statement.length - 1].debit
       : 0;
-    doc.text(`Opening Balance: ₹${ob.toFixed(0)}`, 14, 32);
-    doc.text(`Closing Balance: ₹${cb.toFixed(0)}`, 100, 32);
+    doc.text(`Opening Balance: ₹${ob.toFixed(2)}`, 14, 32);
+    doc.text(`Closing Balance: ₹${cb.toFixed(2)}`, 100, 32);
 
     // Table
     const rows = statement.map((row, i) => [
@@ -92,8 +92,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
       getTypeLabel(row.transaction_type),
       getDurationDisplay(row),
       row.description || '—',
-      isCredit(row.transaction_type) ? `+₹${(row.credit || 0).toFixed(0)}` : `-₹${(row.debit || 0).toFixed(0)}`,
-      `₹${row.running_balance?.toFixed(0) || '—'}`,
+      isCredit(row.transaction_type) ? `+₹${(row.credit || 0).toFixed(2)}` : `-₹${(row.debit || 0).toFixed(2)}`,
+      `₹${row.running_balance?.toFixed(2) || '—'}`,
     ]);
 
     autoTable(doc, {
@@ -161,11 +161,11 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
         <div className="grid grid-cols-2 gap-0 border-b border-border/30">
           <div className="text-center py-3 border-r border-border/30">
             <p className="text-[10px] text-muted-foreground">Opening Balance</p>
-            <p className="text-sm font-bold text-foreground">₹{openingBalance.toFixed(0)}</p>
+            <p className="text-sm font-bold text-foreground">₹{openingBalance.toFixed(2)}</p>
           </div>
           <div className="text-center py-3">
             <p className="text-[10px] text-muted-foreground">Closing Balance</p>
-            <p className="text-sm font-bold text-foreground">₹{closingBalance.toFixed(0)}</p>
+            <p className="text-sm font-bold text-foreground">₹{closingBalance.toFixed(2)}</p>
           </div>
         </div>
       )}
@@ -202,9 +202,9 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
                 </div>
                 <div className="text-right shrink-0">
                   <p className={cn('text-sm font-semibold', isCredit(row.transaction_type) ? 'text-green-600' : 'text-red-500')}>
-                    {isCredit(row.transaction_type) ? '+' : '-'}₹{(row.credit || row.debit || 0).toFixed(0)}
+                    {isCredit(row.transaction_type) ? '+' : '-'}₹{(row.credit || row.debit || 0).toFixed(2)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground">Bal: ₹{row.running_balance?.toFixed(0) || '—'}</p>
+                  <p className="text-[10px] text-muted-foreground">Bal: ₹{row.running_balance?.toFixed(2) || '—'}</p>
                 </div>
               </div>
             );
