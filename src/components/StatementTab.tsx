@@ -180,10 +180,10 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const exportExcel = () => {
     if (!statement.length) return;
     const wsData = [
-      ['Wallet Statement'],
+      [isMale ? 'Wallet Statement' : 'Earnings Statement'],
       [`Period: ${dateRange.from} to ${dateRange.to}`, '', 'Currency: INR', '', 'Timestamps in IST (UTC+5:30)'],
       [],
-      ['OPENING BALANCE', `₹${summary.openingBalance.toFixed(2)}`, '', 'TOTAL CHARGED', `₹${summary.totalDebit.toFixed(2)}`, '', 'TOTAL RECHARGED', `₹${summary.totalCredit.toFixed(2)}`, '', 'CLOSING BALANCE', `₹${summary.closingBalance.toFixed(2)}`],
+      ['OPENING BALANCE', `₹${summary.openingBalance.toFixed(2)}`, '', DEBIT_LABEL, `₹${summary.totalDebit.toFixed(2)}`, '', CREDIT_LABEL, `₹${summary.totalCredit.toFixed(2)}`, '', 'CLOSING BALANCE', `₹${summary.closingBalance.toFixed(2)}`],
       [],
       HEADERS,
       ...tableRows.map(r => [r.sno, r.date, r.type, r.description, r.startTime, r.endTime, r.duration, r.rate, r.debit, r.credit, r.balance]),
