@@ -578,12 +578,15 @@ const WomenDashboardScreen = () => {
             .limit(1)
             .then(r => ({ chatId: s.chat_id, msg: r.data?.[0], fallback: s.last_activity_at }))
         )),
-        supabase
-          .from("chat_messages")
-          .select("chat_id")
-          .in("chat_id", chatIds)
-          .eq("receiver_id", currentUserId)
-          .eq("is_read", false),
+        Promise.all(chatIds.map(chatId =>
+          supabase
+            .from("chat_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("chat_id", chatId)
+            .eq("receiver_id", currentUserId)
+            .eq("is_read", false)
+            .then(r => ({ chatId, count: r.count || 0 }))
+        )),
         supabase
           .from("user_status")
           .select("user_id, is_online, status, active_chat_count")
@@ -594,10 +597,8 @@ const WomenDashboardScreen = () => {
       const statusMap = new Map((partnerStatusRes.data || []).map((s: { user_id: string; is_online: boolean; status: string; active_chat_count: number | null }) => [s.user_id, s]));
       
       const unreadCountMap = new Map<string, number>();
-      if (unreadRes.data) {
-        for (const row of unreadRes.data) {
-          unreadCountMap.set(row.chat_id, (unreadCountMap.get(row.chat_id) || 0) + 1);
-        }
+      for (const item of unreadRes) {
+        if (item.count > 0) unreadCountMap.set(item.chatId, item.count);
       }
 
       const chats = sessions.map(s => {
