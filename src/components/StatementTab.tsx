@@ -7,9 +7,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Filter, ArrowDownLeft, ArrowUpRight, Wallet, RefreshCw } from 'lucide-react';
+import { Filter, ArrowDownLeft, ArrowUpRight, Wallet, RefreshCw, Download } from 'lucide-react';
 import { getStatement, type StatementRow } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { cn } from '@/lib/utils';
 
 interface StatementTabProps {
@@ -65,6 +67,47 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     loadStatement();
   }, [loadStatement]);
 
+  const exportPDF = () => {
+    if (!statement.length) return;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // Title
+    doc.setFontSize(16);
+    doc.text('Transaction Statement', 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Period: ${dateRange.from} to ${dateRange.to}`, 14, 25);
+
+    // Opening / Closing
+    const cb = statement.length > 0 ? statement[0].running_balance : 0;
+    const ob = statement.length > 0
+      ? statement[statement.length - 1].running_balance - statement[statement.length - 1].credit + statement[statement.length - 1].debit
+      : 0;
+    doc.text(`Opening Balance: ₹${ob.toFixed(0)}`, 14, 32);
+    doc.text(`Closing Balance: ₹${cb.toFixed(0)}`, 100, 32);
+
+    // Table
+    const rows = statement.map((row, i) => [
+      String(i + 1),
+      format(new Date(row.created_at), 'dd MMM yyyy, hh:mm a'),
+      getTypeLabel(row.transaction_type),
+      getDurationDisplay(row),
+      row.description || '—',
+      isCredit(row.transaction_type) ? `+₹${(row.credit || 0).toFixed(0)}` : `-₹${(row.debit || 0).toFixed(0)}`,
+      `₹${row.running_balance?.toFixed(0) || '—'}`,
+    ]);
+
+    autoTable(doc, {
+      startY: 38,
+      head: [['#', 'Date', 'Type', 'Duration', 'Description', 'Amount', 'Balance']],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [99, 102, 241] },
+      columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' } },
+    });
+
+    doc.save(`statement-${dateRange.from}-to-${dateRange.to}.pdf`);
+  };
+
   // Per spec §6.4: Opening = first row's running_balance + debit - credit, Closing = last row's running_balance
   const closingBalance = statement.length > 0 ? statement[0].running_balance : 0;
   const openingBalance = statement.length > 0
@@ -90,9 +133,14 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
           <h2 className="text-sm font-semibold text-foreground">Transaction Statement</h2>
           <p className="text-xs text-muted-foreground">{statement.length} transactions</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadStatement}>
-          <RefreshCw className="w-4 h-4" />
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportPDF} disabled={!statement.length} title="Download PDF">
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadStatement}>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Date Filter */}
