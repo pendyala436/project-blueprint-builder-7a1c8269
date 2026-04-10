@@ -633,7 +633,7 @@ const DashboardScreen = () => {
       ]);
 
       const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
-      const statusMap = new Map((partnerStatusRes.data || []).map((s: any) => [s.user_id, s]));
+      const statusMap = new Map((partnerStatusRes.data || []).map((s: { user_id: string; is_online: boolean; status: string; active_chat_count: number | null }) => [s.user_id, s]));
       
       const unreadCountMap = new Map<string, number>();
       if (unreadRes.data) {
