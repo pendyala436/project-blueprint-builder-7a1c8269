@@ -76,13 +76,12 @@ const getRateDisplay = (row: StatementRow): string => {
   return `₹${row.rate_per_minute.toFixed(2)}/min`;
 };
 
-const computeSummary = (rows: StatementRow[]) => {
+const computeSummary = (rows: StatementRow[], walletBalance: number) => {
   const totalDebit = rows.reduce((s, r) => s + (r.debit || 0), 0);
   const totalCredit = rows.reduce((s, r) => s + (r.credit || 0), 0);
-  const closingBalance = rows.length > 0 ? rows[0].running_balance : 0;
-  const openingBalance = rows.length > 0
-    ? rows[rows.length - 1].running_balance - rows[rows.length - 1].credit + rows[rows.length - 1].debit
-    : 0;
+  // Use actual wallet balance as closing balance to match what user sees
+  const closingBalance = walletBalance;
+  const openingBalance = closingBalance - totalCredit + totalDebit;
   return { openingBalance, closingBalance, totalDebit, totalCredit };
 };
 
