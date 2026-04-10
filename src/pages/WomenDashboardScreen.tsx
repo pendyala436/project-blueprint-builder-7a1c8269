@@ -58,6 +58,7 @@ import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
 import { useChatPricing } from '@/hooks/useChatPricing';
+import { StatementTab } from '@/components/StatementTab';
 
 interface Notification {
   id: string;
