@@ -22,18 +22,22 @@ interface StatementTabProps {
 }
 
 const SESSION_TYPES = ['chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge',
+  'private_group_call_charge', 'private_group_call_earning',
   'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning'];
 
-const CREDIT_TYPES = ['credit', 'recharge', 'refund', 'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning', 'gift_received', 'gift_earning'];
+const CREDIT_TYPES = ['credit', 'recharge', 'refund', 'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning', 'private_group_call_earning', 'gift_received', 'gift_earning', 'tip_earning'];
 
 const getTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
     recharge: 'Wallet Recharge', credit: 'Credit', refund: 'Refund',
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
-    group_call_charge: 'Group Call', debit: 'Debit', withdrawal: 'Withdrawal',
+    group_call_charge: 'Group Call', private_group_call_charge: 'Group Call',
+    debit: 'Debit', withdrawal: 'Withdrawal',
     gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received',
+    tip_charge: 'Tip Sent', tip_earning: 'Tip Received',
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
+    private_group_call_earning: 'Group Earning',
     earning: 'Earning',
   };
   return labels[type] || type?.replace(/_/g, ' ');
