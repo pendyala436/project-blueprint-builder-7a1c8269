@@ -121,7 +121,7 @@ const AdminPayoutStatements = () => {
             <div className="flex items-center gap-3">
               <IndianRupee className="w-8 h-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold">₹{totalGross.toFixed(0)}</p>
+                <p className="text-2xl font-bold">₹{totalGross.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Gross Earned</p>
               </div>
             </div>
@@ -130,7 +130,7 @@ const AdminPayoutStatements = () => {
             <div className="flex items-center gap-3">
               <IndianRupee className="w-8 h-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">₹{totalPayable.toFixed(0)}</p>
+                <p className="text-2xl font-bold">₹{totalPayable.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Net Payable</p>
               </div>
             </div>
@@ -182,10 +182,10 @@ const AdminPayoutStatements = () => {
                     <TableCell className="text-xs">{r.bank_name || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.bank_account_number ? '****' + r.bank_account_number.slice(-4) : '—'}</TableCell>
-                    <TableCell className="text-right">₹{Number(r.gross_earned).toFixed(0)}</TableCell>
-                    <TableCell className="text-right text-red-500">₹{Number(r.withdrawal_fee_amount).toFixed(0)}</TableCell>
-                    <TableCell className="text-right font-semibold">₹{Number(r.net_payable).toFixed(0)}</TableCell>
-                    <TableCell className="text-right text-green-600 font-semibold">₹{Number(r.incremental_payable).toFixed(0)}</TableCell>
+                    <TableCell className="text-right">₹{Number(r.gross_earned).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-red-500">₹{Number(r.withdrawal_fee_amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold">₹{Number(r.net_payable).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-green-600 font-semibold">₹{Number(r.incremental_payable).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant={r.payment_status === 'paid' ? 'default' : 'secondary'} className="text-xs">
                         {r.payment_status}
