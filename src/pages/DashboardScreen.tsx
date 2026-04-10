@@ -1616,20 +1616,6 @@ const DashboardScreen = () => {
         </Badge>
       </div>
 
-      {/* Wallet */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={() => setRechargeDialogOpen(true)}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Wallet className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">Wallet Balance</p>
-            <p className="text-xs text-muted-foreground">Tap to recharge</p>
-          </div>
-        </div>
-        <span className="text-lg font-bold text-primary">{formatLocalCurrency(walletBalance)}</span>
-      </div>
-
       {/* Stats */}
       <div className="grid grid-cols-3 gap-0 border-b border-border/30">
         <div className="text-center py-4 border-r border-border/30">
@@ -1695,7 +1681,7 @@ const DashboardScreen = () => {
       {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
-      {/* Statement tab removed — billing system removed */}
+      {activeTab === "wallet" && renderWalletTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}
