@@ -209,12 +209,8 @@ export const AdminUserSearchDialog = () => {
             kyc = kycData as WomenKYC | null;
           }
 
-          // Fetch wallet info via ledger service for consistency
+          // Wallet info removed — billing system removed
           let wallet: WalletInfo | null = null;
-          const walletData = await getLedgerWallet(profile.user_id);
-          if (walletData) {
-            wallet = { balance: walletData.balance, currency: walletData.currency };
-          }
 
           // Fetch chat stats
           let chatStats: ChatStats | null = null;

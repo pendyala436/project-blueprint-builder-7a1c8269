@@ -1023,16 +1023,7 @@ const DashboardScreen = () => {
     
     // Note: Photo validation not needed at runtime - photos are mandatory during registration
 
-    // Check balance first
-    if (!hasSufficientBalance(walletBalance, 2)) {
-      toast({
-        title: 'Insufficient Balance',
-        description: 'Please recharge your wallet to start chatting',
-        variant: "destructive",
-      });
-      setRechargeDialogOpen(true);
-      return;
-    }
+    // Balance check removed — billing system removed
 
     setIsConnecting(true);
     toast({
