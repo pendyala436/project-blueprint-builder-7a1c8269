@@ -175,6 +175,9 @@ export const useWhatsAppCall = (
     cleanup();
   }, [cleanup, setStatusSync]);
 
+  // Keep ref in sync so createPC always has latest doEndCall
+  doEndCallRef.current = doEndCall;
+
   const initiateCall = useCallback(async (
     targetUserId: string,
     targetName: string,
