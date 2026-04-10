@@ -199,6 +199,7 @@ const DashboardScreen = () => {
     partnerPhoto: string | null;
     lastMessage: string;
     lastMessageAt: string;
+    lastMessageSenderId: string;
     unreadCount: number;
   }>>([]);
   const [loadingChats, setLoadingChats] = useState(false);
