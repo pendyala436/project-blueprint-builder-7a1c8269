@@ -71,6 +71,7 @@ import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
 import { useChatPricing } from '@/hooks/useChatPricing';
+import { StatementTab } from '@/components/StatementTab';
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
@@ -1736,6 +1737,7 @@ const DashboardScreen = () => {
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "wallet" && renderWalletTab()}
+      {activeTab === "statement" && <StatementTab userId={currentUserId} />}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}

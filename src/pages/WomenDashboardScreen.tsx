@@ -58,6 +58,7 @@ import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
 import { useChatPricing } from '@/hooks/useChatPricing';
+import { StatementTab } from '@/components/StatementTab';
 
 interface Notification {
   id: string;
@@ -1603,6 +1604,7 @@ const WomenDashboardScreen = () => {
       {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "wallet" && renderWalletTab()}
+      {activeTab === "statement" && <StatementTab userId={currentUserId} />}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
