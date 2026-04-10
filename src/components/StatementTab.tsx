@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 interface StatementTabProps {
   userId: string;
+  gender?: 'male' | 'female';
 }
 
 const SESSION_TYPES = ['chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge',
