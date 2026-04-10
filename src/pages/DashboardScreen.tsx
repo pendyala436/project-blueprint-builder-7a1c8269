@@ -395,7 +395,7 @@ const DashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_status' },
-        () => { throttledFetchOnlineWomen(); }
+        () => { throttledFetchOnlineWomen(); if (chatsFetchedRef.current) fetchActiveChats(); }
       )
       .on(
         'postgres_changes',
