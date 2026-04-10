@@ -296,7 +296,7 @@ const DashboardScreen = () => {
   const formatLocalCurrency = (amountINR: number) => {
     const currency = getCurrencyInfo();
     const converted = convertToLocal(amountINR);
-    return `${currency.symbol}${converted.toLocaleString()}`;
+    return `${currency.symbol}${converted.toFixed(2)}`;
   };
 
   const wentOnlineRef = useRef(false);
