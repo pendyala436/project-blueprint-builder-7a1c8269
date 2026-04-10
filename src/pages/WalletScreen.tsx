@@ -1,36 +1,62 @@
 /**
  * WalletScreen — Men's Wallet with balance and recharge.
- * Transaction history is in the separate Statement tab.
+ * Balance updates dynamically via Supabase realtime on ledger_transactions changes.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Wallet, CreditCard, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Wallet, CreditCard } from 'lucide-react';
 
 const WalletScreen = () => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const userIdRef = useRef('');
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/'); return; }
-      await loadBalance(user.id);
-    })();
-  }, []);
-
-  const loadBalance = async (uid: string) => {
-    setIsLoading(true);
+  const loadBalance = useCallback(async (uid: string) => {
     try {
       const { data } = await supabase.rpc('get_men_wallet_balance', { p_user_id: uid });
       setBalance(Number((data as Record<string, number>)?.balance) || 0);
     } catch { /* fallback 0 */ }
-    setIsLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate('/'); return; }
+      userIdRef.current = user.id;
+      await loadBalance(user.id);
+      setIsLoading(false);
+
+      // Subscribe to ledger changes for this user
+      channel = supabase
+        .channel('wallet-men-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'ledger_transactions',
+          filter: `user_id=eq.${user.id}`,
+        }, () => {
+          loadBalance(user.id);
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallets',
+          filter: `user_id=eq.${user.id}`,
+        }, () => {
+          loadBalance(user.id);
+        })
+        .subscribe();
+    })();
+
+    return () => { channel?.unsubscribe(); };
+  }, [navigate, loadBalance]);
 
   if (isLoading) {
     return (
@@ -42,7 +68,6 @@ const WalletScreen = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <div className="sticky top-0 z-40 bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" className="text-primary-foreground" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
@@ -50,7 +75,6 @@ const WalletScreen = () => {
         <h1 className="text-lg font-semibold flex-1">Wallet</h1>
       </div>
 
-      {/* Balance Card */}
       <div className="p-4">
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 rounded-2xl">
           <div className="flex items-center gap-3 mb-4">

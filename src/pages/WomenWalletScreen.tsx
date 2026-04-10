@@ -1,43 +1,64 @@
 /**
- * WomenWalletScreen — Women's Wallet with earnings balance and breakdown.
- * Transaction history is in the separate Statement tab.
+ * WomenWalletScreen — Women's Wallet with earnings balance.
+ * Balance updates dynamically via Supabase realtime on ledger_transactions changes.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Wallet, IndianRupee, TrendingUp, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp } from 'lucide-react';
 import { getWomenBalance } from '@/services/ledger-wallet.service';
 
 const WomenWalletScreen = () => {
   const navigate = useNavigate();
-  const [userId, setUserId] = useState('');
   const [balance, setBalance] = useState(0);
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const userIdRef = useRef('');
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/'); return; }
-      setUserId(user.id);
-      await loadData(user.id);
-    })();
-  }, []);
-
-  const loadData = async (uid: string) => {
-    setIsLoading(true);
+  const loadData = useCallback(async (uid: string) => {
     try {
       const walletData = await getWomenBalance(uid);
       setBalance(walletData.balance);
       setTodayEarnings(walletData.todayEarnings);
     } catch { /* fallback */ }
-    setIsLoading(false);
-  };
+  }, []);
 
-  const refresh = () => userId && loadData(userId);
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { navigate('/'); return; }
+      userIdRef.current = user.id;
+      await loadData(user.id);
+      setIsLoading(false);
+
+      channel = supabase
+        .channel('wallet-women-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'ledger_transactions',
+          filter: `user_id=eq.${user.id}`,
+        }, () => {
+          loadData(user.id);
+        })
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallets',
+          filter: `user_id=eq.${user.id}`,
+        }, () => {
+          loadData(user.id);
+        })
+        .subscribe();
+    })();
+
+    return () => { channel?.unsubscribe(); };
+  }, [navigate, loadData]);
 
   if (isLoading) {
     return (
@@ -49,18 +70,13 @@ const WomenWalletScreen = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <div className="sticky top-0 z-40 bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" className="text-primary-foreground" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-semibold flex-1">Wallet</h1>
-        <Button variant="ghost" size="icon" className="text-primary-foreground" onClick={refresh}>
-          <RefreshCw className="w-4 h-4" />
-        </Button>
       </div>
 
-      {/* Balance Card */}
       <div className="p-4">
         <Card className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-6 rounded-2xl">
           <div className="flex items-center gap-3 mb-2">
