@@ -778,6 +778,7 @@ const ChatScreen = () => {
               (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
             
             setIsSessionActive(false);
+            setBillingSessionId(null);
             
             // If ended by partner (woman) and current user is man, auto-reconnect
             if (session.end_reason === 'woman_closed' || session.end_reason === 'partner_offline') {
