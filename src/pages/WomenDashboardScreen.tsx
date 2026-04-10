@@ -366,8 +366,8 @@ const WomenDashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'women_earnings' },
-        // Only refresh wallet/earnings, not full dashboard reload
+        { event: '*', schema: 'public', table: 'ledger_transactions', filter: `user_id=eq.${currentUserId}` },
+        // Refresh wallet/earnings from single source of truth
         () => { if (currentUserId) { fetchWalletBalance(currentUserId); fetchTopEarnerLeaderboard(currentUserId); } }
       )
       .on(

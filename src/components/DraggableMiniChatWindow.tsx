@@ -228,11 +228,12 @@ const DraggableMiniChatWindow = ({
         } else if (isEarningEligible) {
           const today = new Date().toISOString().split("T")[0];
           const { data: earnings } = await supabase
-            .from("women_earnings")
-            .select("amount")
+            .from("ledger_transactions")
+            .select("credit")
             .eq("user_id", currentUserId)
+            .gt("credit", 0)
             .gte("created_at", `${today}T00:00:00`);
-          billing.setTodayEarnings(earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0);
+          billing.setTodayEarnings(earnings?.reduce((acc, e) => acc + Number(e.credit), 0) || 0);
         }
 
         if (!sessionStartedRef.current) {
