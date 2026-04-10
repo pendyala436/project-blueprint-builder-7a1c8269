@@ -39,6 +39,7 @@ export const useWhatsAppCall = (
   const statusRef = useRef<CallStatus>('idle');
   const endingRef = useRef(false);
   const iceCandidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
+  const doEndCallRef = useRef<(callId: string, callType: CallType) => Promise<void>>();
 
   const setStatusSync = useCallback((s: CallStatus) => {
     statusRef.current = s;
@@ -139,7 +140,7 @@ export const useWhatsAppCall = (
           return;
         }
         if (!endingRef.current) {
-          doEndCall(callId, callType);
+          doEndCallRef.current?.(callId, callType);
         }
       }
     };
@@ -173,6 +174,9 @@ export const useWhatsAppCall = (
 
     cleanup();
   }, [cleanup, setStatusSync]);
+
+  // Keep ref in sync so createPC always has latest doEndCall
+  doEndCallRef.current = doEndCall;
 
   const initiateCall = useCallback(async (
     targetUserId: string,
@@ -282,8 +286,7 @@ export const useWhatsAppCall = (
 
     ch.on('broadcast', { event: 'call_ended' }, () => {
       if (!endingRef.current) {
-        endingRef.current = true;
-        cleanup();
+        doEndCall(callId, callType);
       }
     });
 
