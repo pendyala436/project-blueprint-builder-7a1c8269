@@ -140,7 +140,7 @@ export const useWhatsAppCall = (
           return;
         }
         if (!endingRef.current) {
-          doEndCall(callId, callType);
+          doEndCallRef.current?.(callId, callType);
         }
       }
     };
