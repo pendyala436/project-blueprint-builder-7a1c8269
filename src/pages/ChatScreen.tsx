@@ -107,6 +107,7 @@ import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
 import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
 import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
+import { useMiniChatBilling } from "@/hooks/useMiniChatBilling";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -332,6 +333,11 @@ const ChatScreen = () => {
   const [isStoppingChat, setIsStoppingChat] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   
+  // Billing state
+  const [billingSessionId, setBillingSessionId] = useState<string | null>(null);
+  const [billingManId, setBillingManId] = useState<string>("");
+  const [billingWomanId, setBillingWomanId] = useState<string>("");
+  
   // Typing preview state (native + English subtitle while typing)
   const [previewNative, setPreviewNative] = useState("");
   const [previewEnglish, setPreviewEnglish] = useState("");
@@ -371,6 +377,24 @@ const ChatScreen = () => {
   // Map temp message IDs to real DB IDs for translation resolution
   const tempToRealIdRef = useRef<Map<string, string>>(new Map());
   const walletChannelRef = useRef<any>(null);
+
+  // ============= CHAT BILLING =============
+  const handleInsufficientBalance = useCallback(() => {
+    toast({
+      title: "Insufficient Balance",
+      description: "Your wallet balance is low. Please recharge to continue chatting.",
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  const { minutesBilled, totalCharged } = useMiniChatBilling({
+    sessionId: billingSessionId,
+    manId: billingManId,
+    womanId: billingWomanId,
+    isActive: isSessionActive && !!billingSessionId,
+    sessionType: 'chat',
+    onInsufficientBalance: handleInsufficientBalance,
+  });
 
   // Cleanup camera stream and wallet channel on unmount
   useEffect(() => {
@@ -722,6 +746,25 @@ const ChatScreen = () => {
       .on(
         'postgres_changes',
         {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'active_chat_sessions',
+          filter: `chat_id=eq.${chatId.current}`
+        },
+        (payload: any) => {
+          const session = payload.new;
+          if (session && (session.status === 'active' || session.status === 'pending')) {
+            setBillingSessionId(session.id);
+            setBillingManId(session.man_user_id);
+            setBillingWomanId(session.woman_user_id);
+            setIsSessionActive(true);
+            console.log("[Chat] Billing session detected via INSERT:", session.id);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'UPDATE',
           schema: 'public',
           table: 'active_chat_sessions',
@@ -735,6 +778,7 @@ const ChatScreen = () => {
               (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
             
             setIsSessionActive(false);
+            setBillingSessionId(null);
             
             // If ended by partner (woman) and current user is man, auto-reconnect
             if (session.end_reason === 'woman_closed' || session.end_reason === 'partner_offline') {
@@ -934,6 +978,29 @@ const ChatScreen = () => {
 
         // Store channel ref for cleanup (do NOT return here — it would abort initializeChat)
         walletChannelRef.current = walletChannel;
+      }
+
+      // ============= FETCH ACTIVE SESSION FOR BILLING =============
+      try {
+        const { data: activeSession } = await supabase
+          .from("active_chat_sessions")
+          .select("id, man_user_id, woman_user_id, status")
+          .eq("chat_id", chatId.current)
+          .in("status", ["active", "pending"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeSession) {
+          setBillingSessionId(activeSession.id);
+          setBillingManId(activeSession.man_user_id);
+          setBillingWomanId(activeSession.woman_user_id);
+          console.log("[Chat] Billing wired for session:", activeSession.id);
+        } else {
+          console.log("[Chat] No active session found for billing - will retry on session change");
+        }
+      } catch (e) {
+        console.warn("[Chat] Failed to fetch billing session:", e);
       }
 
       // ============= FETCH PARTNER PROFILE =============
@@ -1268,6 +1335,7 @@ const ChatScreen = () => {
       if (error) throw error;
 
       setIsSessionActive(false);
+      setBillingSessionId(null);
       
       toast({
         title: "Chat Ended",
@@ -1304,6 +1372,7 @@ const ChatScreen = () => {
           }
         });
         setIsSessionActive(false);
+        setBillingSessionId(null);
       } catch (error) {
         console.error("[OFFLINE] Failed to end chat session:", error);
       }
