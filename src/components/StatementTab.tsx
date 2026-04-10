@@ -111,6 +111,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const TITLE = isMale ? '💰 Wallet Statement' : '💰 Earnings Statement';
   const HEADERS = [...STATIC_HEADERS_PREFIX, DEBIT_COL, CREDIT_COL, 'Balance (₹)'];
   const [statement, setStatement] = useState<StatementRow[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
@@ -121,17 +122,23 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
     if (!userId) return;
     setIsLoading(true);
     try {
-      const data = await getStatement(userId, dateRange.from, dateRange.to);
+      const [data, balance] = await Promise.all([
+        getStatement(userId, dateRange.from, dateRange.to),
+        isMale
+          ? getMenBalance(userId)
+          : getWomenBalance(userId).then(w => w.balance),
+      ]);
       setStatement(data);
+      setWalletBalance(balance);
     } catch { /* fallback empty */ }
     setIsLoading(false);
-  }, [userId, dateRange.from, dateRange.to]);
+  }, [userId, dateRange.from, dateRange.to, isMale]);
 
   useEffect(() => {
     loadStatement();
   }, [loadStatement]);
 
-  const summary = computeSummary(statement);
+  const summary = computeSummary(statement, walletBalance);
   const tableRows = buildTableRows(statement);
 
   // ─── PDF Export ───
