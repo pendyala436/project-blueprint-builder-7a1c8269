@@ -58,6 +58,7 @@ const kycSchema = z.object({
   account_number: z.string().min(9, "Valid account number required").max(18),
   ifsc_code: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format"),
   account_type: z.string().default("savings"),
+  upi_id: z.string().regex(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/, "Invalid UPI ID format (e.g. name@upi)").optional().or(z.literal("")),
 
   // Section 7: Nominee Details
   nominee_name: z.string().optional(),
@@ -164,6 +165,7 @@ export function WomenKYCForm() {
       account_number: "",
       ifsc_code: "",
       account_type: "savings",
+      upi_id: "",
       aadhaar_number: "",
       id_type: "pan",
       id_number: "",
@@ -224,6 +226,7 @@ export function WomenKYCForm() {
           account_number: data.account_number,
           ifsc_code: data.ifsc_code,
           account_type: (data as any).account_type || "savings",
+          upi_id: (data as any).upi_id || "",
           aadhaar_number: (data as any).aadhaar_number || "",
           id_type: (data.id_type === 'aadhaar' ? 'pan' : data.id_type) as any,
           id_number: data.id_type === 'aadhaar' ? "" : data.id_number,
@@ -304,6 +307,7 @@ export function WomenKYCForm() {
         account_number: data.account_number.trim(),
         ifsc_code: data.ifsc_code.toUpperCase().trim(),
         account_type: data.account_type || "savings",
+        upi_id: data.upi_id?.trim() || null,
         aadhaar_number: data.aadhaar_number.trim(),
         aadhaar_front_url: aadhaarFrontUrl,
         aadhaar_back_url: aadhaarBackUrl,
@@ -384,6 +388,7 @@ export function WomenKYCForm() {
             <div><Label className="text-muted-foreground">IFSC</Label><p className="font-medium">{existingKYC.ifsc_code}</p></div>
             <div><Label className="text-muted-foreground">Aadhaar</Label><p className="font-medium">****{(existingKYC.aadhaar_number || '').slice(-4)}</p></div>
             <div><Label className="text-muted-foreground">ID Proof</Label><p className="font-medium">{getIdTypeLabel(existingKYC.id_type)}: ****{existingKYC.id_number.slice(-4)}</p></div>
+            {(existingKYC as any).upi_id && <div><Label className="text-muted-foreground">UPI ID</Label><p className="font-medium">{(existingKYC as any).upi_id}</p></div>}
           </div>
           <div className="pt-2 border-t">
             <p className="text-xs text-muted-foreground mb-2">Editing will reset your KYC status to pending for re-verification.</p>
@@ -627,6 +632,9 @@ export function WomenKYCForm() {
                         <SelectItem value="current">Current</SelectItem>
                       </SelectContent>
                     </Select><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="upi_id" render={({ field }) => (
+                  <FormItem><FormLabel>UPI ID</FormLabel><FormControl><Input {...field} placeholder="e.g. yourname@upi" disabled={!isEditable} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
             </div>
