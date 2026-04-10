@@ -388,6 +388,7 @@ export function WomenKYCForm() {
             <div><Label className="text-muted-foreground">IFSC</Label><p className="font-medium">{existingKYC.ifsc_code}</p></div>
             <div><Label className="text-muted-foreground">Aadhaar</Label><p className="font-medium">****{(existingKYC.aadhaar_number || '').slice(-4)}</p></div>
             <div><Label className="text-muted-foreground">ID Proof</Label><p className="font-medium">{getIdTypeLabel(existingKYC.id_type)}: ****{existingKYC.id_number.slice(-4)}</p></div>
+            {(existingKYC as any).upi_id && <div><Label className="text-muted-foreground">UPI ID</Label><p className="font-medium">{(existingKYC as any).upi_id}</p></div>}
           </div>
           <div className="pt-2 border-t">
             <p className="text-xs text-muted-foreground mb-2">Editing will reset your KYC status to pending for re-verification.</p>
@@ -631,6 +632,9 @@ export function WomenKYCForm() {
                         <SelectItem value="current">Current</SelectItem>
                       </SelectContent>
                     </Select><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="upi_id" render={({ field }) => (
+                  <FormItem><FormLabel>UPI ID</FormLabel><FormControl><Input {...field} placeholder="e.g. yourname@upi" disabled={!isEditable} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
             </div>
