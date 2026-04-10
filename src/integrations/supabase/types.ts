@@ -3641,7 +3641,9 @@ export type Database = {
               credit: number
               debit: number
               description: string
+              duration_seconds: number
               id: string
+              rate_per_minute: number
               reference_id: string
               running_balance: number
               session_id: string
