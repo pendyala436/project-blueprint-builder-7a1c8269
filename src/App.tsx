@@ -110,6 +110,10 @@ const ProfileDetailScreen = lazyRetry(() => import("@/pages/ProfileDetailScreen"
 const SettingsScreen = lazyRetry(() => import("@/pages/SettingsScreen"));
 const InstallApp = lazyRetry(() => import("@/pages/InstallApp"));
 
+// Wallet
+const WalletScreen = lazyRetry(() => import("@/pages/WalletScreen"));
+const WomenWalletScreen = lazyRetry(() => import("@/pages/WomenWalletScreen"));
+
 // Admin
 const AdminDashboard = lazyRetry(() => import("@/pages/AdminDashboard"));
 const AdminUserManagement = lazyRetry(() => import("@/pages/AdminUserManagement"));
@@ -127,6 +131,7 @@ const AdminBackupManagement = lazyRetry(() => import("@/pages/AdminBackupManagem
 const AdminAuditLogs = lazyRetry(() => import("@/pages/AdminAuditLogs"));
 const AdminMessaging = lazyRetry(() => import("@/pages/AdminMessaging"));
 const AdminSettings = lazyRetry(() => import("@/pages/AdminSettings"));
+const AdminPayoutStatements = lazyRetry(() => import("@/pages/AdminPayoutStatements"));
 const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 
 /** Inner component that lives inside BrowserRouter — safe to use router hooks */
@@ -175,6 +180,8 @@ const AppShell = () => {
             <Route path="/online-users" element={<ProtectedRoute><OnlineUsersScreen /></ProtectedRoute>} />
             <Route path="/profile/:userId" element={<ProtectedRoute><ProfileDetailScreen /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsScreen /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute requiredRole="male"><WalletScreen /></ProtectedRoute>} />
+            <Route path="/women-wallet" element={<ProtectedRoute requiredRole="female"><WomenWalletScreen /></ProtectedRoute>} />
             <Route path="/install" element={<RouteSuspense><InstallApp /></RouteSuspense>} />
 
             {/* Admin */}
@@ -194,6 +201,7 @@ const AppShell = () => {
             <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><AdminAuditLogs /></ProtectedRoute>} />
             <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><AdminMessaging /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+            <Route path="/admin/payout-statements" element={<ProtectedRoute requiredRole="admin"><AdminPayoutStatements /></ProtectedRoute>} />
 
             <Route path="*" element={<RouteSuspense><NotFound /></RouteSuspense>} />
           </Routes>
