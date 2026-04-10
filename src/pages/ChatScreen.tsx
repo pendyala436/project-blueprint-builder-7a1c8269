@@ -746,6 +746,25 @@ const ChatScreen = () => {
       .on(
         'postgres_changes',
         {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'active_chat_sessions',
+          filter: `chat_id=eq.${chatId.current}`
+        },
+        (payload: any) => {
+          const session = payload.new;
+          if (session && (session.status === 'active' || session.status === 'pending')) {
+            setBillingSessionId(session.id);
+            setBillingManId(session.man_user_id);
+            setBillingWomanId(session.woman_user_id);
+            setIsSessionActive(true);
+            console.log("[Chat] Billing session detected via INSERT:", session.id);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'UPDATE',
           schema: 'public',
           table: 'active_chat_sessions',
