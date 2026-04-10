@@ -4,6 +4,7 @@
  * Export: PDF, Excel, Word
  */
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -141,6 +142,27 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   useEffect(() => {
     loadStatement();
   }, [loadStatement]);
+
+  // Real-time: auto-refresh when ledger_transactions change for this user
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`statement-realtime-${userId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'ledger_transactions',
+        filter: `user_id=eq.${userId}`,
+      }, () => { loadStatement(); })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallets',
+        filter: `user_id=eq.${userId}`,
+      }, () => { loadStatement(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, loadStatement]);
 
   const summary = computeSummary(statement, walletBalance);
   const tableRows = buildTableRows(statement);
