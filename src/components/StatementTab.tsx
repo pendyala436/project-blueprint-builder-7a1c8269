@@ -108,6 +108,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const DEBIT_COL = isMale ? 'Debit (₹)' : 'Withdrawn (₹)';
   const CREDIT_COL = isMale ? 'Credit (₹)' : 'Earned (₹)';
   const TITLE = isMale ? '💰 Wallet Statement' : '💰 Earnings Statement';
+  const HEADERS = [...STATIC_HEADERS_PREFIX, DEBIT_COL, CREDIT_COL, 'Balance (₹)'];
   const [statement, setStatement] = useState<StatementRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
