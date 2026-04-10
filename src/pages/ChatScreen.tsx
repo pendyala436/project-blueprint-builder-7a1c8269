@@ -1335,6 +1335,7 @@ const ChatScreen = () => {
       if (error) throw error;
 
       setIsSessionActive(false);
+      setBillingSessionId(null);
       
       toast({
         title: "Chat Ended",
@@ -1371,6 +1372,7 @@ const ChatScreen = () => {
           }
         });
         setIsSessionActive(false);
+        setBillingSessionId(null);
       } catch (error) {
         console.error("[OFFLINE] Failed to end chat session:", error);
       }
