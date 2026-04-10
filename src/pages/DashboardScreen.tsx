@@ -1599,6 +1599,42 @@ const DashboardScreen = () => {
     </div>
   );
 
+  const renderWalletTab = () => (
+    <div className="flex-1 overflow-y-auto">
+      {/* Wallet Balance */}
+      <div className="px-4 py-4 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent" onClick={() => setRechargeDialogOpen(true)}>
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+            <Wallet className="w-7 h-7 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">Wallet Balance</p>
+            <p className="text-2xl font-bold text-primary">{formatLocalCurrency(walletBalance)}</p>
+          </div>
+          <Button variant="outline" size="sm" className="gap-1 text-primary border-primary/30" onClick={(e) => { e.stopPropagation(); setRechargeDialogOpen(true); }}>
+            <CreditCard className="w-3.5 h-3.5" />Recharge
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-0 border-b border-border/30">
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-foreground">{stats.onlineUsersCount}</p>
+          <p className="text-[10px] text-muted-foreground">Online</p>
+        </div>
+        <div className="text-center py-4 border-r border-border/30">
+          <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+          <p className="text-[10px] text-muted-foreground">Matches</p>
+        </div>
+        <div className="text-center py-4">
+          <p className="text-xl font-bold text-foreground">{activeChatCount}</p>
+          <p className="text-[10px] text-muted-foreground">Active Chats</p>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderProfileTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Profile card */}
@@ -1614,20 +1650,6 @@ const DashboardScreen = () => {
         <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
           {getStatusText()}
         </Badge>
-      </div>
-
-      {/* Wallet */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-border/30 hover:bg-muted/50 cursor-pointer" onClick={() => setRechargeDialogOpen(true)}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Wallet className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">Wallet Balance</p>
-            <p className="text-xs text-muted-foreground">Tap to recharge</p>
-          </div>
-        </div>
-        <span className="text-lg font-bold text-primary">{formatLocalCurrency(walletBalance)}</span>
       </div>
 
       {/* Stats */}
@@ -1695,7 +1717,7 @@ const DashboardScreen = () => {
       {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
-      {/* Statement tab removed — billing system removed */}
+      {activeTab === "wallet" && renderWalletTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}

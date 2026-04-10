@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { MessageCircle, Users, Heart, User, Wallet, Video, Clock, FileText } from "lucide-react";
+import { MessageCircle, Users, Heart, User, Wallet, Video, Clock } from "lucide-react";
 
 export interface TabItem {
   id: string;
@@ -64,19 +64,18 @@ export const getMenTabs = (onlineBadge?: number, chatBadge?: number, matchBadge?
   { id: "history", label: "History", icon: <Clock className="w-5 h-5" /> },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
   { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchBadge },
-  { id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> },
+  { id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> },
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
 ];
 
-export const getWomenTabs = (onlineBadge?: number, chatBadge?: number, matchesBadge?: number, earningsBadge?: number): TabItem[] => [
+export const getWomenTabs = (onlineBadge?: number, chatBadge?: number, matchesBadge?: number): TabItem[] => [
   { id: "online", label: "Online", icon: <Users className="w-5 h-5" />, badge: onlineBadge },
   { id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge },
   { id: "history", label: "History", icon: <Clock className="w-5 h-5" /> },
   { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchesBadge },
   { id: "community", label: "Community", icon: <Users className="w-5 h-5" /> },
   { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
-  { id: "earnings", label: "Earnings", icon: <Wallet className="w-5 h-5" /> },
-  { id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> },
+  { id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> },
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
 ];
 

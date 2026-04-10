@@ -1453,7 +1453,7 @@ const WomenDashboardScreen = () => {
     </div>
   );
 
-  const renderEarningsTab = () => (
+  const renderWalletTab = () => (
     <div className="flex-1 overflow-y-auto">
       {/* Wallet Balance */}
       <div className="px-4 py-4 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent" onClick={() => navigate("/women-wallet")}>
@@ -1592,8 +1592,7 @@ const WomenDashboardScreen = () => {
       {activeTab === "matches" && renderMatchesTab()}
       {activeTab === "community" && renderCommunityTab()}
       {activeTab === "groups" && renderGroupsTab()}
-      {activeTab === "earnings" && renderEarningsTab()}
-      {/* Statement tab removed — billing system removed */}
+      {activeTab === "wallet" && renderWalletTab()}
       {activeTab === "profile" && renderProfileTab()}
 
       <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
