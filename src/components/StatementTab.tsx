@@ -1,6 +1,6 @@
 /**
  * StatementTab — Bank-style transaction statement for dashboard.
- * Columns: Date, Type, Description, Start Time, End Time, Duration, Rate, Debit, Credit, Balance
+ * Columns: S.No, Date, Type, Description, Start Time, End Time, Duration, Rate, Debit, Credit, Balance
  * Export: PDF, Excel, Word
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -52,7 +52,8 @@ const getTypeWithRate = (row: StatementRow): string => {
 const getDurationDisplay = (row: StatementRow): string => {
   if (!isSession(row.transaction_type)) return '—';
   if (row.duration_seconds == null) return '—';
-  return `${(row.duration_seconds / 60).toFixed(1)} min`;
+  const mins = Math.round(row.duration_seconds / 60);
+  return `${mins} min`;
 };
 
 const getStartTime = (row: StatementRow): string => {
@@ -72,7 +73,6 @@ const getRateDisplay = (row: StatementRow): string => {
   return `₹${row.rate_per_minute.toFixed(2)}/min`;
 };
 
-// ─── Compute summary ───
 const computeSummary = (rows: StatementRow[]) => {
   const totalDebit = rows.reduce((s, r) => s + (r.debit || 0), 0);
   const totalCredit = rows.reduce((s, r) => s + (r.credit || 0), 0);
@@ -83,7 +83,6 @@ const computeSummary = (rows: StatementRow[]) => {
   return { openingBalance, closingBalance, totalDebit, totalCredit };
 };
 
-// ─── Build table data for export ───
 const buildTableRows = (rows: StatementRow[]) =>
   rows.map((row, i) => ({
     sno: i + 1,
@@ -136,10 +135,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     doc.setFontSize(10);
     doc.text(`${dateRange.from} to ${dateRange.to}  •  Currency: INR  •  Timestamps in IST (UTC+5:30)`, 14, 23);
 
-    // Summary row
     const summaryY = 30;
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
     const cols = [
       { label: 'OPENING BALANCE', value: `₹${summary.openingBalance.toFixed(2)}` },
       { label: 'TOTAL CHARGED', value: `₹${summary.totalDebit.toFixed(2)}` },
@@ -190,7 +187,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     XLSX.writeFile(wb, `wallet-statement-${dateRange.from}-to-${dateRange.to}.xlsx`);
   };
 
-  // ─── Word/HTML Export (downloads as .doc) ───
+  // ─── Word/HTML Export ───
   const exportWord = () => {
     if (!statement.length) return;
     const rows = tableRows.map(r =>
@@ -204,12 +201,8 @@ table{border-collapse:collapse;width:100%}
 th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}
 th{background:#6366F1;color:#fff;font-weight:bold}
 h1{font-size:18pt;margin-bottom:4pt}
-.summary{display:flex;gap:20px;margin:10px 0}
-.summary-item{background:#f3f4f6;padding:8px 16px;border-radius:4px}
-.summary-item .label{font-size:8pt;color:#666}
-.summary-item .value{font-size:12pt;font-weight:bold}
 </style></head><body>
-<h1>💰 Wallet Statement</h1>
+<h1>Wallet Statement</h1>
 <p>${dateRange.from} to ${dateRange.to} • Currency: INR • Timestamps in IST (UTC+5:30)</p>
 <table><tr>
 <td style="background:#f3f4f6;padding:8px"><small>OPENING BALANCE</small><br><b>₹${summary.openingBalance.toFixed(2)}</b></td>
@@ -315,6 +308,7 @@ h1{font-size:18pt;margin-bottom:4pt}
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-muted/50 border-b border-border/30">
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground w-8">#</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Date & Time</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Type</th>
                 <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Description</th>
@@ -328,35 +322,33 @@ h1{font-size:18pt;margin-bottom:4pt}
               </tr>
             </thead>
             <tbody>
-              {statement.map((row) => {
-                const credit = isCredit(row.transaction_type);
-                return (
-                  <tr key={row.id} className="border-b border-border/20 hover:bg-muted/30">
-                    <td className="px-2 py-2 whitespace-nowrap text-foreground">
-                      {format(new Date(row.created_at), 'dd MMM yyyy HH:mm')}
-                    </td>
-                    <td className="px-2 py-2 whitespace-nowrap text-foreground font-medium">
-                      {getTypeWithRate(row)}
-                    </td>
-                    <td className="px-2 py-2 text-muted-foreground max-w-[200px] truncate">
-                      {row.description || '—'}
-                    </td>
-                    <td className="px-2 py-2 text-muted-foreground">{getStartTime(row)}</td>
-                    <td className="px-2 py-2 text-muted-foreground">{getEndTime(row)}</td>
-                    <td className="px-2 py-2 text-foreground italic">{getDurationDisplay(row)}</td>
-                    <td className="px-2 py-2 text-green-600 font-medium">{getRateDisplay(row)}</td>
-                    <td className="px-2 py-2 text-right text-red-500 font-medium">
-                      {row.debit ? row.debit.toFixed(2) : '—'}
-                    </td>
-                    <td className="px-2 py-2 text-right text-green-600 font-medium">
-                      {row.credit ? row.credit.toFixed(2) : '—'}
-                    </td>
-                    <td className="px-2 py-2 text-right font-semibold text-foreground">
-                      {row.running_balance?.toFixed(2) ?? '—'}
-                    </td>
-                  </tr>
-                );
-              })}
+              {statement.map((row, index) => (
+                <tr key={row.id} className="border-b border-border/20 hover:bg-muted/30">
+                  <td className="px-2 py-2 text-muted-foreground">{index + 1}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-foreground">
+                    {format(new Date(row.created_at), 'dd MMM yyyy HH:mm')}
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap text-foreground font-medium">
+                    {getTypeWithRate(row)}
+                  </td>
+                  <td className="px-2 py-2 text-muted-foreground max-w-[200px] truncate">
+                    {row.description || '—'}
+                  </td>
+                  <td className="px-2 py-2 text-muted-foreground">{getStartTime(row)}</td>
+                  <td className="px-2 py-2 text-muted-foreground">{getEndTime(row)}</td>
+                  <td className="px-2 py-2 text-foreground italic">{getDurationDisplay(row)}</td>
+                  <td className="px-2 py-2 text-primary font-medium">{getRateDisplay(row)}</td>
+                  <td className="px-2 py-2 text-right text-destructive font-medium">
+                    {row.debit ? row.debit.toFixed(2) : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-right text-primary font-medium">
+                    {row.credit ? row.credit.toFixed(2) : '—'}
+                  </td>
+                  <td className="px-2 py-2 text-right font-semibold text-foreground">
+                    {row.running_balance?.toFixed(2) ?? '—'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}

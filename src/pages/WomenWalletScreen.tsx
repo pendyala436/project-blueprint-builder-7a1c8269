@@ -1,5 +1,5 @@
 /**
- * WomenWalletScreen — Women's Wallet with earnings balance.
+ * WomenWalletScreen — Women's Wallet with earnings balance and statement.
  * Balance updates dynamically via Supabase realtime on ledger_transactions changes.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -8,8 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Wallet, TrendingUp } from 'lucide-react';
 import { getWomenBalance } from '@/services/ledger-wallet.service';
+import { StatementTab } from '@/components/StatementTab';
 
 const WomenWalletScreen = () => {
   const navigate = useNavigate();
@@ -43,17 +45,13 @@ const WomenWalletScreen = () => {
           schema: 'public',
           table: 'ledger_transactions',
           filter: `user_id=eq.${user.id}`,
-        }, () => {
-          loadData(user.id);
-        })
+        }, () => { loadData(user.id); })
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'wallets',
           filter: `user_id=eq.${user.id}`,
-        }, () => {
-          loadData(user.id);
-        })
+        }, () => { loadData(user.id); })
         .subscribe();
     })();
 
@@ -94,6 +92,15 @@ const WomenWalletScreen = () => {
           </div>
         </Card>
       </div>
+
+      <Tabs defaultValue="statement" className="flex-1 flex flex-col">
+        <TabsList className="mx-4 mb-2">
+          <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
+        </TabsList>
+        <TabsContent value="statement" className="flex-1">
+          <StatementTab userId={userIdRef.current} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

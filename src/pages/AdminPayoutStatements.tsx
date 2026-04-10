@@ -1,19 +1,22 @@
 /**
  * AdminPayoutStatements — Admin page for viewing/triggering payout snapshots.
- * Spec §7: Payouts on 1st and 16th, with bank details and Excel/CSV export.
+ * Spec §7: Payouts on 1st and 16th, with bank details and PDF/Excel/CSV export.
  */
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import AdminNav from '@/components/AdminNav';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar } from 'lucide-react';
+import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet } from 'lucide-react';
 import { triggerPayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface PayoutRecord {
   id: string;
@@ -35,6 +38,8 @@ interface PayoutRecord {
   snapshot_ist_date: string;
   created_at: string;
 }
+
+const PAYOUT_HEADERS = ['S.No', 'Name', 'Bank Name', 'IFSC Code', 'Account Number', 'Gross Earned (₹)', 'Fee (₹)', 'Net Payable (₹)', 'Already Paid (₹)', 'Incremental (₹)', 'Status', 'Date'];
 
 const AdminPayoutStatements = () => {
   const { toast } = useToast();
@@ -64,14 +69,29 @@ const AdminPayoutStatements = () => {
     setIsGenerating(false);
   };
 
+  const buildRows = () => records.map((r, i) => ({
+    sno: i + 1,
+    name: r.full_name || '—',
+    bank: r.bank_name || '—',
+    ifsc: r.ifsc_code || '—',
+    account: r.bank_account_number || '—',
+    gross: Number(r.gross_earned).toFixed(2),
+    fee: Number(r.withdrawal_fee_amount).toFixed(2),
+    net: Number(r.net_payable).toFixed(2),
+    paid: Number(r.already_paid).toFixed(2),
+    incremental: Number(r.incremental_payable).toFixed(2),
+    status: r.payment_status,
+    date: r.snapshot_ist_date ? format(new Date(r.snapshot_ist_date), 'dd MMM yyyy') : '—',
+  }));
+
+  const totalPayable = records.reduce((s, r) => s + Number(r.incremental_payable || 0), 0);
+  const totalGross = records.reduce((s, r) => s + Number(r.gross_earned || 0), 0);
+
+  // ─── CSV Export ───
   const exportCSV = () => {
     if (!records.length) return;
-    const headers = ['S.No', 'Name', 'Bank Name', 'IFSC Code', 'Account Number', 'Gross Earned', 'Fee', 'Net Payable', 'Already Paid', 'Incremental', 'Status'];
-    const rows = records.map((r, i) => [
-      i + 1, r.full_name, r.bank_name || '', r.ifsc_code || '', r.bank_account_number || '',
-      r.gross_earned, r.withdrawal_fee_amount, r.net_payable, r.already_paid, r.incremental_payable, r.payment_status,
-    ]);
-    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+    const rows = buildRows();
+    const csv = [PAYOUT_HEADERS.join(','), ...rows.map(r => [r.sno, `"${r.name}"`, `"${r.bank}"`, r.ifsc, r.account, r.gross, r.fee, r.net, r.paid, r.incremental, r.status, r.date].join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -79,8 +99,64 @@ const AdminPayoutStatements = () => {
     URL.revokeObjectURL(url);
   };
 
-  const totalPayable = records.reduce((s, r) => s + Number(r.incremental_payable || 0), 0);
-  const totalGross = records.reduce((s, r) => s + Number(r.gross_earned || 0), 0);
+  // ─── PDF Export ───
+  const exportPDF = () => {
+    if (!records.length) return;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFontSize(18);
+    doc.text('Payout Statement', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total Payable: ₹${totalPayable.toFixed(2)}`, 14, 23);
+
+    const rows = buildRows().map(r => [String(r.sno), r.name, r.bank, r.ifsc, r.account, r.gross, r.fee, r.net, r.paid, r.incremental, r.status, r.date]);
+
+    autoTable(doc, {
+      startY: 30,
+      head: [PAYOUT_HEADERS],
+      body: rows,
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [99, 102, 241], fontSize: 7 },
+      columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+    });
+
+    doc.save(`payout-${monthFilter}.pdf`);
+  };
+
+  // ─── Excel Export ───
+  const exportExcel = () => {
+    if (!records.length) return;
+    const rows = buildRows();
+    const wsData = [
+      ['Payout Statement'],
+      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total Gross: ₹${totalGross.toFixed(2)}`, '', `Total Payable: ₹${totalPayable.toFixed(2)}`],
+      [],
+      PAYOUT_HEADERS,
+      ...rows.map(r => [r.sno, r.name, r.bank, r.ifsc, r.account, r.gross, r.fee, r.net, r.paid, r.incremental, r.status, r.date]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
+    XLSX.writeFile(wb, `payout-${monthFilter}.xlsx`);
+  };
+
+  // ─── Word Export ───
+  const exportWord = () => {
+    if (!records.length) return;
+    const rows = buildRows();
+    const tableRows = rows.map(r =>
+      `<tr><td>${r.sno}</td><td>${r.name}</td><td>${r.bank}</td><td>${r.ifsc}</td><td>${r.account}</td><td style="text-align:right">${r.gross}</td><td style="text-align:right">${r.fee}</td><td style="text-align:right">${r.net}</td><td style="text-align:right">${r.paid}</td><td style="text-align:right">${r.incremental}</td><td>${r.status}</td><td>${r.date}</td></tr>`
+    ).join('');
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
+<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total Payable: ₹${totalPayable.toFixed(2)}</p>
+<table><thead><tr>${PAYOUT_HEADERS.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `payout-${monthFilter}.doc`; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <AdminNav>
@@ -91,18 +167,31 @@ const AdminPayoutStatements = () => {
             <p className="text-sm text-muted-foreground">Bi-monthly payout snapshots (1st & 16th)</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Input
-              type="month"
-              value={monthFilter}
-              onChange={e => setMonthFilter(e.target.value)}
-              className="w-40"
-            />
+            <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-40" />
             <Button variant="outline" size="sm" onClick={loadRecords} disabled={isLoading}>
               <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
             </Button>
-            <Button variant="outline" size="sm" onClick={exportCSV} disabled={!records.length}>
-              <Download className="w-4 h-4 mr-1" /> Export CSV
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={!records.length}>
+                  <Download className="w-4 h-4 mr-1" /> Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportPDF}>
+                  <FileText className="w-4 h-4 mr-2" /> Export PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportExcel}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportCSV}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" /> Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportWord}>
+                  <FileText className="w-4 h-4 mr-2" /> Export Word
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -119,7 +208,7 @@ const AdminPayoutStatements = () => {
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <IndianRupee className="w-8 h-8 text-green-600" />
+              <IndianRupee className="w-8 h-8 text-primary" />
               <div>
                 <p className="text-2xl font-bold">₹{totalGross.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Gross Earned</p>
@@ -161,19 +250,20 @@ const AdminPayoutStatements = () => {
                 <TableHead>Bank</TableHead>
                 <TableHead>IFSC</TableHead>
                 <TableHead>Account</TableHead>
-                <TableHead className="text-right">Gross</TableHead>
-                <TableHead className="text-right">Fee</TableHead>
-                <TableHead className="text-right">Net Payable</TableHead>
-                <TableHead className="text-right">Incremental</TableHead>
+                <TableHead className="text-right">Gross (₹)</TableHead>
+                <TableHead className="text-right">Fee (₹)</TableHead>
+                <TableHead className="text-right">Net Payable (₹)</TableHead>
+                <TableHead className="text-right">Already Paid (₹)</TableHead>
+                <TableHead className="text-right">Incremental (₹)</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : records.length === 0 ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
               ) : (
                 records.map((r, i) => (
                   <TableRow key={r.id}>
@@ -183,15 +273,16 @@ const AdminPayoutStatements = () => {
                     <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.bank_account_number ? '****' + r.bank_account_number.slice(-4) : '—'}</TableCell>
                     <TableCell className="text-right">₹{Number(r.gross_earned).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-red-500">₹{Number(r.withdrawal_fee_amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-destructive">₹{Number(r.withdrawal_fee_amount).toFixed(2)}</TableCell>
                     <TableCell className="text-right font-semibold">₹{Number(r.net_payable).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-green-600 font-semibold">₹{Number(r.incremental_payable).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">₹{Number(r.already_paid).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-primary font-semibold">₹{Number(r.incremental_payable).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant={r.payment_status === 'paid' ? 'default' : 'secondary'} className="text-xs">
                         {r.payment_status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs">{r.snapshot_ist_date ? format(new Date(r.snapshot_ist_date), 'dd MMM') : '—'}</TableCell>
+                    <TableCell className="text-xs">{r.snapshot_ist_date ? format(new Date(r.snapshot_ist_date), 'dd MMM yyyy') : '—'}</TableCell>
                   </TableRow>
                 ))
               )}
