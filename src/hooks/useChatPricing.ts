@@ -32,7 +32,7 @@ export function useChatPricing() {
     return balance >= rateMap[sessionType];
   };
 
-  const formatPrice = (amount: number) => `₹${amount.toFixed(0)}`;
+  const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
 
   return { pricing, isLoading, hasSufficientBalance, formatPrice };
 }

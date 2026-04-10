@@ -851,12 +851,12 @@ const MiniChatWindow = ({
               <p className="text-xs font-medium truncate">{partnerName}</p>
               {userGender === "male" && walletBalance > 0 && (
                 <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5">
-                  <Wallet className="h-2 w-2" />₹{walletBalance.toFixed(0)}
+                  <Wallet className="h-2 w-2" />₹{walletBalance.toFixed(2)}
                 </Badge>
               )}
               {userGender === "female" && todayEarnings > 0 && (
                 <Badge variant="outline" className="h-3.5 text-[8px] px-1 gap-0.5 border-green-500/30 text-green-600">
-                  <TrendingUp className="h-2 w-2" />₹{todayEarnings.toFixed(0)}
+                  <TrendingUp className="h-2 w-2" />₹{todayEarnings.toFixed(2)}
                 </Badge>
               )}
             </div>

@@ -320,7 +320,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                       <span>·</span>
                       <span className="flex items-center gap-0.5">
                         <IndianRupee className="w-3 h-3" />
-                        {isMale ? `-${item.totalEarned.toFixed(0)}` : `+${item.totalEarned.toFixed(0)}`}
+                        {isMale ? `-${item.totalEarned.toFixed(2)}` : `+${item.totalEarned.toFixed(2)}`}
                       </span>
                     </>
                   )}

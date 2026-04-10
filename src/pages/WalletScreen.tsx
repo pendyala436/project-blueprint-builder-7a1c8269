@@ -59,7 +59,7 @@ const WalletScreen = () => {
             </div>
             <div>
               <p className="text-sm opacity-80">Available Balance</p>
-              <p className="text-3xl font-bold">₹{balance.toFixed(0)}</p>
+              <p className="text-3xl font-bold">₹{balance.toFixed(2)}</p>
             </div>
           </div>
           <Button
