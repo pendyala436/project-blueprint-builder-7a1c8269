@@ -332,6 +332,11 @@ const ChatScreen = () => {
   const [isStoppingChat, setIsStoppingChat] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   
+  // Billing state
+  const [billingSessionId, setBillingSessionId] = useState<string | null>(null);
+  const [billingManId, setBillingManId] = useState<string>("");
+  const [billingWomanId, setBillingWomanId] = useState<string>("");
+  
   // Typing preview state (native + English subtitle while typing)
   const [previewNative, setPreviewNative] = useState("");
   const [previewEnglish, setPreviewEnglish] = useState("");
