@@ -247,7 +247,7 @@ h1{font-size:18pt;margin-bottom:4pt}
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/30 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">💰 Wallet Statement</h2>
+          <h2 className="text-sm font-semibold text-foreground">{TITLE}</h2>
           <p className="text-xs text-muted-foreground">{statement.length} transactions • Currency: INR</p>
         </div>
         <div className="flex gap-1">
@@ -293,8 +293,8 @@ h1{font-size:18pt;margin-bottom:4pt}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-border/30">
           {[
             { label: 'OPENING BALANCE', value: summary.openingBalance },
-            { label: 'TOTAL CHARGED', value: summary.totalDebit },
-            { label: 'TOTAL RECHARGED', value: summary.totalCredit },
+            { label: DEBIT_LABEL, value: summary.totalDebit },
+            { label: CREDIT_LABEL, value: summary.totalCredit },
             { label: 'CLOSING BALANCE', value: summary.closingBalance },
           ].map((item, i) => (
             <div key={i} className={cn('text-center py-3', i < 3 && 'border-r border-border/30')}>
