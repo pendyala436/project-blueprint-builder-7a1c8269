@@ -53,8 +53,11 @@ const getTypeWithRate = (row: StatementRow): string => {
 const getDurationDisplay = (row: StatementRow): string => {
   if (!isSession(row.transaction_type)) return '—';
   if (row.duration_seconds == null) return '—';
-  const mins = Math.round(row.duration_seconds / 60);
-  return `${mins} min`;
+  const totalSecs = Math.round(row.duration_seconds);
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  if (s === 0) return `${m} min`;
+  return `${m}m ${s}s`;
 };
 
 const getStartTime = (row: StatementRow): string => {
