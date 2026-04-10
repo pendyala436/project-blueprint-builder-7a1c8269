@@ -226,7 +226,7 @@ export function WomenKYCForm() {
           account_number: data.account_number,
           ifsc_code: data.ifsc_code,
           account_type: (data as any).account_type || "savings",
-          upi_id: (data as any).upi_id || "",
+          aadhaar_number: (data as any).aadhaar_number || "",
           id_type: (data.id_type === 'aadhaar' ? 'pan' : data.id_type) as any,
           id_number: data.id_type === 'aadhaar' ? "" : data.id_number,
           address_proof_type: (data as any).address_proof_type || "aadhaar",
