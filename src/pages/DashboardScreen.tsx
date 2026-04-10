@@ -201,6 +201,9 @@ const DashboardScreen = () => {
     lastMessageAt: string;
     lastMessageSenderId: string;
     unreadCount: number;
+    partnerIsOnline: boolean;
+    partnerStatus: string;
+    partnerActiveChatCount: number;
   }>>([]);
   const [loadingChats, setLoadingChats] = useState(false);
   // App settings (currency rates, payment gateways, recharge amounts - all from database)

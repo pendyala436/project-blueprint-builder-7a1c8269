@@ -163,6 +163,9 @@ const WomenDashboardScreen = () => {
     lastMessageAt: string;
     lastMessageSenderId: string;
     unreadCount: number;
+    partnerIsOnline: boolean;
+    partnerStatus: string;
+    partnerActiveChatCount: number;
   }>>([]);
   const [loadingWomenChats, setLoadingWomenChats] = useState(false);
   
