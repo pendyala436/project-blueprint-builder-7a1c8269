@@ -378,6 +378,24 @@ const ChatScreen = () => {
   const tempToRealIdRef = useRef<Map<string, string>>(new Map());
   const walletChannelRef = useRef<any>(null);
 
+  // ============= CHAT BILLING =============
+  const handleInsufficientBalance = useCallback(() => {
+    toast({
+      title: "Insufficient Balance",
+      description: "Your wallet balance is low. Please recharge to continue chatting.",
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  const { minutesBilled, totalCharged } = useMiniChatBilling({
+    sessionId: billingSessionId,
+    manId: billingManId,
+    womanId: billingWomanId,
+    isActive: isSessionActive && !!billingSessionId,
+    sessionType: 'chat',
+    onInsufficientBalance: handleInsufficientBalance,
+  });
+
   // Cleanup camera stream and wallet channel on unmount
   useEffect(() => {
     return () => {
