@@ -607,11 +607,10 @@ const DashboardScreen = () => {
       const partnerIds = sessions.map(s => s.woman_user_id);
       const chatIds = sessions.map(s => s.chat_id);
       
-      // Fetch profiles, last messages, and unread counts ALL in parallel (eliminates N+1)
+      // Fetch profiles, last messages, unread counts, and partner statuses ALL in parallel
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-      const [profiles, lastMsgsRes, unreadRes] = await Promise.all([
+      const [profiles, lastMsgsRes, unreadRes, partnerStatusRes] = await Promise.all([
         fetchPublicProfiles(partnerIds),
-        // Get last message per chat in a single query
         Promise.all(sessions.map(s =>
           supabase
             .from("chat_messages")
@@ -621,18 +620,21 @@ const DashboardScreen = () => {
             .limit(1)
             .then(r => ({ chatId: s.chat_id, msg: r.data?.[0], fallback: s.last_activity_at }))
         )),
-        // Get all unread counts in a single batch query
         supabase
           .from("chat_messages")
           .select("chat_id", { count: "exact" })
           .in("chat_id", chatIds)
           .eq("receiver_id", currentUserId)
           .eq("is_read", false),
+        supabase
+          .from("user_status")
+          .select("user_id, is_online, status, active_chat_count")
+          .in("user_id", partnerIds),
       ]);
 
       const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+      const statusMap = new Map((partnerStatusRes.data || []).map((s: any) => [s.user_id, s]));
       
-      // Build unread count map from batch result
       const unreadCountMap = new Map<string, number>();
       if (unreadRes.data) {
         for (const row of unreadRes.data) {
@@ -643,6 +645,7 @@ const DashboardScreen = () => {
       const chats = sessions.map(s => {
         const profile = profileMap.get(s.woman_user_id);
         const msgInfo = lastMsgsRes.find(m => m.chatId === s.chat_id);
+        const status = statusMap.get(s.woman_user_id);
         return {
           chatId: s.chat_id,
           partnerId: s.woman_user_id,
@@ -652,10 +655,12 @@ const DashboardScreen = () => {
           lastMessageAt: msgInfo?.msg?.created_at || s.last_activity_at,
           lastMessageSenderId: msgInfo?.msg?.sender_id || "",
           unreadCount: unreadCountMap.get(s.chat_id) || 0,
+          partnerIsOnline: status?.is_online || false,
+          partnerStatus: status?.status || "offline",
+          partnerActiveChatCount: status?.active_chat_count || 0,
         };
       });
 
-      // Sort: unread first, then by latest message time
       chats.sort((a, b) => {
         if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
         if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
