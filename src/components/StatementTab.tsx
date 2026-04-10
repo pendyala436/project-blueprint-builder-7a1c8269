@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Filter, Wallet, RefreshCw, Download, FileText, FileSpreadsheet } from 'lucide-react';
-import { getStatement, type StatementRow } from '@/services/ledger-wallet.service';
+import { getStatement, getMenBalance, getWomenBalance, type StatementRow } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -76,13 +76,12 @@ const getRateDisplay = (row: StatementRow): string => {
   return `₹${row.rate_per_minute.toFixed(2)}/min`;
 };
 
-const computeSummary = (rows: StatementRow[]) => {
+const computeSummary = (rows: StatementRow[], walletBalance: number) => {
   const totalDebit = rows.reduce((s, r) => s + (r.debit || 0), 0);
   const totalCredit = rows.reduce((s, r) => s + (r.credit || 0), 0);
-  const closingBalance = rows.length > 0 ? rows[0].running_balance : 0;
-  const openingBalance = rows.length > 0
-    ? rows[rows.length - 1].running_balance - rows[rows.length - 1].credit + rows[rows.length - 1].debit
-    : 0;
+  // Use actual wallet balance as closing balance to match what user sees
+  const closingBalance = walletBalance;
+  const openingBalance = closingBalance - totalCredit + totalDebit;
   return { openingBalance, closingBalance, totalDebit, totalCredit };
 };
 
@@ -112,6 +111,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const TITLE = isMale ? '💰 Wallet Statement' : '💰 Earnings Statement';
   const HEADERS = [...STATIC_HEADERS_PREFIX, DEBIT_COL, CREDIT_COL, 'Balance (₹)'];
   const [statement, setStatement] = useState<StatementRow[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
     from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
@@ -122,17 +122,23 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
     if (!userId) return;
     setIsLoading(true);
     try {
-      const data = await getStatement(userId, dateRange.from, dateRange.to);
+      const [data, balance] = await Promise.all([
+        getStatement(userId, dateRange.from, dateRange.to),
+        isMale
+          ? getMenBalance(userId)
+          : getWomenBalance(userId).then(w => w.balance),
+      ]);
       setStatement(data);
+      setWalletBalance(balance);
     } catch { /* fallback empty */ }
     setIsLoading(false);
-  }, [userId, dateRange.from, dateRange.to]);
+  }, [userId, dateRange.from, dateRange.to, isMale]);
 
   useEffect(() => {
     loadStatement();
   }, [loadStatement]);
 
-  const summary = computeSummary(statement);
+  const summary = computeSummary(statement, walletBalance);
   const tableRows = buildTableRows(statement);
 
   // ─── PDF Export ───
