@@ -31,10 +31,13 @@ const getTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
     recharge: 'Wallet Recharge', credit: 'Credit', refund: 'Refund',
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
-    group_call_charge: 'Group Call', debit: 'Debit', withdrawal: 'Withdrawal',
+    group_call_charge: 'Group Call', private_group_call_charge: 'Group Call',
+    debit: 'Debit', withdrawal: 'Withdrawal',
     gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received',
+    tip_charge: 'Tip Sent', tip_earning: 'Tip Received',
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
+    private_group_call_earning: 'Group Earning',
     earning: 'Earning',
   };
   return labels[type] || type?.replace(/_/g, ' ');
