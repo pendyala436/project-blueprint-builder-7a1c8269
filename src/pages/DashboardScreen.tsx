@@ -612,7 +612,7 @@ const DashboardScreen = () => {
         Promise.all(sessions.map(s =>
           supabase
             .from("chat_messages")
-            .select("message, created_at")
+            .select("message, created_at, sender_id")
             .eq("chat_id", s.chat_id)
             .order("created_at", { ascending: false })
             .limit(1)
@@ -647,8 +647,16 @@ const DashboardScreen = () => {
           partnerPhoto: profile?.photo_url || null,
           lastMessage: msgInfo?.msg?.message || "",
           lastMessageAt: msgInfo?.msg?.created_at || s.last_activity_at,
+          lastMessageSenderId: msgInfo?.msg?.sender_id || "",
           unreadCount: unreadCountMap.get(s.chat_id) || 0,
         };
+      });
+
+      // Sort: unread first, then by latest message time
+      chats.sort((a, b) => {
+        if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+        if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+        return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
       });
 
       setActiveChats(chats);
