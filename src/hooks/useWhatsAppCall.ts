@@ -286,8 +286,7 @@ export const useWhatsAppCall = (
 
     ch.on('broadcast', { event: 'call_ended' }, () => {
       if (!endingRef.current) {
-        endingRef.current = true;
-        cleanup();
+        doEndCall(callId, callType);
       }
     });
 
