@@ -56,13 +56,14 @@ export interface StatementRow {
 
 // ──────────── Billing ────────────
 
-/** Bill one minute of a 1:1 session (chat / audio / video) */
+/** Bill a session tick — supports partial minutes via durationSeconds (default 60) */
 export async function billSession(
   sessionId: string,
   sessionType: SessionType,
   manId: string,
   womanId: string,
-  minuteNumber: number
+  minuteNumber: number,
+  durationSeconds: number = 60
 ): Promise<BillingResult> {
   const rates = PRICING[sessionType];
   const { data, error } = await supabase.rpc('ledger_bill_session', {
@@ -73,17 +74,19 @@ export async function billSession(
     p_minute_number: minuteNumber,
     p_man_charge: rates.man,
     p_woman_earn: rates.woman,
+    p_duration_seconds: Math.max(1, Math.round(durationSeconds)),
   });
   if (error) return { success: false, error: error.message };
   return (data as BillingResult) ?? { success: false, error: 'No response' };
 }
 
-/** Bill one tick of a private group call */
+/** Bill one tick of a private group call — supports partial minutes */
 export async function billGroupCall(
   sessionId: string,
   womanId: string,
   manIds: string[],
-  minuteNumber: number
+  minuteNumber: number,
+  durationSeconds: number = 60
 ): Promise<BillingResult> {
   const { data, error } = await supabase.rpc('ledger_bill_group_call', {
     p_session_id: sessionId,
@@ -92,6 +95,7 @@ export async function billGroupCall(
     p_minute_number: minuteNumber,
     p_charge_per_man: PRICING.private_group_call.man,
     p_earn_per_man: PRICING.private_group_call.woman,
+    p_duration_seconds: Math.max(1, Math.round(durationSeconds)),
   });
   if (error) return { success: false, error: error.message };
   return (data as BillingResult) ?? { success: false, error: 'No response' };
