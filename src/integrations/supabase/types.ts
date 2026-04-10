@@ -3799,6 +3799,7 @@ export type Database = {
       ledger_bill_group_call: {
         Args: {
           p_charge_per_man: number
+          p_duration_seconds?: number
           p_earn_per_man: number
           p_man_ids: string[]
           p_minute_number: number
@@ -3822,6 +3823,7 @@ export type Database = {
           }
         | {
             Args: {
+              p_duration_seconds?: number
               p_man_charge: number
               p_man_id: string
               p_minute_number: number
