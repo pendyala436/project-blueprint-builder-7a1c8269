@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Filter, Wallet, RefreshCw, Download, FileText, FileSpreadsheet } from 'lucide-react';
-import { getStatement, type StatementRow } from '@/services/ledger-wallet.service';
+import { getStatement, getMenBalance, getWomenBalance, type StatementRow } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
