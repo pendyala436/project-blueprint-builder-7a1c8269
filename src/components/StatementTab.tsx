@@ -210,12 +210,12 @@ th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}
 th{background:#6366F1;color:#fff;font-weight:bold}
 h1{font-size:18pt;margin-bottom:4pt}
 </style></head><body>
-<h1>Wallet Statement</h1>
+<h1>${isMale ? 'Wallet Statement' : 'Earnings Statement'}</h1>
 <p>${dateRange.from} to ${dateRange.to} • Currency: INR • Timestamps in IST (UTC+5:30)</p>
 <table><tr>
 <td style="background:#f3f4f6;padding:8px"><small>OPENING BALANCE</small><br><b>₹${summary.openingBalance.toFixed(2)}</b></td>
-<td style="background:#f3f4f6;padding:8px"><small>TOTAL CHARGED</small><br><b>₹${summary.totalDebit.toFixed(2)}</b></td>
-<td style="background:#f3f4f6;padding:8px"><small>TOTAL RECHARGED</small><br><b>₹${summary.totalCredit.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>${DEBIT_LABEL}</small><br><b>₹${summary.totalDebit.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>${CREDIT_LABEL}</small><br><b>₹${summary.totalCredit.toFixed(2)}</b></td>
 <td style="background:#f3f4f6;padding:8px"><small>CLOSING BALANCE</small><br><b>₹${summary.closingBalance.toFixed(2)}</b></td>
 </tr></table>
 <br>
