@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useChatPricing } from '@/hooks/useChatPricing';
+// useChatPricing removed — billing system removed
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 

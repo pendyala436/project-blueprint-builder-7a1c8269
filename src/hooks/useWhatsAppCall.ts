@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useChatPricing } from '@/hooks/useChatPricing';
+// useChatPricing removed — billing system removed
 
 export type CallType = 'audio' | 'video';
 export type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'active' | 'ended';

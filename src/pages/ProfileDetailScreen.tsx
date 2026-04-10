@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-import { useChatPricing } from "@/hooks/useChatPricing";
+// useChatPricing removed — billing system removed
 import { 
   Heart, 
   ArrowLeft,

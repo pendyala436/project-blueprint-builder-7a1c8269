@@ -70,7 +70,7 @@ import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
-import { useChatPricing } from "@/hooks/useChatPricing";
+// useChatPricing removed — billing system removed
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
@@ -82,7 +82,7 @@ import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs"
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
-import TransactionStatementTab from "@/components/TransactionStatementTab";
+// TransactionStatementTab removed — billing system removed
 interface Notification {
   id: string;
   title: string;

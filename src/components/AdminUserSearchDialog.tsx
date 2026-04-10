@@ -9,7 +9,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getLedgerWallet } from "@/services/ledger-wallet.service";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

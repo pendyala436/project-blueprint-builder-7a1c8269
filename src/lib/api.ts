@@ -6,19 +6,3 @@
 
 // Core API exports
 export * from './api/index';
-
-// Payment exports
-export { paymentService } from './api/payment-service';
-export type {
-  PaymentStatus,
-  PaymentMethod,
-  PaymentRequest,
-  PaymentResponse,
-  PaymentConfirmation,
-  WithdrawalRequest,
-  WithdrawalResponse,
-  BillingSession,
-  PaymentEventType,
-  PaymentEvent,
-  PaymentEventHandler,
-} from './api/payment-types';
