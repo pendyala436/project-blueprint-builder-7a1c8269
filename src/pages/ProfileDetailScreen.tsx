@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import MeowLogo from "@/components/MeowLogo";
 import { useToast } from "@/hooks/use-toast";
-import { useChatPricing } from "@/hooks/useChatPricing";
+// useChatPricing removed — billing system removed
 import { 
   Heart, 
   ArrowLeft,
@@ -80,7 +80,7 @@ const ProfileDetailScreen = () => {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
-  const { pricing } = useChatPricing();
+  const pricing = { ratePerMinute: 0 };
 
   useEffect(() => {
     if (userId) {

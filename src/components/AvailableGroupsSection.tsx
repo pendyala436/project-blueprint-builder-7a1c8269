@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useChatPricing } from '@/hooks/useChatPricing';
+// useChatPricing removed — billing system removed
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -30,8 +30,8 @@ const FLOWER_EMOJIS: Record<string, string> = {
 const MIN_BALANCE_MINUTES = 5;
 
 export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: AvailableGroupsSectionProps) {
-  const { pricing } = useChatPricing();
-  const RATE_PER_MINUTE = pricing.groupCallRatePerMinute || 4;
+  const pricing = { groupCallRatePerMinute: 4 };
+  const RATE_PER_MINUTE = pricing.groupCallRatePerMinute;
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeGroupVideo, setActiveGroupVideo] = useState<PrivateGroup | null>(null);

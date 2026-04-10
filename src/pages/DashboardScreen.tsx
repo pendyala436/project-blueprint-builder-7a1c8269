@@ -70,7 +70,7 @@ import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
-import { useChatPricing } from "@/hooks/useChatPricing";
+// useChatPricing removed — billing system removed
 import { useAutoReconnect } from "@/hooks/useAutoReconnect";
 import { useAtomicTransaction } from "@/hooks/useAtomicTransaction";
 import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
@@ -82,7 +82,7 @@ import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs"
 import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
-import TransactionStatementTab from "@/components/TransactionStatementTab";
+// TransactionStatementTab removed — billing system removed
 interface Notification {
   id: string;
   title: string;
@@ -231,8 +231,10 @@ const DashboardScreen = () => {
     hasBio: false,
   });
 
-  // Chat pricing from admin settings
-  const { pricing, calculateCost, hasSufficientBalance, formatPrice } = useChatPricing();
+  // Chat pricing removed — billing system removed
+  const pricing = { ratePerMinute: 0, audioRatePerMinute: 0, videoRatePerMinute: 0, groupCallRatePerMinute: 0 };
+  const hasSufficientBalance = () => true;
+  const formatPrice = (v: number) => `₹${v}`;
   
   // Auto-reconnect functionality
   const { 
@@ -1021,16 +1023,7 @@ const DashboardScreen = () => {
     
     // Note: Photo validation not needed at runtime - photos are mandatory during registration
 
-    // Check balance first
-    if (!hasSufficientBalance(walletBalance, 2)) {
-      toast({
-        title: 'Insufficient Balance',
-        description: 'Please recharge your wallet to start chatting',
-        variant: "destructive",
-      });
-      setRechargeDialogOpen(true);
-      return;
-    }
+    // Balance check removed — billing system removed
 
     setIsConnecting(true);
     toast({
@@ -1702,7 +1695,7 @@ const DashboardScreen = () => {
       {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
-      {activeTab === "statement" && <TransactionStatementTab gender="male" />}
+      {/* Statement tab removed — billing system removed */}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}

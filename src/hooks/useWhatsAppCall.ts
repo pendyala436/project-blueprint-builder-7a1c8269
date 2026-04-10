@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useChatPricing } from '@/hooks/useChatPricing';
+// useChatPricing removed — billing system removed
 
 export type CallType = 'audio' | 'video';
 export type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'active' | 'ended';
@@ -29,7 +29,7 @@ export const useWhatsAppCall = (
   walletBalance: number
 ) => {
   const { toast } = useToast();
-  const { pricing } = useChatPricing();
+  const pricing = { audioRatePerMinute: 6, videoRatePerMinute: 8 };
   const [status, setStatus] = useState<CallStatus>('idle');
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [isMuted, setIsMuted] = useState(false);

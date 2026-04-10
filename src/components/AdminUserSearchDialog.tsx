@@ -9,7 +9,7 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getLedgerWallet } from "@/services/ledger-wallet.service";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -209,12 +209,8 @@ export const AdminUserSearchDialog = () => {
             kyc = kycData as WomenKYC | null;
           }
 
-          // Fetch wallet info via ledger service for consistency
+          // Wallet info removed — billing system removed
           let wallet: WalletInfo | null = null;
-          const walletData = await getLedgerWallet(profile.user_id);
-          if (walletData) {
-            wallet = { balance: walletData.balance, currency: walletData.currency };
-          }
 
           // Fetch chat stats
           let chatStats: ChatStats | null = null;

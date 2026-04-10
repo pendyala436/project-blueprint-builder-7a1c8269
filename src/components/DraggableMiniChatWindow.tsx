@@ -19,11 +19,11 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { MiniChatActions } from "@/components/MiniChatActions";
-import { GiftSendButton } from "@/components/GiftSendButton";
+// GiftSendButton removed — billing system removed
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useDraggablePosition } from "@/hooks/useDraggablePosition";
 import { useResizableWindow } from "@/hooks/useResizableWindow";
-import { useMiniChatBilling } from "@/hooks/useMiniChatBilling";
+// useMiniChatBilling removed — billing system removed
 import { useMiniChatMessages } from "@/hooks/useMiniChatMessages";
 import { usePartnerMonitor } from "@/hooks/usePartnerMonitor";
 
@@ -111,17 +111,19 @@ const DraggableMiniChatWindow = ({
   const { messages, setMessages, unreadCount, setUnreadCount, messagesEndRef, hasOlderMessages, isLoadingOlder, loadOlderMessages, addSeenId } =
     useMiniChatMessages({ chatId, currentUserId, isMinimized, currentUserLanguage, partnerLanguage: partnerLanguage });
 
-  const billing = useMiniChatBilling({
-    chatId,
-    sessionId,
-    currentUserId,
-    userGender,
-    ratePerMinute,
-    earningRatePerMinute,
-    isEarningEligible,
-    messages,
-    onClose,
-  });
+  // Billing removed — stub object for compatibility
+  const billing = {
+    elapsedSeconds: 0,
+    billingStarted: false,
+    walletBalance: 0,
+    todayEarnings: 0,
+    totalEarned: 0,
+    inactiveWarning: null as string | null,
+    setWalletBalance: (_v: number) => {},
+    setTodayEarnings: (_v: number) => {},
+    setLastActivityTime: (_v: number) => {},
+    stopBillingTimers: () => {},
+  };
 
   usePartnerMonitor({
     partnerId,
@@ -486,9 +488,7 @@ const DraggableMiniChatWindow = ({
           </Button>
           {areButtonsExpanded && (
             <>
-              {userGender === "male" && (
-                <GiftSendButton senderId={currentUserId} receiverId={partnerId} receiverName={partnerName} disabled={!billing.billingStarted} />
-              )}
+              {/* GiftSendButton removed — billing system removed */}
               <MiniChatActions currentUserId={currentUserId} targetUserId={partnerId} targetUserName={partnerName} isPartnerOnline={isPartnerOnline} onBlock={handleClose} onStopChat={handleClose} onLogOff={handleClose} />
               <Button variant="ghost" size="icon" className="h-5 w-5" onClick={toggleMaximize} title={isMaximized ? "Restore size" : "Maximize"}>
                 {isMaximized ? <Minimize2 className="h-2.5 w-2.5" /> : <Maximize2 className="h-2.5 w-2.5" />}

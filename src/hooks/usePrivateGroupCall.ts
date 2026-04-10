@@ -11,7 +11,7 @@ import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useChatPricing } from './useChatPricing';
+// useChatPricing removed — billing system removed
 import { toast } from 'sonner';
 import { ICE_SERVERS_SFU } from '@/lib/iceServers';
 
@@ -100,7 +100,7 @@ export function usePrivateGroupCall({
     hostStream: null,
   });
 
-  const { pricing } = useChatPricing();
+  const pricing = { groupCallRatePerMinute: 4 };
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStream = useRef<MediaStream | null>(null);
