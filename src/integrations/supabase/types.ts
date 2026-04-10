@@ -3811,6 +3811,19 @@ export type Database = {
       ledger_bill_session:
         | {
             Args: {
+              p_duration_seconds?: number
+              p_man_charge: number
+              p_man_id: string
+              p_minute_number: number
+              p_session_id: string
+              p_session_type: string
+              p_woman_earn: number
+              p_woman_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
               p_man_charge: number
               p_man_id: string
               p_minute_number: number
