@@ -1619,10 +1619,10 @@ const DashboardScreen = () => {
       <div className="px-4 py-3 border-b border-border/30">
         <p className="text-xs font-semibold text-muted-foreground mb-2">Rate Card</p>
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Chat</span><span className="font-semibold">₹{pricing.ratePerMinute}/min</span></div>
-          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Audio</span><span className="font-semibold">₹{pricing.audioRatePerMinute}/min</span></div>
-          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Video</span><span className="font-semibold">₹{pricing.videoRatePerMinute}/min</span></div>
-          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Group</span><span className="font-semibold">₹{pricing.groupCallRatePerMinute}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Chat</span><span className="font-semibold">{formatLocalCurrency(pricing.ratePerMinute)}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Audio</span><span className="font-semibold">{formatLocalCurrency(pricing.audioRatePerMinute)}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Video</span><span className="font-semibold">{formatLocalCurrency(pricing.videoRatePerMinute)}/min</span></div>
+          <div className="flex justify-between bg-muted/50 rounded px-2 py-1"><span>Group</span><span className="font-semibold">{formatLocalCurrency(pricing.groupCallRatePerMinute)}/min</span></div>
         </div>
       </div>
 
