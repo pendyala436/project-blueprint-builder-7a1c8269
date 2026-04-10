@@ -330,7 +330,7 @@ const WomenDashboardScreen = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_status' },
-        () => { throttledFetchOnlineMen(); }
+        () => { throttledFetchOnlineMen(); if (chatsFetchedRef.current) fetchWomenActiveChats(); }
       )
       .on(
         'postgres_changes',
