@@ -645,7 +645,7 @@ const DashboardScreen = () => {
       const chats = sessions.map(s => {
         const profile = profileMap.get(s.woman_user_id);
         const msgInfo = lastMsgsRes.find(m => m.chatId === s.chat_id);
-        const status = statusMap.get(s.woman_user_id);
+        const status = statusMap.get(s.woman_user_id) as { is_online: boolean; status: string; active_chat_count: number | null } | undefined;
         return {
           chatId: s.chat_id,
           partnerId: s.woman_user_id,
