@@ -231,8 +231,10 @@ const DashboardScreen = () => {
     hasBio: false,
   });
 
-  // Chat pricing from admin settings
-  const { pricing, calculateCost, hasSufficientBalance, formatPrice } = useChatPricing();
+  // Chat pricing removed — billing system removed
+  const pricing = { ratePerMinute: 0, audioRatePerMinute: 0, videoRatePerMinute: 0, groupCallRatePerMinute: 0 };
+  const hasSufficientBalance = () => true;
+  const formatPrice = (v: number) => `₹${v}`;
   
   // Auto-reconnect functionality
   const { 
@@ -1702,7 +1704,7 @@ const DashboardScreen = () => {
       {activeTab === "history" && <CallHistoryTab currentUserId={currentUserId} userGender="male" />}
       {activeTab === "groups" && renderGroupsTab()}
       {activeTab === "matches" && renderMatchesTab()}
-      {activeTab === "statement" && <TransactionStatementTab gender="male" />}
+      {/* Statement tab removed — billing system removed */}
       {activeTab === "profile" && renderProfileTab()}
 
       {/* WhatsApp-style Bottom Tabs */}

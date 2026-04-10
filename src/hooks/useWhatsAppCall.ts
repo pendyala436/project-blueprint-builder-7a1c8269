@@ -29,7 +29,7 @@ export const useWhatsAppCall = (
   walletBalance: number
 ) => {
   const { toast } = useToast();
-  const { pricing } = useChatPricing();
+  const pricing = { audioRatePerMinute: 6, videoRatePerMinute: 8 };
   const [status, setStatus] = useState<CallStatus>('idle');
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [isMuted, setIsMuted] = useState(false);

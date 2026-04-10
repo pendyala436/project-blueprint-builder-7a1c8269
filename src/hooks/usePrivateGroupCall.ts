@@ -100,7 +100,7 @@ export function usePrivateGroupCall({
     hostStream: null,
   });
 
-  const { pricing } = useChatPricing();
+  const pricing = { groupCallRatePerMinute: 4 };
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStream = useRef<MediaStream | null>(null);

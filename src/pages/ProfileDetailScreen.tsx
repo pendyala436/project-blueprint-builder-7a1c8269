@@ -80,7 +80,7 @@ const ProfileDetailScreen = () => {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [showRechargeDialog, setShowRechargeDialog] = useState(false);
   const [rechargeMessage, setRechargeMessage] = useState("");
-  const { pricing } = useChatPricing();
+  const pricing = { ratePerMinute: 0 };
 
   useEffect(() => {
     if (userId) {
