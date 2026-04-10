@@ -566,9 +566,8 @@ const WomenDashboardScreen = () => {
       const partnerIds = sessions.map(s => s.man_user_id);
       const chatIds = sessions.map(s => s.chat_id);
       
-      // Fetch profiles, last messages, and unread counts ALL in parallel (eliminates N+1)
       const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-      const [profiles, lastMsgsRes, unreadRes] = await Promise.all([
+      const [profiles, lastMsgsRes, unreadRes, partnerStatusRes] = await Promise.all([
         fetchPublicProfiles(partnerIds),
         Promise.all(sessions.map(s =>
           supabase
@@ -579,18 +578,21 @@ const WomenDashboardScreen = () => {
             .limit(1)
             .then(r => ({ chatId: s.chat_id, msg: r.data?.[0], fallback: s.last_activity_at }))
         )),
-        // Batch unread count query instead of N individual count queries
         supabase
           .from("chat_messages")
           .select("chat_id")
           .in("chat_id", chatIds)
           .eq("receiver_id", currentUserId)
           .eq("is_read", false),
+        supabase
+          .from("user_status")
+          .select("user_id, is_online, status, active_chat_count")
+          .in("user_id", partnerIds),
       ]);
 
       const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+      const statusMap = new Map((partnerStatusRes.data || []).map((s: { user_id: string; is_online: boolean; status: string; active_chat_count: number | null }) => [s.user_id, s]));
       
-      // Build unread count map from batch result
       const unreadCountMap = new Map<string, number>();
       if (unreadRes.data) {
         for (const row of unreadRes.data) {
@@ -601,6 +603,7 @@ const WomenDashboardScreen = () => {
       const chats = sessions.map(s => {
         const profile = profileMap.get(s.man_user_id);
         const msgInfo = lastMsgsRes.find(m => m.chatId === s.chat_id);
+        const status = statusMap.get(s.man_user_id) as { is_online: boolean; status: string; active_chat_count: number | null } | undefined;
         return {
           chatId: s.chat_id,
           partnerId: s.man_user_id,
@@ -610,10 +613,12 @@ const WomenDashboardScreen = () => {
           lastMessageAt: msgInfo?.msg?.created_at || s.last_activity_at,
           lastMessageSenderId: msgInfo?.msg?.sender_id || "",
           unreadCount: unreadCountMap.get(s.chat_id) || 0,
+          partnerIsOnline: status?.is_online || false,
+          partnerStatus: status?.status || "offline",
+          partnerActiveChatCount: status?.active_chat_count || 0,
         };
       });
 
-      // Sort: unread first, then by latest message time
       chats.sort((a, b) => {
         if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
         if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
