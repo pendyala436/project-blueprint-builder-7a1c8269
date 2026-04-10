@@ -139,7 +139,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
     doc.setFontSize(18);
-    doc.text('Wallet Statement', 14, 16);
+    doc.text(isMale ? 'Wallet Statement' : 'Earnings Statement', 14, 16);
     doc.setFontSize(10);
     doc.text(`${dateRange.from} to ${dateRange.to}  •  Currency: INR  •  Timestamps in IST (UTC+5:30)`, 14, 23);
 
@@ -147,8 +147,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
     doc.setFontSize(9);
     const cols = [
       { label: 'OPENING BALANCE', value: `₹${summary.openingBalance.toFixed(2)}` },
-      { label: 'TOTAL CHARGED', value: `₹${summary.totalDebit.toFixed(2)}` },
-      { label: 'TOTAL RECHARGED', value: `₹${summary.totalCredit.toFixed(2)}` },
+      { label: DEBIT_LABEL, value: `₹${summary.totalDebit.toFixed(2)}` },
+      { label: CREDIT_LABEL, value: `₹${summary.totalCredit.toFixed(2)}` },
       { label: 'CLOSING BALANCE', value: `₹${summary.closingBalance.toFixed(2)}` },
     ];
     const colW = 60;
