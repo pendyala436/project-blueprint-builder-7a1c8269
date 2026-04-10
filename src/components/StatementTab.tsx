@@ -133,9 +133,14 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
           <h2 className="text-sm font-semibold text-foreground">Transaction Statement</h2>
           <p className="text-xs text-muted-foreground">{statement.length} transactions</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadStatement}>
-          <RefreshCw className="w-4 h-4" />
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportPDF} disabled={!statement.length} title="Download PDF">
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadStatement}>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Date Filter */}
