@@ -101,7 +101,13 @@ const buildTableRows = (rows: StatementRow[]) =>
 
 const HEADERS = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate', 'Debit (₹)', 'Credit (₹)', 'Balance (₹)'];
 
-export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
+export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'male' }) => {
+  const isMale = gender === 'male';
+  const DEBIT_LABEL = isMale ? 'TOTAL CHARGED' : 'TOTAL WITHDRAWN';
+  const CREDIT_LABEL = isMale ? 'TOTAL RECHARGED' : 'TOTAL EARNED';
+  const DEBIT_COL = isMale ? 'Debit (₹)' : 'Withdrawn (₹)';
+  const CREDIT_COL = isMale ? 'Credit (₹)' : 'Earned (₹)';
+  const TITLE = isMale ? '💰 Wallet Statement' : '💰 Earnings Statement';
   const [statement, setStatement] = useState<StatementRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
