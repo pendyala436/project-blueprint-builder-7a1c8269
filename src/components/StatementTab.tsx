@@ -99,7 +99,7 @@ const buildTableRows = (rows: StatementRow[]) =>
     balance: row.running_balance?.toFixed(2) ?? '—',
   }));
 
-const HEADERS = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate', 'Debit (₹)', 'Credit (₹)', 'Balance (₹)'];
+const STATIC_HEADERS_PREFIX = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate'];
 
 export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'male' }) => {
   const isMale = gender === 'male';
