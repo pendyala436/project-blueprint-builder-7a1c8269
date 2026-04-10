@@ -1513,10 +1513,20 @@ const DashboardScreen = () => {
                   {chat.partnerName?.charAt(0) || <User className="w-5 h-5" />}
                 </AvatarFallback>
               </Avatar>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <span className={cn("text-sm truncate", chat.unreadCount > 0 ? "font-bold text-foreground" : "font-semibold text-foreground")}>{chat.partnerName}</span>
+              {/* Online/Offline/Busy indicator dot */}
+              <span
+                className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background"
+                style={{
+                  background: chat.partnerIsOnline
+                    ? (chat.partnerStatus === 'busy' ? '#FFA726' : '#4CAF50')
+                    : '#9E9E9E',
+                }}
+                title={
+                  chat.partnerIsOnline
+                    ? (chat.partnerActiveChatCount > 0 ? `In chat (${chat.partnerActiveChatCount} active)` : 'Online')
+                    : 'Offline'
+                }
+              />
                 <span className={cn("text-[10px] flex-shrink-0 ml-2", chat.unreadCount > 0 ? "text-[#25D366] font-semibold" : "text-muted-foreground")}>
                   {formatChatTime(chat.lastMessageAt)}
                 </span>
