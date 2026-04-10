@@ -326,7 +326,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                   {item.totalMinutes > 0 && (
                     <>
                       <span>·</span>
-                      <span>{Math.round(item.totalMinutes)} min</span>
+                      <span>{formatDuration(item.totalMinutes)}</span>
                     </>
                   )}
                   {item.ratePerMinute > 0 && (
