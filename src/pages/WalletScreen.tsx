@@ -1,5 +1,5 @@
 /**
- * WalletScreen — Men's Wallet with balance and recharge.
+ * WalletScreen — Men's Wallet with balance, recharge, and statement.
  * Balance updates dynamically via Supabase realtime on ledger_transactions changes.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -8,7 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Wallet, CreditCard } from 'lucide-react';
+import { StatementTab } from '@/components/StatementTab';
 
 const WalletScreen = () => {
   const navigate = useNavigate();
@@ -33,7 +35,6 @@ const WalletScreen = () => {
       await loadBalance(user.id);
       setIsLoading(false);
 
-      // Subscribe to ledger changes for this user
       channel = supabase
         .channel('wallet-men-realtime')
         .on('postgres_changes', {
@@ -41,17 +42,13 @@ const WalletScreen = () => {
           schema: 'public',
           table: 'ledger_transactions',
           filter: `user_id=eq.${user.id}`,
-        }, () => {
-          loadBalance(user.id);
-        })
+        }, () => { loadBalance(user.id); })
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'wallets',
           filter: `user_id=eq.${user.id}`,
-        }, () => {
-          loadBalance(user.id);
-        })
+        }, () => { loadBalance(user.id); })
         .subscribe();
     })();
 
@@ -94,6 +91,15 @@ const WalletScreen = () => {
           </Button>
         </Card>
       </div>
+
+      <Tabs defaultValue="statement" className="flex-1 flex flex-col">
+        <TabsList className="mx-4 mb-2">
+          <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
+        </TabsList>
+        <TabsContent value="statement" className="flex-1">
+          <StatementTab userId={userIdRef.current} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
