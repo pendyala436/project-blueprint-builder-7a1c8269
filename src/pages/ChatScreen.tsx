@@ -960,6 +960,29 @@ const ChatScreen = () => {
         walletChannelRef.current = walletChannel;
       }
 
+      // ============= FETCH ACTIVE SESSION FOR BILLING =============
+      try {
+        const { data: activeSession } = await supabase
+          .from("active_chat_sessions")
+          .select("id, man_user_id, woman_user_id, status")
+          .eq("chat_id", chatId.current)
+          .in("status", ["active", "pending"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeSession) {
+          setBillingSessionId(activeSession.id);
+          setBillingManId(activeSession.man_user_id);
+          setBillingWomanId(activeSession.woman_user_id);
+          console.log("[Chat] Billing wired for session:", activeSession.id);
+        } else {
+          console.log("[Chat] No active session found for billing - will retry on session change");
+        }
+      } catch (e) {
+        console.warn("[Chat] Failed to fetch billing session:", e);
+      }
+
       // ============= FETCH PARTNER PROFILE =============
       
       // Use secure RPC for partner profile (excludes sensitive fields)
