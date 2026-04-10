@@ -47,6 +47,15 @@ const RATES = {
   group: { man: 4, woman: 0.5 },
 } as const;
 
+/** Show precise duration: "5m 26s" instead of "5 min" */
+const formatDuration = (minutes: number): string => {
+  const totalSecs = Math.round(minutes * 60);
+  const m = Math.floor(totalSecs / 60);
+  const s = totalSecs % 60;
+  if (s === 0) return `${m} min`;
+  return `${m}m ${s}s`;
+};
+
 interface CallHistoryTabProps {
   currentUserId: string;
   userGender: "male" | "female";
