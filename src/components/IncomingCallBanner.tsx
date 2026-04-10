@@ -22,17 +22,42 @@ export const IncomingCallBanner = ({
         ctxRef.current = new AudioContext();
       }
       const ctx = ctxRef.current;
-      [0, 0.4].forEach(offset => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = 480;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.3);
-        osc.start(ctx.currentTime + offset);
-        osc.stop(ctx.currentTime + offset + 0.3);
+      const t = ctx.currentTime;
+
+      // Loud old-school phone ring — two bursts with harmonics
+      [0, 0.45].forEach(offset => {
+        // Primary ring tone
+        const osc1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        osc1.type = 'square';
+        osc1.frequency.setValueAtTime(2000, t + offset);
+        g1.gain.setValueAtTime(0.8, t + offset);
+        g1.gain.exponentialRampToValueAtTime(0.01, t + offset + 0.35);
+        osc1.connect(g1).connect(ctx.destination);
+        osc1.start(t + offset);
+        osc1.stop(t + offset + 0.35);
+
+        // Secondary harmonic for fullness
+        const osc2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(2500, t + offset);
+        g2.gain.setValueAtTime(0.6, t + offset);
+        g2.gain.exponentialRampToValueAtTime(0.01, t + offset + 0.3);
+        osc2.connect(g2).connect(ctx.destination);
+        osc2.start(t + offset);
+        osc2.stop(t + offset + 0.3);
+
+        // Low body tone
+        const osc3 = ctx.createOscillator();
+        const g3 = ctx.createGain();
+        osc3.type = 'triangle';
+        osc3.frequency.setValueAtTime(440, t + offset);
+        g3.gain.setValueAtTime(0.5, t + offset);
+        g3.gain.exponentialRampToValueAtTime(0.01, t + offset + 0.3);
+        osc3.connect(g3).connect(ctx.destination);
+        osc3.start(t + offset);
+        osc3.stop(t + offset + 0.3);
       });
     } catch {}
   };
