@@ -1,17 +1,19 @@
 /**
- * StatementTab — Inline transaction statement for dashboard.
- * Per spec §11.6: duration is read from stored integer, NEVER recomputed.
- * Per spec §6.3: shows opening/closing balance, date, type, duration, amount.
+ * StatementTab — Bank-style transaction statement for dashboard.
+ * Columns: Date, Type, Description, Start Time, End Time, Duration, Rate, Debit, Credit, Balance
+ * Export: PDF, Excel, Word
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Filter, ArrowDownLeft, ArrowUpRight, Wallet, RefreshCw, Download } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Filter, Wallet, RefreshCw, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { getStatement, type StatementRow } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { cn } from '@/lib/utils';
 
 interface StatementTabProps {
@@ -25,25 +27,79 @@ const CREDIT_TYPES = ['credit', 'recharge', 'refund', 'chat_earning', 'audio_cal
 
 const getTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
-    recharge: 'Recharge', credit: 'Credit', refund: 'Refund',
+    recharge: 'Wallet Recharge', credit: 'Credit', refund: 'Refund',
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
     group_call_charge: 'Group Call', debit: 'Debit', withdrawal: 'Withdrawal',
-    gift: 'Gift Sent', gift_received: 'Gift Received',
+    gift: 'Tip Sent', gift_received: 'Tip Received',
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
+    earning: 'Earning',
   };
   return labels[type] || type?.replace(/_/g, ' ');
 };
 
 const isCredit = (type: string) => CREDIT_TYPES.includes(type);
+const isSession = (type: string) => SESSION_TYPES.includes(type);
 
-/** Per spec: read stored duration_seconds, show exact minutes (no rounding). Gifts/recharges show "—". */
-const getDurationDisplay = (row: StatementRow): string => {
-  if (!SESSION_TYPES.includes(row.transaction_type)) return '—';
-  if (row.duration_seconds == null) return '—';
-  const minutes = (row.duration_seconds / 60).toFixed(1);
-  return `${minutes} min`;
+const getTypeWithRate = (row: StatementRow): string => {
+  const label = getTypeLabel(row.transaction_type);
+  if (isSession(row.transaction_type) && row.rate_per_minute != null) {
+    return `${label} — ₹${row.rate_per_minute.toFixed(2)}/min`;
+  }
+  return label;
 };
+
+const getDurationDisplay = (row: StatementRow): string => {
+  if (!isSession(row.transaction_type)) return '—';
+  if (row.duration_seconds == null) return '—';
+  return `${(row.duration_seconds / 60).toFixed(1)} min`;
+};
+
+const getStartTime = (row: StatementRow): string => {
+  if (!isSession(row.transaction_type) || row.duration_seconds == null) return '—';
+  const endDate = new Date(row.created_at);
+  const startDate = new Date(endDate.getTime() - row.duration_seconds * 1000);
+  return format(startDate, 'HH:mm:ss');
+};
+
+const getEndTime = (row: StatementRow): string => {
+  if (!isSession(row.transaction_type) || row.duration_seconds == null) return '—';
+  return format(new Date(row.created_at), 'HH:mm:ss');
+};
+
+const getRateDisplay = (row: StatementRow): string => {
+  if (!isSession(row.transaction_type) || row.rate_per_minute == null) return '—';
+  return `₹${row.rate_per_minute.toFixed(2)}/min`;
+};
+
+// ─── Compute summary ───
+const computeSummary = (rows: StatementRow[]) => {
+  const totalDebit = rows.reduce((s, r) => s + (r.debit || 0), 0);
+  const totalCredit = rows.reduce((s, r) => s + (r.credit || 0), 0);
+  const closingBalance = rows.length > 0 ? rows[0].running_balance : 0;
+  const openingBalance = rows.length > 0
+    ? rows[rows.length - 1].running_balance - rows[rows.length - 1].credit + rows[rows.length - 1].debit
+    : 0;
+  return { openingBalance, closingBalance, totalDebit, totalCredit };
+};
+
+// ─── Build table data for export ───
+const buildTableRows = (rows: StatementRow[]) =>
+  rows.map((row, i) => ({
+    sno: i + 1,
+    date: format(new Date(row.created_at), 'dd MMM yyyy HH:mm'),
+    type: getTypeWithRate(row),
+    description: row.description || '—',
+    startTime: getStartTime(row),
+    endTime: getEndTime(row),
+    duration: getDurationDisplay(row),
+    rate: getRateDisplay(row),
+    debit: row.debit ? row.debit.toFixed(2) : '—',
+    credit: row.credit ? row.credit.toFixed(2) : '—',
+    balance: row.running_balance?.toFixed(2) ?? '—',
+  }));
+
+const HEADERS = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate', 'Debit (₹)', 'Credit (₹)', 'Balance (₹)'];
 
 export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
   const [statement, setStatement] = useState<StatementRow[]>([]);
@@ -67,52 +123,112 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
     loadStatement();
   }, [loadStatement]);
 
+  const summary = computeSummary(statement);
+  const tableRows = buildTableRows(statement);
+
+  // ─── PDF Export ───
   const exportPDF = () => {
     if (!statement.length) return;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-    // Title
-    doc.setFontSize(16);
-    doc.text('Transaction Statement', 14, 18);
+    doc.setFontSize(18);
+    doc.text('Wallet Statement', 14, 16);
     doc.setFontSize(10);
-    doc.text(`Period: ${dateRange.from} to ${dateRange.to}`, 14, 25);
+    doc.text(`${dateRange.from} to ${dateRange.to}  •  Currency: INR  •  Timestamps in IST (UTC+5:30)`, 14, 23);
 
-    // Opening / Closing
-    const cb = statement.length > 0 ? statement[0].running_balance : 0;
-    const ob = statement.length > 0
-      ? statement[statement.length - 1].running_balance - statement[statement.length - 1].credit + statement[statement.length - 1].debit
-      : 0;
-    doc.text(`Opening Balance: ₹${ob.toFixed(2)}`, 14, 32);
-    doc.text(`Closing Balance: ₹${cb.toFixed(2)}`, 100, 32);
+    // Summary row
+    const summaryY = 30;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const cols = [
+      { label: 'OPENING BALANCE', value: `₹${summary.openingBalance.toFixed(2)}` },
+      { label: 'TOTAL CHARGED', value: `₹${summary.totalDebit.toFixed(2)}` },
+      { label: 'TOTAL RECHARGED', value: `₹${summary.totalCredit.toFixed(2)}` },
+      { label: 'CLOSING BALANCE', value: `₹${summary.closingBalance.toFixed(2)}` },
+    ];
+    const colW = 60;
+    cols.forEach((c, i) => {
+      const x = 14 + i * colW;
+      doc.setFont('helvetica', 'normal');
+      doc.text(c.label, x, summaryY);
+      doc.setFont('helvetica', 'bold');
+      doc.text(c.value, x, summaryY + 5);
+    });
 
-    // Table
-    const rows = statement.map((row, i) => [
-      String(i + 1),
-      format(new Date(row.created_at), 'dd MMM yyyy, hh:mm a'),
-      getTypeLabel(row.transaction_type),
-      getDurationDisplay(row),
-      row.description || '—',
-      isCredit(row.transaction_type) ? `+₹${(row.credit || 0).toFixed(2)}` : `-₹${(row.debit || 0).toFixed(2)}`,
-      `₹${row.running_balance?.toFixed(2) || '—'}`,
+    const rows = tableRows.map(r => [
+      String(r.sno), r.date, r.type, r.description, r.startTime, r.endTime, r.duration, r.rate, r.debit, r.credit, r.balance,
     ]);
 
     autoTable(doc, {
-      startY: 38,
-      head: [['#', 'Date', 'Type', 'Duration', 'Description', 'Amount', 'Balance']],
+      startY: summaryY + 12,
+      head: [HEADERS],
       body: rows,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [99, 102, 241] },
-      columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' } },
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [99, 102, 241], fontSize: 7 },
+      columnStyles: { 8: { halign: 'right' }, 9: { halign: 'right' }, 10: { halign: 'right' } },
     });
 
-    doc.save(`statement-${dateRange.from}-to-${dateRange.to}.pdf`);
+    doc.save(`wallet-statement-${dateRange.from}-to-${dateRange.to}.pdf`);
   };
 
-  // Per spec §6.4: Opening = first row's running_balance + debit - credit, Closing = last row's running_balance
-  const closingBalance = statement.length > 0 ? statement[0].running_balance : 0;
-  const openingBalance = statement.length > 0
-    ? statement[statement.length - 1].running_balance - statement[statement.length - 1].credit + statement[statement.length - 1].debit
-    : 0;
+  // ─── Excel Export ───
+  const exportExcel = () => {
+    if (!statement.length) return;
+    const wsData = [
+      ['Wallet Statement'],
+      [`Period: ${dateRange.from} to ${dateRange.to}`, '', 'Currency: INR', '', 'Timestamps in IST (UTC+5:30)'],
+      [],
+      ['OPENING BALANCE', `₹${summary.openingBalance.toFixed(2)}`, '', 'TOTAL CHARGED', `₹${summary.totalDebit.toFixed(2)}`, '', 'TOTAL RECHARGED', `₹${summary.totalCredit.toFixed(2)}`, '', 'CLOSING BALANCE', `₹${summary.closingBalance.toFixed(2)}`],
+      [],
+      HEADERS,
+      ...tableRows.map(r => [r.sno, r.date, r.type, r.description, r.startTime, r.endTime, r.duration, r.rate, r.debit, r.credit, r.balance]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 4 }, { wch: 20 }, { wch: 28 }, { wch: 36 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Statement');
+    XLSX.writeFile(wb, `wallet-statement-${dateRange.from}-to-${dateRange.to}.xlsx`);
+  };
+
+  // ─── Word/HTML Export (downloads as .doc) ───
+  const exportWord = () => {
+    if (!statement.length) return;
+    const rows = tableRows.map(r =>
+      `<tr><td>${r.sno}</td><td>${r.date}</td><td>${r.type}</td><td>${r.description}</td><td>${r.startTime}</td><td>${r.endTime}</td><td>${r.duration}</td><td>${r.rate}</td><td style="text-align:right">${r.debit}</td><td style="text-align:right">${r.credit}</td><td style="text-align:right">${r.balance}</td></tr>`
+    ).join('');
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="utf-8"><style>
+body{font-family:Arial,sans-serif;font-size:11pt}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}
+th{background:#6366F1;color:#fff;font-weight:bold}
+h1{font-size:18pt;margin-bottom:4pt}
+.summary{display:flex;gap:20px;margin:10px 0}
+.summary-item{background:#f3f4f6;padding:8px 16px;border-radius:4px}
+.summary-item .label{font-size:8pt;color:#666}
+.summary-item .value{font-size:12pt;font-weight:bold}
+</style></head><body>
+<h1>💰 Wallet Statement</h1>
+<p>${dateRange.from} to ${dateRange.to} • Currency: INR • Timestamps in IST (UTC+5:30)</p>
+<table><tr>
+<td style="background:#f3f4f6;padding:8px"><small>OPENING BALANCE</small><br><b>₹${summary.openingBalance.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>TOTAL CHARGED</small><br><b>₹${summary.totalDebit.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>TOTAL RECHARGED</small><br><b>₹${summary.totalCredit.toFixed(2)}</b></td>
+<td style="background:#f3f4f6;padding:8px"><small>CLOSING BALANCE</small><br><b>₹${summary.closingBalance.toFixed(2)}</b></td>
+</tr></table>
+<br>
+<table><thead><tr>${HEADERS.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+</body></html>`;
+
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wallet-statement-${dateRange.from}-to-${dateRange.to}.doc`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (isLoading) {
     return (
@@ -130,13 +246,28 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/30 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Transaction Statement</h2>
-          <p className="text-xs text-muted-foreground">{statement.length} transactions</p>
+          <h2 className="text-sm font-semibold text-foreground">💰 Wallet Statement</h2>
+          <p className="text-xs text-muted-foreground">{statement.length} transactions • Currency: INR</p>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportPDF} disabled={!statement.length} title="Download PDF">
-            <Download className="w-4 h-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={!statement.length} title="Export">
+                <Download className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportPDF}>
+                <FileText className="w-4 h-4 mr-2" /> Export PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportExcel}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportWord}>
+                <FileText className="w-4 h-4 mr-2" /> Export Word
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={loadStatement}>
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -156,61 +287,81 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId }) => {
         <Button size="sm" variant="outline" className="h-8 text-xs" onClick={loadStatement}>Go</Button>
       </div>
 
-      {/* Opening / Closing Balance (spec §6.3) */}
+      {/* Summary Cards */}
       {statement.length > 0 && (
-        <div className="grid grid-cols-2 gap-0 border-b border-border/30">
-          <div className="text-center py-3 border-r border-border/30">
-            <p className="text-[10px] text-muted-foreground">Opening Balance</p>
-            <p className="text-sm font-bold text-foreground">₹{openingBalance.toFixed(2)}</p>
-          </div>
-          <div className="text-center py-3">
-            <p className="text-[10px] text-muted-foreground">Closing Balance</p>
-            <p className="text-sm font-bold text-foreground">₹{closingBalance.toFixed(2)}</p>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-border/30">
+          {[
+            { label: 'OPENING BALANCE', value: summary.openingBalance },
+            { label: 'TOTAL CHARGED', value: summary.totalDebit },
+            { label: 'TOTAL RECHARGED', value: summary.totalCredit },
+            { label: 'CLOSING BALANCE', value: summary.closingBalance },
+          ].map((item, i) => (
+            <div key={i} className={cn('text-center py-3', i < 3 && 'border-r border-border/30')}>
+              <p className="text-[9px] text-muted-foreground font-medium tracking-wider">{item.label}</p>
+              <p className="text-sm font-bold text-foreground">₹{item.value.toFixed(2)}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Transaction List */}
-      <div className="px-4 pb-20 space-y-0">
+      {/* Transaction Table */}
+      <div className="overflow-x-auto">
         {statement.length === 0 ? (
           <div className="text-center py-16">
             <Wallet className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">No transactions found</p>
           </div>
         ) : (
-          statement.map(row => {
-            const duration = getDurationDisplay(row);
-            return (
-              <div key={row.id} className="flex items-center gap-3 py-3 border-b border-border/30">
-                <div className={cn(
-                  'w-9 h-9 rounded-full flex items-center justify-center shrink-0',
-                  isCredit(row.transaction_type) ? 'bg-green-500/10' : 'bg-red-500/10'
-                )}>
-                  {isCredit(row.transaction_type)
-                    ? <ArrowDownLeft className="w-4 h-4 text-green-600" />
-                    : <ArrowUpRight className="w-4 h-4 text-red-500" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground truncate">{getTypeLabel(row.transaction_type)}</p>
-                    {duration !== '—' && (
-                      <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">{duration}</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground truncate">{row.description || '—'}</p>
-                  <p className="text-[10px] text-muted-foreground">{format(new Date(row.created_at), 'dd MMM yyyy, hh:mm a')}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className={cn('text-sm font-semibold', isCredit(row.transaction_type) ? 'text-green-600' : 'text-red-500')}>
-                    {isCredit(row.transaction_type) ? '+' : '-'}₹{(row.credit || row.debit || 0).toFixed(2)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">Bal: ₹{row.running_balance?.toFixed(2) || '—'}</p>
-                </div>
-              </div>
-            );
-          })
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-muted/50 border-b border-border/30">
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Date & Time</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Type</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Description</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Start</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">End</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Duration</th>
+                <th className="px-2 py-2 text-left font-semibold text-muted-foreground">Rate</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Debit (₹)</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Credit (₹)</th>
+                <th className="px-2 py-2 text-right font-semibold text-muted-foreground">Balance (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statement.map((row) => {
+                const credit = isCredit(row.transaction_type);
+                return (
+                  <tr key={row.id} className="border-b border-border/20 hover:bg-muted/30">
+                    <td className="px-2 py-2 whitespace-nowrap text-foreground">
+                      {format(new Date(row.created_at), 'dd MMM yyyy HH:mm')}
+                    </td>
+                    <td className="px-2 py-2 whitespace-nowrap text-foreground font-medium">
+                      {getTypeWithRate(row)}
+                    </td>
+                    <td className="px-2 py-2 text-muted-foreground max-w-[200px] truncate">
+                      {row.description || '—'}
+                    </td>
+                    <td className="px-2 py-2 text-muted-foreground">{getStartTime(row)}</td>
+                    <td className="px-2 py-2 text-muted-foreground">{getEndTime(row)}</td>
+                    <td className="px-2 py-2 text-foreground italic">{getDurationDisplay(row)}</td>
+                    <td className="px-2 py-2 text-green-600 font-medium">{getRateDisplay(row)}</td>
+                    <td className="px-2 py-2 text-right text-red-500 font-medium">
+                      {row.debit ? row.debit.toFixed(2) : '—'}
+                    </td>
+                    <td className="px-2 py-2 text-right text-green-600 font-medium">
+                      {row.credit ? row.credit.toFixed(2) : '—'}
+                    </td>
+                    <td className="px-2 py-2 text-right font-semibold text-foreground">
+                      {row.running_balance?.toFixed(2) ?? '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
+      <div className="h-20" />
     </div>
   );
 };
