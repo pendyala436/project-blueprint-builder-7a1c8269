@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchPublicProfiles } from "@/lib/profile-queries";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-// Skeleton removed — using spinner for WhatsApp-style consistency
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -31,12 +30,22 @@ interface HistoryItem {
   startedAt: string;
   endedAt?: string;
   totalMinutes: number;
-  totalEarned: number;
+  /** For men: total charged (debit); for women: total earned (credit) */
+  totalAmount: number;
+  /** Gender-appropriate rate per minute */
   ratePerMinute: number;
   endReason?: string;
   groupName?: string;
-  isIncoming?: boolean; // for calls: did I receive or initiate
+  isIncoming?: boolean;
 }
+
+/** Pricing rates – men pay, women earn */
+const RATES = {
+  chat:  { man: 4, woman: 2 },
+  audio: { man: 6, woman: 3 },
+  video: { man: 8, woman: 4 },
+  group: { man: 4, woman: 0.5 },
+} as const;
 
 interface CallHistoryTabProps {
   currentUserId: string;
@@ -53,7 +62,6 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
   const [loading, setLoading] = useState(true);
 
   const isMale = userGender === "male";
-  const partnerField = isMale ? "woman_user_id" : "man_user_id";
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -76,7 +84,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .order("created_at", { ascending: false })
         .limit(30);
 
-      // 3. Group call participation (via group_video_access)
+      // 3. Group call participation
       const { data: groupAccess } = await supabase
         .from("group_video_access")
         .select("*, private_groups(name, owner_id)")
@@ -84,32 +92,34 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .order("created_at", { ascending: false })
         .limit(20);
 
-      // Collect all partner IDs for batch profile fetch
+      // Collect partner IDs
       const partnerIds = new Set<string>();
       chatSessions?.forEach((s) => {
-        const pid = s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id;
-        partnerIds.add(pid);
+        partnerIds.add(s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id);
       });
       videoSessions?.forEach((s) => {
-        const pid = s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id;
-        partnerIds.add(pid);
+        partnerIds.add(s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id);
       });
-      // Group owners
       groupAccess?.forEach((g: any) => {
         if (g.private_groups?.owner_id) partnerIds.add(g.private_groups.owner_id);
       });
 
-      // Batch fetch profiles using RPC (bypasses owner-only RLS on profiles table)
+      // Batch fetch profiles
       const profileMap = new Map<string, { full_name: string; photo_url: string }>();
       if (partnerIds.size > 0) {
         const publicProfiles = await fetchPublicProfiles(Array.from(partnerIds));
-        publicProfiles.forEach((p) => profileMap.set(p.user_id, { full_name: p.full_name || "User", photo_url: p.photo_url || "" }));
+        publicProfiles.forEach((p) =>
+          profileMap.set(p.user_id, { full_name: p.full_name || "User", photo_url: p.photo_url || "" })
+        );
       }
 
-      // Map chat sessions
+      // Map chat sessions — compute amounts based on gender
       chatSessions?.forEach((s) => {
         const pid = s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id;
         const profile = profileMap.get(pid);
+        const mins = Number(s.total_minutes) || 0;
+        const rate = isMale ? RATES.chat.man : RATES.chat.woman;
+        const amount = mins * rate;
         items.push({
           id: s.id,
           type: "chat",
@@ -119,18 +129,24 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           status: s.status,
           startedAt: s.started_at || s.created_at,
           endedAt: s.ended_at || undefined,
-          totalMinutes: Number(s.total_minutes) || 0,
-          totalEarned: Number(s.total_earned) || 0,
-          ratePerMinute: Number(s.rate_per_minute) || 0,
+          totalMinutes: mins,
+          totalAmount: amount,
+          ratePerMinute: rate,
           endReason: s.end_reason || undefined,
-          isIncoming: isMale ? false : true,
+          isIncoming: !isMale,
         });
       });
 
-      // Map video sessions
+      // Map video sessions — detect audio vs video from call_type or rate
       videoSessions?.forEach((s) => {
         const pid = s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id;
         const profile = profileMap.get(pid);
+        const mins = Number(s.total_minutes) || 0;
+        const callType = (s as any).call_type;
+        const isAudio = callType === 'audio';
+        const rateSet = isAudio ? RATES.audio : RATES.video;
+        const rate = isMale ? rateSet.man : rateSet.woman;
+        const amount = mins * rate;
         items.push({
           id: s.id,
           type: "video",
@@ -140,9 +156,9 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           status: s.status,
           startedAt: s.started_at || s.created_at,
           endedAt: s.ended_at || undefined,
-          totalMinutes: Number(s.total_minutes) || 0,
-          totalEarned: Number(s.total_earned) || 0,
-          ratePerMinute: Number(s.rate_per_minute) || 0,
+          totalMinutes: mins,
+          totalAmount: amount,
+          ratePerMinute: rate,
           endReason: s.end_reason || undefined,
           isIncoming: !isMale,
         });
@@ -162,8 +178,8 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           startedAt: g.access_granted_at || g.created_at,
           endedAt: g.access_expires_at || undefined,
           totalMinutes: 0,
-          totalEarned: Number(g.gift_amount) || 0,
-          ratePerMinute: 0,
+          totalAmount: Number(g.gift_amount) || 0,
+          ratePerMinute: isMale ? RATES.group.man : RATES.group.woman,
           groupName: g.private_groups?.name || "Private Group",
         });
       });
@@ -269,7 +285,6 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
               key={`${item.type}-${item.id}`}
               onClick={() => {
                 if (item.type === "chat") navigate(`/chat/${item.partnerId}`);
-                else if (item.type === "video") navigate(`/profile/${item.partnerId}`);
                 else navigate(`/profile/${item.partnerId}`);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
@@ -282,7 +297,6 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                     {item.partnerName.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                {/* Type badge overlay */}
                 <div className={cn("absolute -bottom-0.5 -right-0.5 p-1 rounded-full border-2 border-background", getTypeBadgeColor(item.type))}>
                   {getTypeIcon(item.type)}
                 </div>
@@ -312,15 +326,21 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                   {item.totalMinutes > 0 && (
                     <>
                       <span>·</span>
-                      <span>{item.totalMinutes.toFixed(1)} min</span>
+                      <span>{Math.round(item.totalMinutes)} min</span>
                     </>
                   )}
-                  {item.totalEarned > 0 && (
+                  {item.ratePerMinute > 0 && (
+                    <>
+                      <span>·</span>
+                      <span className="text-muted-foreground">₹{item.ratePerMinute}/min</span>
+                    </>
+                  )}
+                  {item.totalAmount > 0 && (
                     <>
                       <span>·</span>
                       <span className="flex items-center gap-0.5">
                         <IndianRupee className="w-3 h-3" />
-                        {isMale ? `-${item.totalEarned.toFixed(2)}` : `+${item.totalEarned.toFixed(2)}`}
+                        {isMale ? `-${item.totalAmount.toFixed(2)}` : `+${item.totalAmount.toFixed(2)}`}
                       </span>
                     </>
                   )}
