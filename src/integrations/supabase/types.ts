@@ -756,6 +756,7 @@ export type Database = {
           suspension_reason: string | null
           total_chats_count: number | null
           updated_at: string
+          upi_id: string | null
           user_id: string
         }
         Insert: {
@@ -807,6 +808,7 @@ export type Database = {
           suspension_reason?: string | null
           total_chats_count?: number | null
           updated_at?: string
+          upi_id?: string | null
           user_id: string
         }
         Update: {
@@ -858,6 +860,7 @@ export type Database = {
           suspension_reason?: string | null
           total_chats_count?: number | null
           updated_at?: string
+          upi_id?: string | null
           user_id?: string
         }
         Relationships: []
