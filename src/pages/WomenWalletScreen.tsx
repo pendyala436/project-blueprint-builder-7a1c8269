@@ -51,17 +51,30 @@ const WomenWalletScreen = () => {
 
   const refresh = () => userId && loadData(userId);
 
+  const SESSION_TYPES = ['chat', 'audio_call', 'video_call', 'group_call',
+    'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning'];
+
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       chat: 'Chat Earning', audio_call: 'Audio Call', video_call: 'Video Call',
       group_call: 'Group Call', gift_credit: 'Gift Received',
       credit: 'Credit', recharge: 'Credit', withdrawal: 'Withdrawal',
       debit: 'Debit', refund: 'Refund',
+      chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
+      video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
     };
     return labels[type] || type?.replace(/_/g, ' ');
   };
 
-  const isCredit = (type: string) => ['credit', 'recharge', 'refund', 'chat', 'audio_call', 'video_call', 'group_call', 'gift_credit'].includes(type);
+  const isCredit = (type: string) => ['credit', 'recharge', 'refund', 'chat', 'audio_call', 'video_call', 'group_call', 'gift_credit',
+    'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning'].includes(type);
+
+  /** Per spec §11.6: read stored duration, FLOOR to minutes. Non-session types show "—". */
+  const getDurationDisplay = (row: StatementRow): string => {
+    if (!SESSION_TYPES.includes(row.transaction_type)) return '—';
+    if (row.duration_seconds == null) return '—';
+    return `${Math.floor(row.duration_seconds / 60)} min`;
+  };
 
   // Calculate earnings breakdown from statement
   const chatEarnings = statement.filter(r => r.transaction_type?.includes('chat')).reduce((s, r) => s + (r.credit || 0), 0);
@@ -157,7 +170,12 @@ const WomenWalletScreen = () => {
                   : <ArrowUpRight className="w-4 h-4 text-red-500" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{getTypeLabel(row.transaction_type)}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">{getTypeLabel(row.transaction_type)}</p>
+                  {getDurationDisplay(row) !== '—' && (
+                    <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">{getDurationDisplay(row)}</span>
+                  )}
+                </div>
                 <p className="text-[10px] text-muted-foreground truncate">{row.description || '—'}</p>
                 <p className="text-[10px] text-muted-foreground">{format(new Date(row.created_at), 'dd MMM yyyy, hh:mm a')}</p>
               </div>

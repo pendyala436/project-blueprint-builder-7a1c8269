@@ -50,6 +50,8 @@ export interface StatementRow {
   counterparty_id: string | null;
   running_balance: number;
   created_at: string;
+  duration_seconds: number | null;
+  rate_per_minute: number | null;
 }
 
 // ──────────── Billing ────────────

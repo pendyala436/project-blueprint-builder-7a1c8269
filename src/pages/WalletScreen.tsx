@@ -52,6 +52,8 @@ const WalletScreen = () => {
 
   const refresh = () => userId && loadData(userId);
 
+  const SESSION_TYPES = ['chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge'];
+
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       recharge: 'Recharge', credit: 'Credit', refund: 'Refund',
@@ -63,6 +65,13 @@ const WalletScreen = () => {
   };
 
   const isCredit = (type: string) => ['credit', 'recharge', 'refund'].includes(type);
+
+  /** Per spec §11.6: read stored duration, FLOOR to minutes. Non-session types show "—". */
+  const getDurationDisplay = (row: StatementRow): string => {
+    if (!SESSION_TYPES.includes(row.transaction_type)) return '—';
+    if (row.duration_seconds == null) return '—';
+    return `${Math.floor(row.duration_seconds / 60)} min`;
+  };
 
   if (isLoading) {
     return (
@@ -151,7 +160,12 @@ const WalletScreen = () => {
                   : <ArrowUpRight className="w-4 h-4 text-red-500" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{getTypeLabel(row.transaction_type)}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">{getTypeLabel(row.transaction_type)}</p>
+                  {getDurationDisplay(row) !== '—' && (
+                    <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">{getDurationDisplay(row)}</span>
+                  )}
+                </div>
                 <p className="text-[10px] text-muted-foreground truncate">{row.description || '—'}</p>
                 <p className="text-[10px] text-muted-foreground">{format(new Date(row.created_at), 'dd MMM yyyy, hh:mm a')}</p>
               </div>
