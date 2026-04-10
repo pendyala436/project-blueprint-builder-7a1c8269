@@ -56,8 +56,7 @@ const getDurationDisplay = (row: StatementRow): string => {
   const totalSecs = Math.round(row.duration_seconds);
   const m = Math.floor(totalSecs / 60);
   const s = totalSecs % 60;
-  if (s === 0) return `${m} min`;
-  return `${m}m ${s}s`;
+  return `${m} min : ${s.toString().padStart(2, '0')} sec`;
 };
 
 const getStartTime = (row: StatementRow): string => {
