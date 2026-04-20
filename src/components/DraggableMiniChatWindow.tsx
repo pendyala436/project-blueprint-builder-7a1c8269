@@ -26,6 +26,8 @@ import { useResizableWindow } from "@/hooks/useResizableWindow";
 // useMiniChatBilling removed — billing system removed
 import { useMiniChatMessages } from "@/hooks/useMiniChatMessages";
 import { usePartnerMonitor } from "@/hooks/usePartnerMonitor";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { PartnerStatusLine } from "@/components/chat/PartnerStatusLine";
 
 interface DraggableMiniChatWindowProps {
   chatId: string;
