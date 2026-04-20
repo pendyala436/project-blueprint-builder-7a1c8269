@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 import { AdminUserSearchDialog } from "@/components/AdminUserSearchDialog";
+import { AdminServiceRolesDialog } from "@/components/AdminServiceRolesDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +166,10 @@ const AdminUserManagement = () => {
   const [deductReason, setDeductReason] = useState("");
   const [deducting, setDeducting] = useState(false);
   const [deductUserBalance, setDeductUserBalance] = useState<number | null>(null);
+
+  // Service Roles dialog
+  const [serviceRolesDialogOpen, setServiceRolesDialogOpen] = useState(false);
+  const [serviceRolesUser, setServiceRolesUser] = useState<UserProfile | null>(null);
 
   // KYC Viewer
   const [kycDialogOpen, setKycDialogOpen] = useState(false);
@@ -1048,6 +1053,9 @@ const AdminUserManagement = () => {
                                   )}
 
                                   <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={() => { setServiceRolesUser(user); setServiceRolesDialogOpen(true); }}>
+                                    <Shield className="h-4 w-4 mr-2" /> Service Roles
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleOpenChat(user)}>
                                     <MessageSquare className="h-4 w-4 mr-2" /> Send Message
                                   </DropdownMenuItem>
@@ -1482,6 +1490,13 @@ const AdminUserManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AdminServiceRolesDialog
+        open={serviceRolesDialogOpen}
+        onOpenChange={setServiceRolesDialogOpen}
+        userId={serviceRolesUser?.user_id ?? null}
+        userName={serviceRolesUser?.full_name}
+      />
     </AdminNav>
   );
 };
