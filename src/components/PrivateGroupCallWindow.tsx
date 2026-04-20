@@ -208,10 +208,11 @@ export function PrivateGroupCallWindow({
     return name;
   }, []);
 
-  // Format elapsed time
+  // Format elapsed time as MM:SS — 60 seconds = 1 minute
   const formatTime = (seconds: number) => {
-    const mins = Math.ceil(seconds / 60);
-    return `${mins} min`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   // Live ticker: counts seconds while session is live (used for live billing display)
@@ -615,14 +616,14 @@ export function PrivateGroupCallWindow({
 
         <div className="flex items-center gap-2">
           {isLive && (() => {
-            const elapsedMin = Math.floor(liveSeconds / 60);
-            const memberCost = elapsedMin * 4;
-            const hostEarnings = elapsedMin * 0.5 * Math.max(0, viewerCount);
+            const elapsedMinFloat = liveSeconds / 60;
+            const memberCost = elapsedMinFloat * 4;
+            const hostEarnings = elapsedMinFloat * 0.5 * Math.max(0, viewerCount);
             return (
               <Badge variant="outline" className="text-white/90 border-accent/50 bg-black/40 text-[11px] gap-1">
                 <Circle className="h-2 w-2 fill-accent text-accent animate-pulse" />
                 {isOwner ? `Earned ₹${hostEarnings.toFixed(2)}` : `Spent ₹${memberCost.toFixed(2)}`}
-                {' · '}{elapsedMin}m
+                {' · '}{formatTime(liveSeconds)}
               </Badge>
             );
           })()}
