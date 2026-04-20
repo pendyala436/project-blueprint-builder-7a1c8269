@@ -144,7 +144,7 @@ const AdminBackupManagement = () => {
           'admin_settings', 'app_settings', 'legal_documents',
           'moderation_reports', 'audit_logs', 'backup_logs',
           'notifications', 'women_kyc', 'withdrawal_requests',
-          'golden_badge_subscriptions', 'attendance', 'absence_records',
+          'attendance', 'absence_records',
           'private_groups', 'group_memberships', 'group_messages',
           'community_announcements', 'community_disputes',
           'admin_broadcast_messages', 'admin_user_messages',

@@ -32,8 +32,6 @@ export interface PublicProfile {
   body_type: string | null;
   is_verified: boolean | null;
   is_premium: boolean | null;
-  has_golden_badge: boolean | null;
-  golden_badge_expires_at: string | null;
   account_status: string;
   approval_status: string;
   profile_completeness: number | null;
