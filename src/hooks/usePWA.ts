@@ -326,32 +326,79 @@ export function usePWA() {
 
   // Install PWA (for browsers that support install prompt)
   const install = useCallback(async (): Promise<boolean> => {
+    // Detect environments where the native install prompt cannot fire
+    const isInIframe = (() => {
+      try { return typeof window !== 'undefined' && window.self !== window.top; }
+      catch { return true; }
+    })();
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const isPreviewHost = host.includes('lovable.app') || host.includes('lovableproject.com') || host.includes('localhost');
+    const alreadyStandalone = typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    );
+
+    if (alreadyStandalone) {
+      // Already installed — no-op, no error
+      return true;
+    }
+
     if (!installPrompt) {
-      console.log('Install prompt not available');
+      // Native prompt isn't available — give a helpful, platform-specific hint instead of an error
+      if (import.meta.env.DEV) console.log('[PWA] Install prompt not available', { isInIframe, isPreviewHost });
+
+      if (isInIframe || isPreviewHost) {
+        toast.info('Open in your browser to install', {
+          description: 'Installation only works on the published app, not inside the editor preview.',
+        });
+        return false;
+      }
+
+      if (state.isIOS || state.isIPadOS) {
+        toast.info('Add to Home Screen', {
+          description: 'Tap the Share icon in Safari, then choose "Add to Home Screen".',
+        });
+      } else if (state.isAndroid) {
+        toast.info('Install from browser menu', {
+          description: 'Tap the ⋮ menu in Chrome and choose "Install app" or "Add to Home screen".',
+        });
+      } else {
+        toast.info('Install from browser', {
+          description: 'Look for the install icon (⊕) in your browser\'s address bar, or use the browser menu.',
+        });
+      }
       return false;
     }
 
     try {
       await installPrompt.prompt();
       const { outcome } = await installPrompt.userChoice;
-      
+
       if (outcome === 'accepted') {
         setInstallPrompt(null);
-        setState(prev => ({ 
-          ...prev, 
-          isInstallable: false, 
+        setState(prev => ({
+          ...prev,
+          isInstallable: false,
           isInstalled: true,
           canInstall: false,
         }));
+        toast.success('App installed', { description: 'You can now launch it from your home screen.' });
         return true;
       }
+      // User dismissed — that's fine, no error toast
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Install failed:', error);
-      toast.error('Installation failed', { description: 'Unable to install the app. Please try again or use your browser.' });
+      // Only show a real error if it's something other than the user cancelling
+      const msg = String(error?.message || error || '').toLowerCase();
+      if (!msg.includes('cancel') && !msg.includes('dismiss') && !msg.includes('user gesture')) {
+        toast.error('Installation unavailable', {
+          description: 'Your browser did not allow installation. Try the browser menu → "Install app".',
+        });
+      }
       return false;
     }
-  }, [installPrompt]);
+  }, [installPrompt, state.isIOS, state.isIPadOS, state.isAndroid]);
 
   // Get install instructions for manual installation (iOS, some Android browsers)
   const getInstallInstructions = useCallback(() => {
