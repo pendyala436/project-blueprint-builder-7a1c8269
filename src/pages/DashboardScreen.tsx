@@ -1531,12 +1531,24 @@ const DashboardScreen = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={cn("text-sm truncate", chat.unreadCount > 0 ? "font-bold text-foreground" : "font-semibold text-foreground")}>{chat.partnerName}</span>
-                  {chat.partnerIsOnline && chat.partnerActiveChatCount > 0 && (
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">In Chat</span>
-                  )}
-                  {chat.partnerIsOnline && chat.partnerActiveChatCount === 0 && (
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 flex-shrink-0">Online</span>
-                  )}
+                  {(() => {
+                    const ageMs = Date.now() - new Date(chat.lastMessageAt).getTime();
+                    if (chat.partnerIsOnline && ageMs < 60000) {
+                      return (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500 text-white flex items-center gap-1 flex-shrink-0 animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                          LIVE
+                        </span>
+                      );
+                    }
+                    if (chat.partnerIsOnline && chat.partnerActiveChatCount > 0) {
+                      return <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 flex-shrink-0">In Chat</span>;
+                    }
+                    if (chat.partnerIsOnline) {
+                      return <span className="text-[9px] px-1 py-0.5 rounded bg-green-100 text-green-700 flex-shrink-0">Online</span>;
+                    }
+                    return <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">Offline</span>;
+                  })()}
                 </div>
                 <span className={cn("text-[10px] flex-shrink-0 ml-2", chat.unreadCount > 0 ? "text-[#25D366] font-semibold" : "text-muted-foreground")}>
                   {formatChatTime(chat.lastMessageAt)}
