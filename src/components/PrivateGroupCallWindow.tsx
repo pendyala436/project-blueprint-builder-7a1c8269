@@ -181,15 +181,31 @@ export function PrivateGroupCallWindow({
   const participantsRef = useRef(participants);
   participantsRef.current = participants;
 
+  // Cache for sender names fetched from profiles (for users not in active media participants list)
+  const nameCacheRef = useRef<Map<string, string>>(new Map());
+
   const getParticipantName = useCallback((userId: string): string => {
     if (userId === currentUserId) return userName;
     if (userId === group.owner_id) {
       const host = participantsRef.current.find(p => p.isOwner);
-      return host?.name || 'Host';
+      return host?.name || nameCacheRef.current.get(userId) || 'Host';
     }
     const participant = participantsRef.current.find(p => p.id === userId);
-    return participant?.name || 'Participant';
+    return participant?.name || nameCacheRef.current.get(userId) || '';
   }, [currentUserId, group.owner_id, userName]);
+
+  // Fetch a sender's display name from profile tables and cache it
+  const fetchSenderName = useCallback(async (userId: string): Promise<string> => {
+    if (nameCacheRef.current.has(userId)) return nameCacheRef.current.get(userId)!;
+    // Try female first, then male
+    const [{ data: f }, { data: m }] = await Promise.all([
+      supabase.from('female_profiles').select('full_name').eq('user_id', userId).maybeSingle(),
+      supabase.from('male_profiles').select('full_name').eq('user_id', userId).maybeSingle(),
+    ]);
+    const name = (f?.full_name || m?.full_name || 'User').trim();
+    nameCacheRef.current.set(userId, name);
+    return name;
+  }, []);
 
   // Format elapsed time
   const formatTime = (seconds: number) => {
