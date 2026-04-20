@@ -85,6 +85,11 @@ export const useMiniChatMessages = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
 
+  // Pin volatile props to a ref so the realtime subscription doesn't churn
+  // (re-subscribing on every minimize/restore was causing dropped messages).
+  const subRefs = useRef({ isMinimized, currentUserLanguage, partnerLanguage });
+  subRefs.current = { isMinimized, currentUserLanguage, partnerLanguage };
+
   const viewerLang = (currentUserLanguage || 'english').toLowerCase().trim();
 
   // CHT-H-03: Load older messages (pagination)
@@ -198,7 +203,7 @@ export const useMiniChatMessages = ({
     loadMessages();
 
     const channel = supabase
-      .channel(`draggable-chat-${chatId}`)
+      .channel(`draggable-chat-${chatId}-${currentUserId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
@@ -208,16 +213,16 @@ export const useMiniChatMessages = ({
           if (seenIdsRef.current.has(m.id)) return;
           seenIdsRef.current.add(m.id);
 
-          // Translate for viewer (both own and partner messages)
+          // Translate for viewer (both own and partner messages) — read latest props from refs
           let translatedMessage: string | undefined;
           let englishText: string | undefined;
           let isTranslated = false;
           let translationFailed = false;
 
           try {
-            // Determine sender language for cross-language transliteration bridge
-            const msgSenderLang = m.sender_id === currentUserId ? currentUserLanguage : partnerLanguage;
-            const result = await translateMessageForViewer(m.message, currentUserLanguage || 'English', msgSenderLang);
+            const viewerLang = subRefs.current.currentUserLanguage || 'English';
+            const msgSenderLang = m.sender_id === currentUserId ? subRefs.current.currentUserLanguage : subRefs.current.partnerLanguage;
+            const result = await translateMessageForViewer(m.message, viewerLang, msgSenderLang);
             translatedMessage = result.displayText;
             englishText = result.englishText;
             isTranslated = result.isTranslated;
@@ -245,8 +250,9 @@ export const useMiniChatMessages = ({
           });
 
           if (m.sender_id !== currentUserId) {
-            setUnreadCount((prev) => prev + (isMinimized ? 1 : 0));
-            if (!isMinimized) {
+            const minimizedNow = subRefs.current.isMinimized;
+            setUnreadCount((prev) => prev + (minimizedNow ? 1 : 0));
+            if (!minimizedNow) {
               markMessagesAsReadWithRetry(chatId, currentUserId);
             }
           }
@@ -257,14 +263,12 @@ export const useMiniChatMessages = ({
         { event: "UPDATE", schema: "public", table: "chat_messages", filter: `chat_id=eq.${chatId}` },
         (payload) => {
           const m = payload.new as any;
-          // Handle "delete for everyone" — remove from view for both parties
           if (m.deleted_for_everyone) {
             setMessages(prev => prev.map(msg =>
               msg.id === m.id ? { ...msg, message: 'This message was deleted', translatedMessage: undefined, englishText: undefined, deletedForEveryone: true } : msg
             ));
             return;
           }
-          // Handle "delete for me" — remove only for the deleter
           if (m.sender_id === currentUserId && m.deleted_for_sender) {
             setMessages(prev => prev.filter(msg => msg.id !== m.id));
             return;
@@ -280,7 +284,7 @@ export const useMiniChatMessages = ({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId, currentUserId, isMinimized, currentUserLanguage, partnerLanguage]);
+  }, [chatId, currentUserId]);
 
   // Effect 2: Auto-scroll on new messages
   useEffect(() => {
