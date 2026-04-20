@@ -606,12 +606,19 @@ export function PrivateGroupCallWindow({
         </div>
 
         <div className="flex items-center gap-2">
-          {isLive && (
-            <Badge variant="outline" className="text-white/90 border-accent/50 bg-black/40 text-[11px] gap-1">
-              <Circle className="h-2 w-2 fill-accent text-accent animate-pulse" />
-              {formatTime(remainingTime)}
-            </Badge>
-          )}
+          {isLive && (() => {
+            // Live billing: men pay ₹4/min, host earns ₹0.50/min per viewer
+            const elapsedMin = Math.max(0, Math.floor((Date.now() - (sessionRef.current?.startedAt?.getTime() || Date.now())) / 60000));
+            const memberCost = elapsedMin * 4;
+            const hostEarnings = elapsedMin * 0.5 * Math.max(0, viewerCount);
+            return (
+              <Badge variant="outline" className="text-white/90 border-accent/50 bg-black/40 text-[11px] gap-1">
+                <Circle className="h-2 w-2 fill-accent text-accent animate-pulse" />
+                {isOwner ? `Earned ₹${hostEarnings.toFixed(2)}` : `Spent ₹${memberCost.toFixed(2)}`}
+                {' · '}{elapsedMin}m
+              </Badge>
+            );
+          })()}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>
