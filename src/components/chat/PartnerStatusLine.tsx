@@ -78,8 +78,8 @@ export const PartnerStatusLine = memo<PartnerStatusLineProps>(
         className={cn(
           "flex items-center gap-1 text-[10px] leading-tight truncate",
           tone === "primary" && "text-primary",
-          tone === "online" && "text-emerald-500",
-          tone === "warn" && "text-amber-500",
+          tone === "online" && "text-online",
+          tone === "warn" && "text-warning",
           tone === "muted" && "text-muted-foreground",
           className
         )}
