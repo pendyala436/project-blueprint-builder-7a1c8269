@@ -2509,8 +2509,13 @@ const ChatScreen = () => {
               setTypingText("");
               setPreviewNative("");
               setPreviewEnglish("");
+              sendTyping(false);
             }}
-            onInputChange={setTypingText}
+            onInputChange={(t) => {
+              setTypingText(t);
+              sendTyping(t.trim().length > 0);
+            }}
+            onTyping={sendTyping}
             disabled={isSending || isBlocked || isBlockedByPartner}
             userLanguage={currentUserLanguage || "english"}
           />
