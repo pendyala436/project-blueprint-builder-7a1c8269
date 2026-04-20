@@ -14,13 +14,21 @@ interface WhatsAppCallScreenProps {
   onEnd: () => void;
   onToggleMute: () => void;
   onToggleCamera: () => void;
+  userGender?: 'male' | 'female';
 }
+
+// Per-minute rates (synced with chat_pricing defaults)
+const RATES = {
+  audio: { male: 6, female: 3 },
+  video: { male: 8, female: 4 },
+} as const;
 
 export const WhatsAppCallScreen = ({
   status, activeCall,
   isMuted, isCameraOff,
   onAccept, onDecline, onEnd,
   onToggleMute, onToggleCamera,
+  userGender = 'male',
 }: WhatsAppCallScreenProps) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -104,11 +112,19 @@ export const WhatsAppCallScreen = ({
           {isActive && fmtDuration(elapsed)}
         </p>
 
-        {isActive && (
-          <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-xs">
-            {activeCall.callType === 'audio' ? '₹6/min' : '₹8/min'}
-          </span>
-        )}
+        {isActive && (() => {
+          const rate = RATES[activeCall.callType][userGender];
+          // Pro-rated per-second amount
+          const amount = (rate / 60) * elapsed;
+          const isMan = userGender === 'male';
+          return (
+            <div className="flex flex-col items-center gap-1">
+              <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-xs">
+                {isMan ? 'Cost' : 'Earned'}: ₹{amount.toFixed(2)} · ₹{rate}/min
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Local video PIP (video calls only) */}
