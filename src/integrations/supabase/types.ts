@@ -3496,7 +3496,78 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_female_profiles: {
+        Row: {
+          account_status: string | null
+          age: number | null
+          approval_status: string | null
+          bio: string | null
+          country: string | null
+          created_at: string | null
+          earning_badge_type: string | null
+          full_name: string | null
+          has_golden_badge: boolean | null
+          id: string | null
+          interests: string[] | null
+          is_earning_eligible: boolean | null
+          is_indian: boolean | null
+          is_premium: boolean | null
+          is_verified: boolean | null
+          last_active_at: string | null
+          photo_url: string | null
+          preferred_language: string | null
+          primary_language: string | null
+          state: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_status?: string | null
+          age?: number | null
+          approval_status?: string | null
+          bio?: string | null
+          country?: string | null
+          created_at?: string | null
+          earning_badge_type?: string | null
+          full_name?: string | null
+          has_golden_badge?: boolean | null
+          id?: string | null
+          interests?: string[] | null
+          is_earning_eligible?: boolean | null
+          is_indian?: boolean | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
+          photo_url?: string | null
+          preferred_language?: string | null
+          primary_language?: string | null
+          state?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_status?: string | null
+          age?: number | null
+          approval_status?: string | null
+          bio?: string | null
+          country?: string | null
+          created_at?: string | null
+          earning_badge_type?: string | null
+          full_name?: string | null
+          has_golden_badge?: boolean | null
+          id?: string | null
+          interests?: string[] | null
+          is_earning_eligible?: boolean | null
+          is_indian?: boolean | null
+          is_premium?: boolean | null
+          is_verified?: boolean | null
+          last_active_at?: string | null
+          photo_url?: string | null
+          preferred_language?: string | null
+          primary_language?: string | null
+          state?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_friend_request: { Args: { p_request_id: string }; Returns: Json }
