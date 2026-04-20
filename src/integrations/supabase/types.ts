@@ -725,6 +725,7 @@ export type Database = {
           earning_badge_type: string | null
           earning_slot_assigned_at: string | null
           education_level: string | null
+          employee_id: string
           full_name: string | null
           golden_badge_expires_at: string | null
           has_golden_badge: boolean | null
@@ -777,6 +778,7 @@ export type Database = {
           earning_badge_type?: string | null
           earning_slot_assigned_at?: string | null
           education_level?: string | null
+          employee_id?: string
           full_name?: string | null
           golden_badge_expires_at?: string | null
           has_golden_badge?: boolean | null
@@ -829,6 +831,7 @@ export type Database = {
           earning_badge_type?: string | null
           earning_slot_assigned_at?: string | null
           education_level?: string | null
+          employee_id?: string
           full_name?: string | null
           golden_badge_expires_at?: string | null
           has_golden_badge?: boolean | null
@@ -3593,6 +3596,7 @@ export type Database = {
       cleanup_old_transactions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
       expire_group_video_access: { Args: never; Returns: undefined }
+      generate_female_employee_id: { Args: never; Returns: string }
       generate_monthly_statement: {
         Args: { p_month: number; p_user_id: string; p_year: number }
         Returns: Json

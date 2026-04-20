@@ -111,6 +111,7 @@ const AdminUserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<Record<string, string>>({});
+  const [employeeIds, setEmployeeIds] = useState<Record<string, string>>({});
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -326,11 +327,18 @@ const AdminUserManagement = () => {
 
       if (data && data.length > 0) {
         const userIds = data.map(u => u.user_id);
-        const { data: rolesData } = await supabase
-          .from("user_roles").select("user_id, role").in("user_id", userIds);
+        const [rolesRes, empRes] = await Promise.all([
+          supabase.from("user_roles").select("user_id, role").in("user_id", userIds),
+          supabase.from("female_profiles").select("user_id, employee_id").in("user_id", userIds),
+        ]);
         const rolesMap: Record<string, string> = {};
-        rolesData?.forEach(r => { rolesMap[r.user_id] = r.role; });
+        rolesRes.data?.forEach(r => { rolesMap[r.user_id] = r.role; });
         setUserRoles(rolesMap);
+        const empMap: Record<string, string> = {};
+        empRes.data?.forEach((r: { user_id: string; employee_id: string | null }) => {
+          if (r.employee_id) empMap[r.user_id] = r.employee_id;
+        });
+        setEmployeeIds(empMap);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -978,6 +986,9 @@ const AdminUserManagement = () => {
                                 </div>
                                 <div>
                                   <p className="font-medium">{user.full_name || "Unknown"}</p>
+                                  {employeeIds[user.user_id] && (
+                                    <p className="text-[10px] font-mono text-primary font-semibold">{employeeIds[user.user_id]}</p>
+                                  )}
                                   <p className="text-xs text-muted-foreground truncate max-w-[120px]">{user.primary_language || "No language"}</p>
                                 </div>
                               </div>

@@ -122,6 +122,7 @@ const WomenDashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "female");
   const { status: callStatus, activeCall, isMuted, isCameraOff, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'female', 0);
@@ -704,6 +705,16 @@ const WomenDashboardScreen = () => {
       if (fullName) {
         setUserName(fullName.split(" ")[0]);
       }
+
+      // Fetch employee ID (for women only) - non-blocking
+      supabase
+        .from("female_profiles")
+        .select("employee_id")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.employee_id) setEmployeeId(data.employee_id);
+        });
 
       const womanLanguage = womanLanguages?.[0]?.language_name || 
                            mainProfile?.primary_language ||
@@ -1588,7 +1599,12 @@ const WomenDashboardScreen = () => {
           </AvatarFallback>
         </Avatar>
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
-        <p className="text-xs text-muted-foreground">{currentWomanLanguage} • {currentWomanCountry}</p>
+        {employeeId && (
+          <Badge variant="outline" className="mt-1 font-mono text-[11px] border-primary/40 text-primary">
+            Employee ID: {employeeId}
+          </Badge>
+        )}
+        <p className="text-xs text-muted-foreground mt-1">{currentWomanLanguage} • {currentWomanCountry}</p>
         <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
           {getStatusText()}
         </Badge>
