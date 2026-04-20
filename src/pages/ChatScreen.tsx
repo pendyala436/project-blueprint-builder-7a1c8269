@@ -2315,7 +2315,7 @@ const ChatScreen = () => {
                     >
                       <div className={`flex items-end gap-1 ${isMine ? "flex-row-reverse" : ""}`} style={{ maxWidth: '72%' }}>
                         {!isMine && (
-                          <div className="w-8 flex-shrink-0">
+                          <div className="w-8 flex-shrink-0 relative">
                             {showAvatar && chatPartner?.avatar ? (
                               <img src={chatPartner.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
                             ) : showAvatar ? (
@@ -2323,6 +2323,13 @@ const ChatScreen = () => {
                                 <span className="text-xs font-bold" style={{ color: '#555' }}>{chatPartner?.fullName.charAt(0).toUpperCase()}</span>
                               </div>
                             ) : <div className="w-8" />}
+                            {showAvatar && (
+                              <span
+                                className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white"
+                                title={chatPartner?.isOnline ? 'Online' : 'Offline'}
+                                style={{ background: chatPartner?.isOnline ? '#4CAF50' : '#9E9E9E' }}
+                              />
+                            )}
                           </div>
                         )}
                         <div>
