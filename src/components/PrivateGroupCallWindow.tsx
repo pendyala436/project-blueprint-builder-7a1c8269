@@ -181,15 +181,31 @@ export function PrivateGroupCallWindow({
   const participantsRef = useRef(participants);
   participantsRef.current = participants;
 
+  // Cache for sender names fetched from profiles (for users not in active media participants list)
+  const nameCacheRef = useRef<Map<string, string>>(new Map());
+
   const getParticipantName = useCallback((userId: string): string => {
     if (userId === currentUserId) return userName;
     if (userId === group.owner_id) {
       const host = participantsRef.current.find(p => p.isOwner);
-      return host?.name || 'Host';
+      return host?.name || nameCacheRef.current.get(userId) || 'Host';
     }
     const participant = participantsRef.current.find(p => p.id === userId);
-    return participant?.name || 'Participant';
+    return participant?.name || nameCacheRef.current.get(userId) || '';
   }, [currentUserId, group.owner_id, userName]);
+
+  // Fetch a sender's display name from profile tables and cache it
+  const fetchSenderName = useCallback(async (userId: string): Promise<string> => {
+    if (nameCacheRef.current.has(userId)) return nameCacheRef.current.get(userId)!;
+    // Try female first, then male
+    const [{ data: f }, { data: m }] = await Promise.all([
+      supabase.from('female_profiles').select('full_name').eq('user_id', userId).maybeSingle(),
+      supabase.from('male_profiles').select('full_name').eq('user_id', userId).maybeSingle(),
+    ]);
+    const name = (f?.full_name || m?.full_name || 'User').trim();
+    nameCacheRef.current.set(userId, name);
+    return name;
+  }, []);
 
   // Format elapsed time
   const formatTime = (seconds: number) => {
@@ -241,9 +257,20 @@ export function PrivateGroupCallWindow({
         schema: 'public',
         table: 'group_messages',
         filter: `group_id=eq.${group.id}`
-      }, (payload) => {
+      }, async (payload) => {
         const msg = payload.new as any;
-        const text: string = msg.message || '';
+        let text: string = msg.message || '';
+        let embeddedName: string | null = null;
+
+        // Strip embedded sender-name prefix from text messages: __MSG__::name::body
+        if (text.startsWith('__MSG__::')) {
+          const idx = text.indexOf('::', 9);
+          if (idx > 9) {
+            embeddedName = text.slice(9, idx);
+            text = text.slice(idx + 2);
+            if (embeddedName) nameCacheRef.current.set(msg.sender_id, embeddedName);
+          }
+        }
 
         // Check if this is a gift broadcast message
         if (text.startsWith('__GIFT__::')) {
@@ -253,7 +280,7 @@ export function PrivateGroupCallWindow({
           const price = parseFloat(parts[3]) || 0;
           // Use the sender's real name embedded in the message (parts[4]),
           // falling back to participant lookup, then generic fallback
-          const senderName = parts[4] || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id));
+          const senderName = parts[4] || embeddedName || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id)) || await fetchSenderName(msg.sender_id);
 
           // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
@@ -272,14 +299,16 @@ export function PrivateGroupCallWindow({
         }
 
         if (msg.sender_id !== currentUserId) {
-          const name = getParticipantName(msg.sender_id);
+          // Resolve sender name: embedded > active participant > cached profile > fetched profile
+          let name = embeddedName || getParticipantName(msg.sender_id);
+          if (!name) name = await fetchSenderName(msg.sender_id);
           addChatMessage(name, text, false);
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName]);
+  }, [group.id, currentUserId, userName, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName, fetchSenderName]);
 
   // Extension check — query DB instead of localStorage
   // NOTE: getMonth() is 0-indexed; DB stores 1-indexed months
@@ -375,10 +404,12 @@ export function PrivateGroupCallWindow({
     // Optimistic: show own message immediately
     addChatMessage(userName, text, true);
 
-    // Persist to DB (fire-and-forget)
+    // Persist to DB with embedded sender name (so all recipients see real name even
+    // if the sender hasn't joined the WebRTC media stream yet)
+    const wireText = `__MSG__::${userName}::${text}`;
     supabase
       .from('group_messages')
-      .insert({ group_id: group.id, sender_id: currentUserId, message: text })
+      .insert({ group_id: group.id, sender_id: currentUserId, message: wireText })
       .then(({ error }) => { if (error) console.error('Failed to send comment', error); });
   };
 
