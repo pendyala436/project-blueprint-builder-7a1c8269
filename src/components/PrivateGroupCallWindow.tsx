@@ -127,6 +127,7 @@ export function PrivateGroupCallWindow({
 
   // Extension state
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
+  const [liveSeconds, setLiveSeconds] = useState(0);
 
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
 
