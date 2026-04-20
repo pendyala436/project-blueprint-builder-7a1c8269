@@ -603,7 +603,7 @@ const DraggableMiniChatWindow = ({
                   </PopoverContent>
                 </Popover>
                 <div className="flex-1">
-                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyPress} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
+                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => { setNewMessage(e.target.value); sendTyping(e.target.value.trim().length > 0); }} onKeyDown={handleKeyPress} onBlur={() => sendTyping(false)} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
                 </div>
                 <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
                   <Send className="h-3.5 w-3.5" />
