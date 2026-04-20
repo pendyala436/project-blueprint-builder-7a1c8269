@@ -26,6 +26,8 @@ import { useResizableWindow } from "@/hooks/useResizableWindow";
 // useMiniChatBilling removed — billing system removed
 import { useMiniChatMessages } from "@/hooks/useMiniChatMessages";
 import { usePartnerMonitor } from "@/hooks/usePartnerMonitor";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { PartnerStatusLine } from "@/components/chat/PartnerStatusLine";
 
 interface DraggableMiniChatWindowProps {
   chatId: string;
@@ -131,6 +133,14 @@ const DraggableMiniChatWindow = ({
     sessionId,
     isPartnerOnline,
     onClose,
+  });
+
+  // Realtime per-chat presence: partner "in chat with you" / typing / left
+  const { partnerState, partnerLastSeen, sendTyping } = useChatPresence({
+    chatId,
+    currentUserId,
+    partnerId,
+    isWindowActive: !isMinimized && (typeof document === "undefined" || !document.hidden),
   });
 
   // --- Native preview for all input types ---
@@ -466,12 +476,28 @@ const DraggableMiniChatWindow = ({
               <AvatarImage src={partnerPhoto || undefined} />
               <AvatarFallback className="text-xs bg-primary/20">{partnerName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className={cn("absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background", isPartnerOnline ? "bg-green-500" : "bg-muted-foreground")} />
+            <div
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background",
+                partnerState === "in_chat" || partnerState === "typing"
+                  ? "bg-primary animate-pulse"
+                  : partnerState === "online_away" || isPartnerOnline
+                  ? "bg-online"
+                  : "bg-muted-foreground"
+              )}
+              aria-hidden="true"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-xs font-medium truncate">{partnerName}</p>
             </div>
+            <PartnerStatusLine
+              state={partnerState}
+              partnerName={partnerName}
+              lastSeen={partnerLastSeen}
+              fallbackOnline={isPartnerOnline}
+            />
             {billing.billingStarted && (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Clock className="h-2 w-2 text-muted-foreground" />
@@ -577,7 +603,7 @@ const DraggableMiniChatWindow = ({
                   </PopoverContent>
                 </Popover>
                 <div className="flex-1">
-                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={handleKeyPress} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
+                  <Input placeholder="Type a message..." value={newMessage} onChange={(e) => { setNewMessage(e.target.value); sendTyping(e.target.value.trim().length > 0); }} onKeyDown={handleKeyPress} onBlur={() => sendTyping(false)} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
                 </div>
                 <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
                   <Send className="h-3.5 w-3.5" />
