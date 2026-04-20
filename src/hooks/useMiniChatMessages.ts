@@ -85,6 +85,11 @@ export const useMiniChatMessages = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
 
+  // Pin volatile props to a ref so the realtime subscription doesn't churn
+  // (re-subscribing on every minimize/restore was causing dropped messages).
+  const subRefs = useRef({ isMinimized, currentUserLanguage, partnerLanguage });
+  subRefs.current = { isMinimized, currentUserLanguage, partnerLanguage };
+
   const viewerLang = (currentUserLanguage || 'english').toLowerCase().trim();
 
   // CHT-H-03: Load older messages (pagination)
