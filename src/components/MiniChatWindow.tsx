@@ -807,9 +807,11 @@ const MiniChatWindow = ({
     onClose();
   };
 
+  // Format as MM:SS — 60 seconds = 1 minute
   const formatTime = (seconds: number) => {
-    const mins = Math.ceil(seconds / 60);
-    return `${mins} min`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const estimatedCost = billingStarted ? (elapsedSeconds / 60) * ratePerMinute : 0;
