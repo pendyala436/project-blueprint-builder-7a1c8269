@@ -363,6 +363,37 @@ const ChatScreen = () => {
   const chatId = useRef<string>("");
   // Reactive state to trigger subscription re-run when chatId is set
   const [activeChatId, setActiveChatId] = useState<string>("");
+
+  // ============= LIVE PRESENCE (per-chat) =============
+  // Track whether THIS chat window is currently visible/focused for the local user
+  const [isWindowActive, setIsWindowActive] = useState<boolean>(
+    typeof document === "undefined" ? true : document.visibilityState === "visible"
+  );
+  useEffect(() => {
+    const onVis = () => setIsWindowActive(document.visibilityState === "visible" && document.hasFocus());
+    const onFocus = () => setIsWindowActive(true);
+    const onBlur = () => setIsWindowActive(false);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  const { partnerState, partnerLastSeen, sendTyping } = useChatPresence({
+    chatId: activeChatId,
+    currentUserId,
+    partnerId: chatPartner?.userId || "",
+    isWindowActive,
+  });
+
+  // Mirror "typing" presence state into the existing typing-bubble indicator
+  useEffect(() => {
+    setIsTyping(partnerState === "typing");
+  }, [partnerState]);
   
   // CHT-01 FIX: Ref to avoid stale closures in realtime subscription
   const chatPartnerRef = useRef<ChatPartner | null>(null);
