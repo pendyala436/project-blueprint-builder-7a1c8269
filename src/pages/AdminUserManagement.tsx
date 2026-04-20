@@ -32,7 +32,7 @@ import {
   Shield, RefreshCw, Filter, ChevronLeft, ChevronRight, ShieldCheck, ShieldAlert,
   Ban, CheckCircle, XCircle, Clock, Pause, Play, Settings, Languages, Bot, Zap,
   Heart, HeartOff, UserPlus, UserMinus, FileText, MessageSquare, Send, Megaphone,
-  Eye, ExternalLink, Home, Crown, Loader2, AlertTriangle, MinusCircle, TimerOff,
+  Eye, ExternalLink, Home, Loader2, AlertTriangle, MinusCircle, TimerOff,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
