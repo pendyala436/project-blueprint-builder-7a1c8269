@@ -642,6 +642,10 @@ export function usePrivateGroupCall({
         // This avoids the race condition where the offer arrives before the participant's listeners are ready
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
+        // Capture whether the leaver was the host BEFORE we delete them
+        const leaver = sessionRef.current?.participants.get(key);
+        const leaverWasHost = leaver?.isOwner === true;
+
         if (sessionRef.current) {
           sessionRef.current.participants.delete(key);
         }
@@ -665,6 +669,17 @@ export function usePrivateGroupCall({
           });
         
         onParticipantLeave?.(key, 'left');
+
+        // ─── Host disconnect → kick all participants ───────────────────────
+        // If the host's presence drops (intentional leave, tab close, network drop)
+        // and we did NOT receive an explicit `stream-ended` broadcast, every
+        // participant should be auto-disconnected from the call.
+        if (leaverWasHost && !isOwner) {
+          toast.info('Host disconnected. The call has ended.');
+          cleanup();
+          onSessionEnd?.(true); // refund unused balance
+          return;
+        }
         
         const remainingParticipants = Array.from(sessionRef.current?.participants.values() || []);
         const nonHostCount = remainingParticipants.filter(p => !p.isOwner).length;
