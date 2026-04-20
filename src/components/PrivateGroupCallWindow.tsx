@@ -257,9 +257,20 @@ export function PrivateGroupCallWindow({
         schema: 'public',
         table: 'group_messages',
         filter: `group_id=eq.${group.id}`
-      }, (payload) => {
+      }, async (payload) => {
         const msg = payload.new as any;
-        const text: string = msg.message || '';
+        let text: string = msg.message || '';
+        let embeddedName: string | null = null;
+
+        // Strip embedded sender-name prefix from text messages: __MSG__::name::body
+        if (text.startsWith('__MSG__::')) {
+          const idx = text.indexOf('::', 9);
+          if (idx > 9) {
+            embeddedName = text.slice(9, idx);
+            text = text.slice(idx + 2);
+            if (embeddedName) nameCacheRef.current.set(msg.sender_id, embeddedName);
+          }
+        }
 
         // Check if this is a gift broadcast message
         if (text.startsWith('__GIFT__::')) {
@@ -269,7 +280,7 @@ export function PrivateGroupCallWindow({
           const price = parseFloat(parts[3]) || 0;
           // Use the sender's real name embedded in the message (parts[4]),
           // falling back to participant lookup, then generic fallback
-          const senderName = parts[4] || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id));
+          const senderName = parts[4] || embeddedName || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id)) || await fetchSenderName(msg.sender_id);
 
           // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
@@ -288,14 +299,16 @@ export function PrivateGroupCallWindow({
         }
 
         if (msg.sender_id !== currentUserId) {
-          const name = getParticipantName(msg.sender_id);
+          // Resolve sender name: embedded > active participant > cached profile > fetched profile
+          let name = embeddedName || getParticipantName(msg.sender_id);
+          if (!name) name = await fetchSenderName(msg.sender_id);
           addChatMessage(name, text, false);
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName]);
+  }, [group.id, currentUserId, userName, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName, fetchSenderName]);
 
   // Extension check — query DB instead of localStorage
   // NOTE: getMonth() is 0-indexed; DB stores 1-indexed months
