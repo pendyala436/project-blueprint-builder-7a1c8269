@@ -391,10 +391,12 @@ export function PrivateGroupCallWindow({
     // Optimistic: show own message immediately
     addChatMessage(userName, text, true);
 
-    // Persist to DB (fire-and-forget)
+    // Persist to DB with embedded sender name (so all recipients see real name even
+    // if the sender hasn't joined the WebRTC media stream yet)
+    const wireText = `__MSG__::${userName}::${text}`;
     supabase
       .from('group_messages')
-      .insert({ group_id: group.id, sender_id: currentUserId, message: text })
+      .insert({ group_id: group.id, sender_id: currentUserId, message: wireText })
       .then(({ error }) => { if (error) console.error('Failed to send comment', error); });
   };
 
