@@ -108,6 +108,8 @@ import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
 import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { useMiniChatBilling } from "@/hooks/useMiniChatBilling";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { PartnerStatusLine } from "@/components/chat/PartnerStatusLine";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
@@ -361,6 +363,37 @@ const ChatScreen = () => {
   const chatId = useRef<string>("");
   // Reactive state to trigger subscription re-run when chatId is set
   const [activeChatId, setActiveChatId] = useState<string>("");
+
+  // ============= LIVE PRESENCE (per-chat) =============
+  // Track whether THIS chat window is currently visible/focused for the local user
+  const [isWindowActive, setIsWindowActive] = useState<boolean>(
+    typeof document === "undefined" ? true : document.visibilityState === "visible"
+  );
+  useEffect(() => {
+    const onVis = () => setIsWindowActive(document.visibilityState === "visible" && document.hasFocus());
+    const onFocus = () => setIsWindowActive(true);
+    const onBlur = () => setIsWindowActive(false);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  const { partnerState, partnerLastSeen, sendTyping } = useChatPresence({
+    chatId: activeChatId,
+    currentUserId,
+    partnerId: chatPartner?.userId || "",
+    isWindowActive,
+  });
+
+  // Mirror "typing" presence state into the existing typing-bubble indicator
+  useEffect(() => {
+    setIsTyping(partnerState === "typing");
+  }, [partnerState]);
   
   // CHT-01 FIX: Ref to avoid stale closures in realtime subscription
   const chatPartnerRef = useRef<ChatPartner | null>(null);
@@ -2043,19 +2076,20 @@ const ChatScreen = () => {
 
               <div className="flex-1 min-w-0">
                 <p className="truncate" style={{ fontSize: 15, fontWeight: 500, color: WA.headerText }}>{chatPartner.fullName}</p>
-                <p className="flex items-center gap-1" style={{ fontSize: 12, color: WA.headerSub }}>
-                  {chatPartner.isOnline ? (
-                    <span style={{ color: WA.headerSub }}>Online</span>
-                  ) : (
-                    <span>Offline</span>
-                  )}
+                <div className="flex items-center gap-1" style={{ color: WA.headerSub }}>
+                  <PartnerStatusLine
+                    state={partnerState}
+                    partnerName={chatPartner.fullName}
+                    lastSeen={partnerLastSeen}
+                    fallbackOnline={chatPartner.isOnline}
+                  />
                   {chatPartner.preferredLanguage !== currentUserLanguage && (
                     <>
-                      <span>•</span>
-                      <span>{chatPartner.preferredLanguage}</span>
+                      <span style={{ fontSize: 12 }}>•</span>
+                      <span style={{ fontSize: 12 }}>{chatPartner.preferredLanguage}</span>
                     </>
                   )}
-                </p>
+                </div>
               </div>
             </div>
           )}
@@ -2475,8 +2509,13 @@ const ChatScreen = () => {
               setTypingText("");
               setPreviewNative("");
               setPreviewEnglish("");
+              sendTyping(false);
             }}
-            onInputChange={setTypingText}
+            onInputChange={(t) => {
+              setTypingText(t);
+              sendTyping(t.trim().length > 0);
+            }}
+            onTyping={sendTyping}
             disabled={isSending || isBlocked || isBlockedByPartner}
             userLanguage={currentUserLanguage || "english"}
           />
