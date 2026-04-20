@@ -2026,6 +2026,7 @@ const ChatScreen = () => {
           onEnd={endCall}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
+          userGender={currentUserGender as 'male' | 'female'}
         />
       )}
       {/* ============= HEADER SECTION ============= */}
