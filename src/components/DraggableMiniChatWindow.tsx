@@ -476,12 +476,28 @@ const DraggableMiniChatWindow = ({
               <AvatarImage src={partnerPhoto || undefined} />
               <AvatarFallback className="text-xs bg-primary/20">{partnerName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className={cn("absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background", isPartnerOnline ? "bg-green-500" : "bg-muted-foreground")} />
+            <div
+              className={cn(
+                "absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background",
+                partnerState === "in_chat" || partnerState === "typing"
+                  ? "bg-primary animate-pulse"
+                  : partnerState === "online_away" || isPartnerOnline
+                  ? "bg-online"
+                  : "bg-muted-foreground"
+              )}
+              aria-hidden="true"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <p className="text-xs font-medium truncate">{partnerName}</p>
             </div>
+            <PartnerStatusLine
+              state={partnerState}
+              partnerName={partnerName}
+              lastSeen={partnerLastSeen}
+              fallbackOnline={isPartnerOnline}
+            />
             {billing.billingStarted && (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Clock className="h-2 w-2 text-muted-foreground" />
