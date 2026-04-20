@@ -135,6 +135,14 @@ const DraggableMiniChatWindow = ({
     onClose,
   });
 
+  // Realtime per-chat presence: partner "in chat with you" / typing / left
+  const { partnerState, partnerLastSeen, sendTyping } = useChatPresence({
+    chatId,
+    currentUserId,
+    partnerId,
+    isWindowActive: !isMinimized && (typeof document === "undefined" || !document.hidden),
+  });
+
   // --- Native preview for all input types ---
   // Works for ALL language combinations:
   // - Non-Latin lang user typing Latin (transliteration/English) → shows native script
