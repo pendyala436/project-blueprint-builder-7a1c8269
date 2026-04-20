@@ -922,12 +922,10 @@ const DashboardScreen = () => {
         return;
       }
 
-      // Fetch ONLY online women from female_profiles table with earning eligibility
+      // Fetch ONLY online women from safe public view (excludes sensitive bank/PAN/phone/DOB fields)
       const { data: femaleProfiles } = await supabase
-        .from("female_profiles")
+        .from("public_female_profiles" as any)
         .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
-        .eq("approval_status", "approved")
-        .eq("account_status", "active")
         .in("user_id", onlineUserIds)
         .limit(50);
 
