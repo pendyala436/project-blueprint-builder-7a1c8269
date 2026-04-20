@@ -1891,6 +1891,7 @@ const DashboardScreen = () => {
           onEnd={endCall}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
+          userGender="male"
         />
       )}
 

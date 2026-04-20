@@ -127,6 +127,7 @@ export function PrivateGroupCallWindow({
 
   // Extension state
   const [canExtendThisMonth, setCanExtendThisMonth] = useState(true);
+  const [liveSeconds, setLiveSeconds] = useState(0);
 
   const hasVideo = group.access_type === 'video' || group.access_type === 'both';
 
@@ -212,6 +213,13 @@ export function PrivateGroupCallWindow({
     const mins = Math.ceil(seconds / 60);
     return `${mins} min`;
   };
+
+  // Live ticker: counts seconds while session is live (used for live billing display)
+  useEffect(() => {
+    if (!isLive) { setLiveSeconds(0); return; }
+    const t = setInterval(() => setLiveSeconds(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [isLive]);
 
   // ─── Add Chat Message ─────────────────────────────────────────
 
@@ -606,12 +614,18 @@ export function PrivateGroupCallWindow({
         </div>
 
         <div className="flex items-center gap-2">
-          {isLive && (
-            <Badge variant="outline" className="text-white/90 border-accent/50 bg-black/40 text-[11px] gap-1">
-              <Circle className="h-2 w-2 fill-accent text-accent animate-pulse" />
-              {formatTime(remainingTime)}
-            </Badge>
-          )}
+          {isLive && (() => {
+            const elapsedMin = Math.floor(liveSeconds / 60);
+            const memberCost = elapsedMin * 4;
+            const hostEarnings = elapsedMin * 0.5 * Math.max(0, viewerCount);
+            return (
+              <Badge variant="outline" className="text-white/90 border-accent/50 bg-black/40 text-[11px] gap-1">
+                <Circle className="h-2 w-2 fill-accent text-accent animate-pulse" />
+                {isOwner ? `Earned ₹${hostEarnings.toFixed(2)}` : `Spent ₹${memberCost.toFixed(2)}`}
+                {' · '}{elapsedMin}m
+              </Badge>
+            );
+          })()}
           <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 h-8 w-8" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>

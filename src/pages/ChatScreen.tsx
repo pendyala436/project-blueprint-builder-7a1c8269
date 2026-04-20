@@ -2026,6 +2026,7 @@ const ChatScreen = () => {
           onEnd={endCall}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
+          userGender={currentUserGender as 'male' | 'female'}
         />
       )}
       {/* ============= HEADER SECTION ============= */}
@@ -2087,6 +2088,17 @@ const ChatScreen = () => {
                     <>
                       <span style={{ fontSize: 12 }}>•</span>
                       <span style={{ fontSize: 12 }}>{chatPartner.preferredLanguage}</span>
+                    </>
+                  )}
+                  {isSessionActive && minutesBilled > 0 && (
+                    <>
+                      <span style={{ fontSize: 12 }}>•</span>
+                      <span style={{ fontSize: 12 }}>
+                        {currentUserGender === 'male'
+                          ? `Spent ₹${totalCharged.toFixed(2)}`
+                          : `Earned ₹${(minutesBilled * 2).toFixed(2)}`}
+                        {' · '}{minutesBilled}m
+                      </span>
                     </>
                   )}
                 </div>

@@ -1706,6 +1706,7 @@ const WomenDashboardScreen = () => {
           onEnd={endCall}
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
+          userGender="female"
         />
       )}
 
