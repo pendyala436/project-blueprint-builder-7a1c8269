@@ -108,6 +108,8 @@ import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
 import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { useMiniChatBilling } from "@/hooks/useMiniChatBilling";
+import { useChatPresence } from "@/hooks/useChatPresence";
+import { PartnerStatusLine } from "@/components/chat/PartnerStatusLine";
 
 // MAX_PARALLEL_CHATS is now loaded dynamically from app_settings
 // Default fallback only used if database is unavailable
