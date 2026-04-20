@@ -248,10 +248,31 @@ export function PrivateGroupCallWindow({
   }, []);
 
   // ─── Realtime: Listen for group_messages as floating comments ───
+  // IMPORTANT: We pin all helper functions to refs so this subscription's deps
+  // are STABLE (only [group.id, currentUserId]). Otherwise the channel would
+  // unsubscribe + resubscribe on every render and drop messages mid-flight —
+  // which is exactly why the host previously didn't see member messages.
+
+  const handlersRef = useRef({
+    addChatMessage,
+    addAnimatedGift,
+    addFloatingReaction,
+    getParticipantName,
+    fetchSenderName,
+    userName,
+  });
+  handlersRef.current = {
+    addChatMessage,
+    addAnimatedGift,
+    addFloatingReaction,
+    getParticipantName,
+    fetchSenderName,
+    userName,
+  };
 
   useEffect(() => {
     const channel = supabase
-      .channel(`danmu-${group.id}`)
+      .channel(`danmu-${group.id}-${currentUserId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -261,6 +282,7 @@ export function PrivateGroupCallWindow({
         const msg = payload.new as any;
         let text: string = msg.message || '';
         let embeddedName: string | null = null;
+        const h = handlersRef.current;
 
         // Strip embedded sender-name prefix from text messages: __MSG__::name::body
         if (text.startsWith('__MSG__::')) {
@@ -278,37 +300,39 @@ export function PrivateGroupCallWindow({
           const emoji = parts[1] || '🎁';
           const giftName = parts[2] || 'Gift';
           const price = parseFloat(parts[3]) || 0;
-          // Use the sender's real name embedded in the message (parts[4]),
-          // falling back to participant lookup, then generic fallback
-          const senderName = parts[4] || embeddedName || (msg.sender_id === currentUserId ? userName : getParticipantName(msg.sender_id)) || await fetchSenderName(msg.sender_id);
+          const senderName = parts[4] || embeddedName || (msg.sender_id === currentUserId ? h.userName : h.getParticipantName(msg.sender_id)) || await h.fetchSenderName(msg.sender_id);
 
-          // Show animated gift overlay for everyone (sender already sees it locally, skip for sender)
           if (msg.sender_id !== currentUserId) {
-            addAnimatedGift(senderName, { id: msg.id, emoji, name: giftName, price });
+            h.addAnimatedGift(senderName, { id: msg.id, emoji, name: giftName, price });
           }
-
-          // Also add a chat message so gift is visible in chat log for ALL users
-          addChatMessage(senderName, `🎁 sent ${emoji} ${giftName}`, msg.sender_id === currentUserId);
+          h.addChatMessage(senderName, `🎁 sent ${emoji} ${giftName}`, msg.sender_id === currentUserId);
           return;
         }
 
-        // Check if this is a quick emoji reaction (single emoji from QUICK_EMOJIS)
+        // Quick emoji reaction → floating bubble (still also show in chat for everyone except sender)
         if (msg.sender_id !== currentUserId && QUICK_EMOJIS.includes(text)) {
-          addFloatingReaction(text);
-          return; // Don't duplicate as chat message
+          h.addFloatingReaction(text);
+          return;
         }
 
+        // Regular text message — show for EVERYONE except the sender (sender sees optimistic copy)
         if (msg.sender_id !== currentUserId) {
-          // Resolve sender name: embedded > active participant > cached profile > fetched profile
-          let name = embeddedName || getParticipantName(msg.sender_id);
-          if (!name) name = await fetchSenderName(msg.sender_id);
-          addChatMessage(name, text, false);
+          let name = embeddedName || h.getParticipantName(msg.sender_id);
+          if (!name) name = await h.fetchSenderName(msg.sender_id);
+          h.addChatMessage(name, text, false);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[GroupChat] Subscribed to messages for group', group.id);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[GroupChat] Channel issue:', status);
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
-  }, [group.id, currentUserId, userName, addChatMessage, addAnimatedGift, addFloatingReaction, getParticipantName, fetchSenderName]);
+  }, [group.id, currentUserId]);
+
 
   // Extension check — query DB instead of localStorage
   // NOTE: getMonth() is 0-indexed; DB stores 1-indexed months
