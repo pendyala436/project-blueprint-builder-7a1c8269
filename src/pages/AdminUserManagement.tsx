@@ -32,7 +32,7 @@ import {
   Shield, RefreshCw, Filter, ChevronLeft, ChevronRight, ShieldCheck, ShieldAlert,
   Ban, CheckCircle, XCircle, Clock, Pause, Play, Settings, Languages, Bot, Zap,
   Heart, HeartOff, UserPlus, UserMinus, FileText, MessageSquare, Send, Megaphone,
-  Eye, ExternalLink, Home, Crown, Loader2, AlertTriangle, MinusCircle, TimerOff,
+  Eye, ExternalLink, Home, Loader2, AlertTriangle, MinusCircle, TimerOff,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -143,7 +143,6 @@ const AdminUserManagement = () => {
   });
   
   const [runningAI, setRunningAI] = useState(false);
-  const [assigningBadge, setAssigningBadge] = useState<string | null>(null);
 
   // Create User dialog
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
@@ -717,28 +716,6 @@ const AdminUserManagement = () => {
     } catch (error) { console.error("Error creating friendship:", error); toast.error("Failed to create friendship"); }
   };
 
-  // ─── Golden Badge ───
-  const handleToggleGoldenBadge = async (user: UserProfile) => {
-    setAssigningBadge(user.user_id);
-    try {
-      const { data: existing } = await supabase.from("golden_badge_subscriptions")
-        .select("id, status").eq("user_id", user.user_id).eq("status", "active").maybeSingle();
-      if (existing) {
-        await supabase.from("golden_badge_subscriptions").update({ status: "expired", expires_at: new Date().toISOString() }).eq("id", existing.id);
-        await supabase.from("female_profiles").update({ has_golden_badge: false, golden_badge_expires_at: null }).eq("user_id", user.user_id);
-        toast.success(`Golden Badge revoked from ${user.full_name || "user"}`);
-      } else {
-        const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + 30);
-        await supabase.from("golden_badge_subscriptions").insert({ user_id: user.user_id, status: "active", amount: 0, purchased_at: new Date().toISOString(), expires_at: expiresAt.toISOString() });
-        await supabase.from("female_profiles").update({ has_golden_badge: true, golden_badge_expires_at: expiresAt.toISOString() }).eq("user_id", user.user_id);
-        toast.success(`Golden Badge assigned to ${user.full_name || "user"} for 30 days`);
-      }
-      fetchUsers();
-    } catch (error: any) {
-      console.error("Error toggling golden badge:", error);
-      toast.error("Action failed", { description: classifyError(error, "toggle golden badge").message });
-    } finally { setAssigningBadge(null); }
-  };
 
   const handleUpdateLanguageGroupLimit = async () => {
     if (!selectedLanguageGroup || !maxWomenInput) return;
