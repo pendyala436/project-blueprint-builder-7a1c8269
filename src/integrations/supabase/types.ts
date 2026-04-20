@@ -2632,6 +2632,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_service_roles: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["service_role"]
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["service_role"]
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["service_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           accent_color: string
@@ -3578,6 +3602,10 @@ export type Database = {
         Returns: number
       }
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
+      can_access_service: {
+        Args: { _service: string; _user_id: string }
+        Returns: boolean
+      }
       cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
       capture_payout_snapshot: {
         Args: { p_snapshot_type: string }
@@ -3803,6 +3831,13 @@ export type Database = {
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_service_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["service_role"]
           _user_id: string
         }
         Returns: boolean
@@ -4081,6 +4116,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      service_role:
+        | "chat_role"
+        | "audio_role"
+        | "video_role"
+        | "group_role"
+        | "all_role"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4209,6 +4250,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      service_role: [
+        "chat_role",
+        "audio_role",
+        "video_role",
+        "group_role",
+        "all_role",
+      ],
     },
   },
 } as const
