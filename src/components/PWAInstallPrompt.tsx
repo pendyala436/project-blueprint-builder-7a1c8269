@@ -56,25 +56,18 @@ export function PWAInstallPrompt() {
     }
   }, []);
 
-  // Show manual prompt for iOS or when auto-prompt isn't available
+  // Show install prompt after a short delay on EVERY route (not just landing)
+  // as long as the app isn't already installed and the user hasn't dismissed it.
   useEffect(() => {
     if (dismissed || isInstalled || isInStandaloneMode) return;
 
-    // Show prompt after delay if:
-    // 1. iOS/iPadOS (no auto-prompt support)
-    // 2. Auto-prompt not triggered after 4 seconds (fallback for all platforms)
     const timer = setTimeout(() => {
-      if (isIOS || isIPadOS) {
-        if (import.meta.env.DEV) console.log('[PWA] Showing iOS manual install prompt');
-        setShowPrompt(true);
-      } else if (!isInstallable && !autoPromptTriggered) {
-        if (import.meta.env.DEV) console.log('[PWA] Showing fallback install prompt (beforeinstallprompt not fired)');
-        setShowPrompt(true);
-      }
+      if (import.meta.env.DEV) console.log('[PWA] Showing install prompt', { isInstallable, isIOS, isIPadOS });
+      setShowPrompt(true);
     }, 4000);
 
     return () => clearTimeout(timer);
-  }, [isIOS, isIPadOS, dismissed, isInstalled, isInStandaloneMode, isInstallable, autoPromptTriggered]);
+  }, [isIOS, isIPadOS, dismissed, isInstalled, isInStandaloneMode, isInstallable]);
 
   // Don't show if already installed or dismissed
   if (isInstalled || isInStandaloneMode || dismissed || !showPrompt) {
