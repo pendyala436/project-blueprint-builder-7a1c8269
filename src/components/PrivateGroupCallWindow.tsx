@@ -214,6 +214,13 @@ export function PrivateGroupCallWindow({
     return `${mins} min`;
   };
 
+  // Live ticker: counts seconds while session is live (used for live billing display)
+  useEffect(() => {
+    if (!isLive) { setLiveSeconds(0); return; }
+    const t = setInterval(() => setLiveSeconds(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [isLive]);
+
   // ─── Add Chat Message ─────────────────────────────────────────
 
   const addChatMessage = useCallback((senderName: string, text: string, isSelf: boolean) => {
@@ -608,8 +615,7 @@ export function PrivateGroupCallWindow({
 
         <div className="flex items-center gap-2">
           {isLive && (() => {
-            // Live billing: men pay ₹4/min, host earns ₹0.50/min per viewer
-            const elapsedMin = Math.max(0, Math.floor((Date.now() - (sessionRef.current?.startedAt?.getTime() || Date.now())) / 60000));
+            const elapsedMin = Math.floor(liveSeconds / 60);
             const memberCost = elapsedMin * 4;
             const hostEarnings = elapsedMin * 0.5 * Math.max(0, viewerCount);
             return (
