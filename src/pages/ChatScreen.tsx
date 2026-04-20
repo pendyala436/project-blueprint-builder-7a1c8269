@@ -2076,19 +2076,20 @@ const ChatScreen = () => {
 
               <div className="flex-1 min-w-0">
                 <p className="truncate" style={{ fontSize: 15, fontWeight: 500, color: WA.headerText }}>{chatPartner.fullName}</p>
-                <p className="flex items-center gap-1" style={{ fontSize: 12, color: WA.headerSub }}>
-                  {chatPartner.isOnline ? (
-                    <span style={{ color: WA.headerSub }}>Online</span>
-                  ) : (
-                    <span>Offline</span>
-                  )}
+                <div className="flex items-center gap-1" style={{ color: WA.headerSub }}>
+                  <PartnerStatusLine
+                    state={partnerState}
+                    partnerName={chatPartner.fullName}
+                    lastSeen={partnerLastSeen}
+                    fallbackOnline={chatPartner.isOnline}
+                  />
                   {chatPartner.preferredLanguage !== currentUserLanguage && (
                     <>
-                      <span>•</span>
-                      <span>{chatPartner.preferredLanguage}</span>
+                      <span style={{ fontSize: 12 }}>•</span>
+                      <span style={{ fontSize: 12 }}>{chatPartner.preferredLanguage}</span>
                     </>
                   )}
-                </p>
+                </div>
               </div>
             </div>
           )}
