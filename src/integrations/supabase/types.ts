@@ -3780,8 +3780,6 @@ export type Database = {
           education_level: string
           full_name: string
           gender: string
-          golden_badge_expires_at: string
-          has_golden_badge: boolean
           height_cm: number
           id: string
           interests: string[]
