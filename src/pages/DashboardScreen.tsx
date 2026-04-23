@@ -65,8 +65,8 @@ import { AdminMessagesWidget } from "@/components/AdminMessagesWidget";
 import { useAdminUnreadCounts } from "@/hooks/useAdminUnreadCounts";
 // MenFreeMinutesBadge removed - free minutes feature removed
 import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
-import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
-import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { useAppCall } from "@/hooks/useAppCall";
+import { CallScreen } from "@/components/CallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 // LanguageCommunityPanel removed - language chat is women-only
 
@@ -78,9 +78,9 @@ import { useActivityBasedStatus } from "@/hooks/useActivityBasedStatus";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMessageSound } from "@/hooks/useMessageSound";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
-import { WhatsAppHeader } from "@/components/WhatsAppHeader";
-import { WhatsAppBottomTabs, getMenTabs } from "@/components/WhatsAppBottomTabs";
-import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
+import { AppHeader } from "@/components/AppHeader";
+import { AppBottomTabs, getMenTabs } from "@/components/AppBottomTabs";
+import { UserContactCard } from "@/components/UserContactCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
 // TransactionStatementTab removed — billing system removed
@@ -163,7 +163,7 @@ const DashboardScreen = () => {
   const userLanguageRef = useRef(userLanguage);
   const [userLanguageCode, setUserLanguageCode] = useState("eng_Latn"); // Language language code
   const [walletBalance, setWalletBalance] = useState(0);
-  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'male', walletBalance);
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useAppCall(currentUserId || null, 'male', walletBalance);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [sameLanguageWomen, setSameLanguageWomen] = useState<OnlineWoman[]>([]);
   const [indianTranslatedWomen, setIndianTranslatedWomen] = useState<OnlineWoman[]>([]);
@@ -1412,7 +1412,7 @@ const DashboardScreen = () => {
                 <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageWomen.length})</span>
               </div>
               {sameLanguageWomen.map((woman) => (
-                <WhatsAppUserCard
+                <UserContactCard
                   key={woman.id}
                   name={woman.full_name || "Anonymous"}
                   photoUrl={woman.photo_url}
@@ -1453,7 +1453,7 @@ const DashboardScreen = () => {
                 <span className="text-[10px] text-muted-foreground ml-1">({indianTranslatedWomen.length})</span>
               </div>
               {indianTranslatedWomen.map((woman) => (
-                <WhatsAppUserCard
+                <UserContactCard
                   key={woman.id}
                   name={woman.full_name || "Anonymous"}
                   photoUrl={woman.photo_url}
@@ -1621,7 +1621,7 @@ const DashboardScreen = () => {
         </div>
       ) : matchedWomen.length > 0 ? (
         matchedWomen.map((woman) => (
-          <WhatsAppUserCard
+          <UserContactCard
             key={woman.matchId}
             name={woman.fullName || "User"}
             photoUrl={woman.photoUrl}
@@ -1760,7 +1760,7 @@ const DashboardScreen = () => {
   return (
     <div className="flex flex-col bg-background overflow-hidden" style={{ height: '100dvh', maxHeight: '100dvh' }}>
       {/* WhatsApp-style Header */}
-      <WhatsAppHeader
+      <AppHeader
         isOnline={isOnline}
         onToggleOnline={(checked) => {
           toggleOnlineStatus(checked);
@@ -1796,7 +1796,7 @@ const DashboardScreen = () => {
       </div>
 
       {/* WhatsApp-style Bottom Tabs */}
-      <WhatsAppBottomTabs tabs={menTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <AppBottomTabs tabs={menTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Recharge Dialog */}
       <Dialog open={rechargeDialogOpen} onOpenChange={setRechargeDialogOpen}>
@@ -1885,7 +1885,7 @@ const DashboardScreen = () => {
 
       {/* WhatsApp Call Screen */}
       {(callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'active') && (
-        <WhatsAppCallScreen
+        <CallScreen
           status={callStatus}
           activeCall={activeCall}
           isMuted={isMuted}
