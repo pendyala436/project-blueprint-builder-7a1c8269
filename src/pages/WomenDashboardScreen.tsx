@@ -1639,7 +1639,7 @@ const WomenDashboardScreen = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="flex flex-col bg-background overflow-hidden" style={{ height: '100dvh', maxHeight: '100dvh' }}>
       <WhatsAppHeader
         isOnline={isOnline}
         onToggleOnline={(checked) => {

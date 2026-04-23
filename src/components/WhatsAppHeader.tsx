@@ -48,7 +48,7 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
   unreadAdminChat = 0,
 }) => {
   return (
-    <header className="sticky top-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
+    <header className="shrink-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
       <div className="px-4 py-2.5 flex items-center justify-between">
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-2">
