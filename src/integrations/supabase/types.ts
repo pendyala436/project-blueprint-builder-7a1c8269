@@ -3639,6 +3639,7 @@ export type Database = {
       cleanup_expired_data: { Args: never; Returns: undefined }
       cleanup_idle_sessions: { Args: never; Returns: undefined }
       cleanup_old_admin_messages: { Args: never; Returns: undefined }
+      cleanup_old_chat_messages: { Args: never; Returns: undefined }
       cleanup_old_group_messages: { Args: never; Returns: undefined }
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       cleanup_old_transactions: { Args: never; Returns: undefined }
