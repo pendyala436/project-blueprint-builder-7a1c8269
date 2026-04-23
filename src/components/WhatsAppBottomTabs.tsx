@@ -21,7 +21,7 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
   onTabChange,
 }) => {
   return (
-    <nav className="sticky bottom-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)] w-full">
+    <nav className="shrink-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)] w-full">
       <div className="flex items-stretch w-full">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;

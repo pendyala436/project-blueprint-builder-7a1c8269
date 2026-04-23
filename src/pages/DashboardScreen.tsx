@@ -1758,7 +1758,7 @@ const DashboardScreen = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="flex flex-col bg-background overflow-hidden" style={{ height: '100dvh', maxHeight: '100dvh' }}>
       {/* WhatsApp-style Header */}
       <WhatsAppHeader
         isOnline={isOnline}
