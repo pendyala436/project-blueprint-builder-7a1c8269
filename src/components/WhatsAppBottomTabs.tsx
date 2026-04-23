@@ -21,8 +21,8 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
   onTabChange,
 }) => {
   return (
-    <nav className="sticky bottom-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-stretch overflow-x-auto scrollbar-hide">
+    <nav className="sticky bottom-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)] w-full">
+      <div className="flex items-stretch w-full">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
@@ -30,7 +30,7 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex-1 min-w-[56px] flex flex-col items-center justify-center gap-0.5 py-2 relative transition-colors",
+                "flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 relative transition-colors",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -40,15 +40,15 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
               {isActive && (
                 <div className="absolute top-0 left-1/4 right-1/4 h-[3px] rounded-b-full bg-primary" />
               )}
-              <div className="relative">
-                {tab.icon}
+              <div className="relative shrink-0">
+                <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">{tab.icon}</span>
                 {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-[16px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-1">
+                  <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center px-0.5">
                     {tab.badge > 99 ? "99+" : tab.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-medium">{tab.label}</span>
+              <span className="text-[9px] leading-tight font-medium truncate w-full text-center">{tab.label}</span>
             </button>
           );
         })}
