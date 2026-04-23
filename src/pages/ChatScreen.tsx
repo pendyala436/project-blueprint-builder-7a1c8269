@@ -1470,6 +1470,60 @@ const ChatScreen = () => {
     }
   };
 
+  /**
+   * Delete ALL messages in this chat for me only (other person still sees them)
+   */
+  const handleDeleteAllForMe = async () => {
+    if (!chatId.current || !currentUserId) return;
+    if (!confirm('Delete all messages in this chat for you? The other person will still see them.')) return;
+    try {
+      // Mark all messages I sent as deleted_for_sender
+      const { error: e1 } = await supabase
+        .from('chat_messages')
+        .update({ deleted_for_sender: true, deleted_at: new Date().toISOString() } as any)
+        .eq('chat_id', chatId.current)
+        .eq('sender_id', currentUserId);
+      if (e1) throw e1;
+      // Mark all messages I received as deleted_for_receiver
+      const { error: e2 } = await supabase
+        .from('chat_messages')
+        .update({ deleted_for_receiver: true, deleted_at: new Date().toISOString() } as any)
+        .eq('chat_id', chatId.current)
+        .eq('receiver_id', currentUserId);
+      if (e2) throw e2;
+      setMessages([]);
+      toast({ title: 'Messages deleted', description: 'All messages cleared from your view.' });
+    } catch (err) {
+      console.error('Delete all for me error:', err);
+      toast({ title: 'Error', description: 'Failed to delete messages', variant: 'destructive' });
+    }
+  };
+
+  /**
+   * Delete ALL messages in this chat for everyone (permanently for both users)
+   */
+  const handleDeleteAllForEveryone = async () => {
+    if (!chatId.current || !currentUserId) return;
+    if (!confirm('Permanently delete all messages in this chat for BOTH you and the other person? This cannot be undone.')) return;
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({
+          deleted_for_everyone: true,
+          deleted_for_sender: true,
+          deleted_for_receiver: true,
+          deleted_at: new Date().toISOString(),
+        } as any)
+        .eq('chat_id', chatId.current);
+      if (error) throw error;
+      setMessages([]);
+      toast({ title: 'Messages deleted for everyone' });
+    } catch (err) {
+      console.error('Delete all for everyone error:', err);
+      toast({ title: 'Error', description: 'Failed to delete messages', variant: 'destructive' });
+    }
+  };
+
   // === Reaction handler ===
   const handleReaction = async (messageId: string, emoji: string) => {
     try {
@@ -2208,7 +2262,24 @@ const ChatScreen = () => {
               )}
               
               <DropdownMenuSeparator />
-              
+
+              {/* Delete messages for me */}
+              <DropdownMenuItem onClick={handleDeleteAllForMe}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete messages for me
+              </DropdownMenuItem>
+
+              {/* Delete messages for everyone */}
+              <DropdownMenuItem
+                onClick={handleDeleteAllForEveryone}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete messages for everyone
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               {/* Go Offline - Available for both genders */}
               <DropdownMenuItem 
                 onClick={handleGoOffline}
