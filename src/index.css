@@ -48,13 +48,63 @@ body {
   flex-direction: column;
 }
 
-/* Ensure top-level page wrappers using min-h-screen behave like h-100dvh
-   so they don't exceed the viewport. Internal scrollers still work. */
+/* ============================================================
+   UNIVERSAL PAGE LAYOUT — header + body + footer fit any device
+   Every page wrapper using `min-h-screen` is locked to the
+   viewport (100dvh). Inside it:
+     - <header> stays pinned to the top
+     - <footer> stays pinned to the bottom
+     - <main> (or the remaining flex child) scrolls internally
+   Safe-area insets keep content clear of notches and home bars.
+   No JS / no functional changes — pure CSS containment.
+   ============================================================ */
 .min-h-screen {
   min-height: 100dvh;
   max-height: 100dvh;
-  overflow-y: auto;        /* allow internal scroll if content overflows */
+  height: 100dvh;
+  overflow: hidden;                /* page itself never scrolls */
   overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Header inside any page wrapper — pinned at the top, never shrinks */
+.min-h-screen > header,
+.min-h-screen [data-app-header] {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* Footer inside any page wrapper — pinned at the bottom, never shrinks */
+.min-h-screen > footer,
+.min-h-screen [data-app-footer] {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+}
+
+/* The remaining child (body / main content) takes the leftover space
+   and is the only thing that scrolls. */
+.min-h-screen > main,
+.min-h-screen [data-app-body] {
+  flex: 1 1 auto;
+  min-height: 0;                   /* critical for flex overflow */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fallback: if a page wrapper has no explicit header/footer/main markers,
+   allow the wrapper itself to scroll so legacy pages still fit. */
+.min-h-screen:not(:has(> header)):not(:has(> footer)):not(:has(> main)):not(:has([data-app-body])) {
+  overflow-y: auto;
 }
 
 /* Hide scrollbars on small/inner scroll containers but keep functional */
