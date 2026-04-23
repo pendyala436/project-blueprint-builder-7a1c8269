@@ -22,7 +22,7 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
 }) => {
   return (
     <nav className="shrink-0 z-50 bg-background border-t border-border pb-[env(safe-area-inset-bottom)] w-full">
-      <div className="flex items-stretch w-full">
+      <div className="flex items-stretch w-full max-w-full">
         {tabs.map((tab) => {
           const isActive = tab.id === activeTab;
           return (
@@ -30,7 +30,7 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1.5 px-0.5 relative transition-colors",
+                "flex-1 basis-0 min-w-0 flex flex-col items-center justify-center gap-0.5 py-1 px-0 relative transition-colors",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -38,17 +38,17 @@ export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
             >
               {/* Active indicator bar */}
               {isActive && (
-                <div className="absolute top-0 left-1/4 right-1/4 h-[3px] rounded-b-full bg-primary" />
+                <div className="absolute top-0 left-1/4 right-1/4 h-[2px] rounded-b-full bg-primary" />
               )}
               <div className="relative shrink-0">
-                <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">{tab.icon}</span>
+                <span className="[&>svg]:w-[16px] [&>svg]:h-[16px]">{tab.icon}</span>
                 {tab.badge !== undefined && tab.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[14px] h-[14px] rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center px-0.5">
+                  <span className="absolute -top-1 -right-1.5 min-w-[12px] h-[12px] rounded-full bg-primary text-primary-foreground text-[8px] font-bold flex items-center justify-center px-0.5">
                     {tab.badge > 99 ? "99+" : tab.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[9px] leading-tight font-medium truncate w-full text-center">{tab.label}</span>
+              <span className="text-[8px] leading-none font-medium truncate w-full text-center px-0.5">{tab.label}</span>
             </button>
           );
         })}

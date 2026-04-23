@@ -48,40 +48,40 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
   unreadAdminChat = 0,
 }) => {
   return (
-    <header className="shrink-0 z-50 bg-primary pt-[env(safe-area-inset-top)]">
-      <div className="px-4 py-2.5 flex items-center justify-between">
+    <header className="shrink-0 z-50 bg-primary pt-[env(safe-area-inset-top)] w-full">
+      <div className="px-2 sm:px-3 py-1.5 flex items-center justify-between gap-1 min-w-0">
         {/* Left: Logo + Title */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0 flex-shrink">
           <MeowLogo size="sm" />
-          <span className="text-base font-bold text-primary-foreground tracking-tight">
+          <span className="text-sm sm:text-base font-bold text-primary-foreground tracking-tight truncate">
             Meow Meow
           </span>
         </div>
 
         {/* Right: Action icons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           {/* Online toggle */}
-          <div className="flex items-center gap-1 mr-1 px-1.5 py-1 rounded-lg bg-primary-foreground/10 flex-shrink-0">
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary-foreground/10 flex-shrink-0">
             <Switch
               checked={isOnline}
               onCheckedChange={onToggleOnline}
-              className="data-[state=checked]:bg-primary-foreground/30 scale-75"
+              className="data-[state=checked]:bg-primary-foreground/30 scale-[0.65]"
             />
-            <span className="text-[10px] font-medium text-primary-foreground/80">
+            <span className="text-[9px] font-medium text-primary-foreground/80">
               {isOnline ? "On" : "Off"}
             </span>
           </div>
 
-          {/* Search / Notifications */}
+          {/* Notifications */}
           {onNotifications && (
             <button
-              className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+              className="relative w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
               onClick={onNotifications}
               aria-label="Notifications"
             >
-              <BellRing className="w-[18px] h-[18px] text-primary-foreground" />
+              <BellRing className="w-[16px] h-[16px] text-primary-foreground" />
               {unreadNotifications > 0 && (
-                <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-0.5">
+                <span className="absolute top-0.5 right-0.5 min-w-[12px] h-[12px] rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center px-0.5">
                   {unreadNotifications > 9 ? "9+" : unreadNotifications}
                 </span>
               )}
@@ -92,12 +92,12 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
+                className="relative w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary-foreground/10 transition-colors"
                 aria-label="More options"
               >
-                <MoreVertical className="w-[18px] h-[18px] text-primary-foreground" />
+                <MoreVertical className="w-[16px] h-[16px] text-primary-foreground" />
                 {(unreadAdminMessages + unreadAdminChat) > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[14px] h-[14px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-0.5">
+                  <span className="absolute top-0.5 right-0.5 min-w-[12px] h-[12px] rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center px-0.5">
                     {(unreadAdminMessages + unreadAdminChat) > 9 ? "9+" : (unreadAdminMessages + unreadAdminChat)}
                   </span>
                 )}
