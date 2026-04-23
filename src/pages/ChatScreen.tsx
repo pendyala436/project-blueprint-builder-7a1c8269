@@ -2262,7 +2262,24 @@ const ChatScreen = () => {
               )}
               
               <DropdownMenuSeparator />
-              
+
+              {/* Delete messages for me */}
+              <DropdownMenuItem onClick={handleDeleteAllForMe}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete messages for me
+              </DropdownMenuItem>
+
+              {/* Delete messages for everyone */}
+              <DropdownMenuItem
+                onClick={handleDeleteAllForEveryone}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete messages for everyone
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               {/* Go Offline - Available for both genders */}
               <DropdownMenuItem 
                 onClick={handleGoOffline}
