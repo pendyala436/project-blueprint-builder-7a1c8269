@@ -1158,7 +1158,7 @@ const WomenDashboardScreen = () => {
   const womenTabs = getWomenTabs(onlineMenCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedMen.length || undefined);
 
   const renderOnlineUsersTab = () => (
-    <div className="min-h-0 h-full overflow-y-auto">
+    <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       {/* Status bar */}
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -1336,7 +1336,7 @@ const WomenDashboardScreen = () => {
   );
 
   const renderChatsTab = () => (
-    <div className="min-h-0 h-full overflow-y-auto">
+    <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <MessageCircle className="h-4 w-4 text-primary" />
@@ -1427,7 +1427,7 @@ const WomenDashboardScreen = () => {
   );
 
   const renderGroupsTab = () => (
-    <div className="min-h-0 h-full overflow-y-auto">
+    <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <Video className="h-4 w-4 text-primary" />
@@ -1448,7 +1448,7 @@ const WomenDashboardScreen = () => {
   );
 
   const renderMatchesTab = () => (
-    <div className="min-h-0 h-full overflow-y-auto">
+    <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
         <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
           <Heart className="h-4 w-4 text-primary" />
@@ -1514,7 +1514,7 @@ const WomenDashboardScreen = () => {
   );
 
   const renderWalletTab = () => (
-    <div className="min-h-0 h-full overflow-y-auto">
+    <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       {/* Wallet Balance */}
       <div className="px-4 py-4 border-b border-border/30 bg-gradient-to-br from-primary/5 to-transparent" onClick={() => navigate("/women-wallet")}>
         <div className="flex items-center gap-3">
@@ -1600,7 +1600,7 @@ const WomenDashboardScreen = () => {
   );
 
   const renderProfileTab = () => (
-    <div className="min-h-0 h-full overflow-y-auto">
+    <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       <div className="px-4 py-6 flex flex-col items-center border-b border-border/30">
         <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-lg mb-3">
           <AvatarImage src={userPhoto || undefined} />
@@ -1665,12 +1665,12 @@ const WomenDashboardScreen = () => {
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "online" && renderOnlineUsersTab()}
         {activeTab === "chats" && renderChatsTab()}
-        {activeTab === "history" && <div className="min-h-0 h-full overflow-y-auto"><CallHistoryTab currentUserId={currentUserId} userGender="female" /></div>}
+        {activeTab === "history" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><CallHistoryTab currentUserId={currentUserId} userGender="female" /></div>}
         {activeTab === "matches" && renderMatchesTab()}
         {activeTab === "community" && renderCommunityTab()}
         {activeTab === "groups" && renderGroupsTab()}
         {activeTab === "wallet" && renderWalletTab()}
-        {activeTab === "statement" && <div className="min-h-0 h-full overflow-y-auto"><StatementTab userId={currentUserId} gender="female" /></div>}
+        {activeTab === "statement" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><StatementTab userId={currentUserId} gender="female" /></div>}
         {activeTab === "profile" && renderProfileTab()}
       </div>
 
