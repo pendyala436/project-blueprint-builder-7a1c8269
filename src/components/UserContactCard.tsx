@@ -3,7 +3,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Crown, Languages, MapPin } from "lucide-react";
 
-interface WhatsAppUserCardProps {
+interface UserContactCardProps {
   name: string;
   photoUrl?: string | null;
   age?: number | null;
@@ -28,7 +28,7 @@ interface WhatsAppUserCardProps {
   className?: string;
 }
 
-export const WhatsAppUserCard: React.FC<WhatsAppUserCardProps> = ({
+export const UserContactCard: React.FC<UserContactCardProps> = ({
   name,
   photoUrl,
   age,
@@ -128,4 +128,4 @@ export const WhatsAppUserCard: React.FC<WhatsAppUserCardProps> = ({
   );
 };
 
-export default WhatsAppUserCard;
+export default UserContactCard;

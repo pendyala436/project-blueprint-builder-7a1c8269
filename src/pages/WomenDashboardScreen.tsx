@@ -37,8 +37,8 @@ import { cn, formatChatTime } from "@/lib/utils";
 import EnhancedParallelChatsContainer from "@/components/EnhancedParallelChatsContainer";
 // Chat mode removed - all women are in paid mode by default
 import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
-import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
-import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { useAppCall } from "@/hooks/useAppCall";
+import { CallScreen } from "@/components/CallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { PrivateGroupsSection } from "@/components/PrivateGroupsSection";
 import { UserAdminChat } from "@/components/UserAdminChat";
@@ -51,9 +51,9 @@ import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 // DirectVideoCallButton removed - women cannot initiate calls
 
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
-import { WhatsAppHeader } from "@/components/WhatsAppHeader";
-import { WhatsAppBottomTabs, getWomenTabs } from "@/components/WhatsAppBottomTabs";
-import { WhatsAppUserCard } from "@/components/WhatsAppUserCard";
+import { AppHeader } from "@/components/AppHeader";
+import { AppBottomTabs, getWomenTabs } from "@/components/AppBottomTabs";
+import { UserContactCard } from "@/components/UserContactCard";
 // WhatsAppFAB removed — unused in current layout
 import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
@@ -125,7 +125,7 @@ const WomenDashboardScreen = () => {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "female");
-  const { status: callStatus, activeCall, isMuted, isCameraOff, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, 'female', 0);
+  const { status: callStatus, activeCall, isMuted, isCameraOff, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useAppCall(currentUserId || null, 'female', 0);
   const [rechargedMen, setRechargedMen] = useState<OnlineMan[]>([]);
   const [nonRechargedMen, setNonRechargedMen] = useState<OnlineMan[]>([]);
   const [sameLanguageMen, setSameLanguageMen] = useState<OnlineMan[]>([]);
@@ -1140,7 +1140,7 @@ const WomenDashboardScreen = () => {
 
   // ScrollableUserList extracted to top-level component to avoid Hooks violation
 
-  // renderUserCard removed — replaced by WhatsAppUserCard component
+  // renderUserCard removed — replaced by UserContactCard component
 
   if (isLoading) {
     return (
@@ -1233,7 +1233,7 @@ const WomenDashboardScreen = () => {
                 <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageMen.length})</span>
               </div>
               {sameLanguageMen.map((user) => (
-                <WhatsAppUserCard
+                <UserContactCard
                   key={user.userId}
                   name={user.fullName}
                   photoUrl={user.photoUrl}
@@ -1264,7 +1264,7 @@ const WomenDashboardScreen = () => {
                 <span className="text-[10px] text-muted-foreground ml-1">({otherLanguageMen.length})</span>
               </div>
               {otherLanguageMen.map((user) => (
-                <WhatsAppUserCard
+                <UserContactCard
                   key={user.userId}
                   name={user.fullName}
                   photoUrl={user.photoUrl}
@@ -1304,7 +1304,7 @@ const WomenDashboardScreen = () => {
         <>
           {nonRechargedMen.length > 0 ? (
             nonRechargedMen.map((user) => (
-              <WhatsAppUserCard
+              <UserContactCard
                 key={user.userId}
                 name={user.fullName}
                 photoUrl={user.photoUrl}
@@ -1464,7 +1464,7 @@ const WomenDashboardScreen = () => {
         </div>
       ) : matchedMen.length > 0 ? (
         matchedMen.map((man) => (
-          <WhatsAppUserCard
+          <UserContactCard
             key={man.matchId}
             name={man.fullName || "User"}
             photoUrl={man.photoUrl}
@@ -1640,7 +1640,7 @@ const WomenDashboardScreen = () => {
 
   return (
     <div className="flex flex-col bg-background overflow-hidden" style={{ height: '100dvh', maxHeight: '100dvh' }}>
-      <WhatsAppHeader
+      <AppHeader
         isOnline={isOnline}
         onToggleOnline={(checked) => {
           toggleOnlineStatus(checked);
@@ -1674,7 +1674,7 @@ const WomenDashboardScreen = () => {
         {activeTab === "profile" && renderProfileTab()}
       </div>
 
-      <WhatsAppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <AppBottomTabs tabs={womenTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Profile Edit Dialog */}
       <ProfileEditDialog open={profileEditOpen} onOpenChange={setProfileEditOpen} onProfileUpdated={() => loadDashboardData()} />
@@ -1700,7 +1700,7 @@ const WomenDashboardScreen = () => {
 
       {/* WhatsApp Call Screen */}
       {(callStatus === 'connecting' || callStatus === 'active') && (
-        <WhatsAppCallScreen
+        <CallScreen
           status={callStatus}
           activeCall={activeCall}
           isMuted={isMuted}

@@ -104,8 +104,8 @@ import { PinnedMessages } from "@/components/chat/PinnedMessages";
 import { MessageReactions } from "@/components/chat/MessageReactions";
 import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 import { useIncomingCallListener } from "@/hooks/useIncomingCallListener";
-import { useWhatsAppCall } from "@/hooks/useWhatsAppCall";
-import { WhatsAppCallScreen } from "@/components/WhatsAppCallScreen";
+import { useAppCall } from "@/hooks/useAppCall";
+import { CallScreen } from "@/components/CallScreen";
 import { IncomingCallBanner } from "@/components/IncomingCallBanner";
 import { useMiniChatBilling } from "@/hooks/useMiniChatBilling";
 import { useChatPresence } from "@/hooks/useChatPresence";
@@ -455,7 +455,7 @@ const ChatScreen = () => {
   
   // ============= INCOMING CALLS =============
   const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, currentUserGender as 'male' | 'female');
-  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useWhatsAppCall(currentUserId || null, currentUserGender as 'male' | 'female', walletBalance);
+  const { status: callStatus, activeCall, isMuted, isCameraOff, initiateCall, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useAppCall(currentUserId || null, currentUserGender as 'male' | 'female', walletBalance);
   
   // ============= AUTO-RECONNECT HANDLER =============
   
@@ -2072,7 +2072,7 @@ const ChatScreen = () => {
       )}
       {/* ============= WHATSAPP CALL SCREEN ============= */}
       {(callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'active') && (
-        <WhatsAppCallScreen
+        <CallScreen
           status={callStatus}
           activeCall={activeCall}
           isMuted={isMuted}

@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface WhatsAppHeaderProps {
+interface AppHeaderProps {
   isOnline: boolean;
   onToggleOnline: (checked: boolean) => void;
   onAdminMessages: () => void;
@@ -32,7 +32,7 @@ interface WhatsAppHeaderProps {
   unreadAdminChat?: number;
 }
 
-export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
+export const AppHeader: React.FC<AppHeaderProps> = ({
   isOnline,
   onToggleOnline,
   onAdminMessages,
@@ -142,4 +142,4 @@ export const WhatsAppHeader: React.FC<WhatsAppHeaderProps> = ({
   );
 };
 
-export default WhatsAppHeader;
+export default AppHeader;

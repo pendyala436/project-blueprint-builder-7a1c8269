@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, Volume2 } from 'lucide-react';
-import { ActiveCall, CallStatus } from '@/hooks/useWhatsAppCall';
+import { ActiveCall, CallStatus } from '@/hooks/useAppCall';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
-interface WhatsAppCallScreenProps {
+interface CallScreenProps {
   status: CallStatus;
   activeCall: ActiveCall | null;
   isMuted: boolean;
@@ -23,13 +23,13 @@ const RATES = {
   video: { male: 8, female: 4 },
 } as const;
 
-export const WhatsAppCallScreen = ({
+export const CallScreen = ({
   status, activeCall,
   isMuted, isCameraOff,
   onAccept, onDecline, onEnd,
   onToggleMute, onToggleCamera,
   userGender = 'male',
-}: WhatsAppCallScreenProps) => {
+}: CallScreenProps) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -242,4 +242,4 @@ const CallControlButton = ({
   </button>
 );
 
-export default WhatsAppCallScreen;
+export default CallScreen;
