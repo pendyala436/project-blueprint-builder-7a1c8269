@@ -2,14 +2,14 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { MessageCircle } from "lucide-react";
 
-interface WhatsAppFABProps {
+interface ChatFABProps {
   onClick: () => void;
   icon?: React.ReactNode;
   badge?: number;
   className?: string;
 }
 
-export const WhatsAppFAB: React.FC<WhatsAppFABProps> = ({
+export const ChatFAB: React.FC<ChatFABProps> = ({
   onClick,
   icon,
   badge,
@@ -36,4 +36,4 @@ export const WhatsAppFAB: React.FC<WhatsAppFABProps> = ({
   );
 };
 
-export default WhatsAppFAB;
+export default ChatFAB;

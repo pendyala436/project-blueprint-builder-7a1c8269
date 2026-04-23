@@ -9,13 +9,13 @@ export interface TabItem {
   badge?: number;
 }
 
-interface WhatsAppBottomTabsProps {
+interface AppBottomTabsProps {
   tabs: TabItem[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
 }
 
-export const WhatsAppBottomTabs: React.FC<WhatsAppBottomTabsProps> = ({
+export const AppBottomTabs: React.FC<AppBottomTabsProps> = ({
   tabs,
   activeTab,
   onTabChange,
@@ -81,4 +81,4 @@ export const getWomenTabs = (onlineBadge?: number, chatBadge?: number, matchesBa
   { id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> },
 ];
 
-export default WhatsAppBottomTabs;
+export default AppBottomTabs;

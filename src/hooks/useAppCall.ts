@@ -18,7 +18,7 @@ export interface ActiveCall {
   remoteStream: MediaStream | null;
 }
 
-export const useWhatsAppCall = (
+export const useAppCall = (
   currentUserId: string | null,
   currentUserGender: 'male' | 'female',
   walletBalance: number
@@ -85,7 +85,7 @@ export const useWhatsAppCall = (
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (e) {
-        console.warn('[WhatsAppCall] Failed to add queued ICE candidate:', e);
+        console.warn('[AppCall] Failed to add queued ICE candidate:', e);
       }
     }
   }, []);
@@ -100,7 +100,7 @@ export const useWhatsAppCall = (
     try {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (e) {
-      console.warn('[WhatsAppCall] addIceCandidate error:', e);
+      console.warn('[AppCall] addIceCandidate error:', e);
     }
   }, []);
 
@@ -122,7 +122,7 @@ export const useWhatsAppCall = (
     };
 
     pc.onconnectionstatechange = () => {
-      console.log('[WhatsAppCall] connectionState:', pc.connectionState);
+      console.log('[AppCall] connectionState:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         startTimeRef.current = new Date();
         setStatusSync('active');
@@ -135,7 +135,7 @@ export const useWhatsAppCall = (
       if (['disconnected', 'failed'].includes(pc.connectionState)) {
         // Try ICE restart on disconnected before giving up
         if (pc.connectionState === 'disconnected') {
-          console.log('[WhatsAppCall] Attempting ICE restart...');
+          console.log('[AppCall] Attempting ICE restart...');
           pc.restartIce();
           return;
         }
@@ -146,7 +146,7 @@ export const useWhatsAppCall = (
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.log('[WhatsAppCall] iceConnectionState:', pc.iceConnectionState);
+      console.log('[AppCall] iceConnectionState:', pc.iceConnectionState);
     };
 
     return pc;
@@ -169,7 +169,7 @@ export const useWhatsAppCall = (
         p_call_type: callType,
       });
     } catch (e) {
-      console.error('[WhatsAppCall] Billing error:', e);
+      console.error('[AppCall] Billing error:', e);
     }
 
     cleanup();
@@ -268,7 +268,7 @@ export const useWhatsAppCall = (
         await pcRef.current?.setRemoteDescription(new RTCSessionDescription(payload.sdp));
         await flushIceCandidateQueue();
       } catch (e) {
-        console.error('[WhatsAppCall] setRemoteDescription error:', e);
+        console.error('[AppCall] setRemoteDescription error:', e);
       }
     });
 
