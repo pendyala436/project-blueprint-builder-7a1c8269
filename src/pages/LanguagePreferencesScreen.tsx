@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Languages, Search, X, Check, Loader2, Globe2, ArrowLeft } from "lucide-react";
 import { languages } from "@/data/languages";
 import { supabase } from "@/integrations/supabase/client";
+import { isIndianLanguageInput, NON_INDIA_ERROR } from "@/lib/indianValidation";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
@@ -41,6 +42,10 @@ const LanguagePreferencesScreen = () => {
       const exists = prev.find((l) => l.code === lang.code);
       if (exists) {
         return prev.filter((l) => l.code !== lang.code);
+      }
+      if (!isIndianLanguageInput(lang.code)) {
+        toast({ ...NON_INDIA_ERROR, variant: "destructive" });
+        return prev;
       }
       return [...prev, { code: lang.code, name: lang.name }];
     });
