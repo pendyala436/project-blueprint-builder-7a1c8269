@@ -9,6 +9,7 @@ import ScreenTitle from "@/components/ScreenTitle";
 import { languages } from "@/data/languages";
 import { countries } from "@/data/countries";
 import { toast } from "@/hooks/use-toast";
+import { isIndianCountry, isIndianLanguageInput, NON_INDIA_ERROR } from "@/lib/indianValidation";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
@@ -37,6 +38,16 @@ const LanguageCountryScreen = () => {
         description: "Both language and country are required to continue.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!isIndianCountry(selectedCountry)) {
+      toast({ ...NON_INDIA_ERROR, variant: "destructive" });
+      return;
+    }
+
+    if (!isIndianLanguageInput(selectedLanguage)) {
+      toast({ ...NON_INDIA_ERROR, variant: "destructive" });
       return;
     }
 

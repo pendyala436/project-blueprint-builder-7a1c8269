@@ -13,6 +13,7 @@ import SearchableSelect from "@/components/SearchableSelect";
 import { countries } from "@/data/countries";
 import { getStatesForCountry, hasStates } from "@/data/states";
 import { supabase } from "@/integrations/supabase/client";
+import { isIndianCountry, NON_INDIA_ERROR } from "@/lib/indianValidation";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
@@ -196,6 +197,11 @@ const LocationSetupScreen = () => {
         description: "Please select your country.",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (!isIndianCountry(country)) {
+      toast({ ...NON_INDIA_ERROR, variant: "destructive" });
       return;
     }
 
