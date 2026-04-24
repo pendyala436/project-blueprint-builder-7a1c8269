@@ -978,6 +978,56 @@ export type Database = {
         }
         Relationships: []
       }
+      group_active_hosts: {
+        Row: {
+          group_id: string
+          host_id: string
+          host_language: string | null
+          host_name: string
+          host_photo: string | null
+          id: string
+          is_active: boolean
+          last_heartbeat_at: string
+          participant_count: number
+          started_at: string
+          stream_id: string | null
+        }
+        Insert: {
+          group_id: string
+          host_id: string
+          host_language?: string | null
+          host_name: string
+          host_photo?: string | null
+          id?: string
+          is_active?: boolean
+          last_heartbeat_at?: string
+          participant_count?: number
+          started_at?: string
+          stream_id?: string | null
+        }
+        Update: {
+          group_id?: string
+          host_id?: string
+          host_language?: string | null
+          host_name?: string
+          host_photo?: string | null
+          id?: string
+          is_active?: boolean
+          last_heartbeat_at?: string
+          participant_count?: number
+          started_at?: string
+          stream_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_active_hosts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "private_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_memberships: {
         Row: {
           created_at: string
@@ -986,6 +1036,7 @@ export type Database = {
           has_access: boolean
           id: string
           joined_at: string
+          joined_host_id: string | null
           user_id: string
         }
         Insert: {
@@ -995,6 +1046,7 @@ export type Database = {
           has_access?: boolean
           id?: string
           joined_at?: string
+          joined_host_id?: string | null
           user_id: string
         }
         Update: {
@@ -1004,6 +1056,7 @@ export type Database = {
           has_access?: boolean
           id?: string
           joined_at?: string
+          joined_host_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -4100,6 +4153,17 @@ export type Database = {
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
+      start_host_session: {
+        Args: {
+          p_group_id: string
+          p_host_language?: string
+          p_host_name: string
+          p_host_photo?: string
+          p_stream_id?: string
+        }
+        Returns: Json
+      }
+      stop_host_session: { Args: { p_group_id: string }; Returns: Json }
       stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
