@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet } from 'lucide-react';
-import { triggerPayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
+import { generatePayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
