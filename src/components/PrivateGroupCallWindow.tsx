@@ -510,8 +510,19 @@ export function PrivateGroupCallWindow({
     if (success) toast.success('You are now live!');
   };
 
+  const confirmEndWithMembers = (): boolean => {
+    if (!isOwner || !isLive) return true;
+    const memberCount = participants.filter(p => !p.isOwner).length;
+    if (memberCount === 0) return true;
+    return window.confirm(
+      `${memberCount} member${memberCount === 1 ? ' is' : 's are'} currently in your group call. ` +
+      `Ending the call will disconnect everyone. Continue?`
+    );
+  };
+
   const handleEndStream = async () => {
     if (isStoppingRef.current) return;
+    if (!confirmEndWithMembers()) return;
     isStoppingRef.current = true;
     try { await endStream(true); } catch (err) { console.error(err); }
     toast.success('Stream ended');
@@ -533,6 +544,7 @@ export function PrivateGroupCallWindow({
 
   const handleClose = async () => {
     if (isStoppingRef.current) return;
+    if (isOwner && isLive && !confirmEndWithMembers()) return;
     isStoppingRef.current = true;
     try {
       if (isOwner && isLive) { await endStream(true); } else { cleanup(); }
