@@ -196,6 +196,16 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
 
   return (
     <div className={cn('border-t border-border bg-background/95 backdrop-blur-sm', className)}>
+      {moderationWarning && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mx-3 mt-2 flex items-start gap-2 rounded-lg border-2 border-destructive bg-destructive/10 px-3 py-2 text-destructive animate-in fade-in slide-in-from-bottom-1"
+        >
+          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <p className="text-sm font-semibold leading-tight">{moderationWarning}</p>
+        </div>
+      )}
       <div className="p-3 pt-2 flex items-end gap-2">
         <div className="flex-1 relative">
           <Textarea
