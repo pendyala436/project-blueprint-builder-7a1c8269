@@ -171,7 +171,10 @@ export async function getPayoutSnapshots(month?: string) {
     query = query.eq('ist_month', month);
   }
   const { data, error } = await query.limit(500);
-  if (error) return [];
+  if (error) {
+    console.error('[ledger] getPayoutSnapshots failed:', error);
+    throw error;
+  }
   return data || [];
 }
 
