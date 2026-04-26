@@ -46,7 +46,6 @@ export const countryCodes = [
   { code: "BA", name: "Bosnia and Herzegovina", dialCode: "+387", flag: "🇧🇦" },
   { code: "BW", name: "Botswana", dialCode: "+267", flag: "🇧🇼" },
   { code: "BR", name: "Brazil", dialCode: "+55", flag: "🇧🇷" },
-  { code: "IO", name: "British Indian Ocean Territory", dialCode: "+246", flag: "🇮🇴" },
   { code: "BN", name: "Brunei", dialCode: "+673", flag: "🇧🇳" },
   { code: "BG", name: "Bulgaria", dialCode: "+359", flag: "🇧🇬" },
   { code: "BF", name: "Burkina Faso", dialCode: "+226", flag: "🇧🇫" },
