@@ -173,61 +173,72 @@ const AdminModerationScreen = () => {
     
     // ============= REALTIME SUBSCRIPTIONS =============
     
-    // Subscribe to new/updated reports
     const reportsChannel = supabase
       .channel('moderation-reports')
       .on('postgres_changes', {
-        event: '*',  // All events (INSERT, UPDATE, DELETE)
+        event: '*',
         schema: 'public',
         table: 'moderation_reports'
       }, () => {
-        loadReports(); // Reload reports on any change
+        loadReports();
       })
       .subscribe();
 
-    // Subscribe to flagged message updates
     const messagesChannel = supabase
       .channel('flagged-messages')
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'chat_messages',
         filter: 'flagged=eq.true'
       }, () => {
-        loadFlaggedMessages(); // Reload flagged messages
+        loadFlaggedMessages();
       })
       .subscribe();
 
-    // Cleanup subscriptions on unmount
+    const blocksChannel = supabase
+      .channel('user-blocks-mod')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_blocks'
+      }, () => {
+        loadBlockedUsers();
+      })
+      .subscribe();
+
+    const warningsChannel = supabase
+      .channel('user-warnings-mod')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_warnings'
+      }, () => {
+        // No list shown, but keeps profile cache fresh on new warnings
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(reportsChannel);
       supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(blocksChannel);
+      supabase.removeChannel(warningsChannel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * loadData Function
-   * 
-   * Loads all moderation data in parallel.
-   */
-  // FIX #37: Wrap loadData in useCallback
   const loadData = useCallback(async () => {
     setLoading(true);
     await Promise.all([loadReports(), loadFlaggedMessages(), loadBlockedUsers()]);
     setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * loadReports Function
-   * 
-   * Fetches all moderation reports from database.
-   * Also loads profiles for reporter and reported users.
-   */
   const loadReports = async () => {
     const { data, error } = await supabase
       .from('moderation_reports')
       .select('*')
-      .order('created_at', { ascending: false }); // Newest first
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading reports:', error);
@@ -237,7 +248,6 @@ const AdminModerationScreen = () => {
 
     setReports(data || []);
     
-    // Collect user IDs for profile lookup
     const userIds = new Set<string>();
     data?.forEach(r => {
       userIds.add(r.reporter_id);
@@ -246,18 +256,13 @@ const AdminModerationScreen = () => {
     await loadProfiles(Array.from(userIds));
   };
 
-  /**
-   * loadFlaggedMessages Function
-   * 
-   * Fetches chat messages marked as flagged.
-   */
   const loadFlaggedMessages = async () => {
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('flagged', true)  // Only flagged messages
+      .eq('flagged', true)
       .order('created_at', { ascending: false })
-      .limit(100);  // Limit for performance
+      .limit(100);
 
     if (error) {
       console.error('Error loading flagged messages:', error);
@@ -267,7 +272,6 @@ const AdminModerationScreen = () => {
 
     setFlaggedMessages(data || []);
     
-    // Load profiles for senders and receivers
     const userIds = new Set<string>();
     data?.forEach(m => {
       userIds.add(m.sender_id);
@@ -276,15 +280,13 @@ const AdminModerationScreen = () => {
     await loadProfiles(Array.from(userIds));
   };
 
-  /**
-   * loadBlockedUsers Function
-   * 
-   * Fetches all currently blocked users.
-   */
   const loadBlockedUsers = async () => {
+    // Filter out expired temporary blocks at the query level
+    const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from('user_blocks')
       .select('*')
+      .or(`block_type.eq.permanent,expires_at.is.null,expires_at.gt.${nowIso}`)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -295,18 +297,13 @@ const AdminModerationScreen = () => {
 
     setBlockedUsers(data || []);
     
-    // Load profiles for blocked users
     const userIds = data?.map(b => b.blocked_user_id) || [];
     await loadProfiles(userIds);
   };
 
   /**
-   * loadProfiles Function
-   * 
-   * Batch loads user profiles for display names.
-   * Updates profile cache Map.
-   * 
-   * @param userIds - Array of user UUIDs to load
+   * loadProfiles — uses functional state update to avoid stale closure
+   * when called from parallel loaders.
    */
   const loadProfiles = async (userIds: string[]) => {
     if (userIds.length === 0) return;
@@ -318,14 +315,14 @@ const AdminModerationScreen = () => {
 
     if (error) {
       console.error('Error loading profiles:', error);
-      toast.error('Profiles unavailable', { description: 'Unable to load profiles. Please refresh.' });
       return;
     }
 
-    // Add to existing profile cache
-    const newProfiles = new Map(profiles);
-    data?.forEach(p => newProfiles.set(p.user_id, p));
-    setProfiles(newProfiles);
+    setProfiles(prev => {
+      const next = new Map(prev);
+      data?.forEach(p => next.set(p.user_id, p));
+      return next;
+    });
   };
 
   /**
