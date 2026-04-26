@@ -68,45 +68,79 @@ By creating an account or using Meow Meow ("the App", "we", "us"), you enter a b
 3. NATURE OF SERVICE
 Meow Meow is an opposite-sex social and communication platform offering:
 • Real-time text chat with auto-translation across 100+ languages.
-• 1:1 audio and video calls (WhatsApp-style) initiated by men and accepted by women.
-• Private flower-themed group video calls (up to 50 rooms).
+• 1:1 audio and video calls (WhatsApp-style) — initiated by men, accepted by women, billed per second.
+• Private flower-themed group video & audio calls (up to 50 rooms, multi-participant).
 • Language-specific community group chat for women.
-Chat is text-only — no media attachments. The service is provided online and depends on network connectivity, third-party infrastructure, and user availability.
+All communication channels — chat, audio calls, video calls, and group calls — are expressly permitted within the App and governed by the same prohibitions, moderation, and safety rules. Chat is text-only (no media attachments). The service is online-only and depends on network, third-party infrastructure, and user availability.
 
 4. ACCOUNT REGISTRATION & VERIFICATION
 • Email, phone, gender, age, country (India), state, languages and a live selfie are required.
 • AI face verification confirms a real, single, live human and estimates gender; mismatched photos are rejected.
-• Female users must complete a 9-section Bank KYC (PAN, Aadhaar, bank account, IFSC, UPI, address proof) to receive payouts. KYC data is encrypted and used only for payout, taxation, and anti-fraud purposes.
+• Female users who choose to receive payouts must complete a 9-section Bank KYC (PAN, Aadhaar, bank account, IFSC, UPI, address proof). Completing KYC is OPTIONAL — a woman may use the App socially without ever requesting a payout. KYC data is encrypted and used only for payout, taxation, and anti-fraud purposes.
 • We may re-verify identity at any time and suspend access pending verification.
 
-5. PROHIBITED CONDUCT
-You shall NOT, directly or indirectly:
-(a) Post, send, or solicit any sexual, obscene, pornographic, nude, semi-nude, erotic, or sexually-suggestive content (zero-tolerance — see Anti-Sexual Content Policy).
-(b) Engage with, attempt to engage with, or depict minors in any sexual or grooming context. Such conduct will be reported to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC, INTERPOL, and local police, and the offender's full data will be preserved for law enforcement.
-(c) Harass, stalk, threaten, defame, dox, blackmail, sextort, hate-speech, intimidate, or discriminate against any user on grounds of religion, caste, race, gender, sexual orientation, disability, or nationality.
-(d) Solicit, exchange, or share personal contact details (phone, WhatsApp, Telegram, Instagram, Snapchat, email, address, social handles, payment apps such as UPI/Paytm/PhonePe/GPay) inside chat, calls, or profile.
-(e) Solicit prostitution, escort services, sugar-daddy/sugar-baby arrangements, or any commercial sexual activity.
-(f) Run, promote, or fall for any romance scam, advance-fee fraud, investment scam, crypto scam, "lottery" scam, fake-emergency scam, "pig butchering", catfishing, or impersonation.
-(g) Upload, transmit, or distribute viruses, malware, spyware, scraping bots, automation scripts, or attempt reverse engineering, penetration testing, or denial-of-service.
-(h) Circumvent gender, age, geography, payment, or moderation controls.
-(i) Use the App for money laundering, terror financing, hawala, or any activity prohibited under the Prevention of Money Laundering Act 2002, FEMA 1999, UAPA 1967, or international sanctions (OFAC, UN, EU).
-(j) Infringe any copyright, trademark, trade secret, publicity, or privacy right.
-(k) Engage in chargeback fraud, "friendly fraud", or recharge with stolen cards/UPI.
-(l) Sell, transfer, rent, or share your account.
+5. PROHIBITED CONDUCT — SEXUAL CONTENT, HATE SPEECH & MORE
+You shall NOT, directly or indirectly, in chat, audio, video, group calls, profile, or any other feature:
+(a) SEXUAL CONTENT — Post, send, broadcast, perform on camera, narrate, roleplay, or solicit any sexual, obscene, pornographic, nude, semi-nude, lingerie, erotic, masturbatory, fetish, BDSM, or sexually-suggestive content. This is a strict zero-tolerance rule and a criminal offence under:
+   • IT Act 2000 §67 (obscene material in electronic form, up to 5 years + ₹10 lakh fine; second offence up to 7 years + ₹10 lakh),
+   • IT Act 2000 §67A (sexually explicit material, up to 5 years + ₹10 lakh),
+   • IT Act 2000 §67B (any sexual depiction of a child — up to 7 years + ₹10 lakh),
+   • IT Act 2000 §66E (capturing/transmitting private images without consent),
+   • Bharatiya Nyaya Sanhita 2023 §§75, 76, 77, 78, 79 (sexual harassment, voyeurism, stalking, insult to modesty),
+   • Indecent Representation of Women (Prohibition) Act 1986,
+   • Immoral Traffic (Prevention) Act 1956 (no solicitation of prostitution / escort / sugar arrangements),
+   • POCSO Act 2012 for any content involving minors,
+   • EU Directive 2011/93/EU, US 18 USC §§2252/2252A/2422, UK Protection of Children Act 1978, and equivalent laws worldwide.
+   Live audio/video/group calls are continuously moderated; any sexual exposure ends the call instantly, permanently bans the user, forfeits all balance/earnings, and may be referred to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC CyberTipline, INTERPOL ICSE, and local police.
 
-6. PAYMENTS — MEN (Wallet & Coins)
-• Men recharge their in-app wallet using INR via authorized payment processors (Razorpay/Paddle/Stripe etc.).
-• Per-second pro-rated billing applies to chat, calls, and groups (see in-app rates).
-• 18% GST is charged on each recharge as required under the CGST/SGST/IGST Acts and is included in the displayed price.
-• Coins/balance are NON-REFUNDABLE except where mandated by Indian Consumer Protection Act 2019 or RBI guidelines.
-• Initiating a chargeback without first contacting support is treated as fraud and results in permanent ban + reporting to the payment network.
+(b) CHILD PROTECTION — Engage with, attempt to engage with, groom, or depict any minor in any sexual, romantic, or exploitative context. Mandatory reporting under POCSO 2012, IT Act §67B, US 18 USC §2258A (NCMEC), and similar laws. All evidence (account, IP, device, payments, chat) is preserved indefinitely for law enforcement.
 
-7. EARNINGS & PAYOUTS — WOMEN
-• Female users earn a share of men's spend on chats/calls/groups they participate in.
-• Earnings appear in the in-app Statement and Wallet ledger as a single source of truth.
-• Bi-monthly snapshots (1st and 16th) are generated; payouts are processed to the verified bank/UPI listed in KYC.
-• TDS under section 194-O / 194-R / 194-S of the Income Tax Act 1961 may be deducted; a TDS certificate (Form 16A) is issued where applicable.
-• Earnings from fake activity, collusion, automation, sexual content, contact-sharing, or manipulation are forfeited and the account is permanently banned.
+(c) HATE SPEECH & DISCRIMINATION — Post, transmit, or perform any content that incites hatred, enmity, violence, or discrimination on grounds of religion, caste, race, ethnicity, language, region, gender, sexual orientation, disability, or nationality. Prohibited under:
+   • Bharatiya Nyaya Sanhita 2023 §196 (promoting enmity between groups), §197 (imputations prejudicial to national integration), §299 (deliberate insult to religious feelings), §351 (criminal intimidation), §353 (statements conducing to public mischief),
+   • IT Act 2000 §69A (blocking of unlawful content) and §79 read with IT Rules 2021 §3(1)(b)(ii)–(x),
+   • SC/ST (Prevention of Atrocities) Act 1989,
+   • Protection of Civil Rights Act 1955,
+   • Unlawful Activities (Prevention) Act 1967 (UAPA) for terror-related speech,
+   • EU Digital Services Act 2022, German NetzDG, French Loi Avia, UK Online Safety Act 2023,
+   • US incitement standards (Brandenburg v. Ohio) and platform anti-hate norms.
+   Communalism, casteism, racism, misogyny, misandry, homophobia, transphobia, xenophobia, religious mockery, and dehumanising slurs are removed on detection and result in escalating bans up to permanent.
+
+(d) HARASSMENT, STALKING & ABUSE — No threats, intimidation, defamation, doxxing, blackmail, sextortion, repeated unwanted contact after block, image-based abuse ("revenge porn"), or coordinated brigading. Covered by BNS §§78 (stalking), §79 (insult to modesty), §351 (criminal intimidation), §356 (defamation); IT Act §66E; and equivalents abroad.
+
+(e) PRIVACY & CONTACT-SHARING — Do not solicit, exchange, or share personal contact details (phone, WhatsApp, Telegram, Instagram, Snapchat, email, postal address, social handles) or external payment apps (UPI, Paytm, PhonePe, GPay, bank account). All chat, audio, video, and group conversations must remain inside the App.
+
+(f) FRAUD & SCAMS — No romance scams, advance-fee fraud, investment / crypto / "lottery" / fake-emergency / "pig-butchering" scams, catfishing, impersonation, or coordinated inauthentic behaviour. Punishable under BNS §§316, 318 (cheating), §319 (cheating by personation), IT Act §66C/§66D, and global fraud statutes.
+
+(g) PROHIBITED COMMERCE — No prostitution, escort services, sugar-daddy/sugar-baby arrangements, trafficking, or commercial sexual activity (Immoral Traffic (Prevention) Act 1956; UN Palermo Protocol; US TVPA).
+
+(h) TECHNICAL ABUSE — No viruses, malware, spyware, scraping bots, automation scripts, reverse engineering, penetration testing, or denial-of-service.
+
+(i) CIRCUMVENTION — No bypassing gender, age, geography, payment, or moderation controls; no VPN/Tor/GPS-spoofing.
+
+(j) FINANCIAL CRIME — No money laundering, terror financing, or hawala (PMLA 2002, FEMA 1999, UAPA 1967, OFAC/UN/EU sanctions).
+
+(k) IP INFRINGEMENT — No infringement of copyright, trademark, trade secret, publicity, or privacy rights.
+
+(l) PAYMENT FRAUD — No chargeback fraud, "friendly fraud", or recharge with stolen instruments.
+
+(m) ACCOUNT INTEGRITY — No selling, transferring, renting, or sharing your account.
+
+6. PAYMENTS — MEN (Wallet, Coins, Limits)
+• Recharge in INR via authorised processors (Razorpay/Stripe/Paddle/UPI).
+• Per-second pro-rated billing for chat, calls, video calls, and group calls (see in-app rate card).
+• 18% GST is included as required under CGST/SGST/IGST Acts; GST invoice on request.
+• MAXIMUM DAILY RECHARGE LIMIT: ₹50,000 per user per day. MAXIMUM MONTHLY RECHARGE LIMIT: ₹2,00,000 per user per month. MAXIMUM WALLET BALANCE AT ANY TIME: ₹1,00,000. These ceilings exist to comply with RBI Master Directions on Prepaid Payment Instruments (PPI), the Payment and Settlement Systems Act 2007, and PMLA 2002 anti-money-laundering norms. The administrator may revise these limits at any time without prior notice.
+• Recharges are NON-REFUNDABLE except where mandated by the Consumer Protection Act 2019 or RBI guidelines.
+• Chargeback without first contacting support is treated as fraud and results in permanent ban + payment-network blacklist.
+
+7. EARNINGS & PAYOUTS — WOMEN (Discretionary, Not Mandatory)
+• A woman MAY earn a share of qualifying men's spend on her chats/calls/groups, but participation in the earnings programme is entirely OPTIONAL and DISCRETIONARY.
+• Payouts are NOT a guaranteed right, salary, wage, or employment benefit. Meow Meow is not the woman's employer; no employer-employee, principal-agent, or partnership relationship is created.
+• The administrator is NOT OBLIGATED to make any payout and may, at its sole discretion and without prior notice, withhold, delay, reduce, reverse, or refuse any payout where (i) KYC is incomplete or suspect, (ii) earnings are linked to fraud, automation, fake activity, sexual content, hate speech, or contact-sharing, (iii) a chargeback or dispute affects the underlying men's recharge, (iv) a court / tax authority / regulator orders so, (v) the platform is wound down, or (vi) for any other reasonable business or compliance ground.
+• MAXIMUM PAYOUT CEILING: ₹1,00,000 per woman per calendar month, subject to KYC and TDS. The administrator may revise this ceiling at any time without prior notice.
+• Bi-monthly snapshots (1st and 16th); payouts to the verified bank/UPI in KYC.
+• TDS under §§194-O / 194-R / 194-S of the Income Tax Act 1961 may be deducted; Form 16A issued where applicable. The woman is responsible for declaring earnings in her own income-tax return.
+• Earnings derived from fake activity, collusion, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
 
 8. CONTENT LICENSE
 You retain ownership of content you create. By submitting it, you grant Meow Meow a worldwide, royalty-free, non-exclusive, sub-licensable licence to host, store, transmit, translate, moderate, and display it solely to operate, improve, and protect the service.
