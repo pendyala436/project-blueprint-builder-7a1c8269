@@ -302,14 +302,25 @@ const CONTACT_FILENAME_PATTERNS = [
 // TYPES
 // ========================================
 
-export type ViolationType = 'phone' | 'email' | 'social_media' | 'contact_intent' | 'sexual_content' | 'harmful_content' | 'blocked_attachment' | 'number_words';
+export type ViolationType = 'phone' | 'email' | 'social_media' | 'contact_intent' | 'sexual_content' | 'harmful_content' | 'hate_speech' | 'blocked_attachment' | 'number_words';
 
 export interface ModerationResult {
   isBlocked: boolean;
   reason?: string;
   detectedType?: ViolationType;
   sanitizedMessage?: string;
+  /** Words/phrases that triggered the block — useful for audio beep timing */
+  matches?: string[];
 }
+
+/**
+ * Combined export for downstream consumers (audio/video moderation hooks).
+ * The audio hook uses these to decide which words to beep over a transcript.
+ */
+export const SPEECH_BLOCKLIST_PATTERNS = [
+  ...SEXUAL_CONTENT_PATTERNS,
+  ...HATE_SPEECH_PATTERNS,
+];
 
 // ========================================
 // MAIN MODERATION FUNCTION
@@ -324,32 +335,52 @@ export function moderateMessage(message: string): ModerationResult {
   }
 
   const normalizedMessage = message.toLowerCase().replace(/\s+/g, ' ').trim();
+  const collectMatches = (pattern: RegExp): string[] => {
+    pattern.lastIndex = 0;
+    const found = message.match(pattern) || normalizedMessage.match(pattern) || [];
+    return Array.from(new Set(found));
+  };
 
   // 1. Sexual content (highest priority)
   for (const pattern of SEXUAL_CONTENT_PATTERNS) {
-    pattern.lastIndex = 0;
-    if (pattern.test(message) || pattern.test(normalizedMessage)) {
+    const matches = collectMatches(pattern);
+    if (matches.length) {
       return {
         isBlocked: true,
         reason: 'Sexual or explicit content is strictly prohibited.',
         detectedType: 'sexual_content',
+        matches,
       };
     }
   }
 
-  // 2. Harmful/threatening content
+  // 2. Hate speech (slurs, religious/caste/racial hatred, calls for violence)
+  for (const pattern of HATE_SPEECH_PATTERNS) {
+    const matches = collectMatches(pattern);
+    if (matches.length) {
+      return {
+        isBlocked: true,
+        reason: 'Hate speech, slurs, and discriminatory language are not allowed.',
+        detectedType: 'hate_speech',
+        matches,
+      };
+    }
+  }
+
+  // 3. Harmful/threatening content
   for (const pattern of HARMFUL_CONTENT_PATTERNS) {
-    pattern.lastIndex = 0;
-    if (pattern.test(message) || pattern.test(normalizedMessage)) {
+    const matches = collectMatches(pattern);
+    if (matches.length) {
       return {
         isBlocked: true,
         reason: 'Threatening or harmful content is not allowed.',
         detectedType: 'harmful_content',
+        matches,
       };
     }
   }
 
-  // 3. Phone numbers (digits, words, symbols)
+  // 4. Phone numbers (digits, words, symbols)
   for (const pattern of PHONE_PATTERNS) {
     pattern.lastIndex = 0;
     if (pattern.test(message) || pattern.test(normalizedMessage)) {
