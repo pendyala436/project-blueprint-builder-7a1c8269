@@ -133,14 +133,19 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
 • Recharges are NON-REFUNDABLE except where mandated by the Consumer Protection Act 2019 or RBI guidelines.
 • Chargeback without first contacting support is treated as fraud and results in permanent ban + payment-network blacklist.
 
-7. EARNINGS & PAYOUTS — WOMEN (Discretionary, Not Mandatory)
-• A woman MAY earn a share of qualifying men's spend on her chats/calls/groups, but participation in the earnings programme is entirely OPTIONAL and DISCRETIONARY.
-• Payouts are NOT a guaranteed right, salary, wage, or employment benefit. Meow Meow is not the woman's employer; no employer-employee, principal-agent, or partnership relationship is created.
-• The administrator is NOT OBLIGATED to make any payout and may, at its sole discretion and without prior notice, withhold, delay, reduce, reverse, or refuse any payout where (i) KYC is incomplete or suspect, (ii) earnings are linked to fraud, automation, fake activity, sexual content, hate speech, or contact-sharing, (iii) a chargeback or dispute affects the underlying men's recharge, (iv) a court / tax authority / regulator orders so, (v) the platform is wound down, or (vi) for any other reasonable business or compliance ground.
-• MAXIMUM PAYOUT CEILING: ₹1,00,000 per woman per calendar month, subject to KYC and TDS. The administrator may revise this ceiling at any time without prior notice.
-• Bi-monthly snapshots (1st and 16th); payouts to the verified bank/UPI in KYC.
-• TDS under §§194-O / 194-R / 194-S of the Income Tax Act 1961 may be deducted; Form 16A issued where applicable. The woman is responsible for declaring earnings in her own income-tax return.
-• Earnings derived from fake activity, collusion, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
+7. WOMEN — VOLUNTARY PARTICIPATION & VIRTUAL COINS (NO MONEY)
+• Women use Meow Meow ENTIRELY for their own social interest — to chat, audio-call, video-call, and join group calls with verified male users. Participation is voluntary, recreational, and personal.
+• WOMEN DO NOT EARN, RECEIVE, OR HAVE ANY CLAIM TO REAL MONEY, INDIAN RUPEES, FOREIGN CURRENCY, CRYPTO, OR ANY OTHER FORM OF MONETARY VALUE FROM MEOW MEOW.
+• Their in-app activity may be acknowledged with VIRTUAL COINS — non-monetary, in-app digital tokens that:
+   – have NO cash value, NO redemption value, and NO exchange value;
+   – are NOT a currency, security, e-money, prepaid instrument, deposit, or financial product under the RBI Act 1934, Payment & Settlement Systems Act 2007, RBI PPI Master Directions, FEMA 1999, or SEBI laws;
+   – CANNOT be withdrawn, transferred to a bank, sold, gifted to another user, or converted into money or goods;
+   – may only be used inside the App for cosmetic, recognition, status, or visibility features that the administrator may add, modify, or remove at any time without notice;
+   – may be reduced, expired, frozen, or revoked by the administrator at sole discretion, without compensation.
+• NO EMPLOYMENT — Meow Meow is not the woman's employer, principal, agent, partner, contractor, or counterparty. No employer-employee, contract-of-service, contract-for-service, agency, partnership, or joint-venture relationship is created. No salary, wage, commission, fee, bonus, or other remuneration is owed.
+• NO TAX EVENT — Because no money or money's worth is received, no income, GST, TDS, or other tax obligation is created on the women's side. No PAN, Aadhaar, bank account, UPI ID, IFSC, address proof, or any other KYC document is collected from women.
+• NO PAYOUT MECHANISM exists for women on the platform. Any external request, message, or third-party offer to "convert" virtual coins into money is a scam and must be reported.
+• Virtual coins earned through fake activity, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
 
 8. CONTENT LICENSE
 You retain ownership of content you create. By submitting it, you grant Meow Meow a worldwide, royalty-free, non-exclusive, sub-licensable licence to host, store, transmit, translate, moderate, and display it solely to operate, improve, and protect the service.
