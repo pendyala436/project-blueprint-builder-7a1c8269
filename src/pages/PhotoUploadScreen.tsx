@@ -30,6 +30,9 @@ const PhotoUploadScreen = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [selectedGender, setSelectedGender] = useState<"male" | "female" | null>(null);
+  const [detectedGender, setDetectedGender] = useState<"male" | "female" | "unknown" | null>(null);
+  const [genderChanged, setGenderChanged] = useState(false);
 
   // Restore previously captured selfie if user returns to this step
   useEffect(() => {
