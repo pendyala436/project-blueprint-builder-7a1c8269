@@ -129,7 +129,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
 • Recharge in INR via authorised processors (Razorpay/Stripe/Paddle/UPI).
 • Per-second pro-rated billing for chat, calls, video calls, and group calls (see in-app rate card).
 • 18% GST is included as required under CGST/SGST/IGST Acts; GST invoice on request.
-• MAXIMUM DAILY RECHARGE LIMIT: ₹50,000 per user per day. MAXIMUM MONTHLY RECHARGE LIMIT: ₹2,00,000 per user per month. MAXIMUM WALLET BALANCE AT ANY TIME: ₹1,00,000. These ceilings exist to comply with RBI Master Directions on Prepaid Payment Instruments (PPI), the Payment and Settlement Systems Act 2007, and PMLA 2002 anti-money-laundering norms. The administrator may revise these limits at any time without prior notice.
+• NO UPPER LIMIT ON RECHARGES OR WALLET BALANCE: men may recharge any amount, any number of times, and hold any wallet balance, subject only to (i) their own bank/card/UPI limits, (ii) the payment processor's per-transaction caps, and (iii) statutory anti-money-laundering checks under PMLA 2002, RBI Master Directions on Prepaid Payment Instruments, and the Payment and Settlement Systems Act 2007 (large or unusual transactions may be flagged or reported to FIU-IND). The administrator may introduce, modify, or remove recharge limits at any time without prior notice.
 • Recharges are NON-REFUNDABLE except where mandated by the Consumer Protection Act 2019 or RBI guidelines.
 • Chargeback without first contacting support is treated as fraud and results in permanent ban + payment-network blacklist.
 
