@@ -99,6 +99,9 @@ const WomenWalletScreen = () => {
             <IndianRupee className="w-4 h-4" />
             Withdraw
           </Button>
+          <p className="text-[11px] text-primary-foreground/80 mt-2 text-center leading-snug">
+            Self-withdrawal is not available. Payouts are processed only by the admin as per the payout schedule.
+          </p>
         </Card>
       </div>
 
