@@ -345,7 +345,7 @@ This Policy explains what personal data we collect, why, how we use it, and the 
 2. SENSITIVE PERSONAL DATA
 We treat the following as sensitive and apply additional safeguards:
 • Biometric data (face embeddings used only for liveness/gender check — discarded after verification).
-• Government IDs (encrypted at rest, access-logged, used only for payout & legal compliance).
+• Government IDs are NOT collected from women. From men, only payment-processor tokens are stored, encrypted at rest and access-logged.
 We do NOT collect: contacts list, social-media accounts, browsing history outside the App, health data, religious or political opinions.
 
 3. LEGAL BASIS (DPDP / GDPR Art. 6)
