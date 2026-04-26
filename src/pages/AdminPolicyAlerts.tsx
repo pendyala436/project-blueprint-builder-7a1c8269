@@ -645,7 +645,7 @@ const AdminPolicyAlerts = () => {
       </div>
 
       {/* Alert Details Dialog */}
-      <Dialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+      <Dialog open={alertDialogOpen} onOpenChange={(open) => { setAlertDialogOpen(open); if (!open) { setSelectedAlert(null); setAdminNotes(""); setActionTaken(""); } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -710,7 +710,7 @@ const AdminPolicyAlerts = () => {
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="destructive" onClick={() => handleBlockUser(selectedAlert!.user_id)}>
+            <Button variant="destructive" disabled={!selectedAlert} onClick={() => selectedAlert && handleBlockUser(selectedAlert.user_id)}>
               <Ban className="h-4 w-4 mr-2" />
               Block User
             </Button>
