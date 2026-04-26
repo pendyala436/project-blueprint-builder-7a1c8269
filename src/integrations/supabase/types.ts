@@ -3986,6 +3986,7 @@ export type Database = {
         }
         Returns: Json
       }
+      mark_stalled_backups: { Args: never; Returns: number }
       migrate_existing_wallets_to_ledger: { Args: never; Returns: Json }
       now_ist: { Args: never; Returns: string }
       perform_monthly_earning_rotation: { Args: never; Returns: Json }
