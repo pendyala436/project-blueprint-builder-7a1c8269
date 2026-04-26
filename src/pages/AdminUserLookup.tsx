@@ -113,6 +113,7 @@ const AdminUserLookup = () => {
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [kycData, setKycData] = useState<KYCRecord | null>(null);
+  const [kycSignedUrls, setKycSignedUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [genderFilter, setGenderFilter] = useState<string>("all");
@@ -165,25 +166,59 @@ const AdminUserLookup = () => {
   };
   loadAllUsersRef.current = loadAllUsers;
 
+  const getSignedKycUrl = async (storedValue: string | null): Promise<string | null> => {
+    if (!storedValue) return null;
+    try {
+      let filePath = storedValue;
+      const marker = '/kyc-documents/';
+      const idx = storedValue.indexOf(marker);
+      if (idx !== -1) filePath = storedValue.substring(idx + marker.length);
+      const { data, error } = await supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(filePath, 3600);
+      if (error || !data?.signedUrl) return null;
+      return data.signedUrl;
+    } catch { return null; }
+  };
+
   const selectUser = async (user: UserProfile) => {
     setSelectedUser(user);
     setDetailLoading(true);
+    setKycSignedUrls({});
     try {
-      // Load wallet, transactions, chat sessions in parallel
-      const [walletRes, txRes, chatRes, kycRes] = await Promise.all([
+      const isIndianFemale = user.gender?.toLowerCase() === "female" && user.is_indian;
+      const [walletRes, txRes, chatRes, kycRes] = await Promise.allSettled([
         supabase.from("wallets").select("balance, currency").eq("user_id", user.user_id).maybeSingle(),
         supabase.from("ledger_transactions").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false }).limit(50),
         supabase.from("active_chat_sessions").select("*").or(`man_user_id.eq.${user.user_id},woman_user_id.eq.${user.user_id}`).order("started_at", { ascending: false }).limit(50),
-        // Only load KYC for Indian women
-        user.gender?.toLowerCase() === "female" && user.is_indian
+        isIndianFemale
           ? supabase.from("women_kyc").select("*").eq("user_id", user.user_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
       ]);
 
-      setWallet(walletRes.data as WalletData | null);
-      setTransactions((txRes.data || []) as LedgerTransaction[]);
-      setChatSessions((chatRes.data || []) as ChatSession[]);
-      setKycData(kycRes.data as KYCRecord | null);
+      const walletData = walletRes.status === "fulfilled" ? (walletRes.value.data as WalletData | null) : null;
+      const txData = txRes.status === "fulfilled" ? ((txRes.value.data || []) as LedgerTransaction[]) : [];
+      const chatData = chatRes.status === "fulfilled" ? ((chatRes.value.data || []) as ChatSession[]) : [];
+      const kyc = kycRes.status === "fulfilled" ? (kycRes.value.data as KYCRecord | null) : null;
+
+      setWallet(walletData);
+      setTransactions(txData);
+      setChatSessions(chatData);
+      setKycData(kyc);
+
+      // Generate signed URLs for KYC document fields (private bucket)
+      if (kyc) {
+        const fields: (keyof KYCRecord)[] = [
+          'aadhaar_front_url','aadhaar_back_url',
+          'id_proof_front_url','id_proof_back_url','selfie_url',
+        ];
+        const entries = await Promise.all(
+          fields.map(async (f) => [f as string, await getSignedKycUrl((kyc as any)[f])] as const)
+        );
+        const urls: Record<string, string> = {};
+        entries.forEach(([k, v]) => { if (v) urls[k] = v; });
+        setKycSignedUrls(urls);
+      }
     } catch (err) {
       toast.error("Failed to load user details");
     } finally {
@@ -427,7 +462,7 @@ const AdminUserLookup = () => {
                     <CardContent className="space-y-4">
                       <div className="p-4 bg-muted rounded-lg">
                         <p className="text-sm text-muted-foreground">Balance</p>
-                        <p className="text-3xl font-bold">₹{wallet?.balance?.toFixed(2) ?? "0.00"}</p>
+                        <p className="text-3xl font-bold">{wallet?.currency === "USD" ? "$" : "₹"}{Number(wallet?.balance ?? 0).toFixed(2)}</p>
                       </div>
                       <h3 className="font-semibold text-sm">Recent Transactions</h3>
                       {transactions.length === 0 ? (
@@ -442,7 +477,7 @@ const AdminUserLookup = () => {
                                   <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleString()}</p>
                                 </div>
                                 <span className={tx.credit > 0 ? "text-primary font-semibold" : "text-destructive font-semibold"}>
-                                  {tx.credit > 0 ? "+" : "-"}₹{(tx.credit > 0 ? tx.credit : tx.debit).toFixed(2)}
+                                  {Number(tx.credit) > 0 ? "+" : "-"}₹{(Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit ?? 0)).toFixed(2)}
                                 </span>
                               </div>
                             ))}
@@ -474,8 +509,8 @@ const AdminUserLookup = () => {
                                   <span className="text-xs text-muted-foreground">{new Date(chat.started_at).toLocaleString()}</span>
                                 </div>
                                 <div className="flex gap-4 text-xs text-muted-foreground">
-                                  <span>Duration: {chat.total_minutes.toFixed(1)} min</span>
-                                  <span>Earned: ₹{chat.total_earned.toFixed(2)}</span>
+                                  <span>Duration: {Number(chat.total_minutes ?? 0).toFixed(1)} min</span>
+                                  <span>Earned: ₹{Number(chat.total_earned ?? 0).toFixed(2)}</span>
                                 </div>
                                 {chat.ended_at && <p className="text-xs">Ended: {new Date(chat.ended_at).toLocaleString()}</p>}
                               </div>
@@ -537,11 +572,11 @@ const AdminUserLookup = () => {
                               <h4 className="font-semibold text-sm">Uploaded Documents</h4>
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 {[
-                                  { label: "Aadhaar Front", url: kycData.aadhaar_front_url },
-                                  { label: "Aadhaar Back", url: kycData.aadhaar_back_url },
-                                  { label: "ID Front", url: kycData.id_proof_front_url },
-                                  { label: "ID Back", url: kycData.id_proof_back_url },
-                                  { label: "Selfie", url: kycData.selfie_url },
+                                  { label: "Aadhaar Front", key: "aadhaar_front_url", url: kycSignedUrls.aadhaar_front_url || kycData.aadhaar_front_url },
+                                  { label: "Aadhaar Back", key: "aadhaar_back_url", url: kycSignedUrls.aadhaar_back_url || kycData.aadhaar_back_url },
+                                  { label: "ID Front", key: "id_proof_front_url", url: kycSignedUrls.id_proof_front_url || kycData.id_proof_front_url },
+                                  { label: "ID Back", key: "id_proof_back_url", url: kycSignedUrls.id_proof_back_url || kycData.id_proof_back_url },
+                                  { label: "Selfie", key: "selfie_url", url: kycSignedUrls.selfie_url || kycData.selfie_url },
                                 ].map(doc => (
                                   <div key={doc.label} className="text-center">
                                     <p className="text-xs text-muted-foreground mb-1">{doc.label}</p>
