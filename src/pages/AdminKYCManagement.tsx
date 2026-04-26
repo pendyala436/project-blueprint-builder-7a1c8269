@@ -160,7 +160,7 @@ const AdminKYCManagement = () => {
   const [selectedKYC, setSelectedKYC] = useState<KYCRecord | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [kycLoading, setKycLoading] = useState(false);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
   // FIX #6: Guard data fetching behind isAdmin check
