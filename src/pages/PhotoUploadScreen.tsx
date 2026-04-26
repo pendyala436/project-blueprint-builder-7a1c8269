@@ -139,9 +139,9 @@ const PhotoUploadScreen = () => {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleAdditionalPhoto(file);
-  }, [handleAdditionalPhoto]);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) handleAdditionalPhotos(files);
+  }, [handleAdditionalPhotos]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
