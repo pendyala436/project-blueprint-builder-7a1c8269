@@ -166,25 +166,59 @@ const AdminUserLookup = () => {
   };
   loadAllUsersRef.current = loadAllUsers;
 
+  const getSignedKycUrl = async (storedValue: string | null): Promise<string | null> => {
+    if (!storedValue) return null;
+    try {
+      let filePath = storedValue;
+      const marker = '/kyc-documents/';
+      const idx = storedValue.indexOf(marker);
+      if (idx !== -1) filePath = storedValue.substring(idx + marker.length);
+      const { data, error } = await supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(filePath, 3600);
+      if (error || !data?.signedUrl) return null;
+      return data.signedUrl;
+    } catch { return null; }
+  };
+
   const selectUser = async (user: UserProfile) => {
     setSelectedUser(user);
     setDetailLoading(true);
+    setKycSignedUrls({});
     try {
-      // Load wallet, transactions, chat sessions in parallel
-      const [walletRes, txRes, chatRes, kycRes] = await Promise.all([
+      const isIndianFemale = user.gender?.toLowerCase() === "female" && user.is_indian;
+      const [walletRes, txRes, chatRes, kycRes] = await Promise.allSettled([
         supabase.from("wallets").select("balance, currency").eq("user_id", user.user_id).maybeSingle(),
         supabase.from("ledger_transactions").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false }).limit(50),
         supabase.from("active_chat_sessions").select("*").or(`man_user_id.eq.${user.user_id},woman_user_id.eq.${user.user_id}`).order("started_at", { ascending: false }).limit(50),
-        // Only load KYC for Indian women
-        user.gender?.toLowerCase() === "female" && user.is_indian
+        isIndianFemale
           ? supabase.from("women_kyc").select("*").eq("user_id", user.user_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
       ]);
 
-      setWallet(walletRes.data as WalletData | null);
-      setTransactions((txRes.data || []) as LedgerTransaction[]);
-      setChatSessions((chatRes.data || []) as ChatSession[]);
-      setKycData(kycRes.data as KYCRecord | null);
+      const walletData = walletRes.status === "fulfilled" ? (walletRes.value.data as WalletData | null) : null;
+      const txData = txRes.status === "fulfilled" ? ((txRes.value.data || []) as LedgerTransaction[]) : [];
+      const chatData = chatRes.status === "fulfilled" ? ((chatRes.value.data || []) as ChatSession[]) : [];
+      const kyc = kycRes.status === "fulfilled" ? (kycRes.value.data as KYCRecord | null) : null;
+
+      setWallet(walletData);
+      setTransactions(txData);
+      setChatSessions(chatData);
+      setKycData(kyc);
+
+      // Generate signed URLs for KYC document fields (private bucket)
+      if (kyc) {
+        const fields: (keyof KYCRecord)[] = [
+          'aadhaar_front_url','aadhaar_back_url',
+          'id_proof_front_url','id_proof_back_url','selfie_url',
+        ];
+        const entries = await Promise.all(
+          fields.map(async (f) => [f as string, await getSignedKycUrl((kyc as any)[f])] as const)
+        );
+        const urls: Record<string, string> = {};
+        entries.forEach(([k, v]) => { if (v) urls[k] = v; });
+        setKycSignedUrls(urls);
+      }
     } catch (err) {
       toast.error("Failed to load user details");
     } finally {
