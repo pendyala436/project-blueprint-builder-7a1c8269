@@ -772,6 +772,7 @@ const AdminModerationScreen = () => {
                                   className="text-amber-500 hover:text-amber-600"
                                   onClick={() => {
                                     setTargetUserId(report.reported_user_id);
+                                    setSourceReportId(report.id);
                                     setWarnDialogOpen(true);
                                   }}
                                 >
@@ -783,6 +784,7 @@ const AdminModerationScreen = () => {
                                   className="text-destructive hover:text-destructive"
                                   onClick={() => {
                                     setTargetUserId(report.reported_user_id);
+                                    setSourceReportId(report.id);
                                     setBlockDialogOpen(true);
                                   }}
                                 >
@@ -984,7 +986,7 @@ const AdminModerationScreen = () => {
               Dismiss
             </Button>
             <Button 
-              onClick={() => selectedReport && handleResolveReport(selectedReport.id, 'action_taken')}
+              onClick={() => selectedReport && handleResolveReport(selectedReport.id, 'reviewed')}
             >
               Resolve
             </Button>
