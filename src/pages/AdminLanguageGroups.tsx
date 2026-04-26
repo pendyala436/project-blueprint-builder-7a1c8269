@@ -89,12 +89,25 @@ const AdminLanguageGroups = () => {
 
   const getLanguageName = (code: string) => {
     const lang = languages.find((l) => l.code === code);
-    return lang ? lang.name : code;
+    if (lang) return lang.name;
+    // Handle regional variants like en-US, hi-IN, ur-PK
+    if (code.includes("-")) {
+      const [base, region] = code.split("-");
+      const baseLang = languages.find((l) => l.code === base);
+      if (baseLang) return `${baseLang.name} (${region.toUpperCase()})`;
+    }
+    return code;
   };
 
   const getLanguageNativeName = (code: string) => {
     const lang = languages.find((l) => l.code === code);
-    return lang ? lang.nativeName : code;
+    if (lang) return lang.nativeName;
+    if (code.includes("-")) {
+      const [base] = code.split("-");
+      const baseLang = languages.find((l) => l.code === base);
+      if (baseLang) return baseLang.nativeName;
+    }
+    return code;
   };
 
   const filteredGroups = groups.filter((group) => {
