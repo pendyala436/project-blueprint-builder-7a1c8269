@@ -661,7 +661,23 @@ const AdminLegalDocuments = () => {
       </div>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        if (uploading) return;
+        setUploadDialogOpen(open);
+        if (!open) {
+          setSelectedFile(null);
+          setUploadProgress(0);
+          setNewDocument({
+            name: "",
+            document_type: "terms",
+            version: "1.0",
+            description: "",
+            effective_date: "",
+            is_active: false,
+          });
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      }}>
         <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader>
             <DialogTitle className="text-foreground">Upload Legal Document</DialogTitle>
