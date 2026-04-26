@@ -85,7 +85,7 @@ const PasswordSetupScreen = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={7} totalSteps={9} />
+            <ProgressIndicator currentStep={8} totalSteps={10} />
           </div>
         </div>
       </header>
