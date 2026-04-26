@@ -263,8 +263,8 @@ const AdminChatMonitoring = () => {
           chat_id: s.chat_id, man_user_id: s.man_user_id, woman_user_id: s.woman_user_id,
           started_at: s.started_at, last_activity_at: s.last_activity_at,
           man_name: man?.full_name || "Unknown", woman_name: woman?.full_name || "Unknown",
-          man_country: man?.country || "Unknown", woman_country: woman?.country || "India",
-          man_language: man?.primary_language || "Unknown", woman_language: woman?.primary_language || "Hindi",
+          man_country: man?.country || "Unknown", woman_country: woman?.country || "Unknown",
+          man_language: man?.primary_language || "Unknown", woman_language: woman?.primary_language || "Unknown",
           message_count: countMap.get(s.chat_id) || 0,
         };
       }));
