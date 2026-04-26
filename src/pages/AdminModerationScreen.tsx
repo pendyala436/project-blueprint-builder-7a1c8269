@@ -995,7 +995,7 @@ const AdminModerationScreen = () => {
       </Dialog>
 
       {/* ============= BLOCK USER DIALOG ============= */}
-      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+      <Dialog open={blockDialogOpen} onOpenChange={(open) => { setBlockDialogOpen(open); if (!open) { setSourceReportId(null); setTargetUserId(''); setActionReason(''); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Block User</DialogTitle>
@@ -1030,7 +1030,7 @@ const AdminModerationScreen = () => {
       </Dialog>
 
       {/* ============= WARN USER DIALOG ============= */}
-      <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
+      <Dialog open={warnDialogOpen} onOpenChange={(open) => { setWarnDialogOpen(open); if (!open) { setSourceReportId(null); setTargetUserId(''); setWarningMessage(''); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send Warning</DialogTitle>
