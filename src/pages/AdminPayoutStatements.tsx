@@ -1,6 +1,6 @@
 /**
  * AdminPayoutStatements — Admin page for viewing/triggering payout snapshots.
- * Spec §7: Payouts on 1st and 16th, with bank details and PDF/Excel/CSV export.
+ * Spec §7: KYC-based payout statement (10 columns from Bank KYC).
  */
 import { useState, useEffect } from 'react';
 import AdminNav from '@/components/AdminNav';
@@ -21,15 +21,16 @@ import * as XLSX from 'xlsx';
 interface PayoutRecord {
   id: string;
   user_id: string;
+  app_sno: number | null;
+  beneficiary_purpose: string | null;
+  account_holder_name: string | null;
   full_name: string;
-  bank_name: string | null;
+  mobile_number: string | null;
+  email_address: string | null;
+  address: string | null;
   bank_account_number: string | null;
   ifsc_code: string | null;
-  gross_earned: number;
-  withdrawal_fee_amount: number;
-  net_payable: number;
-  already_paid: number;
-  incremental_payable: number;
+  upi_vpa: string | null;
   wallet_balance_at_snapshot: number;
   payment_status: string;
   snapshot_type: string;
@@ -39,7 +40,19 @@ interface PayoutRecord {
   created_at: string;
 }
 
-const PAYOUT_HEADERS = ['S.No', 'Name', 'Bank Name', 'IFSC Code', 'Account Number', 'Gross Earned (₹)', 'Fee (₹)', 'Net Payable (₹)', 'Already Paid (₹)', 'Incremental (₹)', 'Status', 'Date'];
+// Spec §7 — 10 columns sourced from Bank KYC
+const PAYOUT_HEADERS = [
+  'Beneficiary ID / S.No',
+  'Beneficiary Purpose',
+  'Name',
+  'Phone Number',
+  'Email ID',
+  'Address',
+  'Account Number',
+  'IFSC Code',
+  'UPI VPA',
+  'Amount (₹)',
+];
 
 const AdminPayoutStatements = () => {
   const { toast } = useToast();
@@ -70,28 +83,29 @@ const AdminPayoutStatements = () => {
   };
 
   const buildRows = () => records.map((r, i) => ({
-    sno: i + 1,
-    name: r.full_name || '—',
-    bank: r.bank_name || '—',
-    ifsc: r.ifsc_code || '—',
+    sno: r.app_sno ?? i + 1,
+    purpose: r.beneficiary_purpose || 'Earnings Payout',
+    name: r.account_holder_name || r.full_name || '—',
+    phone: r.mobile_number || '—',
+    email: r.email_address || '—',
+    address: r.address || '—',
     account: r.bank_account_number || '—',
-    gross: Number(r.gross_earned).toFixed(2),
-    fee: Number(r.withdrawal_fee_amount).toFixed(2),
-    net: Number(r.net_payable).toFixed(2),
-    paid: Number(r.already_paid).toFixed(2),
-    incremental: Number(r.incremental_payable).toFixed(2),
-    status: r.payment_status,
-    date: r.snapshot_ist_date ? format(new Date(r.snapshot_ist_date), 'dd MMM yyyy') : '—',
+    ifsc: r.ifsc_code || '—',
+    upi: r.upi_vpa || '—',
+    amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
   }));
 
-  const totalPayable = records.reduce((s, r) => s + Number(r.incremental_payable || 0), 0);
-  const totalGross = records.reduce((s, r) => s + Number(r.gross_earned || 0), 0);
+  const totalAmount = records.reduce((s, r) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
 
   // ─── CSV Export ───
   const exportCSV = () => {
     if (!records.length) return;
     const rows = buildRows();
-    const csv = [PAYOUT_HEADERS.join(','), ...rows.map(r => [r.sno, `"${r.name}"`, `"${r.bank}"`, r.ifsc, r.account, r.gross, r.fee, r.net, r.paid, r.incremental, r.status, r.date].join(','))].join('\n');
+    const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [
+      PAYOUT_HEADERS.join(','),
+      ...rows.map(r => [r.sno, escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount].join(',')),
+    ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -106,9 +120,9 @@ const AdminPayoutStatements = () => {
     doc.setFontSize(18);
     doc.text('Payout Statement', 14, 16);
     doc.setFontSize(10);
-    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total Payable: ₹${totalPayable.toFixed(2)}`, 14, 23);
+    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ₹${totalAmount.toFixed(2)}`, 14, 23);
 
-    const rows = buildRows().map(r => [String(r.sno), r.name, r.bank, r.ifsc, r.account, r.gross, r.fee, r.net, r.paid, r.incremental, r.status, r.date]);
+    const rows = buildRows().map(r => [String(r.sno), r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]);
 
     autoTable(doc, {
       startY: 30,
@@ -116,7 +130,7 @@ const AdminPayoutStatements = () => {
       body: rows,
       styles: { fontSize: 7, cellPadding: 1.5 },
       headStyles: { fillColor: [99, 102, 241], fontSize: 7 },
-      columnStyles: { 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } },
+      columnStyles: { 9: { halign: 'right' } },
     });
 
     doc.save(`payout-${monthFilter}.pdf`);
@@ -128,13 +142,13 @@ const AdminPayoutStatements = () => {
     const rows = buildRows();
     const wsData = [
       ['Payout Statement'],
-      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total Gross: ₹${totalGross.toFixed(2)}`, '', `Total Payable: ₹${totalPayable.toFixed(2)}`],
+      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ₹${totalAmount.toFixed(2)}`],
       [],
       PAYOUT_HEADERS,
-      ...rows.map(r => [r.sno, r.name, r.bank, r.ifsc, r.account, r.gross, r.fee, r.net, r.paid, r.incremental, r.status, r.date]),
+      ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 5 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
     XLSX.writeFile(wb, `payout-${monthFilter}.xlsx`);
@@ -145,11 +159,11 @@ const AdminPayoutStatements = () => {
     if (!records.length) return;
     const rows = buildRows();
     const tableRows = rows.map(r =>
-      `<tr><td>${r.sno}</td><td>${r.name}</td><td>${r.bank}</td><td>${r.ifsc}</td><td>${r.account}</td><td style="text-align:right">${r.gross}</td><td style="text-align:right">${r.fee}</td><td style="text-align:right">${r.net}</td><td style="text-align:right">${r.paid}</td><td style="text-align:right">${r.incremental}</td><td>${r.status}</td><td>${r.date}</td></tr>`
+      `<tr><td>${r.sno}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td></tr>`
     ).join('');
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
-<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total Payable: ₹${totalPayable.toFixed(2)}</p>
+<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total: ₹${totalAmount.toFixed(2)}</p>
 <table><thead><tr>${PAYOUT_HEADERS.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
@@ -164,7 +178,7 @@ const AdminPayoutStatements = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Payout Statements</h1>
-            <p className="text-sm text-muted-foreground">Bi-monthly payout snapshots (1st & 16th)</p>
+            <p className="text-sm text-muted-foreground">Monthly payout snapshots — sourced from Bank KYC</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-40" />
@@ -196,7 +210,7 @@ const AdminPayoutStatements = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <Users className="w-8 h-8 text-primary" />
@@ -210,17 +224,8 @@ const AdminPayoutStatements = () => {
             <div className="flex items-center gap-3">
               <IndianRupee className="w-8 h-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">₹{totalGross.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Gross Earned</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <IndianRupee className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">₹{totalPayable.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Net Payable</p>
+                <p className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Total Payout Amount</p>
               </div>
             </div>
           </Card>
@@ -240,49 +245,47 @@ const AdminPayoutStatements = () => {
           </Button>
         </Card>
 
-        {/* Table */}
+        {/* Table — Spec §7: 10 columns from Bank KYC */}
         <Card className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>S.No</TableHead>
+                <TableHead>Beneficiary ID / S.No</TableHead>
+                <TableHead>Beneficiary Purpose</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Bank</TableHead>
-                <TableHead>IFSC</TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead className="text-right">Gross (₹)</TableHead>
-                <TableHead className="text-right">Fee (₹)</TableHead>
-                <TableHead className="text-right">Net Payable (₹)</TableHead>
-                <TableHead className="text-right">Already Paid (₹)</TableHead>
-                <TableHead className="text-right">Incremental (₹)</TableHead>
+                <TableHead>Phone Number</TableHead>
+                <TableHead>Email ID</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Account Number</TableHead>
+                <TableHead>IFSC Code</TableHead>
+                <TableHead>UPI VPA</TableHead>
+                <TableHead className="text-right">Amount (₹)</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={12} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : records.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
               ) : (
                 records.map((r, i) => (
                   <TableRow key={r.id}>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell className="font-medium">{r.full_name}</TableCell>
-                    <TableCell className="text-xs">{r.bank_name || '—'}</TableCell>
-                    <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.app_sno ?? i + 1}</TableCell>
+                    <TableCell className="text-xs">{r.beneficiary_purpose || 'Earnings Payout'}</TableCell>
+                    <TableCell className="font-medium">{r.account_holder_name || r.full_name || '—'}</TableCell>
+                    <TableCell className="text-xs font-mono">{r.mobile_number || '—'}</TableCell>
+                    <TableCell className="text-xs">{r.email_address || '—'}</TableCell>
+                    <TableCell className="text-xs max-w-[200px] truncate" title={r.address || ''}>{r.address || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.bank_account_number ? '****' + r.bank_account_number.slice(-4) : '—'}</TableCell>
-                    <TableCell className="text-right">₹{Number(r.gross_earned).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-destructive">₹{Number(r.withdrawal_fee_amount).toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-semibold">₹{Number(r.net_payable).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">₹{Number(r.already_paid).toFixed(2)}</TableCell>
-                    <TableCell className="text-right text-primary font-semibold">₹{Number(r.incremental_payable).toFixed(2)}</TableCell>
+                    <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
+                    <TableCell className="text-xs font-mono">{r.upi_vpa || '—'}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">₹{Number(r.wallet_balance_at_snapshot).toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant={r.payment_status === 'paid' ? 'default' : 'secondary'} className="text-xs">
                         {r.payment_status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs">{r.snapshot_ist_date ? format(new Date(r.snapshot_ist_date), 'dd MMM yyyy') : '—'}</TableCell>
                   </TableRow>
                 ))
               )}
