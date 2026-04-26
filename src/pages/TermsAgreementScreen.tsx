@@ -355,7 +355,7 @@ We do NOT collect: contacts list, social-media accounts, browsing history outsid
 • Legitimate interest — fraud prevention, security, service improvement, balanced against your rights.
 
 4. PURPOSES OF USE
-Account creation; matching opposite-sex users; chat/call/group delivery; AI translation; AI face/gender/age verification; per-second billing & GST invoicing; women's payouts & TDS; safety, moderation, anti-spam; complying with court orders, tax filings, and government requests; communicating service notices.
+Account creation; matching opposite-sex users; chat/call/group delivery; AI translation; AI face/gender/age verification; per-second billing & GST invoicing on men's recharges; awarding non-monetary virtual coins to women; safety, moderation, anti-spam; complying with court orders, tax filings, and government requests; communicating service notices.
 
 5. AI AUTOMATED PROCESSING
 Decisions made wholly or partly by AI (gender mismatch, content takedown, fraud flag) can be appealed to a human reviewer at support@meowmeow.app within 30 days. We do not perform political profiling or sell biometric data.
