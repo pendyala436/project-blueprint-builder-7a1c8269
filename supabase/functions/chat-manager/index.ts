@@ -1568,94 +1568,22 @@ serve(async (req) => {
                 .eq("is_active", true)
                 .maybeSingle();
 
-              const finalRate = endPricing?.rate_per_minute || session.rate_per_minute || 4;
-              const finalWomenRate = endPricing?.women_earning_rate || 2;
-              const finalMenCharge = fractionalMinutesRemaining * finalRate;
-
-              // Check if the woman is Indian (only Indian women earn)
-              let endWomanIsIndian = false;
-              const { data: endWomanProfile } = await supabase
-                .from("profiles")
-                .select("is_indian")
-                .eq("user_id", session.woman_user_id)
-                .maybeSingle();
-              if (endWomanProfile?.is_indian) {
-                endWomanIsIndian = true;
+              // ✅ Final billing via canonical RPC — same single source of truth as heartbeat.
+              // process_chat_billing handles: super-user bypass, wallet debit, women_earnings, wallet_transactions,
+              // active_chat_sessions totals update, and idempotency.
+              const { data: finalBill, error: finalBillErr } = await supabase.rpc('process_chat_billing', {
+                p_session_id: session.id,
+                p_minutes: fractionalMinutesRemaining,
+              });
+              if (finalBillErr) {
+                console.warn('[END_CHAT] Final billing RPC error:', finalBillErr.message);
               } else {
-                const { data: endFemaleProfile } = await supabase
-                  .from("female_profiles")
-                  .select("is_indian")
-                  .eq("user_id", session.woman_user_id)
-                  .maybeSingle();
-                endWomanIsIndian = endFemaleProfile?.is_indian === true;
+                const fr = (finalBill ?? {}) as Record<string, unknown>;
+                const finalCharged = Number(fr.charged ?? 0);
+                const finalEarned = Number(fr.earned ?? 0);
+                console.log(`[END_CHAT] Final billing: men charged ₹${finalCharged.toFixed(2)}, women earned ₹${finalEarned.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(1)} min`);
               }
 
-              const finalWomenEarning = endWomanIsIndian ? fractionalMinutesRemaining * finalWomenRate : 0;
-
-              const isManSuperUser = await checkIsSuperUser(supabase, session.man_user_id);
-
-              if (!isManSuperUser) {
-                const { data: manWallet } = await supabase
-                  .from("wallets")
-                  .select("id, balance")
-                  .eq("user_id", session.man_user_id)
-                  .maybeSingle();
-
-                if (manWallet && manWallet.balance >= finalMenCharge) {
-                  const { data: endNewBal } = await supabase.rpc('atomic_wallet_debit', { p_wallet_id: manWallet.id, p_amount: finalMenCharge });
-                  if (endNewBal === -1) {
-                    console.warn('[END_CHAT] Insufficient balance for final billing');
-                  } else {
-                    await supabase.from("ledger_transactions").insert({
-                      user_id: session.man_user_id,
-                      transaction_type: "chat_debit",
-                      debit: finalMenCharge,
-                      credit: 0,
-                      counterparty_id: session.woman_user_id,
-                      session_id: session.id,
-                      rate_per_minute: finalRate,
-                      duration_seconds: Math.floor(secondsRemaining),
-                      description: `Chat debit - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalRate}/min`
-                    });
-                    console.log(`[END_CHAT] Final billing: men charged ₹${finalMenCharge.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(1)} min`);
-                  }
-                }
-              }
-
-              // Credit only Indian woman's earnings
-              if (finalWomenEarning > 0) {
-                const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
-                await Promise.all([
-                  supabase.from("women_earnings").insert({
-                    user_id: session.woman_user_id,
-                    chat_session_id: session.id,
-                    amount: finalWomenEarning,
-                    earning_type: "chat",
-                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalWomenRate}/min`
-                  }),
-                  supabase.from("ledger_transactions").insert({
-                    user_id: session.woman_user_id,
-                    transaction_type: "chat_earning",
-                    debit: 0,
-                    credit: finalWomenEarning,
-                    counterparty_id: session.man_user_id,
-                    session_id: session.id,
-                    rate_per_minute: finalWomenRate,
-                    duration_seconds: Math.floor(secondsRemaining),
-                    description: `Chat earning - ${fractionalMinutesRemaining.toFixed(1)} min at ₹${finalWomenRate}/min`
-                  }),
-                  // Credit woman's wallet balance
-                  ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: finalWomenEarning })] : [])
-                ]);
-              }
-
-              // Update session totals
-              await supabase.from("active_chat_sessions").update({
-                total_minutes: session.total_minutes + fractionalMinutesRemaining,
-                total_earned: session.total_earned + finalWomenEarning
-              }).eq("chat_id", chat_id);
-
-              console.log(`[END_CHAT] Final billing: women earned ₹${finalWomenEarning.toFixed(2)} (indian: ${endWomanIsIndian})`);
             }
           }
 
