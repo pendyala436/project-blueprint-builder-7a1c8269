@@ -112,6 +112,35 @@ const HARMFUL_CONTENT_PATTERNS = [
 ];
 
 // ========================================
+// HATE SPEECH DETECTION (multilingual)
+// ========================================
+
+const HATE_SPEECH_PATTERNS = [
+  // English — racial / religious / casteist / homophobic / xenophobic slurs
+  /\b(n[i1]gg(?:er|a|az)|ch[i1]nk|sp[i1]c|k[i1]ke|w[e3]tback|towel\s*head|sand\s*n\w+|cracker|gook|paki|raghead|jihad[i]?|terror[i1]st\s*(scum|pig)?|kafir\s*scum|infidel\s*scum|fag|f[a@]gg[o0]t|dyke|tranny|shemale|retard|spaz|mongoloid|gypsy\s*scum|jewboy|zionist\s*pig|nazi|hitler\s*was\s*right|gas\s*the\s*\w+|white\s*power|kkk|black\s*lives\s*don'?t\s*matter|all\s*\w+\s*should\s*die)\b/gi,
+  // Caste-based slurs (India)
+  /\b(chamar|bhangi|chura|dalit\s*scum|achoot|untouchable|neech\s*jaat|low\s*caste|harijan\s*scum|kanjar|mahar|mochi|musahar|valmiki\s*scum)\b/gi,
+  // Religious hatred (India / South Asia)
+  /\b(katua|katwa|mulla\s*scum|hindu\s*scum|sikh\s*scum|christian\s*scum|jain\s*scum|buddhist\s*scum|pakistani\s*scum|bangla\s*scum|rohingya\s*scum|love\s*jihad|land\s*jihad|gow?\s*mata\s*killer|cow\s*killer|beef\s*eater\s*scum|pork\s*eater\s*scum|circumcised\s*scum|kafir\s*kill)\b/gi,
+  // Hindi / Hinglish hate
+  /\b(saala\s*musla|saala\s*mulla|saala\s*hindu|saala\s*sardar|saala\s*madrasi|saala\s*bihari|kala\s*kaluta|kalu|habshi|chinki|momos|kaali\s*kaluti|bhangi|chamar|achoot|katuwa|katua|mulle|hindue|sikhde|jaat\s*sala|marwadi\s*chor|gujju\s*chor|south\s*indian\s*idli|madarasi\s*idli|bihari\s*bhaiya\s*chor)\b/gi,
+  // Devanagari hate
+  /(साला\s*मुसला|साला\s*मुल्ला|कटुवा|कटुआ|भंगी|चमार|अछूत|नीच\s*जात|काली\s*कलूटी|कलूटा|हब्शी|चिंकी|हिंदू\s*स्कम|मुल्ले|गाय\s*मारने|बीफ\s*खाने)/g,
+  // Tamil hate
+  /(வடநாட்டான்\s*போ|பயல்\s*தமிழன்\s*அல்ல|துலுக்கன்|தீ\s*வைப்பேன்)/g,
+  // Telugu hate
+  /(ఆంధ్రోడు\s*పో|నీచ\s*జాతి|మ్లేచ్ఛుడు)/g,
+  // Bengali hate
+  /(মালু|মালুর\s*বাচ্চা|বিহারি\s*চোর|হিন্দু\s*স্কাম)/g,
+  // Calls for violence against groups
+  /\b(kill\s*all\s*(muslims|hindus|sikhs|christians|jews|gays|lesbians|trans|blacks|whites|indians|pakistanis|bangladeshis|chinese|tamils|brahmins|dalits))\b/gi,
+  /\b((muslims|hindus|sikhs|christians|jews|gays|lesbians|trans|blacks|whites|indians|pakistanis|bangladeshis|chinese|dalits|brahmins)\s*should\s*(die|be\s*killed|burn|hang|be\s*hanged|be\s*shot|leave))\b/gi,
+  /\b(go\s*back\s*to\s*(your\s*country|pakistan|bangladesh|africa|china))\b/gi,
+  // Dehumanizing language
+  /\b((muslims|hindus|jews|blacks|gays|trans|dalits)\s*are\s*(animals|dogs|pigs|vermin|cockroaches|rats|cancer))\b/gi,
+];
+
+// ========================================
 // CONTACT SHARING DETECTION
 // ========================================
 
