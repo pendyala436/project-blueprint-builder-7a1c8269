@@ -418,7 +418,7 @@ Effective: ${EFFECTIVE_DATE}
 
 1. ENCRYPTION
 • In transit: TLS 1.3 for all client-server traffic; DTLS-SRTP for media (audio/video calls).
-• At rest: AES-256 GCM for databases, KYC documents, and backups.
+• At rest: AES-256 GCM for databases and backups.
 • Passwords: hashed with bcrypt/argon2id + per-user salt.
 
 2. INFRASTRUCTURE
