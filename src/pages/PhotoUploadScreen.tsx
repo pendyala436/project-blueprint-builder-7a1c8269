@@ -69,25 +69,50 @@ const PhotoUploadScreen = () => {
   }, []);
 
   const handleAdditionalPhoto = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-      return;
-    }
+    return new Promise<boolean>((resolve) => {
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image`,
+          variant: "destructive",
+        });
+        return resolve(false);
+      }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 10MB",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is larger than 10MB`,
+          variant: "destructive",
+        });
+        return resolve(false);
+      }
 
-    if (additionalPhotos.length >= MAX_ADDITIONAL_PHOTOS) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setAdditionalPhotos(prev => {
+          if (prev.length >= MAX_ADDITIONAL_PHOTOS) {
+            toast({
+              title: "Maximum photos reached",
+              description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
+              variant: "destructive",
+            });
+            return prev;
+          }
+          return [...prev, dataUrl];
+        });
+        resolve(true);
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleAdditionalPhotos = useCallback(async (files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    const remaining = MAX_ADDITIONAL_PHOTOS - additionalPhotos.length;
+    if (remaining <= 0) {
       toast({
         title: "Maximum photos reached",
         description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
@@ -95,13 +120,17 @@ const PhotoUploadScreen = () => {
       });
       return;
     }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setAdditionalPhotos(prev => [...prev, e.target?.result as string]);
-    };
-    reader.readAsDataURL(file);
-  }, [additionalPhotos.length]);
+    const toProcess = fileArr.slice(0, remaining);
+    if (fileArr.length > remaining) {
+      toast({
+        title: "Some photos skipped",
+        description: `Only ${remaining} more photo(s) can be added`,
+      });
+    }
+    for (const file of toProcess) {
+      await handleAdditionalPhoto(file);
+    }
+  }, [additionalPhotos.length, handleAdditionalPhoto]);
 
   const removeAdditionalPhoto = (index: number) => {
     setAdditionalPhotos(prev => prev.filter((_, i) => i !== index));
