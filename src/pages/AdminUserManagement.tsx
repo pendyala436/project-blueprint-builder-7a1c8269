@@ -394,47 +394,31 @@ const AdminUserManagement = () => {
     }
     try {
       const userId = selectedUser.user_id;
-      // Clean up related tables
-      await Promise.allSettled([
-        supabase.from("user_languages").delete().eq("user_id", userId),
-        supabase.from("user_photos").delete().eq("user_id", userId),
-        supabase.from("user_consent").delete().eq("user_id", userId),
-        supabase.from("tutorial_progress").delete().eq("user_id", userId),
-        supabase.from("notifications").delete().eq("user_id", userId),
-        supabase.from("male_profiles").delete().eq("user_id", userId),
-        supabase.from("female_profiles").delete().eq("user_id", userId),
-        supabase.from("user_roles").delete().eq("user_id", userId),
-        supabase.from("user_friends").delete().eq("user_id", userId),
-        supabase.from("user_friends").delete().eq("friend_id", userId),
-        supabase.from("user_blocks").delete().eq("blocked_by", userId),
-        supabase.from("user_blocks").delete().eq("blocked_user_id", userId),
-        supabase.from("matches").delete().eq("user_id", userId),
-        supabase.from("matches").delete().eq("matched_user_id", userId),
-        supabase.from("ledger_transactions").delete().eq("user_id", userId),
-        supabase.from("wallets").delete().eq("user_id", userId),
-      ]);
 
-      const { error } = await supabase.from("profiles").delete().eq("id", selectedUser.id);
-      if (error) throw error;
-
-      // Delete the Supabase Auth user via edge function (requires service role)
-      const { error: authError } = await supabase.functions.invoke("admin-delete-user", {
+      // Full cleanup + auth deletion is done server-side with the service role
+      const { data, error: authError } = await supabase.functions.invoke("admin-delete-user", {
         body: { user_id: userId },
       });
       if (authError) {
-        console.error("Warning: Auth user deletion failed:", authError);
-        toast.warning("Profile deleted but auth account removal failed. The user may still be able to log in.");
-      } else {
-        toast.success("User fully deleted (profile + auth account)");
+        const msg = (authError as any)?.message || "Failed to delete user";
+        throw new Error(msg);
+      }
+      if (data?.cleanupErrors?.length) {
+        console.warn("Some cleanup steps failed:", data.cleanupErrors);
       }
 
-      setDeleteDialogOpen(false); fetchUsers(); loadStats();
+      toast.success("User fully deleted (profile + auth account)");
+      setDeleteDialogOpen(false);
+      fetchUsers();
+      loadStats();
     } catch (error: any) {
       console.error("Error deleting user:", error);
       const msg = error?.message || "Failed to delete user";
-      if (msg.includes("protected admin")) {
+      if (msg.toLowerCase().includes("protected admin")) {
         toast.error("Cannot delete protected admin account (admin1-15@meow-meow.com)");
-      } else { toast.error(msg); }
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
