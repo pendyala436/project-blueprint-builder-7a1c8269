@@ -141,6 +141,8 @@ const PhotoUploadScreen = () => {
 
     setVerificationState("verifying");
     setIsVerifying(true);
+    setGenderChanged(false);
+    setDetectedGender(null);
 
     try {
       const storedGender = sessionStorage.getItem("userGender");
@@ -152,17 +154,22 @@ const PhotoUploadScreen = () => {
 
       if (result.verified && result.hasFace) {
         const detected = result.detectedGender;
+        setDetectedGender(detected);
+
         if ((detected === "male" || detected === "female") && expectedGender !== detected) {
+          // Auto-correct the user's gender selection based on AI verification
           sessionStorage.setItem("userGender", detected);
+          setSelectedGender(detected);
+          setGenderChanged(true);
           toast({
-            title: "Gender updated",
-            description: `Your profile gender has been set to ${detected} based on AI detection`,
+            title: "Gender updated by AI",
+            description: `We detected ${detected}. Your profile gender has been changed from ${expectedGender ?? "unset"} to ${detected}.`,
           });
         }
 
         setVerificationState("verified");
         toast({
-          title: "Selfie verified! ✨",
+          title: "Selfie verified ✨",
           description: result.confidence && (detected === "male" || detected === "female")
             ? `Gender detected as ${detected} (${Math.round(result.confidence * 100)}% confidence)`
             : (result.reason || "Your photo has been verified"),
