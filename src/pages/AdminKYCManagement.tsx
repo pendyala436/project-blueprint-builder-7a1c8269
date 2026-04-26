@@ -160,7 +160,7 @@ const AdminKYCManagement = () => {
   const [selectedKYC, setSelectedKYC] = useState<KYCRecord | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [kycLoading, setKycLoading] = useState(false);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
 
   // FIX #6: Guard data fetching behind isAdmin check
@@ -171,13 +171,22 @@ const AdminKYCManagement = () => {
 
     const channel = supabase
       .channel('kyc-management-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, (payload: any) => {
         loadStats();
+        // Refresh the currently selected user's KYC if it changed
+        const changedUserId = (payload?.new as any)?.user_id || (payload?.old as any)?.user_id;
+        if (changedUserId && changedUserId === selectedUserId) {
+          loadKYCForUser(changedUserId);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' as any }, () => {
+        loadIndianWomen();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isAdmin, adminLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, adminLoading, selectedUserId]);
 
   useEffect(() => {
     filterWomen();
@@ -198,12 +207,13 @@ const AdminKYCManagement = () => {
   const loadIndianWomen = async () => {
     setLoading(true);
     try {
-      // Get all Indian women profiles
+      // Get all Indian women profiles (case-insensitive partial match on country)
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("user_id, full_name, country, primary_language, photo_url")
         .ilike("gender", "female")
-        .or("country.ilike.india,country.eq.IN,is_indian.eq.true");
+        .or("country.ilike.%india%,country.eq.IN,is_indian.eq.true")
+        .order("full_name", { ascending: true });
 
       if (error) throw error;
       setIndianWomen((profiles || []) as IndianWoman[]);
@@ -275,9 +285,6 @@ const AdminKYCManagement = () => {
     await loadKYCForUser(userId);
   };
 
-  const handleViewDetails = (kyc: KYCRecord) => {
-    setDetailDialogOpen(true);
-  };
 
   const handleApproveKYC = async () => {
     if (!selectedKYC) return;
@@ -286,6 +293,7 @@ const AdminKYCManagement = () => {
         .from("women_kyc")
         .update({
           verification_status: "approved",
+          rejection_reason: null,
           verified_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -293,14 +301,20 @@ const AdminKYCManagement = () => {
 
       if (error) throw error;
 
-      // Also update profile verification
-      await supabase
-        .from("profiles")
-        .update({ is_verified: true, updated_at: new Date().toISOString() })
-        .eq("user_id", selectedKYC.user_id);
+      // Also update profile verification (both profiles and female_profiles)
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ is_verified: true, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+        supabase
+          .from("female_profiles")
+          .update({ is_verified: true, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+      ]);
 
       toast.success("KYC approved successfully");
-      setSelectedKYC({ ...selectedKYC, verification_status: "approved" });
+      setSelectedKYC({ ...selectedKYC, verification_status: "approved", rejection_reason: null });
       loadStats();
     } catch (error) {
       console.error("Error approving KYC:", error);
@@ -329,6 +343,18 @@ const AdminKYCManagement = () => {
         .eq("id", selectedKYC.id);
 
       if (error) throw error;
+
+      // Revoke verified flag on profiles when KYC is rejected
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ is_verified: false, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+        supabase
+          .from("female_profiles")
+          .update({ is_verified: false, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+      ]);
 
       toast.success("KYC rejected");
       setSelectedKYC({ ...selectedKYC, verification_status: "rejected", rejection_reason: rejectionReason.trim() });
