@@ -707,6 +707,7 @@ export function usePrivateGroupCall({
       })
       .on('broadcast', { event: 'stream-ended' }, ({ payload }) => {
         if (!isOwner) {
+          setState(prev => ({ ...prev, hostStatus: 'left' }));
           toast.info(payload.refunded ? 'Host ended the call. Unused balance refunded.' : 'The call has ended.');
           cleanup();
           onSessionEnd?.(payload.refunded);
