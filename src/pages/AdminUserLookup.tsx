@@ -113,6 +113,7 @@ const AdminUserLookup = () => {
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [kycData, setKycData] = useState<KYCRecord | null>(null);
+  const [kycSignedUrls, setKycSignedUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [genderFilter, setGenderFilter] = useState<string>("all");
