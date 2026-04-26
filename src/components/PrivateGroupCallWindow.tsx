@@ -608,6 +608,22 @@ export function PrivateGroupCallWindow({
                   <Radio className="h-2.5 w-2.5 animate-pulse" /> LIVE
                 </Badge>
               )}
+              {hostStatus && hostStatus !== 'live' && (
+                <Badge
+                  className={`text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0 ${
+                    hostStatus === 'away' ? 'bg-amber-500 text-black' :
+                    hostStatus === 'muted' ? 'bg-slate-600 text-white' :
+                    hostStatus === 'camera-off' ? 'bg-slate-700 text-white' :
+                    'bg-red-600 text-white'
+                  }`}
+                  title={`Host is ${hostStatus.replace('-', ' ')}`}
+                >
+                  {hostStatus === 'away' && 'Host away'}
+                  {hostStatus === 'muted' && 'Host muted'}
+                  {hostStatus === 'camera-off' && 'Camera off'}
+                  {hostStatus === 'left' && 'Host left'}
+                </Badge>
+              )}
               <span className="text-white/70 text-[11px] flex items-center gap-0.5">
                 <Users className="h-3 w-3" /> {viewerCount}
               </span>
