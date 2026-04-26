@@ -245,17 +245,26 @@ const AdminMessaging = () => {
       .order('created_at', { ascending: false })
       .limit(100);
 
-    if (!error && data) setMessages(data as Message[]);
+    if (error) {
+      console.error('[AdminMessaging] broadcast fetch failed:', error);
+      toast.error('Failed to load broadcasts', { description: error.message });
+      return;
+    }
+    if (data) setMessages(data as Message[]);
   };
 
   const fetchChatMessages = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('admin_user_messages')
       .select('*')
       .eq('target_user_id', userId)
       .order('created_at', { ascending: true })
       .limit(200);
 
+    if (error) {
+      console.error('[AdminMessaging] chat fetch failed:', error);
+      return;
+    }
     if (data) setChatMessages(data as Message[]);
   };
 
