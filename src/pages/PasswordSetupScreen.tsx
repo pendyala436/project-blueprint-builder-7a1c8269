@@ -91,21 +91,21 @@ const PasswordSetupScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-6 pb-32 overflow-y-auto relative z-10">
-        <div className="text-center mb-4 animate-fade-in">
-          <MeowLogo size="sm" className="mx-auto mb-3" />
-          <h1 className="font-display text-2xl font-bold text-foreground mb-1">
+      <main className="flex-1 flex flex-col items-center px-6 pb-28 overflow-y-auto relative z-10">
+        <div className="text-center mb-3 animate-fade-in">
+          <MeowLogo size="sm" className="mx-auto mb-2" />
+          <h1 className="font-display text-xl font-bold text-foreground mb-0.5">
             Create Your Password
           </h1>
-          <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+          <p className="text-muted-foreground text-xs max-w-xs mx-auto">
             Secure your account with a strong password
           </p>
         </div>
 
-        <Card className="w-full max-w-sm p-5 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
-          <div className="space-y-4">
+        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+          <div className="space-y-3">
             {/* Password Field */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Lock className="w-4 h-4 text-primary" />
                 Password
@@ -118,7 +118,7 @@ const PasswordSetupScreen = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
                   className={cn(
-                    "h-12 pr-10 rounded-xl border-2 transition-all",
+                    "h-11 pr-10 rounded-xl border-2 transition-all",
                     touched.password && !allRequirementsMet
                       ? "border-destructive focus:border-destructive"
                       : "border-input focus:border-primary"
@@ -134,27 +134,26 @@ const PasswordSetupScreen = () => {
               </div>
             </div>
 
-            {/* Password Requirements */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground">Password must have:</p>
-              <div className="space-y-1">
+            {/* Password Requirements - compact grid */}
+            {password.length > 0 && !allRequirementsMet && (
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
                 {passwordRequirements.map((req, index) => {
                   const met = req.test(password);
                   return (
                     <div
                       key={index}
                       className={cn(
-                        "flex items-center gap-2 text-xs transition-all duration-200",
+                        "flex items-center gap-1 text-[10px] transition-all duration-200",
                         met ? "text-success" : "text-muted-foreground"
                       )}
                     >
-                      {met ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                      {req.label}
+                      {met ? <Check className="h-3 w-3 shrink-0" /> : <X className="h-3 w-3 shrink-0" />}
+                      <span className="truncate">{req.label}</span>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            )}
 
             {/* Confirm Password Field */}
             <div className="space-y-2">
