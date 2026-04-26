@@ -684,6 +684,7 @@ export function usePrivateGroupCall({
         // and we did NOT receive an explicit `stream-ended` broadcast, every
         // participant should be auto-disconnected from the call.
         if (leaverWasHost && !isOwner) {
+          setState(prev => ({ ...prev, hostStatus: 'left' }));
           toast.info('Host disconnected. The call has ended.');
           cleanup();
           onSessionEnd?.(true); // refund unused balance
