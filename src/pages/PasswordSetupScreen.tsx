@@ -156,7 +156,7 @@ const PasswordSetupScreen = () => {
             )}
 
             {/* Confirm Password Field */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Lock className="w-4 h-4 text-primary" />
                 Confirm Password
@@ -164,15 +164,17 @@ const PasswordSetupScreen = () => {
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
+                  placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   onBlur={() => setTouched((prev) => ({ ...prev, confirm: true }))}
                   className={cn(
-                    "h-12 pr-10 rounded-xl border-2 transition-all",
+                    "h-11 pr-10 rounded-xl border-2 transition-all",
                     touched.confirm && !passwordsMatch && confirmPassword.length > 0
                       ? "border-destructive focus:border-destructive"
-                      : "border-input focus:border-primary"
+                      : passwordsMatch
+                        ? "border-success focus:border-success"
+                        : "border-input focus:border-primary"
                   )}
                 />
                 <button
@@ -204,15 +206,6 @@ const PasswordSetupScreen = () => {
                 </p>
               )}
             </div>
-
-            {/* Inline Submit Button (always inside the card too) */}
-            <Button
-              onClick={handleSubmit}
-              disabled={!isValid}
-              className="w-full h-12 rounded-xl font-semibold text-base gap-2"
-            >
-              Continue to Terms
-            </Button>
           </div>
         </Card>
 
