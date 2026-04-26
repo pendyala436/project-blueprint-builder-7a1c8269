@@ -1528,7 +1528,7 @@ serve(async (req) => {
           .from("active_chat_sessions")
           .update({
             total_minutes: newTotalMinutes,
-            total_earned: newTotalEarned
+            total_earned: session.total_earned + womenEarnings
           })
           .eq("chat_id", chat_id);
 
