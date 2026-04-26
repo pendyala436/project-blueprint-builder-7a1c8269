@@ -1525,7 +1525,7 @@ const WomenDashboardScreen = () => {
             <p className="text-xs text-muted-foreground">Wallet Balance</p>
             <p className="text-2xl font-bold text-primary">{formatLocalCurrency(myWalletBalance)}</p>
           </div>
-          <Button variant="outline" size="sm" className="gap-1 text-primary border-primary/30" onClick={(e) => { e.stopPropagation(); navigate("/women-wallet"); }}>
+          <Button variant="outline" size="sm" disabled aria-disabled="true" className="gap-1 text-primary border-primary/30 opacity-50 cursor-not-allowed" onClick={(e) => e.stopPropagation()}>
             <IndianRupee className="w-3.5 h-3.5" />Withdraw
           </Button>
         </div>
