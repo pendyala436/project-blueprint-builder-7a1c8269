@@ -643,7 +643,7 @@ Profile photos, display names, bio, chat messages, group names, call behaviour (
 Tiered enforcement based on severity, history, and intent:
 (i) Warning + content removal,
 (ii) Temporary suspension (24 h – 30 days),
-(iii) Permanent ban + forfeiture of balance/earnings,
+(iii) Permanent ban + forfeiture of wallet balance and virtual coins,
 (iv) Shadow-restriction of visibility,
 (v) Law-enforcement referral (CSAM, threats, fraud, trafficking).
 
