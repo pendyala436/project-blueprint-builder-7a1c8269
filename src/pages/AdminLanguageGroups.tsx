@@ -65,7 +65,8 @@ const AdminLanguageGroups = () => {
       const { data, error } = await supabase
         .from("language_groups")
         .select("*")
-        .order("priority", { ascending: true });
+        .order("priority", { ascending: true })
+        .order("name", { ascending: true });
 
       if (error) throw error;
       setGroups(data || []);
@@ -89,12 +90,25 @@ const AdminLanguageGroups = () => {
 
   const getLanguageName = (code: string) => {
     const lang = languages.find((l) => l.code === code);
-    return lang ? lang.name : code;
+    if (lang) return lang.name;
+    // Handle regional variants like en-US, hi-IN, ur-PK
+    if (code.includes("-")) {
+      const [base, region] = code.split("-");
+      const baseLang = languages.find((l) => l.code === base);
+      if (baseLang) return `${baseLang.name} (${region.toUpperCase()})`;
+    }
+    return code;
   };
 
   const getLanguageNativeName = (code: string) => {
     const lang = languages.find((l) => l.code === code);
-    return lang ? lang.nativeName : code;
+    if (lang) return lang.nativeName;
+    if (code.includes("-")) {
+      const [base] = code.split("-");
+      const baseLang = languages.find((l) => l.code === base);
+      if (baseLang) return baseLang.nativeName;
+    }
+    return code;
   };
 
   const filteredGroups = groups.filter((group) => {
@@ -108,7 +122,26 @@ const AdminLanguageGroups = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const filteredLanguages = languages.filter(
+  // Build a merged list of available languages: base list + any codes already
+  // present in saved groups or in the current form (e.g., regional variants
+  // like en-US, hi-IN that aren't in the base list).
+  const extraCodes = Array.from(
+    new Set([
+      ...groups.flatMap((g) => g.languages),
+      ...formLanguages,
+    ])
+  ).filter((code) => !languages.some((l) => l.code === code));
+
+  const allLanguages = [
+    ...languages,
+    ...extraCodes.map((code) => ({
+      code,
+      name: getLanguageName(code),
+      nativeName: getLanguageNativeName(code),
+    })),
+  ];
+
+  const filteredLanguages = allLanguages.filter(
     (lang) =>
       lang.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
       lang.nativeName.toLowerCase().includes(languageSearch.toLowerCase()) ||
@@ -505,7 +538,7 @@ const AdminLanguageGroups = () => {
               {/* Available Languages */}
               <ScrollArea className="h-48 border rounded-lg">
                 <div className="p-2 grid grid-cols-2 gap-1">
-                  {filteredLanguages.slice(0, 100).map((lang) => (
+                  {(languageSearch ? filteredLanguages : filteredLanguages.slice(0, 100)).map((lang) => (
                     <button
                       key={lang.code}
                       type="button"
