@@ -46,8 +46,10 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [dynamicLabels, setDynamicLabels] = useState(DEFAULT_LABELS);
+  const [moderationWarning, setModerationWarning] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const warningTimeoutRef = useRef<NodeJS.Timeout>();
 
   const langNorm = (userLanguage || 'english').toLowerCase().trim();
   const isNonEnglish = langNorm !== 'english';
