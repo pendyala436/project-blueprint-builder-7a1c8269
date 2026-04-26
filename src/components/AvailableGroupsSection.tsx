@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFlowerImage } from '@/assets/flowers';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -251,8 +252,15 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
               >
                 {/* Avatar with live ring */}
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-primary/10 ring-2 ring-accent">
-                    {FLOWER_EMOJIS[row.group.name] || '🌸'}
+                  <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-accent bg-muted">
+                    <img
+                      src={getFlowerImage(row.group.name)}
+                      alt={row.group.name}
+                      width={44}
+                      height={44}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center">
                     <Radio className="h-2 w-2 text-accent-foreground animate-pulse" />
