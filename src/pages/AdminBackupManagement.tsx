@@ -439,12 +439,13 @@ const AdminBackupManagement = () => {
                           )}
                         </div>
                       </div>
-                      {backup.status === "completed" && (
+                      {backup.status === "completed" && backup.storage_path && (
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="text-muted-foreground hover:text-foreground"
                           onClick={() => handleDownloadBackup(backup)}
+                          title="Download backup file"
                         >
                           <Download className="w-4 h-4" />
                         </Button>
