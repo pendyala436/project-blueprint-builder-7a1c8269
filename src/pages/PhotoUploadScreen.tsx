@@ -260,6 +260,8 @@ const PhotoUploadScreen = () => {
     setSelfiePreview(null);
     setVerificationState("idle");
     setVerificationResult(null);
+    setDetectedGender(null);
+    setGenderChanged(false);
   };
 
   return (
