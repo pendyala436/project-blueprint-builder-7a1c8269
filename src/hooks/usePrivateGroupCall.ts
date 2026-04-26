@@ -775,6 +775,12 @@ export function usePrivateGroupCall({
             }));
           }
         }
+      })
+      .on('broadcast', { event: 'host-status' }, ({ payload }) => {
+        // Participants update their view of the host's current status
+        if (!isOwner && payload?.status) {
+          setState(prev => ({ ...prev, hostStatus: payload.status as HostStatus }));
+        }
       });
 
     channel.subscribe(async (status) => {
