@@ -74,8 +74,8 @@ const PasswordSetupScreen = () => {
       </Suspense>
 
       {/* Header */}
-      <header className="px-6 pt-8 pb-4 relative z-10">
-        <div className="flex items-center gap-4 mb-4">
+      <header className="px-6 pt-4 pb-2 relative z-10">
+        <div className="flex items-center gap-4 mb-2">
           <Button
             variant="ghost"
             size="icon"
