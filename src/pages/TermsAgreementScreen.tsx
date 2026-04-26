@@ -557,7 +557,7 @@ Use the in-app Report button or email report@meowmeow.app. Reports are reviewed 
     content: `MEOW MEOW — ANTI-SEXUAL CONTENT & CHILD-SAFETY POLICY
 Effective: ${EFFECTIVE_DATE}
 
-ZERO TOLERANCE — sending, soliciting, or hinting at any of the following results in IMMEDIATE permanent ban, forfeiture of wallet/earnings, and reporting to authorities:
+ZERO TOLERANCE — sending, soliciting, or hinting at any of the following results in IMMEDIATE permanent ban, forfeiture of wallet balance and virtual coins, and reporting to authorities:
 • Erotic chat, sexual roleplay, sexting, "dirty talk".
 • Nudity, semi-nudity, sexual imagery.
 • Pornographic, obscene, or vulgar language.
