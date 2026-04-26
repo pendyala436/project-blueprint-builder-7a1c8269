@@ -148,14 +148,17 @@ export async function getStatement(userId: string, fromDate?: string, toDate?: s
 
 // ──────────── Payout ────────────
 
-/** Trigger payout snapshot (admin only) */
-export async function triggerPayoutSnapshot(snapshotType: 'mid_month' | 'end_month'): Promise<{ success: boolean; count?: number; error?: string }> {
-  const { data, error } = await supabase.rpc('capture_payout_snapshot', {
-    p_snapshot_type: snapshotType,
-  });
+/** Trigger an on-demand payout snapshot (admin only) — captures all women's
+ *  current wallet balance + Bank KYC details at the moment of click. */
+export async function generatePayoutSnapshot(): Promise<{ success: boolean; count?: number; skipped?: number; error?: string }> {
+  const { data, error } = await supabase.rpc('generate_payout_snapshot_now');
   if (error) return { success: false, error: error.message };
   const result = data as Record<string, unknown>;
-  return { success: Boolean(result?.success), count: Number(result?.women_processed) || 0 };
+  return {
+    success: Boolean(result?.success),
+    count: Number(result?.women_processed) || 0,
+    skipped: Number(result?.women_skipped_no_kyc) || 0,
+  };
 }
 
 /** Get payout snapshots */

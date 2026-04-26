@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet } from 'lucide-react';
-import { triggerPayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
+import { generatePayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -70,11 +70,12 @@ const AdminPayoutStatements = () => {
     setIsLoading(false);
   };
 
-  const handleGenerate = async (type: 'mid_month' | 'end_month') => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    const result = await triggerPayoutSnapshot(type);
+    const result = await generatePayoutSnapshot();
     if (result.success) {
-      toast({ title: 'Payout Generated', description: `${result.count} women processed.` });
+      const skipMsg = result.skipped ? ` • ${result.skipped} skipped (no KYC)` : '';
+      toast({ title: 'Payout Generated', description: `${result.count} women processed${skipMsg}.` });
       loadRecords();
     } else {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
@@ -231,17 +232,15 @@ const AdminPayoutStatements = () => {
           </Card>
         </div>
 
-        {/* Generate Buttons */}
+        {/* Generate Button — captures all women's current wallet balance + Bank KYC */}
         <Card className="p-4 flex flex-wrap gap-3 items-center">
           <Calendar className="w-5 h-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Generate Payout:</span>
-          <Button size="sm" onClick={() => handleGenerate('mid_month')} disabled={isGenerating}>
-            {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-            Mid Month (16th)
-          </Button>
-          <Button size="sm" onClick={() => handleGenerate('end_month')} disabled={isGenerating}>
-            {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-            End Month (1st)
+          <span className="text-sm text-muted-foreground">
+            Generate a payout snapshot for all eligible women (closing wallet balance at this moment, sourced from Bank KYC):
+          </span>
+          <Button size="sm" onClick={handleGenerate} disabled={isGenerating}>
+            {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+            Generate Now
           </Button>
         </Card>
 
