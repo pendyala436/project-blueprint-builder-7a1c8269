@@ -113,22 +113,47 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   }, []);
 
 
+  const showWarning = useCallback((reason: string) => {
+    setModerationWarning(reason);
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+    warningTimeoutRef.current = setTimeout(() => setModerationWarning(null), 4000);
+  }, []);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length > maxLength) return;
     setMessage(value);
     onInputChange?.(value);
 
+    // Live moderation as user types — clears warning when text becomes safe
+    if (value.trim().length > 2) {
+      const result = moderateMessage(value);
+      if (result.isBlocked) {
+        setModerationWarning(result.reason || 'Prohibited content detected.');
+      } else if (moderationWarning) {
+        setModerationWarning(null);
+      }
+    } else if (moderationWarning) {
+      setModerationWarning(null);
+    }
+
     if (onTyping) {
       onTyping(value.length > 0);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => onTyping(false), 2000);
     }
-  }, [onTyping, onInputChange, maxLength]);
+  }, [onTyping, onInputChange, maxLength, moderationWarning]);
 
   const handleSend = useCallback(async () => {
     const text = message.trim().replace(/<[^>]*>/g, "");
     if (!text || disabled || isSending) return;
+
+    // Final moderation gate — block send entirely with red warning
+    const moderation = moderateMessage(text);
+    if (moderation.isBlocked) {
+      showWarning(moderation.reason || 'Message contains prohibited content and was not sent.');
+      return;
+    }
 
     if (!chatRateLimiter.canProceed()) {
       return;
@@ -137,13 +162,14 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
     setIsSending(true);
     try {
       setMessage('');
+      setModerationWarning(null);
       onTyping?.(false);
       textareaRef.current?.focus();
       await onSendMessage(text);
     } finally {
       setIsSending(false);
     }
-  }, [message, disabled, isSending, onSendMessage, onTyping]);
+  }, [message, disabled, isSending, onSendMessage, onTyping, showWarning]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -155,6 +181,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     };
   }, []);
 
