@@ -691,7 +691,7 @@ USED FOR
 
 NOT USED FOR
 • Final permanent-ban decisions without human review.
-• Final payout approval/rejection without human review.
+• Final virtual-coin grant or revocation without human review where significant.
 • Profiling for advertising, political, or insurance pricing purposes.
 • Sale of biometric or behavioural data to third parties.
 
