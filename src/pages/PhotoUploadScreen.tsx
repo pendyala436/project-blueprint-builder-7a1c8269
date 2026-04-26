@@ -30,13 +30,20 @@ const PhotoUploadScreen = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [selectedGender, setSelectedGender] = useState<"male" | "female" | null>(null);
+  const [detectedGender, setDetectedGender] = useState<"male" | "female" | "unknown" | null>(null);
+  const [genderChanged, setGenderChanged] = useState(false);
 
-  // Restore previously captured selfie if user returns to this step
+  // Restore previously captured selfie + read selected gender from registration
   useEffect(() => {
     const existing = sessionStorage.getItem("pendingPhotoData");
     if (existing) {
       setSelfiePreview(existing);
       setVerificationState("verified");
+    }
+    const storedGender = sessionStorage.getItem("userGender");
+    if (storedGender === "male" || storedGender === "female") {
+      setSelectedGender(storedGender);
     }
   }, []);
 
@@ -134,6 +141,8 @@ const PhotoUploadScreen = () => {
 
     setVerificationState("verifying");
     setIsVerifying(true);
+    setGenderChanged(false);
+    setDetectedGender(null);
 
     try {
       const storedGender = sessionStorage.getItem("userGender");
@@ -145,17 +154,22 @@ const PhotoUploadScreen = () => {
 
       if (result.verified && result.hasFace) {
         const detected = result.detectedGender;
+        setDetectedGender(detected);
+
         if ((detected === "male" || detected === "female") && expectedGender !== detected) {
+          // Auto-correct the user's gender selection based on AI verification
           sessionStorage.setItem("userGender", detected);
+          setSelectedGender(detected);
+          setGenderChanged(true);
           toast({
-            title: "Gender updated",
-            description: `Your profile gender has been set to ${detected} based on AI detection`,
+            title: "Gender updated by AI",
+            description: `We detected ${detected}. Your profile gender has been changed from ${expectedGender ?? "unset"} to ${detected}.`,
           });
         }
 
         setVerificationState("verified");
         toast({
-          title: "Selfie verified! ✨",
+          title: "Selfie verified ✨",
           description: result.confidence && (detected === "male" || detected === "female")
             ? `Gender detected as ${detected} (${Math.round(result.confidence * 100)}% confidence)`
             : (result.reason || "Your photo has been verified"),
@@ -246,6 +260,8 @@ const PhotoUploadScreen = () => {
     setSelfiePreview(null);
     setVerificationState("idle");
     setVerificationResult(null);
+    setDetectedGender(null);
+    setGenderChanged(false);
   };
 
   return (
@@ -321,6 +337,33 @@ const PhotoUploadScreen = () => {
               </span>
             )}
           </div>
+
+          {/* Gender info: selected vs AI-detected */}
+          {(selectedGender || detectedGender) && (
+            <div className={`
+              mb-3 p-2.5 rounded-lg text-xs flex items-center justify-between gap-2 flex-wrap
+              ${genderChanged
+                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                : "bg-muted/50 text-muted-foreground border border-border"
+              }
+            `}>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Selected:</span>
+                <span className="capitalize">{selectedGender ?? "—"}</span>
+              </div>
+              {detectedGender && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">AI detected:</span>
+                  <span className="capitalize">{detectedGender}</span>
+                </div>
+              )}
+              {genderChanged && (
+                <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-amber-500/20">
+                  Auto-updated
+                </span>
+              )}
+            </div>
+          )}
 
           {!selfiePreview ? (
             <Button
