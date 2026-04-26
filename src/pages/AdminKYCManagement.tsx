@@ -704,6 +704,7 @@ const AdminKYCManagement = () => {
                   )}
                 </div>
               )}
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
