@@ -51,7 +51,11 @@ const AdminBackupManagement = () => {
   const fetchBackupsCb = useCallback(() => { fetchBackups(); }, []);
 
   useEffect(() => {
-    fetchBackups();
+    // Mark any backups stuck in 'in_progress' for >30min as failed, then load
+    (async () => {
+      try { await supabase.rpc('mark_stalled_backups'); } catch (e) { /* non-fatal */ }
+      fetchBackups();
+    })();
   }, []);
 
   // Real-time subscription using standardized hook
@@ -80,9 +84,13 @@ const AdminBackupManagement = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchBackups();
-    setRefreshing(false);
-    toast.success("Refreshed", { description: "Backup list updated" });
+    try {
+      await supabase.rpc('mark_stalled_backups').then(() => {}).catch(() => {});
+      await fetchBackups();
+      toast.success("Refreshed", { description: "Backup list updated" });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const triggerManualBackup = async () => {
