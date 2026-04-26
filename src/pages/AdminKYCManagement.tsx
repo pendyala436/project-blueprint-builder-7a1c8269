@@ -171,13 +171,22 @@ const AdminKYCManagement = () => {
 
     const channel = supabase
       .channel('kyc-management-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_kyc' as any }, (payload: any) => {
         loadStats();
+        // Refresh the currently selected user's KYC if it changed
+        const changedUserId = (payload?.new as any)?.user_id || (payload?.old as any)?.user_id;
+        if (changedUserId && changedUserId === selectedUserId) {
+          loadKYCForUser(changedUserId);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' as any }, () => {
+        loadIndianWomen();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isAdmin, adminLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, adminLoading, selectedUserId]);
 
   useEffect(() => {
     filterWomen();
