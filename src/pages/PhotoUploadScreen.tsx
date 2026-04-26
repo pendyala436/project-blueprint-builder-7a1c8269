@@ -34,12 +34,16 @@ const PhotoUploadScreen = () => {
   const [detectedGender, setDetectedGender] = useState<"male" | "female" | "unknown" | null>(null);
   const [genderChanged, setGenderChanged] = useState(false);
 
-  // Restore previously captured selfie if user returns to this step
+  // Restore previously captured selfie + read selected gender from registration
   useEffect(() => {
     const existing = sessionStorage.getItem("pendingPhotoData");
     if (existing) {
       setSelfiePreview(existing);
       setVerificationState("verified");
+    }
+    const storedGender = sessionStorage.getItem("userGender");
+    if (storedGender === "male" || storedGender === "female") {
+      setSelectedGender(storedGender);
     }
   }, []);
 
