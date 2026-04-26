@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, Video, Radio, Loader2, RefreshCw, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFlowerImage } from '@/assets/flowers';
 import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 
@@ -29,17 +30,6 @@ interface LiveHostRow {
 interface AvailableGroupsSectionProps {
   currentUserId: string; userName: string; userPhoto: string | null;
 }
-
-const FLOWER_EMOJIS: Record<string, string> = {
-  Rose: '🌹', Lily: '🌸', Jasmine: '🌼', Orchid: '🌺', Sunflower: '🌻',
-  Tulip: '🌷', Lotus: '🪷', Daisy: '🌼', Lavender: '💜', Marigold: '🏵️',
-  Hibiscus: '🌺', Magnolia: '🌷', Peony: '🌸', Camellia: '🌼', Iris: '🪻',
-  Poppy: '🌺', Bluebell: '🔔', Carnation: '🌷', Chrysanthemum: '🌼', Dahlia: '🌸',
-  Freesia: '🌼', Gardenia: '🤍', Geranium: '🌷', Hyacinth: '💐', Petunia: '🌸',
-  Primrose: '🌼', Rhododendron: '🌺', Snowdrop: '❄️', Verbena: '💜', Violet: '🟣',
-  Zinnia: '🌻', Anemone: '🌸', Azalea: '🌺', Begonia: '🌷', Buttercup: '🌼',
-  Clematis: '💜', Cosmos: '🌸', Dandelion: '🌼', Foxglove: '🌷', Heather: '💜',
-};
 
 const MIN_BALANCE_MINUTES = 5;
 const RATE_PER_MINUTE = 4;
@@ -251,8 +241,15 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
               >
                 {/* Avatar with live ring */}
                 <div className="relative shrink-0">
-                  <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl bg-primary/10 ring-2 ring-accent">
-                    {FLOWER_EMOJIS[row.group.name] || '🌸'}
+                  <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-accent bg-muted">
+                    <img
+                      src={getFlowerImage(row.group.name)}
+                      alt={row.group.name}
+                      width={44}
+                      height={44}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-accent rounded-full flex items-center justify-center">
                     <Radio className="h-2 w-2 text-accent-foreground animate-pulse" />
