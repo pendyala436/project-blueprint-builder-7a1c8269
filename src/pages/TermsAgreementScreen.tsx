@@ -107,7 +107,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
 
 (d) HARASSMENT, STALKING & ABUSE — No threats, intimidation, defamation, doxxing, blackmail, sextortion, repeated unwanted contact after block, image-based abuse ("revenge porn"), or coordinated brigading. Covered by BNS §§78 (stalking), §79 (insult to modesty), §351 (criminal intimidation), §356 (defamation); IT Act §66E; and equivalents abroad.
 
-(e) PRIVACY & CONTACT-SHARING — Do not solicit, exchange, or share personal contact details (phone, WhatsApp, Telegram, Instagram, Snapchat, email, postal address, social handles) or external payment apps (UPI, Paytm, PhonePe, GPay, bank account). All chat, audio, video, and group conversations must remain inside the App.
+(e) PRIVACY & CONTACT-SHARING — Do not solicit, exchange, or share personal contact details (phone, Telegram, Instagram, Snapchat, email, postal address, social handles) or external payment apps (UPI, Paytm, PhonePe, GPay, bank account). All chat, audio, video, and group conversations must remain inside the App.
 
 (f) FRAUD & SCAMS — No romance scams, advance-fee fraud, investment / crypto / "lottery" / fake-emergency / "pig-butchering" scams, catfishing, impersonation, or coordinated inauthentic behaviour. Punishable under BNS §§316, 318 (cheating), §319 (cheating by personation), IT Act §66C/§66D, and global fraud statutes.
 
