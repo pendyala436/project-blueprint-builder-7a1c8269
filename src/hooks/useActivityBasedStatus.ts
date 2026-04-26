@@ -83,6 +83,13 @@ export const useActivityBasedStatus = ({
   useEffect(() => {
     if (!userId) return;
 
+    // Force initial DB sync to online on mount (local state defaults to true,
+    // so goOnline() would otherwise skip the DB write and leave a stale offline row).
+    if (!isManuallyOffline) {
+      lastDbUpdateRef.current = 0;
+      updateOnlineStatus(true);
+    }
+
     resetInactivityTimer();
 
     const unsubscribe = subscribe(() => {
