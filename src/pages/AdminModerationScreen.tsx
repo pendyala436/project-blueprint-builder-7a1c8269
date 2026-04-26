@@ -160,6 +160,8 @@ const AdminModerationScreen = () => {
   const [warningMessage, setWarningMessage] = useState('');
   const [blockType, setBlockType] = useState('temporary');
   const [targetUserId, setTargetUserId] = useState('');
+  // When warn/block is triggered from a report, remember it so we can auto-resolve
+  const [sourceReportId, setSourceReportId] = useState<string | null>(null);
 
   /**
    * useEffect: Load Data and Setup Realtime
@@ -173,61 +175,72 @@ const AdminModerationScreen = () => {
     
     // ============= REALTIME SUBSCRIPTIONS =============
     
-    // Subscribe to new/updated reports
     const reportsChannel = supabase
       .channel('moderation-reports')
       .on('postgres_changes', {
-        event: '*',  // All events (INSERT, UPDATE, DELETE)
+        event: '*',
         schema: 'public',
         table: 'moderation_reports'
       }, () => {
-        loadReports(); // Reload reports on any change
+        loadReports();
       })
       .subscribe();
 
-    // Subscribe to flagged message updates
     const messagesChannel = supabase
       .channel('flagged-messages')
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'chat_messages',
         filter: 'flagged=eq.true'
       }, () => {
-        loadFlaggedMessages(); // Reload flagged messages
+        loadFlaggedMessages();
       })
       .subscribe();
 
-    // Cleanup subscriptions on unmount
+    const blocksChannel = supabase
+      .channel('user-blocks-mod')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_blocks'
+      }, () => {
+        loadBlockedUsers();
+      })
+      .subscribe();
+
+    const warningsChannel = supabase
+      .channel('user-warnings-mod')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_warnings'
+      }, () => {
+        // No list shown, but keeps profile cache fresh on new warnings
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(reportsChannel);
       supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(blocksChannel);
+      supabase.removeChannel(warningsChannel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * loadData Function
-   * 
-   * Loads all moderation data in parallel.
-   */
-  // FIX #37: Wrap loadData in useCallback
   const loadData = useCallback(async () => {
     setLoading(true);
     await Promise.all([loadReports(), loadFlaggedMessages(), loadBlockedUsers()]);
     setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * loadReports Function
-   * 
-   * Fetches all moderation reports from database.
-   * Also loads profiles for reporter and reported users.
-   */
   const loadReports = async () => {
     const { data, error } = await supabase
       .from('moderation_reports')
       .select('*')
-      .order('created_at', { ascending: false }); // Newest first
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading reports:', error);
@@ -237,7 +250,6 @@ const AdminModerationScreen = () => {
 
     setReports(data || []);
     
-    // Collect user IDs for profile lookup
     const userIds = new Set<string>();
     data?.forEach(r => {
       userIds.add(r.reporter_id);
@@ -246,18 +258,13 @@ const AdminModerationScreen = () => {
     await loadProfiles(Array.from(userIds));
   };
 
-  /**
-   * loadFlaggedMessages Function
-   * 
-   * Fetches chat messages marked as flagged.
-   */
   const loadFlaggedMessages = async () => {
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('flagged', true)  // Only flagged messages
+      .eq('flagged', true)
       .order('created_at', { ascending: false })
-      .limit(100);  // Limit for performance
+      .limit(100);
 
     if (error) {
       console.error('Error loading flagged messages:', error);
@@ -267,7 +274,6 @@ const AdminModerationScreen = () => {
 
     setFlaggedMessages(data || []);
     
-    // Load profiles for senders and receivers
     const userIds = new Set<string>();
     data?.forEach(m => {
       userIds.add(m.sender_id);
@@ -276,15 +282,13 @@ const AdminModerationScreen = () => {
     await loadProfiles(Array.from(userIds));
   };
 
-  /**
-   * loadBlockedUsers Function
-   * 
-   * Fetches all currently blocked users.
-   */
   const loadBlockedUsers = async () => {
+    // Filter out expired temporary blocks at the query level
+    const nowIso = new Date().toISOString();
     const { data, error } = await supabase
       .from('user_blocks')
       .select('*')
+      .or(`block_type.eq.permanent,expires_at.is.null,expires_at.gt.${nowIso}`)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -295,18 +299,13 @@ const AdminModerationScreen = () => {
 
     setBlockedUsers(data || []);
     
-    // Load profiles for blocked users
     const userIds = data?.map(b => b.blocked_user_id) || [];
     await loadProfiles(userIds);
   };
 
   /**
-   * loadProfiles Function
-   * 
-   * Batch loads user profiles for display names.
-   * Updates profile cache Map.
-   * 
-   * @param userIds - Array of user UUIDs to load
+   * loadProfiles — uses functional state update to avoid stale closure
+   * when called from parallel loaders.
    */
   const loadProfiles = async (userIds: string[]) => {
     if (userIds.length === 0) return;
@@ -318,14 +317,14 @@ const AdminModerationScreen = () => {
 
     if (error) {
       console.error('Error loading profiles:', error);
-      toast.error('Profiles unavailable', { description: 'Unable to load profiles. Please refresh.' });
       return;
     }
 
-    // Add to existing profile cache
-    const newProfiles = new Map(profiles);
-    data?.forEach(p => newProfiles.set(p.user_id, p));
-    setProfiles(newProfiles);
+    setProfiles(prev => {
+      const next = new Map(prev);
+      data?.forEach(p => next.set(p.user_id, p));
+      return next;
+    });
   };
 
   /**
@@ -386,44 +385,55 @@ const AdminModerationScreen = () => {
    * Temporary blocks expire after 7 days.
    */
   const handleBlockUser = async () => {
-    if (!targetUserId) return;
+    if (!targetUserId) {
+      toast.error('No user selected');
+      return;
+    }
     
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     
-    // Insert block record
     const { error } = await supabase
       .from('user_blocks')
       .insert({
         blocked_user_id: targetUserId,
         blocked_by: user?.id,
-        reason: actionReason,
+        reason: actionReason || null,
         block_type: blockType,
-        // Set expiry for temporary blocks (7 days)
         expires_at: blockType === 'temporary' 
           ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() 
           : null
       });
 
     if (error) {
-      toast.error('Failed to block user');
+      console.error('Block user error:', error);
+      toast.error('Failed to block user', { description: error.message });
       return;
+    }
+
+    // Auto-resolve the source report if blocking was initiated from a report
+    if (sourceReportId) {
+      await supabase
+        .from('moderation_reports')
+        .update({
+          status: 'resolved',
+          action_taken: `blocked_${blockType}`,
+          action_reason: actionReason || 'User blocked',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', sourceReportId);
+      loadReports();
     }
 
     toast.success('User blocked successfully');
     setBlockDialogOpen(false);
     setTargetUserId('');
     setActionReason('');
+    setSourceReportId(null);
     loadBlockedUsers();
   };
 
-  /**
-   * handleUnblockUser Function
-   * 
-   * Removes a block record, restoring user access.
-   * 
-   * @param blockId - Block record UUID
-   */
   const handleUnblockUser = async (blockId: string) => {
     const { error } = await supabase
       .from('user_blocks')
@@ -431,7 +441,7 @@ const AdminModerationScreen = () => {
       .eq('id', blockId);
 
     if (error) {
-      toast.error('Failed to unblock user');
+      toast.error('Failed to unblock user', { description: error.message });
       return;
     }
 
@@ -439,37 +449,50 @@ const AdminModerationScreen = () => {
     loadBlockedUsers();
   };
 
-  /**
-   * handleWarnUser Function
-   * 
-   * Sends a warning to a user.
-   * Creates warning record in database.
-   */
   const handleWarnUser = async () => {
-    if (!targetUserId || !warningMessage) return;
+    if (!targetUserId || !warningMessage.trim()) {
+      toast.error('Warning message is required');
+      return;
+    }
     
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     
-    // Insert warning record
     const { error } = await supabase
       .from('user_warnings')
       .insert({
         user_id: targetUserId,
         warning_type: 'behavior',
-        message: warningMessage,
+        message: warningMessage.trim(),
         issued_by: user?.id
       });
 
     if (error) {
-      toast.error('Failed to send warning');
+      console.error('Warn user error:', error);
+      toast.error('Failed to send warning', { description: error.message });
       return;
+    }
+
+    // Auto-resolve the source report if warning was initiated from a report
+    if (sourceReportId) {
+      await supabase
+        .from('moderation_reports')
+        .update({
+          status: 'resolved',
+          action_taken: 'warned',
+          action_reason: warningMessage.trim(),
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', sourceReportId);
+      loadReports();
     }
 
     toast.success('Warning sent successfully');
     setWarnDialogOpen(false);
     setTargetUserId('');
     setWarningMessage('');
+    setSourceReportId(null);
   };
 
   /**
@@ -526,10 +549,12 @@ const AdminModerationScreen = () => {
    * Applies search and status filters to reports.
    */
   const filteredReports = reports.filter(r => {
-    // Search filter: match user name or content
-    const matchesSearch = getUserName(r.reported_user_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (r.content?.toLowerCase().includes(searchTerm.toLowerCase()));
-    // Status filter
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term ||
+      getUserName(r.reported_user_id).toLowerCase().includes(term) ||
+      getUserName(r.reporter_id).toLowerCase().includes(term) ||
+      r.report_type?.toLowerCase().includes(term) ||
+      (r.content?.toLowerCase().includes(term) ?? false);
     const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -749,6 +774,7 @@ const AdminModerationScreen = () => {
                                   className="text-amber-500 hover:text-amber-600"
                                   onClick={() => {
                                     setTargetUserId(report.reported_user_id);
+                                    setSourceReportId(report.id);
                                     setWarnDialogOpen(true);
                                   }}
                                 >
@@ -760,6 +786,7 @@ const AdminModerationScreen = () => {
                                   className="text-destructive hover:text-destructive"
                                   onClick={() => {
                                     setTargetUserId(report.reported_user_id);
+                                    setSourceReportId(report.id);
                                     setBlockDialogOpen(true);
                                   }}
                                 >
@@ -961,7 +988,7 @@ const AdminModerationScreen = () => {
               Dismiss
             </Button>
             <Button 
-              onClick={() => selectedReport && handleResolveReport(selectedReport.id, 'action_taken')}
+              onClick={() => selectedReport && handleResolveReport(selectedReport.id, 'reviewed')}
             >
               Resolve
             </Button>
@@ -970,7 +997,7 @@ const AdminModerationScreen = () => {
       </Dialog>
 
       {/* ============= BLOCK USER DIALOG ============= */}
-      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+      <Dialog open={blockDialogOpen} onOpenChange={(open) => { setBlockDialogOpen(open); if (!open) { setSourceReportId(null); setTargetUserId(''); setActionReason(''); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Block User</DialogTitle>
@@ -1005,7 +1032,7 @@ const AdminModerationScreen = () => {
       </Dialog>
 
       {/* ============= WARN USER DIALOG ============= */}
-      <Dialog open={warnDialogOpen} onOpenChange={setWarnDialogOpen}>
+      <Dialog open={warnDialogOpen} onOpenChange={(open) => { setWarnDialogOpen(open); if (!open) { setSourceReportId(null); setTargetUserId(''); setWarningMessage(''); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send Warning</DialogTitle>
