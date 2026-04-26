@@ -87,6 +87,7 @@ const LanguageCountryScreen = lazyRetry(() => import("@/pages/LanguageCountryScr
 const BasicInfoScreen = lazyRetry(() => import("@/pages/BasicInfoScreen"));
 const PersonalDetailsScreen = lazyRetry(() => import("@/pages/PersonalDetailsScreen"));
 const PhotoUploadScreen = lazyRetry(() => import("@/pages/PhotoUploadScreen"));
+const AdditionalPhotosScreen = lazyRetry(() => import("@/pages/AdditionalPhotosScreen"));
 const LocationSetupScreen = lazyRetry(() => import("@/pages/LocationSetupScreen"));
 const LanguagePreferencesScreen = lazyRetry(() => import("@/pages/LanguagePreferencesScreen"));
 const PasswordSetupScreen = lazyRetry(() => import("@/pages/PasswordSetupScreen"));
