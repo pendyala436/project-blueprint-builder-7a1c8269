@@ -63,7 +63,7 @@ By creating an account or using Meow Meow ("the App", "we", "us"), you enter a b
 • Only two gender options are supported: Male and Female. Gender is verified using AI face/photo analysis.
 • One natural person = one account. Duplicate, fake, bot, or shared accounts are prohibited.
 • You must provide truthful, accurate, and current information at registration and keep it updated.
-• Use of VPN, Tor, GPS spoofing, or any tool to misrepresent your location, identity, gender, or age is forbidden and will result in permanent ban and forfeiture of any wallet balance or earnings.
+• Use of VPN, Tor, GPS spoofing, or any tool to misrepresent your location, identity, gender, or age is forbidden and will result in permanent ban and forfeiture of any wallet balance or virtual coins.
 
 3. NATURE OF SERVICE
 Meow Meow is an opposite-sex social and communication platform offering:
