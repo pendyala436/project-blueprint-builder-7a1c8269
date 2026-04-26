@@ -462,7 +462,7 @@ const AdminUserLookup = () => {
                     <CardContent className="space-y-4">
                       <div className="p-4 bg-muted rounded-lg">
                         <p className="text-sm text-muted-foreground">Balance</p>
-                        <p className="text-3xl font-bold">₹{wallet?.balance?.toFixed(2) ?? "0.00"}</p>
+                        <p className="text-3xl font-bold">{wallet?.currency === "USD" ? "$" : "₹"}{Number(wallet?.balance ?? 0).toFixed(2)}</p>
                       </div>
                       <h3 className="font-semibold text-sm">Recent Transactions</h3>
                       {transactions.length === 0 ? (
