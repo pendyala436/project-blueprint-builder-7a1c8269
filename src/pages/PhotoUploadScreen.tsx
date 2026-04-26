@@ -283,8 +283,8 @@ const PhotoUploadScreen = () => {
         <AuroraBackground />
       </Suspense>
 
-      <header className="px-6 pt-8 pb-4 relative z-10">
-        <div className="flex items-center gap-4 mb-4">
+      <header className="px-6 pt-4 pb-2 relative z-10">
+        <div className="flex items-center gap-4 mb-2">
           <Button
             variant="ghost"
             size="icon"
@@ -299,12 +299,12 @@ const PhotoUploadScreen = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto relative z-10">
+      <main className="flex-1 flex flex-col items-center px-4 pb-4 overflow-y-auto relative z-10">
         <ScreenTitle
           title="Take a Selfie"
           subtitle="We'll verify your identity with a quick AI check"
-          logoSize="md"
-          className="mb-6"
+          logoSize="sm"
+          className="mb-3"
         />
 
         {showCamera && (
@@ -338,12 +338,12 @@ const PhotoUploadScreen = () => {
 
         <canvas ref={canvasRef} className="hidden" />
 
-        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
-          <div className="flex items-center gap-2 mb-3">
+        <Card className="w-full max-w-md p-3 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <Camera className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-foreground">Selfie for Verification</h2>
+            <h2 className="font-semibold text-sm text-foreground">Selfie for Verification</h2>
             {verificationState === "verified" && (
-              <span className="ml-auto text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span className="ml-auto text-[10px] bg-accent/20 text-accent-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Check className="h-3 w-3" /> Verified
               </span>
             )}
@@ -352,7 +352,7 @@ const PhotoUploadScreen = () => {
           {/* Gender info: selected vs AI-detected */}
           {(selectedGender || detectedGender) && (
             <div className={`
-              mb-3 p-2.5 rounded-lg text-xs flex items-center justify-between gap-2 flex-wrap
+              mb-2 p-2 rounded-lg text-xs flex items-center justify-between gap-2 flex-wrap
               ${genderChanged
                 ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30"
                 : "bg-muted/50 text-muted-foreground border border-border"
@@ -364,7 +364,7 @@ const PhotoUploadScreen = () => {
               </div>
               {detectedGender && (
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">AI detected:</span>
+                  <span className="font-medium">AI:</span>
                   <span className="capitalize">{detectedGender}</span>
                 </div>
               )}
@@ -379,43 +379,43 @@ const PhotoUploadScreen = () => {
           {!selfiePreview ? (
             <Button
               variant="outline"
-              className="w-full h-32 border-dashed border-2 gap-2 flex-col"
+              className="w-full h-28 border-dashed border-2 gap-2 flex-col"
               onClick={startCamera}
             >
-              <Camera className="h-8 w-8 text-primary" />
-              <span>Take a Selfie</span>
+              <Camera className="h-7 w-7 text-primary" />
+              <span className="text-sm">Take a Selfie</span>
             </Button>
           ) : (
             <div className="relative">
-              <div className="relative rounded-xl overflow-hidden aspect-square animate-in fade-in duration-500 bg-muted">
+              <div className="relative rounded-xl overflow-hidden mx-auto w-40 h-40 sm:w-48 sm:h-48 animate-in fade-in duration-500 bg-muted">
                 <img
                   src={selfiePreview}
                   alt="Selfie preview"
-                  className="w-full h-full object-contain cursor-zoom-in"
+                  className="w-full h-full object-cover cursor-zoom-in"
                   onClick={() => setLightboxSrc(selfiePreview)}
                 />
 
                 {verificationState === "verifying" && (
-                  <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-3">
+                  <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-2">
                     <div className="relative">
-                      <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                      <Sparkles className="h-5 w-5 text-primary absolute -top-1 -right-1 animate-pulse" />
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                      <Sparkles className="h-4 w-4 text-primary absolute -top-1 -right-1 animate-pulse" />
                     </div>
-                    <p className="text-sm font-medium text-foreground">
-                      AI Verification in progress...
+                    <p className="text-xs font-medium text-foreground">
+                      Verifying...
                     </p>
                   </div>
                 )}
 
                 {verificationState === "verified" && (
-                  <div className="absolute top-3 right-3 bg-green-500 text-white rounded-full p-2 animate-in zoom-in duration-300">
-                    <Check className="h-5 w-5" />
+                  <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1.5 animate-in zoom-in duration-300">
+                    <Check className="h-4 w-4" />
                   </div>
                 )}
 
                 {verificationState === "failed" && (
-                  <div className="absolute top-3 right-3 bg-destructive text-destructive-foreground rounded-full p-2 animate-in zoom-in duration-300">
-                    <X className="h-5 w-5" />
+                  <div className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 animate-in zoom-in duration-300">
+                    <X className="h-4 w-4" />
                   </div>
                 )}
               </div>
@@ -457,7 +457,7 @@ const PhotoUploadScreen = () => {
 
               {verificationResult && verificationState !== "verifying" && (
                 <div className={`
-                  mt-3 p-2 rounded-lg text-xs
+                  mt-2 p-2 rounded-lg text-xs
                   ${verificationState === "verified"
                     ? "bg-green-500/10 text-green-600 dark:text-green-400"
                     : "bg-destructive/10 text-destructive"
@@ -492,17 +492,19 @@ const PhotoUploadScreen = () => {
             </Button>
           </div>
         )}
+      </main>
 
+      <div className="sticky bottom-0 z-20 px-4 py-3 bg-background/90 backdrop-blur-md border-t border-border/50">
         <Button
           variant="aurora"
-          className="w-full max-w-md mt-2"
+          className="w-full max-w-md mx-auto flex"
           size="lg"
           onClick={handleNext}
           disabled={!selfiePreview}
         >
           Continue
         </Button>
-      </main>
+      </div>
     </div>
   );
 };
