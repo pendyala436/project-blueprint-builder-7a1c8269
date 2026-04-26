@@ -122,7 +122,7 @@ const WomenDashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [appId, setAppId] = useState<string | null>(null);
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "female");
   const { status: callStatus, activeCall, isMuted, isCameraOff, acceptCall, declineCall, endCall, toggleMute, toggleCamera } = useAppCall(currentUserId || null, 'female', 0);
@@ -704,25 +704,14 @@ const WomenDashboardScreen = () => {
         setUserName(fullName.split(" ")[0]);
       }
 
-      // Fetch App ID (single source of truth: profiles.app_id, fallback to female_profiles.employee_id)
+      // Fetch App ID (single source of truth: profiles.app_id only)
       supabase
         .from("profiles")
         .select("app_id")
         .eq("user_id", user.id)
         .maybeSingle()
         .then(({ data }) => {
-          if ((data as any)?.app_id) {
-            setEmployeeId((data as any).app_id);
-          } else {
-            supabase
-              .from("female_profiles")
-              .select("employee_id")
-              .eq("user_id", user.id)
-              .maybeSingle()
-              .then(({ data: fp }) => {
-                if (fp?.employee_id) setEmployeeId(fp.employee_id);
-              });
-          }
+          if ((data as any)?.app_id) setAppId((data as any).app_id);
         });
 
       const womanLanguage = womanLanguages?.[0]?.language_name || 
@@ -1620,9 +1609,9 @@ const WomenDashboardScreen = () => {
           </AvatarFallback>
         </Avatar>
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
-        {employeeId && (
+        {appId && (
           <Badge variant="outline" className="mt-1 font-mono text-[11px] border-primary/40 text-primary">
-            App ID: {employeeId}
+            App ID: {appId}
           </Badge>
         )}
         <p className="text-xs text-muted-foreground mt-1">{currentWomanLanguage} • {currentWomanCountry}</p>
