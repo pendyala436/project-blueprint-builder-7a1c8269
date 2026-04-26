@@ -32,7 +32,6 @@ export const countries = [
   { code: "BW", name: "Botswana", flag: "🇧🇼" },
   { code: "BV", name: "Bouvet Island", flag: "🇧🇻" },
   { code: "BR", name: "Brazil", flag: "🇧🇷" },
-  { code: "IO", name: "British Indian Ocean Territory", flag: "🇮🇴" },
   { code: "BN", name: "Brunei Darussalam", flag: "🇧🇳" },
   { code: "BG", name: "Bulgaria", flag: "🇧🇬" },
   { code: "BF", name: "Burkina Faso", flag: "🇧🇫" },
