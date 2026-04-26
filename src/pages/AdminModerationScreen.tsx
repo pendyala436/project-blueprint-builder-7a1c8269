@@ -160,6 +160,8 @@ const AdminModerationScreen = () => {
   const [warningMessage, setWarningMessage] = useState('');
   const [blockType, setBlockType] = useState('temporary');
   const [targetUserId, setTargetUserId] = useState('');
+  // When warn/block is triggered from a report, remember it so we can auto-resolve
+  const [sourceReportId, setSourceReportId] = useState<string | null>(null);
 
   /**
    * useEffect: Load Data and Setup Realtime
@@ -383,44 +385,55 @@ const AdminModerationScreen = () => {
    * Temporary blocks expire after 7 days.
    */
   const handleBlockUser = async () => {
-    if (!targetUserId) return;
+    if (!targetUserId) {
+      toast.error('No user selected');
+      return;
+    }
     
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     
-    // Insert block record
     const { error } = await supabase
       .from('user_blocks')
       .insert({
         blocked_user_id: targetUserId,
         blocked_by: user?.id,
-        reason: actionReason,
+        reason: actionReason || null,
         block_type: blockType,
-        // Set expiry for temporary blocks (7 days)
         expires_at: blockType === 'temporary' 
           ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() 
           : null
       });
 
     if (error) {
-      toast.error('Failed to block user');
+      console.error('Block user error:', error);
+      toast.error('Failed to block user', { description: error.message });
       return;
+    }
+
+    // Auto-resolve the source report if blocking was initiated from a report
+    if (sourceReportId) {
+      await supabase
+        .from('moderation_reports')
+        .update({
+          status: 'resolved',
+          action_taken: `blocked_${blockType}`,
+          action_reason: actionReason || 'User blocked',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', sourceReportId);
+      loadReports();
     }
 
     toast.success('User blocked successfully');
     setBlockDialogOpen(false);
     setTargetUserId('');
     setActionReason('');
+    setSourceReportId(null);
     loadBlockedUsers();
   };
 
-  /**
-   * handleUnblockUser Function
-   * 
-   * Removes a block record, restoring user access.
-   * 
-   * @param blockId - Block record UUID
-   */
   const handleUnblockUser = async (blockId: string) => {
     const { error } = await supabase
       .from('user_blocks')
@@ -428,7 +441,7 @@ const AdminModerationScreen = () => {
       .eq('id', blockId);
 
     if (error) {
-      toast.error('Failed to unblock user');
+      toast.error('Failed to unblock user', { description: error.message });
       return;
     }
 
@@ -436,37 +449,50 @@ const AdminModerationScreen = () => {
     loadBlockedUsers();
   };
 
-  /**
-   * handleWarnUser Function
-   * 
-   * Sends a warning to a user.
-   * Creates warning record in database.
-   */
   const handleWarnUser = async () => {
-    if (!targetUserId || !warningMessage) return;
+    if (!targetUserId || !warningMessage.trim()) {
+      toast.error('Warning message is required');
+      return;
+    }
     
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     
-    // Insert warning record
     const { error } = await supabase
       .from('user_warnings')
       .insert({
         user_id: targetUserId,
         warning_type: 'behavior',
-        message: warningMessage,
+        message: warningMessage.trim(),
         issued_by: user?.id
       });
 
     if (error) {
-      toast.error('Failed to send warning');
+      console.error('Warn user error:', error);
+      toast.error('Failed to send warning', { description: error.message });
       return;
+    }
+
+    // Auto-resolve the source report if warning was initiated from a report
+    if (sourceReportId) {
+      await supabase
+        .from('moderation_reports')
+        .update({
+          status: 'resolved',
+          action_taken: 'warned',
+          action_reason: warningMessage.trim(),
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', sourceReportId);
+      loadReports();
     }
 
     toast.success('Warning sent successfully');
     setWarnDialogOpen(false);
     setTargetUserId('');
     setWarningMessage('');
+    setSourceReportId(null);
   };
 
   /**
