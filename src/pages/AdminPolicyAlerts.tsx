@@ -282,22 +282,25 @@ const AdminPolicyAlerts = () => {
     try {
       const { data: { session: s2 } } = await supabase.auth.getSession();
       const user = s2?.user;
+      const trimmed = messageContent.trim();
 
       // Insert notification for the user
       const { error } = await supabase.from("notifications").insert({
         user_id: selectedAlert.user_id,
         title: "Policy Violation Warning",
-        message: messageContent,
+        message: trimmed,
         type: "warning",
       });
 
       if (error) throw error;
 
-      // Update alert with action taken
+      // Update alert with action taken + move to reviewing so it leaves the pending queue
+      const preview = trimmed.length > 100 ? `${trimmed.slice(0, 100)}…` : trimmed;
       await supabase
         .from("policy_violation_alerts")
         .update({
-          action_taken: `Warning message sent: ${messageContent.substring(0, 100)}...`,
+          action_taken: `Warning sent: ${preview}`,
+          status: selectedAlert.status === "pending" ? "reviewing" : selectedAlert.status,
           reviewed_by: user?.id,
           reviewed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -306,31 +309,59 @@ const AdminPolicyAlerts = () => {
 
       toast.success("Warning message sent to user");
       setMessageDialogOpen(false);
+      setMessageContent("");
       loadAlerts();
-    } catch (error) {
+      loadStats();
+    } catch (error: any) {
       console.error("Error sending message:", error);
-      toast.error("Failed to send message");
+      toast.error("Failed to send message", { description: error?.message });
     }
   };
 
   const handleBlockUser = async (userId: string) => {
     try {
-      const { error } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const adminId = session?.user?.id;
+
+      // 1) Mark profile blocked
+      const { error: profileErr } = await supabase
         .from("profiles")
         .update({ account_status: "blocked", updated_at: new Date().toISOString() })
         .eq("user_id", userId);
 
-      if (error) throw error;
+      if (profileErr) throw profileErr;
+
+      // 2) Create permanent block record so /admin/moderation reflects it consistently
+      const { error: blockErr } = await supabase
+        .from("user_blocks")
+        .insert({
+          blocked_user_id: userId,
+          blocked_by: adminId,
+          block_type: "permanent",
+          reason: selectedAlert
+            ? `Policy violation: ${selectedAlert.violation_type} (${selectedAlert.severity})`
+            : "Policy violation",
+          expires_at: null,
+        });
+      if (blockErr) {
+        // Non-fatal but report it
+        console.warn("Block record insert failed:", blockErr);
+        toast.warning("Profile blocked, but block record could not be created", {
+          description: blockErr.message,
+        });
+      }
 
       toast.success("User blocked successfully");
-      
-      // Update alert
+
+      // 3) Update alert
       if (selectedAlert) {
         await supabase
           .from("policy_violation_alerts")
           .update({
-            action_taken: "User blocked",
+            action_taken: "user_blocked",
             status: "resolved",
+            reviewed_by: adminId,
+            reviewed_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .eq("id", selectedAlert.id);
@@ -339,9 +370,9 @@ const AdminPolicyAlerts = () => {
       setAlertDialogOpen(false);
       loadAlerts();
       loadStats();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error blocking user:", error);
-      toast.error("Failed to block user");
+      toast.error("Failed to block user", { description: error?.message });
     }
   };
 
@@ -381,12 +412,15 @@ const AdminPolicyAlerts = () => {
   };
 
   const filteredAlerts = alerts.filter(alert => {
-    if (!searchQuery) return true;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
     const profile = userProfiles[alert.user_id];
     return (
-      profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      alert.violation_type.toLowerCase().includes(searchQuery.toLowerCase())
+      profile?.full_name?.toLowerCase().includes(q) ||
+      alert.content?.toLowerCase().includes(q) ||
+      alert.violation_type.toLowerCase().includes(q) ||
+      alert.admin_notes?.toLowerCase().includes(q) ||
+      alert.action_taken?.toLowerCase().includes(q)
     );
   });
 
@@ -580,7 +614,9 @@ const AdminPolicyAlerts = () => {
                           <TableCell>{getSeverityBadge(alert.severity)}</TableCell>
                           <TableCell>
                             <p className="text-sm truncate max-w-[200px]" title={alert.content || ""}>
-                              {alert.content?.substring(0, 50) || "N/A"}...
+                              {alert.content
+                                ? (alert.content.length > 50 ? `${alert.content.slice(0, 50)}…` : alert.content)
+                                : "N/A"}
                             </p>
                           </TableCell>
                           <TableCell>{getStatusBadge(alert.status)}</TableCell>
@@ -609,7 +645,7 @@ const AdminPolicyAlerts = () => {
       </div>
 
       {/* Alert Details Dialog */}
-      <Dialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+      <Dialog open={alertDialogOpen} onOpenChange={(open) => { setAlertDialogOpen(open); if (!open) { setSelectedAlert(null); setAdminNotes(""); setActionTaken(""); } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -674,7 +710,7 @@ const AdminPolicyAlerts = () => {
             </div>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="destructive" onClick={() => handleBlockUser(selectedAlert!.user_id)}>
+            <Button variant="destructive" disabled={!selectedAlert} onClick={() => selectedAlert && handleBlockUser(selectedAlert.user_id)}>
               <Ban className="h-4 w-4 mr-2" />
               Block User
             </Button>
@@ -693,7 +729,7 @@ const AdminPolicyAlerts = () => {
       </Dialog>
 
       {/* Send Message Dialog */}
-      <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+      <Dialog open={messageDialogOpen} onOpenChange={(open) => { setMessageDialogOpen(open); if (!open) { setMessageContent(""); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
