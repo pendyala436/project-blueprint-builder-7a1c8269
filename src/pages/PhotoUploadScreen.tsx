@@ -299,7 +299,7 @@ const PhotoUploadScreen = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center px-4 pb-4 overflow-y-auto relative z-10">
+        <main className="flex-1 flex flex-col items-center px-4 pb-3 overflow-y-auto relative z-10">
         <ScreenTitle
           title="Take a Selfie"
           subtitle="We'll verify your identity with a quick AI check"
@@ -338,7 +338,7 @@ const PhotoUploadScreen = () => {
 
         <canvas ref={canvasRef} className="hidden" />
 
-        <Card className="w-full max-w-md p-3 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-3">
+        <Card className="w-full max-w-md p-3 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-2">
           <div className="flex items-center gap-2 mb-2">
             <Camera className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-sm text-foreground">Selfie for Verification</h2>
@@ -418,41 +418,6 @@ const PhotoUploadScreen = () => {
                     <X className="h-4 w-4" />
                   </div>
                 )}
-              </div>
-
-              <div className="flex gap-2 mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={clearSelfie}
-                >
-                  Retake
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 gap-2"
-                  onClick={verifySelfie}
-                  disabled={verificationState === "verifying" || isVerifying}
-                  variant={verificationState === "verified" ? "outline" : "default"}
-                >
-                  {verificationState === "verifying" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Verifying
-                    </>
-                  ) : verificationState === "verified" ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Re-verify
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      Verify Gender
-                    </>
-                  )}
-                </Button>
               </div>
 
               {verificationResult && verificationState !== "verifying" && (
