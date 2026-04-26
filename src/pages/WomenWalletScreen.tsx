@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Wallet, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp, IndianRupee } from 'lucide-react';
 import { getWomenBalance } from '@/services/ledger-wallet.service';
 import { StatementTab } from '@/components/StatementTab';
 
