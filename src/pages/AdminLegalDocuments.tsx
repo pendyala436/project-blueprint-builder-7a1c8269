@@ -205,19 +205,41 @@ const AdminLegalDocuments = () => {
       return;
     }
 
+    if (!newDocument.version.trim()) {
+      toast.error("Version required", { description: "Please enter a version" });
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
-      
+      if (!user) {
+        throw new Error("You must be signed in as an admin to upload documents");
+      }
+
+      // Check duplicate version for same type
+      const { data: existing, error: existErr } = await supabase
+        .from('legal_documents')
+        .select('id')
+        .eq('document_type', newDocument.document_type)
+        .eq('version', newDocument.version.trim())
+        .maybeSingle();
+      if (existErr) throw existErr;
+      if (existing) {
+        throw new Error(`Version ${newDocument.version} already exists for this document type`);
+      }
+
       // Generate unique file path
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${newDocument.document_type}/${Date.now()}_${newDocument.version}.${fileExt}`;
+      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'bin';
+      const safeVersion = newDocument.version.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${newDocument.document_type}/${Date.now()}_v${safeVersion}.${fileExt}`;
       
       // Simulate upload progress
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
