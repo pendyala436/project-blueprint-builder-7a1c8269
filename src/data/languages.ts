@@ -998,6 +998,8 @@ export const getLanguageNativeName = (code: string): string => {
 // Get all Indian languages (Official + Regional + Tribal + Northeast)
 export const getIndianLanguages = (): Language[] => {
   const indianCodes = [
+    // English (widely spoken in India and an associate official language)
+    "en",
     // Official 22
     "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "or", "pa",
     "as", "mai", "sa", "ks", "ne", "sd", "kok", "doi", "mni", "sat", "brx", "ur",

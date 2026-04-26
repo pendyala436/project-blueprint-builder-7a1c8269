@@ -13,6 +13,7 @@ export interface SupportedLanguage {
 
 // Indian language codes for categorization (same set used in LanguageSelector)
 const INDIAN_LANGUAGE_CODES = new Set([
+  "en",
   "hi", "bn", "te", "mr", "ta", "gu", "kn", "ml", "or", "pa", "as", "mai", "sat", "ks",
   "kok", "doi", "mni", "brx", "sa", "bho", "hne", "raj", "mwr", "mtr", "bgc", "mag",
   "anp", "bjj", "awa", "bns", "bfy", "gbm", "kfy", "him", "kan", "tcy", "kfa", "bhb",
