@@ -116,13 +116,23 @@ export const useAtomicTransaction = () => {
     startProcessing();
     
     try {
-      // Call the atomic database function with row-level locking
-      const { data, error } = await supabase.rpc("process_wallet_transaction", {
+      // Single source of truth: route credits/debits through canonical RPCs.
+      // Generic standalone wallet adjustments use ledger_recharge for credits;
+      // ad-hoc debits should not be performed via this helper anymore (use a
+      // domain-specific billing RPC). For backward compatibility we still call
+      // ledger_recharge for credits and surface a clear error otherwise.
+      if (type !== "credit") {
+        return {
+          success: false,
+          error: "Direct debit no longer supported — use a domain billing RPC.",
+        };
+      }
+      const { data, error } = await supabase.rpc("ledger_recharge", {
         p_user_id: userId,
         p_amount: amount,
-        p_type: type,
+        p_gateway: "manual",
+        p_gateway_txn_id: referenceId || null,
         p_description: description || null,
-        p_reference_id: referenceId || null,
       });
 
       if (error) throw error;
@@ -143,7 +153,7 @@ export const useAtomicTransaction = () => {
 
       return {
         success: true,
-        transactionId: result.transaction_id as string,
+        transactionId: undefined,
         previousBalance: result.previous_balance as number,
         newBalance: result.new_balance as number,
       };
@@ -358,14 +368,22 @@ export const useAtomicTransaction = () => {
    */
   const processVideoBilling = useCallback(async (
     sessionId: string,
-    minutes: number
+    minutes: number,
+    manId?: string,
+    womanId?: string,
   ): Promise<BillingResult> => {
     startProcessing();
-    
+
     try {
-      const { data, error } = await supabase.rpc("process_video_billing", {
+      if (!manId || !womanId) {
+        return { success: false, error: "manId/womanId required for video billing" };
+      }
+      const { data, error } = await supabase.rpc("process_video_billing_v2", {
         p_session_id: sessionId,
+        p_man_id: manId,
+        p_woman_id: womanId,
         p_minutes: minutes,
+        p_idempotency: `video:${sessionId}:${Math.floor(Date.now() / 60000)}`,
       });
 
       if (error) throw error;
