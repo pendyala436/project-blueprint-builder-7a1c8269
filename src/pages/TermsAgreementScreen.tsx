@@ -76,7 +76,7 @@ All communication channels — chat, audio calls, video calls, and group calls �
 4. ACCOUNT REGISTRATION & VERIFICATION
 • Email, phone, gender, age, country (India), state, languages and a live selfie are required.
 • AI face verification confirms a real, single, live human and estimates gender; mismatched photos are rejected.
-• Female users are NOT required to submit any bank, PAN, Aadhaar, UPI, or KYC information. Women do not earn or receive any money on the platform; participation is purely social and voluntary (see §7).
+• Female users may be asked to complete a KYC verification (PAN, Aadhaar with masking, bank account or UPI handle for identity matching, address proof, and a live selfie). KYC is collected solely for IDENTITY VERIFICATION, anti-fraud, anti-impersonation, age confirmation, and statutory compliance — NOT as a basis for any monetary payout. Women still do not receive any money from the platform; participation remains voluntary and is acknowledged only with non-monetary in-app virtual coins (see §7). KYC documents are encrypted, access-logged, and disclosed only to authorised compliance staff and to law enforcement on valid legal demand.
 • We may re-verify identity at any time and suspend access pending verification.
 
 5. PROHIBITED CONDUCT — SEXUAL CONTENT, HATE SPEECH & MORE
