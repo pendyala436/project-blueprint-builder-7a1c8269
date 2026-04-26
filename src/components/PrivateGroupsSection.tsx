@@ -17,6 +17,12 @@ const MAX_HOSTS_PER_GROUP = 3;
 const FLOWER_EMOJIS: Record<string, string> = {
   Rose: '🌹', Lily: '🌸', Jasmine: '🌼', Orchid: '🌺', Sunflower: '🌻',
   Tulip: '🌷', Lotus: '🪷', Daisy: '🌼', Lavender: '💜', Marigold: '🏵️',
+  Hibiscus: '🌺', Magnolia: '🌷', Peony: '🌸', Camellia: '🌼', Iris: '🪻',
+  Poppy: '🌺', Bluebell: '🔔', Carnation: '🌷', Chrysanthemum: '🌼', Dahlia: '🌸',
+  Freesia: '🌼', Gardenia: '🤍', Geranium: '🌷', Hyacinth: '💐', Petunia: '🌸',
+  Primrose: '🌼', Rhododendron: '🌺', Snowdrop: '❄️', Verbena: '💜', Violet: '🟣',
+  Zinnia: '🌻', Anemone: '🌸', Azalea: '🌺', Begonia: '🌷', Buttercup: '🌼',
+  Clematis: '💜', Cosmos: '🌸', Dandelion: '🌼', Foxglove: '🌷', Heather: '💜',
 };
 
 interface PrivateGroup {
@@ -193,7 +199,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       {/* Tip info banner */}
       <div className="flex items-center gap-2 px-3 py-2 bg-accent/15 rounded-lg text-[11px] text-foreground border border-accent/30">
         <span className="text-sm">💰</span>
-        <span>{TIP_INFO} • Up to {MAX_HOSTS_PER_GROUP} hosts per group.</span>
+        <span>{TIP_INFO}</span>
       </div>
 
       {/* Group list */}
@@ -235,9 +241,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
                       <Radio className="h-2 w-2 animate-pulse" /> LIVE
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-[9px] h-4 px-1.5 shrink-0">
-                    {hostCount}/{MAX_HOSTS_PER_GROUP} hosts
-                  </Badge>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {isMyHost ? (

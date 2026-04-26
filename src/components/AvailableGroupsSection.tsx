@@ -33,6 +33,12 @@ interface AvailableGroupsSectionProps {
 const FLOWER_EMOJIS: Record<string, string> = {
   Rose: '🌹', Lily: '🌸', Jasmine: '🌼', Orchid: '🌺', Sunflower: '🌻',
   Tulip: '🌷', Lotus: '🪷', Daisy: '🌼', Lavender: '💜', Marigold: '🏵️',
+  Hibiscus: '🌺', Magnolia: '🌷', Peony: '🌸', Camellia: '🌼', Iris: '🪻',
+  Poppy: '🌺', Bluebell: '🔔', Carnation: '🌷', Chrysanthemum: '🌼', Dahlia: '🌸',
+  Freesia: '🌼', Gardenia: '🤍', Geranium: '🌷', Hyacinth: '💐', Petunia: '🌸',
+  Primrose: '🌼', Rhododendron: '🌺', Snowdrop: '❄️', Verbena: '💜', Violet: '🟣',
+  Zinnia: '🌻', Anemone: '🌸', Azalea: '🌺', Begonia: '🌷', Buttercup: '🌼',
+  Clematis: '💜', Cosmos: '🌸', Dandelion: '🌼', Foxglove: '🌷', Heather: '💜',
 };
 
 const MIN_BALANCE_MINUTES = 5;
