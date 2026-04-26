@@ -420,7 +420,7 @@ const PhotoUploadScreen = () => {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Selfie Section */}
-        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
+        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Camera className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Selfie for Verification</h2>
