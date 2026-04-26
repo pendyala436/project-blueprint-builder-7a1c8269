@@ -3,42 +3,42 @@ import { useRegistrationGuard } from "@/hooks/useRegistrationGuard";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import MeowLogo from "@/components/MeowLogo";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScreenTitle from "@/components/ScreenTitle";
 import { toast } from "@/hooks/use-toast";
 import { useFaceVerification } from "@/hooks/useFaceVerification";
-import { ArrowLeft, Upload, Camera, Check, X, Loader2, Sparkles, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Check, X, Loader2, Sparkles } from "lucide-react";
 
 const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 type VerificationState = "idle" | "verifying" | "verified" | "failed";
 
-const MAX_ADDITIONAL_PHOTOS = 5;
-
 const PhotoUploadScreen = () => {
   const navigate = useNavigate();
   useRegistrationGuard([{ key: "userEmail" }, { key: "userGender" }], "/basic-info");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const additionalFileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  
+
   // Face verification hook for client-side gender detection
-  const { verifyFace, isLoadingModel, modelLoadProgress } = useFaceVerification();
-  
-  // Selfie state (first photo with AI verification)
+  const { verifyFace } = useFaceVerification();
+
+  // Selfie state (with AI verification)
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [verificationState, setVerificationState] = useState<VerificationState>("idle");
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  
-  // Additional photos state
-  const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  // Restore previously captured selfie if user returns to this step
+  useEffect(() => {
+    const existing = sessionStorage.getItem("pendingPhotoData");
+    if (existing) {
+      setSelfiePreview(existing);
+      setVerificationState("verified");
+    }
+  }, []);
 
   const handleSelfieCapture = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -67,90 +67,6 @@ const PhotoUploadScreen = () => {
       setSelfiePreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
-  }, []);
-
-  const handleAdditionalPhoto = useCallback((file: File) => {
-    return new Promise<boolean>((resolve) => {
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Invalid file type",
-          description: `${file.name} is not an image`,
-          variant: "destructive",
-        });
-        return resolve(false);
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: `${file.name} is larger than 10MB`,
-          variant: "destructive",
-        });
-        return resolve(false);
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        setAdditionalPhotos(prev => {
-          if (prev.length >= MAX_ADDITIONAL_PHOTOS) {
-            toast({
-              title: "Maximum photos reached",
-              description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
-              variant: "destructive",
-            });
-            return prev;
-          }
-          return [...prev, dataUrl];
-        });
-        resolve(true);
-      };
-      reader.onerror = () => resolve(false);
-      reader.readAsDataURL(file);
-    });
-  }, []);
-
-  const handleAdditionalPhotos = useCallback(async (files: FileList | File[]) => {
-    const fileArr = Array.from(files);
-    const remaining = MAX_ADDITIONAL_PHOTOS - additionalPhotos.length;
-    if (remaining <= 0) {
-      toast({
-        title: "Maximum photos reached",
-        description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
-        variant: "destructive",
-      });
-      return;
-    }
-    const toProcess = fileArr.slice(0, remaining);
-    if (fileArr.length > remaining) {
-      toast({
-        title: "Some photos skipped",
-        description: `Only ${remaining} more photo(s) can be added`,
-      });
-    }
-    for (const file of toProcess) {
-      await handleAdditionalPhoto(file);
-    }
-  }, [additionalPhotos.length, handleAdditionalPhoto]);
-
-  const removeAdditionalPhoto = (index: number) => {
-    setAdditionalPhotos(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) handleAdditionalPhotos(files);
-  }, [handleAdditionalPhotos]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setIsDragging(false);
   }, []);
 
   const startCamera = async () => {
@@ -220,18 +136,14 @@ const PhotoUploadScreen = () => {
     setIsVerifying(true);
 
     try {
-      // Get the expected gender from registration data (defensive: ignore invalid values)
       const storedGender = sessionStorage.getItem("userGender");
       const expectedGender = storedGender === "male" || storedGender === "female" ? storedGender : null;
       if (storedGender && !expectedGender) sessionStorage.removeItem("userGender");
-      
-      // Use client-side face-api.js for photo verification
+
       const result = await verifyFace(selfiePreview, expectedGender || undefined);
-      
       setVerificationResult(result);
 
       if (result.verified && result.hasFace) {
-        // If a concrete gender was detected and differs from expected, update the stored gender
         const detected = result.detectedGender;
         if ((detected === "male" || detected === "female") && expectedGender !== detected) {
           sessionStorage.setItem("userGender", detected);
@@ -270,20 +182,33 @@ const PhotoUploadScreen = () => {
     }
   };
 
+  const compressImage = (dataUrl: string, quality = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 1080;
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
+
   const handleNext = async () => {
     if (!selfiePreview) {
       toast({
         title: "Selfie required",
         description: "Please take a selfie before continuing",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (additionalPhotos.length < MAX_ADDITIONAL_PHOTOS) {
-      toast({
-        title: "All 5 photos required",
-        description: `Please upload ${MAX_ADDITIONAL_PHOTOS - additionalPhotos.length} more photo(s). Total ${MAX_ADDITIONAL_PHOTOS} additional photos are mandatory.`,
         variant: "destructive",
       });
       return;
@@ -295,56 +220,21 @@ const PhotoUploadScreen = () => {
         description: "Continuing without AI verification — your profile may need manual review.",
       });
     }
-    // Store photo data for later upload (after auth)
-    try {
-      // Compress images before storing to avoid localStorage quota issues
-      const compressImage = (dataUrl: string, quality = 0.85): Promise<string> => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            // Resize to max 1080px for clarity while keeping storage reasonable
-            const maxDim = 1080;
-            let w = img.width, h = img.height;
-            if (w > maxDim || h > maxDim) {
-              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-              else { w = Math.round(w * maxDim / h); h = maxDim; }
-            }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', quality));
-          };
-          img.onerror = () => resolve(dataUrl); // fallback to original
-          img.src = dataUrl;
-        });
-      };
 
-      if (selfiePreview) {
-        const compressed = await compressImage(selfiePreview);
-        sessionStorage.setItem("pendingPhotoData", compressed);
-      }
-      if (additionalPhotos.length > 0) {
-        const compressedPhotos = await Promise.all(additionalPhotos.map(p => compressImage(p)));
-        sessionStorage.setItem("pendingAdditionalPhotos", JSON.stringify(compressedPhotos));
-      }
+    try {
+      const compressed = await compressImage(selfiePreview);
+      sessionStorage.setItem("pendingPhotoData", compressed);
     } catch (storageError) {
-      console.warn("Failed to save photos:", storageError);
+      console.warn("Failed to save selfie:", storageError);
       toast({
         title: "Storage Error",
-        description: "Unable to save photos. Your device storage may be full. Please free up space and try again.",
+        description: "Unable to save the selfie. Your device storage may be full.",
         variant: "destructive",
       });
       return;
     }
 
-    toast({
-      title: "Photos saved!",
-      description: "Your photos have been saved",
-    });
-    
-    navigate("/location-setup");
+    navigate("/additional-photos");
   };
 
   const handleBack = () => {
@@ -360,14 +250,12 @@ const PhotoUploadScreen = () => {
 
   return (
     <div className="min-h-screen flex flex-col relative bg-background text-foreground">
-      {/* Aurora Background */}
       <Suspense fallback={
         <div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />
       }>
         <AuroraBackground />
       </Suspense>
 
-      {/* Header */}
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4 mb-4">
           <Button
@@ -379,21 +267,19 @@ const PhotoUploadScreen = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <ProgressIndicator currentStep={4} totalSteps={9} />
+            <ProgressIndicator currentStep={4} totalSteps={10} />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto relative z-10">
         <ScreenTitle
-          title="Add Your Photos"
-          subtitle="Take a selfie for verification, then add more photos"
+          title="Take a Selfie"
+          subtitle="We'll verify your identity with a quick AI check"
           logoSize="md"
           className="mb-6"
         />
 
-        {/* Camera View */}
         {showCamera && (
           <div className="fixed inset-0 z-50 bg-background/95 flex flex-col items-center justify-center p-4">
             <div className="relative">
@@ -425,7 +311,6 @@ const PhotoUploadScreen = () => {
 
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Selfie Section */}
         <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Camera className="h-4 w-4 text-primary" />
@@ -455,7 +340,7 @@ const PhotoUploadScreen = () => {
                   className="w-full h-full object-contain cursor-zoom-in"
                   onClick={() => setLightboxSrc(selfiePreview)}
                 />
-                
+
                 {verificationState === "verifying" && (
                   <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-3">
                     <div className="relative">
@@ -495,7 +380,7 @@ const PhotoUploadScreen = () => {
                     size="sm"
                     className="flex-1 gap-2"
                     onClick={verifySelfie}
-                    disabled={verificationState === "verifying"}
+                    disabled={verificationState === "verifying" || isVerifying}
                   >
                     {verificationState === "verifying" ? (
                       <>
@@ -515,8 +400,8 @@ const PhotoUploadScreen = () => {
               {verificationResult && verificationState !== "verifying" && (
                 <div className={`
                   mt-3 p-2 rounded-lg text-xs
-                  ${verificationState === "verified" 
-                    ? "bg-green-500/10 text-green-600 dark:text-green-400" 
+                  ${verificationState === "verified"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
                     : "bg-destructive/10 text-destructive"
                   }
                 `}>
@@ -527,84 +412,6 @@ const PhotoUploadScreen = () => {
           )}
         </Card>
 
-        {/* Additional Photos Section */}
-        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
-          <div className="flex items-center gap-2 mb-3">
-            <Upload className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-foreground">Additional Photos <span className="text-destructive">*</span></h2>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS} (all required)
-            </span>
-          </div>
-
-          <input
-            ref={additionalFileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) => {
-              const files = e.target.files;
-              if (files && files.length > 0) handleAdditionalPhotos(files);
-              e.target.value = "";
-            }}
-            className="hidden"
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            {additionalPhotos.map((photo, index) => (
-              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group animate-in fade-in duration-300 bg-muted">
-                <img
-                  src={photo}
-                  alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-contain cursor-zoom-in"
-                  onClick={() => setLightboxSrc(photo)}
-                />
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeAdditionalPhoto(index); }}
-                  className="absolute top-1 right-1 p-1.5 bg-destructive/90 text-destructive-foreground rounded-full opacity-90 hover:opacity-100 transition-opacity"
-                  aria-label={`Remove photo ${index + 1}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-                <span className="absolute bottom-1 left-1 text-[10px] bg-background/70 text-foreground px-1.5 py-0.5 rounded">
-                  {index + 1}
-                </span>
-              </div>
-            ))}
-
-            {Array.from({ length: MAX_ADDITIONAL_PHOTOS - additionalPhotos.length }).map((_, i) => {
-              const isFirstEmpty = i === 0;
-              return (
-                <div
-                  key={`empty-${i}`}
-                  onDrop={isFirstEmpty ? handleDrop : undefined}
-                  onDragOver={isFirstEmpty ? handleDragOver : undefined}
-                  onDragLeave={isFirstEmpty ? handleDragLeave : undefined}
-                  onClick={() => additionalFileInputRef.current?.click()}
-                  className={`
-                    aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1
-                    cursor-pointer transition-all duration-200
-                    ${isFirstEmpty && isDragging
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50 hover:bg-primary/5"
-                    }
-                  `}
-                >
-                  <Plus className="h-7 w-7 text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground">
-                    Photo {additionalPhotos.length + i + 1}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          <p className="text-xs text-muted-foreground mt-3 text-center">
-            Tap a photo to view full size. You can select multiple photos at once. Up to {MAX_ADDITIONAL_PHOTOS} required.
-          </p>
-        </Card>
-
-        {/* Lightbox for full-clear photo preview */}
         {lightboxSrc && (
           <div
             className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -628,13 +435,12 @@ const PhotoUploadScreen = () => {
           </div>
         )}
 
-        {/* Continue Button */}
         <Button
           variant="aurora"
-          className="w-full max-w-md mt-6"
+          className="w-full max-w-md mt-2"
           size="lg"
           onClick={handleNext}
-          disabled={!selfiePreview || additionalPhotos.length < MAX_ADDITIONAL_PHOTOS}
+          disabled={!selfiePreview}
         >
           Continue
         </Button>

@@ -87,6 +87,7 @@ const LanguageCountryScreen = lazyRetry(() => import("@/pages/LanguageCountryScr
 const BasicInfoScreen = lazyRetry(() => import("@/pages/BasicInfoScreen"));
 const PersonalDetailsScreen = lazyRetry(() => import("@/pages/PersonalDetailsScreen"));
 const PhotoUploadScreen = lazyRetry(() => import("@/pages/PhotoUploadScreen"));
+const AdditionalPhotosScreen = lazyRetry(() => import("@/pages/AdditionalPhotosScreen"));
 const LocationSetupScreen = lazyRetry(() => import("@/pages/LocationSetupScreen"));
 const LanguagePreferencesScreen = lazyRetry(() => import("@/pages/LanguagePreferencesScreen"));
 const PasswordSetupScreen = lazyRetry(() => import("@/pages/PasswordSetupScreen"));
@@ -158,6 +159,7 @@ const AppShell = () => {
             <Route path="/basic-info" element={<RouteSuspense><BasicInfoScreen /></RouteSuspense>} />
             <Route path="/personal-details" element={<RouteSuspense><PersonalDetailsScreen /></RouteSuspense>} />
             <Route path="/photo-upload" element={<RouteSuspense><PhotoUploadScreen /></RouteSuspense>} />
+            <Route path="/additional-photos" element={<RouteSuspense><AdditionalPhotosScreen /></RouteSuspense>} />
             <Route path="/location-setup" element={<RouteSuspense><LocationSetupScreen /></RouteSuspense>} />
             <Route path="/language-preferences" element={<RouteSuspense><LanguagePreferencesScreen /></RouteSuspense>} />
             <Route path="/password-setup" element={<RouteSuspense><PasswordSetupScreen /></RouteSuspense>} />
