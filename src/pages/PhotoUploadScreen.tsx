@@ -38,6 +38,7 @@ const PhotoUploadScreen = () => {
   // Additional photos state
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const handleSelfieCapture = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -69,25 +70,50 @@ const PhotoUploadScreen = () => {
   }, []);
 
   const handleAdditionalPhoto = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-      return;
-    }
+    return new Promise<boolean>((resolve) => {
+      if (!file.type.startsWith("image/")) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not an image`,
+          variant: "destructive",
+        });
+        return resolve(false);
+      }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 10MB",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: `${file.name} is larger than 10MB`,
+          variant: "destructive",
+        });
+        return resolve(false);
+      }
 
-    if (additionalPhotos.length >= MAX_ADDITIONAL_PHOTOS) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setAdditionalPhotos(prev => {
+          if (prev.length >= MAX_ADDITIONAL_PHOTOS) {
+            toast({
+              title: "Maximum photos reached",
+              description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
+              variant: "destructive",
+            });
+            return prev;
+          }
+          return [...prev, dataUrl];
+        });
+        resolve(true);
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleAdditionalPhotos = useCallback(async (files: FileList | File[]) => {
+    const fileArr = Array.from(files);
+    const remaining = MAX_ADDITIONAL_PHOTOS - additionalPhotos.length;
+    if (remaining <= 0) {
       toast({
         title: "Maximum photos reached",
         description: `You can only add ${MAX_ADDITIONAL_PHOTOS} additional photos`,
@@ -95,13 +121,17 @@ const PhotoUploadScreen = () => {
       });
       return;
     }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setAdditionalPhotos(prev => [...prev, e.target?.result as string]);
-    };
-    reader.readAsDataURL(file);
-  }, [additionalPhotos.length]);
+    const toProcess = fileArr.slice(0, remaining);
+    if (fileArr.length > remaining) {
+      toast({
+        title: "Some photos skipped",
+        description: `Only ${remaining} more photo(s) can be added`,
+      });
+    }
+    for (const file of toProcess) {
+      await handleAdditionalPhoto(file);
+    }
+  }, [additionalPhotos.length, handleAdditionalPhoto]);
 
   const removeAdditionalPhoto = (index: number) => {
     setAdditionalPhotos(prev => prev.filter((_, i) => i !== index));
@@ -110,9 +140,9 @@ const PhotoUploadScreen = () => {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleAdditionalPhoto(file);
-  }, [handleAdditionalPhoto]);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) handleAdditionalPhotos(files);
+  }, [handleAdditionalPhotos]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -262,13 +292,13 @@ const PhotoUploadScreen = () => {
     // Store photo data for later upload (after auth)
     try {
       // Compress images before storing to avoid localStorage quota issues
-      const compressImage = (dataUrl: string, quality = 0.5): Promise<string> => {
+      const compressImage = (dataUrl: string, quality = 0.85): Promise<string> => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            // Resize to max 400px for storage
-            const maxDim = 400;
+            // Resize to max 1080px for clarity while keeping storage reasonable
+            const maxDim = 1080;
             let w = img.width, h = img.height;
             if (w > maxDim || h > maxDim) {
               if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
@@ -390,7 +420,7 @@ const PhotoUploadScreen = () => {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Selfie Section */}
-        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
+        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Camera className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Selfie for Verification</h2>
@@ -412,11 +442,12 @@ const PhotoUploadScreen = () => {
             </Button>
           ) : (
             <div className="relative">
-              <div className="relative rounded-xl overflow-hidden aspect-square animate-in fade-in duration-500">
+              <div className="relative rounded-xl overflow-hidden aspect-square animate-in fade-in duration-500 bg-muted">
                 <img
                   src={selfiePreview}
                   alt="Selfie preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain cursor-zoom-in"
+                  onClick={() => setLightboxSrc(selfiePreview)}
                 />
                 
                 {verificationState === "verifying" && (
@@ -491,7 +522,7 @@ const PhotoUploadScreen = () => {
         </Card>
 
         {/* Additional Photos Section */}
-        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
           <div className="flex items-center gap-2 mb-3">
             <Upload className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Additional Photos <span className="text-destructive">*</span></h2>
@@ -504,28 +535,34 @@ const PhotoUploadScreen = () => {
             ref={additionalFileInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleAdditionalPhoto(file);
+              const files = e.target.files;
+              if (files && files.length > 0) handleAdditionalPhotos(files);
               e.target.value = "";
             }}
             className="hidden"
           />
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {additionalPhotos.map((photo, index) => (
-              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group animate-in fade-in duration-300">
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group animate-in fade-in duration-300 bg-muted">
                 <img
                   src={photo}
                   alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain cursor-zoom-in"
+                  onClick={() => setLightboxSrc(photo)}
                 />
                 <button
-                  onClick={() => removeAdditionalPhoto(index)}
-                  className="absolute top-1 right-1 p-1 bg-destructive/90 text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => { e.stopPropagation(); removeAdditionalPhoto(index); }}
+                  className="absolute top-1 right-1 p-1.5 bg-destructive/90 text-destructive-foreground rounded-full opacity-90 hover:opacity-100 transition-opacity"
+                  aria-label={`Remove photo ${index + 1}`}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
+                <span className="absolute bottom-1 left-1 text-[10px] bg-background/70 text-foreground px-1.5 py-0.5 rounded">
+                  {index + 1}
+                </span>
               </div>
             ))}
 
@@ -536,7 +573,7 @@ const PhotoUploadScreen = () => {
                 onDragLeave={handleDragLeave}
                 onClick={() => additionalFileInputRef.current?.click()}
                 className={`
-                  aspect-square rounded-lg border-2 border-dashed flex items-center justify-center
+                  aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1
                   cursor-pointer transition-all duration-200
                   ${isDragging 
                     ? "border-primary bg-primary/10" 
@@ -544,20 +581,45 @@ const PhotoUploadScreen = () => {
                   }
                 `}
               >
-                <Plus className="h-6 w-6 text-muted-foreground" />
+                <Plus className="h-7 w-7 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Add photo(s)</span>
               </div>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            Add up to {MAX_ADDITIONAL_PHOTOS} more photos to your profile
+            Tap a photo to view full size. You can select multiple photos at once. Up to {MAX_ADDITIONAL_PHOTOS} required.
           </p>
         </Card>
+
+        {/* Lightbox for full-clear photo preview */}
+        {lightboxSrc && (
+          <div
+            className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setLightboxSrc(null)}
+          >
+            <img
+              src={lightboxSrc}
+              alt="Full preview"
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute top-4 right-4"
+              onClick={() => setLightboxSrc(null)}
+              aria-label="Close preview"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
 
         {/* Continue Button */}
         <Button
           variant="aurora"
-          className="w-full max-w-sm mt-6"
+          className="w-full max-w-md mt-6"
           size="lg"
           onClick={handleNext}
           disabled={verificationState !== "verified" || additionalPhotos.length < MAX_ADDITIONAL_PHOTOS}
