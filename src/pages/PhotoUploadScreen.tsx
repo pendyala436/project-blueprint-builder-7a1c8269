@@ -292,13 +292,13 @@ const PhotoUploadScreen = () => {
     // Store photo data for later upload (after auth)
     try {
       // Compress images before storing to avoid localStorage quota issues
-      const compressImage = (dataUrl: string, quality = 0.5): Promise<string> => {
+      const compressImage = (dataUrl: string, quality = 0.85): Promise<string> => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            // Resize to max 400px for storage
-            const maxDim = 400;
+            // Resize to max 1080px for clarity while keeping storage reasonable
+            const maxDim = 1080;
             let w = img.width, h = img.height;
             if (w > maxDim || h > maxDim) {
               if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
