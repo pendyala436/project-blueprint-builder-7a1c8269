@@ -407,6 +407,19 @@ export function PrivateGroupCallWindow({
     if (error) toast.error(error);
   }, [error]);
 
+  // Notify participants of host status changes
+  const prevHostStatusRef = useRef(hostStatus);
+  useEffect(() => {
+    if (isOwner) return;
+    const prev = prevHostStatusRef.current;
+    if (prev === hostStatus) return;
+    prevHostStatusRef.current = hostStatus;
+    if (hostStatus === 'away') toast.info('Host stepped away');
+    else if (hostStatus === 'muted') toast.info('Host muted their mic');
+    else if (hostStatus === 'camera-off') toast.info('Host turned off camera');
+    else if (hostStatus === 'live' && prev !== 'live') toast.success('Host is back');
+  }, [hostStatus, isOwner]);
+
   // Fetch gifts
   useEffect(() => {
     const fetchGifts = async () => {
