@@ -271,10 +271,10 @@ const PhotoUploadScreen = () => {
   };
 
   const handleNext = async () => {
-    if (verificationState !== "verified") {
+    if (!selfiePreview) {
       toast({
-        title: "Selfie not verified",
-        description: "Please verify your selfie before continuing",
+        title: "Selfie required",
+        description: "Please take a selfie before continuing",
         variant: "destructive",
       });
       return;
@@ -289,6 +289,12 @@ const PhotoUploadScreen = () => {
       return;
     }
 
+    if (verificationState !== "verified") {
+      toast({
+        title: "Selfie not AI-verified",
+        description: "Continuing without AI verification — your profile may need manual review.",
+      });
+    }
     // Store photo data for later upload (after auth)
     try {
       // Compress images before storing to avoid localStorage quota issues
