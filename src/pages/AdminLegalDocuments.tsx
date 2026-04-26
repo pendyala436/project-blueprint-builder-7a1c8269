@@ -246,9 +246,11 @@ const AdminLegalDocuments = () => {
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
         .from('legal-documents')
-        .upload(fileName, selectedFile);
-
-      clearInterval(progressInterval);
+        .upload(fileName, selectedFile, {
+          cacheControl: '3600',
+          contentType: selectedFile.type,
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -258,19 +260,23 @@ const AdminLegalDocuments = () => {
       const { error: insertError } = await supabase
         .from('legal_documents')
         .insert({
-          name: newDocument.name,
+          name: newDocument.name.trim(),
           document_type: newDocument.document_type,
-          version: newDocument.version,
-          description: newDocument.description || null,
+          version: newDocument.version.trim(),
+          description: newDocument.description?.trim() || null,
           file_path: fileName,
           file_size: selectedFile.size,
           mime_type: selectedFile.type,
           is_active: newDocument.is_active,
-          uploaded_by: user?.id,
+          uploaded_by: user.id,
           effective_date: newDocument.effective_date || null,
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Rollback: delete orphaned storage object
+        await supabase.storage.from('legal-documents').remove([fileName]);
+        throw insertError;
+      }
 
       setUploadProgress(100);
 
@@ -294,6 +300,7 @@ const AdminLegalDocuments = () => {
       console.error("Error uploading document:", error);
       toast.error("Upload failed", { description: classifyError(error, "upload the document").message });
     } finally {
+      if (progressInterval) clearInterval(progressInterval);
       setUploading(false);
     }
   };
