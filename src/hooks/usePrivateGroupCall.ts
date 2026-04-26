@@ -1087,6 +1087,25 @@ export function usePrivateGroupCall({
     };
   }, [cleanup]);
 
+  // Host: broadcast 'away' / 'live' on tab visibility changes while live
+  useEffect(() => {
+    if (!isOwner || !state.isLive) return;
+    const handleVisibility = () => {
+      const isHidden = document.visibilityState === 'hidden';
+      // When returning, restore status based on current track state
+      if (!isHidden && localStream.current) {
+        const audioOn = localStream.current.getAudioTracks().some(t => t.enabled);
+        const videoOn = localStream.current.getVideoTracks().some(t => t.enabled);
+        const next: HostStatus = !videoOn ? 'camera-off' : !audioOn ? 'muted' : 'live';
+        broadcastHostStatus(next);
+      } else if (isHidden) {
+        broadcastHostStatus('away');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isOwner, state.isLive, broadcastHostStatus]);
+
   return {
     ...state,
     localVideoRef,
