@@ -140,9 +140,12 @@ const AdminLegalDocuments = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchDocuments();
-    setRefreshing(false);
-    toast.success("Refreshed", { description: "Document list updated" });
+    try {
+      await fetchDocuments();
+      toast.success("Refreshed", { description: "Document list updated" });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleSeedDocuments = async () => {
@@ -202,28 +205,52 @@ const AdminLegalDocuments = () => {
       return;
     }
 
+    if (!newDocument.version.trim()) {
+      toast.error("Version required", { description: "Please enter a version" });
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
-      
+      if (!user) {
+        throw new Error("You must be signed in as an admin to upload documents");
+      }
+
+      // Check duplicate version for same type
+      const { data: existing, error: existErr } = await supabase
+        .from('legal_documents')
+        .select('id')
+        .eq('document_type', newDocument.document_type)
+        .eq('version', newDocument.version.trim())
+        .maybeSingle();
+      if (existErr) throw existErr;
+      if (existing) {
+        throw new Error(`Version ${newDocument.version} already exists for this document type`);
+      }
+
       // Generate unique file path
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${newDocument.document_type}/${Date.now()}_${newDocument.version}.${fileExt}`;
+      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'bin';
+      const safeVersion = newDocument.version.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${newDocument.document_type}/${Date.now()}_v${safeVersion}.${fileExt}`;
       
       // Simulate upload progress
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
         .from('legal-documents')
-        .upload(fileName, selectedFile);
-
-      clearInterval(progressInterval);
+        .upload(fileName, selectedFile, {
+          cacheControl: '3600',
+          contentType: selectedFile.type,
+          upsert: false,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -233,19 +260,23 @@ const AdminLegalDocuments = () => {
       const { error: insertError } = await supabase
         .from('legal_documents')
         .insert({
-          name: newDocument.name,
+          name: newDocument.name.trim(),
           document_type: newDocument.document_type,
-          version: newDocument.version,
-          description: newDocument.description || null,
+          version: newDocument.version.trim(),
+          description: newDocument.description?.trim() || null,
           file_path: fileName,
           file_size: selectedFile.size,
           mime_type: selectedFile.type,
           is_active: newDocument.is_active,
-          uploaded_by: user?.id,
+          uploaded_by: user.id,
           effective_date: newDocument.effective_date || null,
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Rollback: delete orphaned storage object
+        await supabase.storage.from('legal-documents').remove([fileName]);
+        throw insertError;
+      }
 
       setUploadProgress(100);
 
@@ -269,6 +300,7 @@ const AdminLegalDocuments = () => {
       console.error("Error uploading document:", error);
       toast.error("Upload failed", { description: classifyError(error, "upload the document").message });
     } finally {
+      if (progressInterval) clearInterval(progressInterval);
       setUploading(false);
     }
   };
@@ -319,18 +351,21 @@ const AdminLegalDocuments = () => {
     if (!confirm(`Are you sure you want to delete "${document.name}"?`)) return;
 
     try {
-      // Delete from storage
-      await supabase.storage
-        .from('legal-documents')
-        .remove([document.file_path]);
-
-      // Delete from database
+      // Delete from database first (RLS-protected source of truth)
       const { error } = await supabase
         .from('legal_documents')
         .delete()
         .eq('id', document.id);
 
       if (error) throw error;
+
+      // Then remove storage file (best-effort; orphan is harmless)
+      if (document.file_path) {
+        const { error: storageErr } = await supabase.storage
+          .from('legal-documents')
+          .remove([document.file_path]);
+        if (storageErr) console.warn('[LegalDocs] Storage cleanup failed:', storageErr.message);
+      }
 
       toast.success("Document deleted", { description: `${document.name} has been deleted` });
 
@@ -626,7 +661,23 @@ const AdminLegalDocuments = () => {
       </div>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+      <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+        if (uploading) return;
+        setUploadDialogOpen(open);
+        if (!open) {
+          setSelectedFile(null);
+          setUploadProgress(0);
+          setNewDocument({
+            name: "",
+            document_type: "terms",
+            version: "1.0",
+            description: "",
+            effective_date: "",
+            is_active: false,
+          });
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      }}>
         <DialogContent className="bg-card border-border max-w-md">
           <DialogHeader>
             <DialogTitle className="text-foreground">Upload Legal Document</DialogTitle>
