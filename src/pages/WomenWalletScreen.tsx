@@ -43,7 +43,7 @@ const WomenWalletScreen = () => {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'ledger_transactions',
+          table: 'wallet_transactions',
           filter: `user_id=eq.${user.id}`,
         }, () => { loadData(user.id); })
         .on('postgres_changes', {

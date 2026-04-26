@@ -207,14 +207,15 @@ const MiniChatWindow = ({
           }
         } else {
           const today = new Date().toISOString().split("T")[0];
+          // Earnings come from wallet_transactions (canonical) — credits are positive amounts
           const { data: earnings } = await supabase
-            .from("ledger_transactions")
-            .select("credit")
+            .from("wallet_transactions")
+            .select("amount")
             .eq("user_id", currentUserId)
-            .gt("credit", 0)
+            .gt("amount", 0)
             .gte("created_at", `${today}T00:00:00`);
           
-          const total = earnings?.reduce((acc, e) => acc + Number(e.credit), 0) || 0;
+          const total = earnings?.reduce((acc, e) => acc + Number(e.amount), 0) || 0;
           setTodayEarnings(total);
         }
 

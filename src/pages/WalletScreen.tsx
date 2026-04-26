@@ -40,7 +40,7 @@ const WalletScreen = () => {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'ledger_transactions',
+          table: 'wallet_transactions',
           filter: `user_id=eq.${user.id}`,
         }, () => { loadBalance(user.id); })
         .on('postgres_changes', {

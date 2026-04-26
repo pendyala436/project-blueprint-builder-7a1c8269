@@ -367,8 +367,8 @@ const WomenDashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'ledger_transactions', filter: `user_id=eq.${currentUserId}` },
-        // Refresh wallet/earnings from single source of truth
+        { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${currentUserId}` },
+        // Refresh wallet/earnings from single source of truth (wallet_transactions)
         () => { if (currentUserId) { fetchWalletBalance(currentUserId); fetchTopEarnerLeaderboard(currentUserId); } }
       )
       .on(
