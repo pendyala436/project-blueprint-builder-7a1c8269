@@ -163,8 +163,14 @@ You will defend, indemnify, and hold harmless Meow Meow, its directors, employee
 14. GOVERNING LAW & JURISDICTION
 These Terms are governed by the laws of India. Subject to the Arbitration and Conciliation Act 1996, disputes will be referred to a sole arbitrator in Bengaluru, Karnataka. Courts at Bengaluru have exclusive jurisdiction. Foreign users additionally consent to Indian jurisdiction and waive forum non-conveniens objections.
 
-15. CHANGES
-We may update these Terms at any time. Material changes will be notified in-app at least 7 days before they take effect. Continued use after the effective date constitutes acceptance.
+15. ADMIN DISCRETION & UNILATERAL CHANGES (NO USER NOTICE REQUIRED)
+You expressly acknowledge and agree that:
+• The administrator of Meow Meow has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, payout ceiling, payout eligibility, KYC requirement, moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
+• The administrator MAY ADD, MODIFY, REPLACE, SUSPEND, OR REMOVE any rule, policy, feature, price, or limit at ANY TIME, EFFECTIVE IMMEDIATELY, WITHOUT PRIOR NOTICE, individual notification, email, push, or in-app banner to end-users.
+• The current version of these Terms and all linked policies, as published in the App at the moment of any user action, governs that action. It is the user's responsibility to review the Terms periodically.
+• Continued use of the App after any change constitutes full and final acceptance of the change. The user's sole remedy in case of disagreement is to stop using the App and request account deletion.
+• No prior version of these Terms or any past communication, marketing material, or oral statement creates any vested right, estoppel, or legitimate expectation against the administrator's right to change the Terms unilaterally.
+This unilateral-change right is exercised in good faith and subject only to the non-waivable rights granted to users by Indian law (DPDP 2023, Consumer Protection Act 2019) and applicable foreign mandatory law (e.g., GDPR Art. 22, EU consumer law). Where local mandatory law requires advance notice for a specific category of change (e.g., material privacy changes under GDPR), that legal minimum is honoured for affected users only.
 
 16. CONTACT / GRIEVANCE OFFICER (per IT Rules 2021)
 Grievance Officer: support@meowmeow.app | Response within 24 hours, resolution within 15 days as required by Rule 3(2) of the IT (Intermediary Guidelines) Rules 2021.`
