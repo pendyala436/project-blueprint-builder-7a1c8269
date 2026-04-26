@@ -207,12 +207,13 @@ const AdminKYCManagement = () => {
   const loadIndianWomen = async () => {
     setLoading(true);
     try {
-      // Get all Indian women profiles
+      // Get all Indian women profiles (case-insensitive partial match on country)
       const { data: profiles, error } = await supabase
         .from("profiles")
         .select("user_id, full_name, country, primary_language, photo_url")
         .ilike("gender", "female")
-        .or("country.ilike.india,country.eq.IN,is_indian.eq.true");
+        .or("country.ilike.%india%,country.eq.IN,is_indian.eq.true")
+        .order("full_name", { ascending: true });
 
       if (error) throw error;
       setIndianWomen((profiles || []) as IndianWoman[]);
