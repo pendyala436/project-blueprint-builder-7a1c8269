@@ -3743,16 +3743,10 @@ export type Database = {
         Returns: Json
       }
       generate_payout_snapshot_now: { Args: never; Returns: Json }
-      get_analytics_summary:
-        | { Args: { p_end_date: string; p_start_date: string }; Returns: Json }
-        | {
-            Args: {
-              p_bucket_interval?: string
-              p_end_date: string
-              p_start_date: string
-            }
-            Returns: Json
-          }
+      get_analytics_summary: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
       get_browsable_female_profiles: {
         Args: never
         Returns: {
