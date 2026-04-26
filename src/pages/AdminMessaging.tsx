@@ -245,17 +245,26 @@ const AdminMessaging = () => {
       .order('created_at', { ascending: false })
       .limit(100);
 
-    if (!error && data) setMessages(data as Message[]);
+    if (error) {
+      console.error('[AdminMessaging] broadcast fetch failed:', error);
+      toast.error('Failed to load broadcasts', { description: error.message });
+      return;
+    }
+    if (data) setMessages(data as Message[]);
   };
 
   const fetchChatMessages = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('admin_user_messages')
       .select('*')
       .eq('target_user_id', userId)
       .order('created_at', { ascending: true })
       .limit(200);
 
+    if (error) {
+      console.error('[AdminMessaging] chat fetch failed:', error);
+      return;
+    }
     if (data) setChatMessages(data as Message[]);
   };
 
@@ -304,18 +313,24 @@ const AdminMessaging = () => {
   };
 
   const searchUsers = async () => {
-    if (!searchQuery.trim()) return;
+    const q = searchQuery.trim();
+    if (!q) return;
     setIsSearching(true);
     try {
+      // Sanitize for PostgREST .or() — strip chars that would break filter syntax
+      const safe = q.replace(/[,()*\\]/g, ' ').replace(/%/g, '').slice(0, 80);
       const { data, error } = await supabase
         .from('profiles')
         .select('user_id, full_name, gender, country, is_indian')
-        .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(20);
 
-      if (!error && data) setSearchResults(data as UserProfile[]);
-    } catch {
-      toast.error('Search failed');
+      if (error) throw error;
+      setSearchResults((data as UserProfile[]) || []);
+    } catch (err: any) {
+      console.error('[AdminMessaging] search failed:', err);
+      toast.error('Search failed', { description: err?.message || 'Try a different query' });
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -323,12 +338,14 @@ const AdminMessaging = () => {
 
   const deleteMessage = async (id: string) => {
     const { error } = await supabase.from('admin_user_messages').delete().eq('id', id);
-    if (!error) {
-      setMessages(prev => prev.filter(m => m.id !== id));
-      setChatMessages(prev => prev.filter(m => m.id !== id));
-      setThreadMessages(prev => prev.filter(m => m.id !== id));
-      toast.success('Message deleted');
+    if (error) {
+      toast.error('Delete failed', { description: error.message });
+      return;
     }
+    setMessages(prev => prev.filter(m => m.id !== id));
+    setChatMessages(prev => prev.filter(m => m.id !== id));
+    setThreadMessages(prev => prev.filter(m => m.id !== id));
+    toast.success('Message deleted');
   };
 
   const getGroupLabel = (group: string) => GROUP_CONFIG.find(g => g.key === group)?.label || group;

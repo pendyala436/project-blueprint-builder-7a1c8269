@@ -3,6 +3,7 @@
  * Spec §7: KYC-based payout statement (10 columns from Bank KYC).
  */
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import AdminNav from '@/components/AdminNav';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -63,11 +64,30 @@ const AdminPayoutStatements = () => {
 
   useEffect(() => { loadRecords(); }, [monthFilter]);
 
+  // Realtime: refresh when snapshots change
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-payout-snapshots-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'women_payout_snapshots' }, () => {
+        loadRecords();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthFilter]);
+
   const loadRecords = async () => {
     setIsLoading(true);
-    const data = await getPayoutSnapshots(monthFilter);
-    setRecords(data as PayoutRecord[]);
-    setIsLoading(false);
+    try {
+      const data = await getPayoutSnapshots(monthFilter);
+      setRecords(data as PayoutRecord[]);
+    } catch (err: any) {
+      console.error('[Payouts] load failed:', err);
+      toast({ title: 'Failed to load payouts', description: err?.message || 'Please retry', variant: 'destructive' });
+      setRecords([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerate = async () => {
