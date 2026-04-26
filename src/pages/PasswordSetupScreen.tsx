@@ -91,10 +91,10 @@ const PasswordSetupScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto relative z-10">
-        <div className="text-center mb-6 animate-fade-in">
-          <MeowLogo size="sm" className="mx-auto mb-4" />
-          <h1 className="font-display text-2xl font-bold text-foreground mb-2">
+      <main className="flex-1 flex flex-col items-center px-6 pb-32 overflow-y-auto relative z-10">
+        <div className="text-center mb-4 animate-fade-in">
+          <MeowLogo size="sm" className="mx-auto mb-3" />
+          <h1 className="font-display text-2xl font-bold text-foreground mb-1">
             Create Your Password
           </h1>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
@@ -102,8 +102,8 @@ const PasswordSetupScreen = () => {
           </p>
         </div>
 
-        <Card className="w-full max-w-sm p-6 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
-          <div className="space-y-6">
+        <Card className="w-full max-w-sm p-5 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+          <div className="space-y-4">
             {/* Password Field */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -135,24 +135,20 @@ const PasswordSetupScreen = () => {
             </div>
 
             {/* Password Requirements */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Password must have:</p>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {passwordRequirements.map((req, index) => {
                   const met = req.test(password);
                   return (
                     <div
                       key={index}
-                    className={cn(
-                      "flex items-center gap-2 text-xs transition-all duration-200",
-                      met ? "text-success" : "text-muted-foreground"
-                    )}
-                    >
-                      {met ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <X className="h-3 w-3" />
+                      className={cn(
+                        "flex items-center gap-2 text-xs transition-all duration-200",
+                        met ? "text-success" : "text-muted-foreground"
                       )}
+                    >
+                      {met ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                       {req.label}
                     </div>
                   );
@@ -188,11 +184,13 @@ const PasswordSetupScreen = () => {
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {touched.confirm && confirmPassword.length > 0 && (
-                <p className={cn(
-                  "text-xs flex items-center gap-1 animate-fade-in",
-                  passwordsMatch ? "text-success" : "text-destructive"
-                )}>
+              {confirmPassword.length > 0 && (
+                <p
+                  className={cn(
+                    "text-xs flex items-center gap-1 animate-fade-in",
+                    passwordsMatch ? "text-success" : "text-destructive"
+                  )}
+                >
                   {passwordsMatch ? (
                     <>
                       <Check className="h-3 w-3" />
@@ -208,7 +206,7 @@ const PasswordSetupScreen = () => {
               )}
             </div>
 
-            {/* Submit Button */}
+            {/* Inline Submit Button (always inside the card too) */}
             <Button
               onClick={handleSubmit}
               disabled={!isValid}
@@ -219,10 +217,29 @@ const PasswordSetupScreen = () => {
           </div>
         </Card>
 
-        <p className="text-xs text-muted-foreground text-center mt-4 max-w-xs">
+        <p className="text-xs text-muted-foreground text-center mt-3 max-w-xs">
           Your password is securely encrypted and never stored in plain text
         </p>
       </main>
+
+      {/* Sticky bottom CTA — guarantees the Continue button is always visible */}
+      <div className="sticky bottom-0 left-0 right-0 z-20 px-6 py-3 bg-background/90 backdrop-blur-md border-t border-border">
+        <div className="max-w-sm mx-auto">
+          <Button
+            onClick={handleSubmit}
+            disabled={!isValid}
+            className="w-full h-12 rounded-xl font-semibold text-base gap-2"
+          >
+            {isValid
+              ? "Continue to Terms"
+              : !allRequirementsMet
+                ? "Meet all password rules"
+                : password.length === 0
+                  ? "Enter a password"
+                  : "Confirm your password"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
