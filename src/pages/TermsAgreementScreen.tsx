@@ -351,7 +351,7 @@ We do NOT collect: contacts list, social-media accounts, browsing history outsid
 3. LEGAL BASIS (DPDP / GDPR Art. 6)
 • Consent — for marketing, optional features, AI gender verification.
 • Performance of contract — to operate the App, process payments, deliver chats/calls.
-• Legal obligation — tax (Income Tax Act 1961, GST on men's recharges), grievance redressal (IT Rules 2021), child-safety reporting (POCSO 2012).
+• Legal obligation — tax (Income Tax Act 1961, GST on men's recharges), KYC retention (PMLA 2002 where applicable), grievance redressal (IT Rules 2021), child-safety reporting (POCSO 2012).
 • Legitimate interest — fraud prevention, security, service improvement, balanced against your rights.
 
 4. PURPOSES OF USE
