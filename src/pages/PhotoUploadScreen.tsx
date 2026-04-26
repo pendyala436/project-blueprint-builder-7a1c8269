@@ -435,6 +435,45 @@ const PhotoUploadScreen = () => {
           )}
         </Card>
 
+        {selfiePreview && (
+          <div className="sticky bottom-0 z-30 w-full max-w-md bg-background/95 backdrop-blur-md border border-border rounded-lg p-2 shadow-lg">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="min-h-11"
+                onClick={clearSelfie}
+              >
+                Retake
+              </Button>
+              <Button
+                size="lg"
+                className="min-h-11 gap-2"
+                onClick={verifySelfie}
+                disabled={verificationState === "verifying" || isVerifying}
+                variant={verificationState === "verified" ? "outline" : "default"}
+              >
+                {verificationState === "verifying" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verifying
+                  </>
+                ) : verificationState === "verified" ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Re-verify
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Verify
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {lightboxSrc && (
           <div
             className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
