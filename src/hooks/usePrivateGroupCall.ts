@@ -101,6 +101,7 @@ export function usePrivateGroupCall({
     totalEarnings: 0,
     isRefunding: false,
     hostStream: null,
+    hostStatus: 'live',
   });
 
   const pricing = { groupCallRatePerMinute: 4 };
