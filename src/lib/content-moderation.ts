@@ -14,39 +14,50 @@
 // ========================================
 
 const SEXUAL_CONTENT_PATTERNS = [
-  // English
-  /\b(sex|nude[s]?|naked|porn|xxx|nsfw|erotic|orgasm|masturbat|blowjob|handjob|anal\s*sex|oral\s*sex|threesome|gangbang|fetish|bondage|bdsm|strip\s*tease|lap\s*dance|one\s*night\s*stand|hookup|hook\s*up|booty\s*call|f[*\s]?u[*\s]?c[*\s]?k|d[*\s]?i[*\s]?c[*\s]?k|p[*\s]?u[*\s]?s[*\s]?s[*\s]?y|c[*\s]?o[*\s]?c[*\s]?k|a[*\s]?s[*\s]?s\s*h[*\s]?o[*\s]?l[*\s]?e|cum\s*shot|creampie|milf|dildo|vibrator|slutt?y?|whor[e]?|bitch)\b/gi,
+  // English (expanded)
+  /\b(sex|sexy|sexting|nude[s]?|naked|porn|porno|pornography|xxx|nsfw|erotic|erotica|orgasm|masturbat\w*|blowjob|handjob|rimjob|footjob|titjob|anal\s*sex|oral\s*sex|threesome|gangbang|orgy|fetish|bondage|bdsm|kinky|strip\s*tease|lap\s*dance|one\s*night\s*stand|hookup|hook\s*up|booty\s*call|friends?\s*with\s*benefits|fwb|nsa|f[*\s]?u[*\s]?c[*\s]?k|d[*\s]?i[*\s]?c[*\s]?k|p[*\s]?u[*\s]?s[*\s]?s[*\s]?y|c[*\s]?o[*\s]?c[*\s]?k|a[*\s]?s[*\s]?s\s*h[*\s]?o[*\s]?l[*\s]?e|cum\s*shot|cumshot|creampie|milf|dilf|gilf|dildo|vibrator|sex\s*toy|fleshlight|slutt?y?|whor[e]?|bitch|hoe|thot|camgirl|escort|prostitut\w*|hooker|callgirl|cuckold|incest|pedo|loli|shota|bestiality|voyeur|exhibition|upskirt|downblouse|cleavage|nipple|breast|boob[s]?|tit[s]?|titt(?:y|ies)|areola|labia|clit|clitoris|vagina|penis|erection|ejaculat\w*|sperm|semen|cum|jizz|squirt|wet\s*pussy|hard\s*on|boner|stiffy|deepthroat|gagging|choking|spank|bukkake|gloryhole|swing(?:er|ing)|polyamor\w*)\b/gi,
   /\b(send\s*(me\s*)?(nudes?|pics?|photos?|body\s*pics?))\b/gi,
   /\b(show\s*(me\s*)?(your\s*)?(body|boobs?|tits?|ass|butt|privates?))\b/gi,
   /\b(let'?s?\s*(have\s*)?sex|wanna\s*(f[*]?ck|bang|smash|screw))\b/gi,
   /\b(horny|turned\s*on|get\s*laid|make\s*love|sleep\s*with\s*me)\b/gi,
-  // Hindi/Urdu
-  /\b(chod|chud|lund|gaand|bhosdi|randi|chut|maderchod|behenchod|chudai|jhaant|muth|hilana)\b/gi,
-  /\b(चोद|चूत|लंड|गांड|भोसडी|रंडी|चुदाई|मादरचोद|बहनचोद|मूठ|हिलाना)\b/g,
-  // Tamil
-  /\b(otha|thevdiya|pundai|sunni|oombu|koothi|myiru)\b/gi,
-  /\b(ஓத்தா|தேவடியா|புண்டை|சுன்னி|ஊம்பு|கூதி)\b/g,
-  // Telugu
-  /\b(dengey|modda|gudda|lanja|pooku|sulli)\b/gi,
-  /\b(దెంగేయ్|మొడ్డ|గుద్ద|లంజ|పూకు|సుల్లి)\b/g,
-  // Bengali
-  /\b(choda|baal|magir?|gud|dhon|magi|chudi)\b/gi,
-  /\b(চোদা|বাল|মাগি|গুদ|ধোন|চুদি)\b/g,
-  // Kannada
-  /\b(tunne|tull|sule|bolimaga|ninge)\b/gi,
-  /\b(ತುನ್ನೆ|ತುಳ್ಳ|ಸೂಳೆ|ಬೋಳಿಮಗ)\b/g,
-  // Malayalam
-  /\b(kunna|pooru|thendi|myiru|poorr)\b/gi,
-  /\b(കുണ്ണ|പൂറ്|തെണ്ടി|മൈര്)\b/g,
-  // Marathi
-  /\b(zavadya|jhavla|madharchod|zhavne|randya)\b/gi,
-  /\b(झवाड्या|झवला|मादरचोद|झवणे|रांडया)\b/g,
-  // Gujarati
-  /\b(chodu|chodvu|gand|lodo|bhosad)\b/gi,
-  /\b(ચોદુ|ગાંડ|લોડો|ભોસડ)\b/g,
-  // Punjabi
-  /\b(lann|phuddi|kanjri|chod|bhosad|kutti)\b/gi,
-  /\b(ਲੰਨ|ਫੁੱਦੀ|ਕੰਜਰੀ|ਚੋਦ|ਕੁੱਤੀ)\b/g,
+  // ========== HINDI / URDU (Romanized — Hinglish) ==========
+  /\b(chod\w*|chud\w*|chudai|chudwa\w*|chudak\w*|chudasi|chinaal|lund|loda|lauda|laude|launde|lawde|gaand|gandu|gaandu|bhosd[ai]\w*|bhosdike|bhosdiwale|bhonsdi|randi|randwa|raand|chut|chutiya|chutiyap|chutmarani|chutiye|maderchod|madarchod|maaderchod|madhrchod|behenchod|bhenchod|bhencho|bsdk|mkb|jhaant|jhant|jhand|muth|muthal|hilana|hilake|hilao|hilane|gandfat|gandmara|gandmar|gandmasti|tatti|tatte|fudi|fuddi|chuchi|chuchiyan|momme|mamme|kuttiya|haraamzad\w*|haramzad\w*|kamine|kamini|raand\w*|rakhel|aiyaash|aiyash|sutta|nashe|gilf)\b/gi,
+  // Hindi (Devanagari)
+  /(चोद|चूद|चुदाई|चुदक्कड़|चुदासी|लंड|लौड़ा|लौड़े|लौंड़े|गांड|गाण्ड|गांडू|भोसड़ी|भोसड़ीके|भोंसड़ी|रंडी|रांड|चूत|चुतिया|चूतिये|चूतमारानी|मादरचोद|बहनचोद|भेनचोद|झांट|झांटू|मूठ|हिलाना|हिलाओ|गंदफट|गांडमारा|टट्टी|फुद्दी|चूची|चूचियाँ|कुत्तिया|हरामज़ादा|हरामी|कमीना|कमीनी|आयाश)/g,
+  // Urdu (Nastaliq script)
+  /(چود|چودائی|لنڈ|لوڑا|گانڈ|بھوسڑی|رنڈی|چوت|چتیا|مادرچود|بہنچود|ہراامزادہ|کمینہ|کتیا)/g,
+  // ========== TAMIL ==========
+  /\b(otha|othha|oththa|thevdiya|thevidiya|thevudiya|pundai|poondai|sunni|soonni|oombu|oomba|koothi|kooth|myiru|maire|naaye|naai|punda|kena|loosu|kayadi|paei|kazhuthai|panni|kena\s*panni)\b/gi,
+  /(ஓத்தா|ஓத்த|தேவடியா|தேவிடியா|புண்டை|பூண்டை|சுன்னி|ஊம்பு|கூதி|மைரு|மைரே|நாயே|பண்டா|கேனா|பன்னி|கழுதை)/g,
+  // ========== TELUGU ==========
+  /\b(dengey|denga|dengu|dengaalaa|modda|moddha|gudda|guddha|lanja|lanjakodaka|pooku|pukulo|sulli|gajji|saami|nikamma|naayi|donga|gaddida|battayi)\b/gi,
+  /(దెంగేయ్|దెంగు|దెంగా|మొడ్డ|గుద్ద|లంజ|లంజకొడక|పూకు|సుల్లి|నాయీ|దొంగ)/g,
+  // ========== BENGALI ==========
+  /\b(choda|chodachudi|baal|maagi|magir?|gud|dhon|magi|chudi|chudai|khanki|khankir|chodam|chudam|chudte|baalpanti|hagamuto|gandu|laar|laund|kutta|kuttar|shala|shali|harami|magiir)\b/gi,
+  /(চোদা|চোদাচুদি|বাল|মাগি|গুদ|ধোন|চুদি|চুদাই|খানকি|খানকির|গাণ্ডু|হারামি|কুত্তা|কুত্তার|শালা|শালী)/g,
+  // ========== KANNADA ==========
+  /\b(tunne|tunni|tull|tulli|sule|sulemaga|bolimaga|bevarsi|munde|kotari|naayi|kelsa|gubbi|hode|aithu|hennu\s*kelsa)\b/gi,
+  /(ತುನ್ನೆ|ತುಳ್ಳ|ತುಳ್ಳಿ|ಸೂಳೆ|ಸೂಳೇಮಗ|ಬೋಳಿಮಗ|ಬೇವರ್ಸಿ|ಮುಂಡೆ|ನಾಯಿ)/g,
+  // ========== MALAYALAM ==========
+  /\b(kunna|kunne|pooru|poori|thendi|thendiyole|myiru|myire|poorr|patti|naaye|kazhuvere|kandam|chettan\s*pooru|thayoli|thayolimol|achanammede|kazhuvera|nayinte\s*mone|porimol)\b/gi,
+  /(കുണ്ണ|പൂറ്|പൂറി|തെണ്ടി|തെണ്ടിയോളെ|മൈര്|പട്ടി|നായേ|കഴുവേറെ|തായോളി|പൂറിമോള്)/g,
+  // ========== MARATHI ==========
+  /\b(zavadya|zavadi|jhavla|jhavnar|madharchod|zhavne|randya|randichi|aaichya|aaichi\s*gand|bahnchod|gandya|kutra|sali|gadhav|chyaayla|tujhya\s*aaichi)\b/gi,
+  /(झवाड्या|झवाडी|झवला|झवणार|मादरचोद|झवणे|रांडया|रांडीची|आईच्या|गांड|गांड्या|भेनचोद|च्यायला|कुत्रा|गाढव)/g,
+  // ========== GUJARATI ==========
+  /\b(chodu|chodvu|chodva|gand|gandu|lodo|laudo|bhosad|bhosadi|chutiya|randi|saala|saali|kutra|gadhedo|haramkhor|chinaal|harami)\b/gi,
+  /(ચોદુ|ચોદવુ|ગાંડ|ગાંડુ|લોડો|લૌડો|ભોસડ|ભોસડી|ચૂતિયા|રંડી|હરામી|હરામખોર|કૂતરા|ગધેડો)/g,
+  // ========== PUNJABI ==========
+  /\b(lann|laun|laund|phuddi|phudi|kanjri|kanjar|chod|chodu|bhosad|bhosadi|kutti|kuttiye|gashti|paindu|chinaal|haraami|teri\s*maa|teri\s*pen|behnchod|maderchod|saala|saali|gadha)\b/gi,
+  /(ਲੰਨ|ਲੌਣ|ਫੁੱਦੀ|ਫੁਡੀ|ਕੰਜਰੀ|ਕੰਜਰ|ਚੋਦ|ਭੋਸੜ|ਭੋਸੜੀ|ਕੁੱਤੀ|ਕੁੱਤੀਏ|ਗਸ਼ਤੀ|ਪੈਂਡੂ|ਹਰਾਮੀ|ਮਾਦਰਚੋਦ|ਬਹਿਣਚੋਦ)/g,
+  // ========== ODIA / ORIYA ==========
+  /\b(maguni|nakata|maaichoda|bhainchoda|gandi|kukura|haraami|chutiya|randi)\b/gi,
+  /(ମାଗୁଣି|ନକଟା|ମାଇଚୋଦା|ଭଇଁଚୋଦା|ଗଣ୍ଡି|କୁକୁର|ହରାମୀ|ଚୁତିଆ|ରଣ୍ଡୀ)/g,
+  // ========== ASSAMESE ==========
+  /\b(maguni|chuda|chudai|chudri|gud|dhon|magi|harami|kutta|sala|sali)\b/gi,
+  /(মাগুনি|চুদা|চুদাই|গুদ|ধোন|মাগি|হারামি|কুকুৰ)/g,
+  // ========== KASHMIRI / SINDHI / NEPALI / KONKANI ==========
+  /\b(thoo|saale|kaminey|gandu|chutiya|randi|harami|kuttiya|nepali\s*chodne|saala\s*chor)\b/gi,
   // Arabic
   /\b(kos|ayre|sharmouta|nikni|zobb|teezi|manyak|sharmoot)\b/gi,
   /\b(كس|زب|شرموطة|طيزي|منيك)\b/g,
@@ -98,6 +109,35 @@ const HARMFUL_CONTENT_PATTERNS = [
   // Blackmail/extortion
   /\b(i('?ll| will)\s*(expose|leak|share)\s*(your|ur)\s*(photos?|pics?|videos?|nudes?))\b/gi,
   /\b(pay\s*me\s*or|send\s*money\s*or\s*i('?ll| will))\b/gi,
+];
+
+// ========================================
+// HATE SPEECH DETECTION (multilingual)
+// ========================================
+
+const HATE_SPEECH_PATTERNS = [
+  // English — racial / religious / casteist / homophobic / xenophobic slurs
+  /\b(n[i1]gg(?:er|a|az)|ch[i1]nk|sp[i1]c|k[i1]ke|w[e3]tback|towel\s*head|sand\s*n\w+|cracker|gook|paki|raghead|jihad[i]?|terror[i1]st\s*(scum|pig)?|kafir\s*scum|infidel\s*scum|fag|f[a@]gg[o0]t|dyke|tranny|shemale|retard|spaz|mongoloid|gypsy\s*scum|jewboy|zionist\s*pig|nazi|hitler\s*was\s*right|gas\s*the\s*\w+|white\s*power|kkk|black\s*lives\s*don'?t\s*matter|all\s*\w+\s*should\s*die)\b/gi,
+  // Caste-based slurs (India)
+  /\b(chamar|bhangi|chura|dalit\s*scum|achoot|untouchable|neech\s*jaat|low\s*caste|harijan\s*scum|kanjar|mahar|mochi|musahar|valmiki\s*scum)\b/gi,
+  // Religious hatred (India / South Asia)
+  /\b(katua|katwa|mulla\s*scum|hindu\s*scum|sikh\s*scum|christian\s*scum|jain\s*scum|buddhist\s*scum|pakistani\s*scum|bangla\s*scum|rohingya\s*scum|love\s*jihad|land\s*jihad|gow?\s*mata\s*killer|cow\s*killer|beef\s*eater\s*scum|pork\s*eater\s*scum|circumcised\s*scum|kafir\s*kill)\b/gi,
+  // Hindi / Hinglish hate
+  /\b(saala\s*musla|saala\s*mulla|saala\s*hindu|saala\s*sardar|saala\s*madrasi|saala\s*bihari|kala\s*kaluta|kalu|habshi|chinki|momos|kaali\s*kaluti|bhangi|chamar|achoot|katuwa|katua|mulle|hindue|sikhde|jaat\s*sala|marwadi\s*chor|gujju\s*chor|south\s*indian\s*idli|madarasi\s*idli|bihari\s*bhaiya\s*chor)\b/gi,
+  // Devanagari hate
+  /(साला\s*मुसला|साला\s*मुल्ला|कटुवा|कटुआ|भंगी|चमार|अछूत|नीच\s*जात|काली\s*कलूटी|कलूटा|हब्शी|चिंकी|हिंदू\s*स्कम|मुल्ले|गाय\s*मारने|बीफ\s*खाने)/g,
+  // Tamil hate
+  /(வடநாட்டான்\s*போ|பயல்\s*தமிழன்\s*அல்ல|துலுக்கன்|தீ\s*வைப்பேன்)/g,
+  // Telugu hate
+  /(ఆంధ్రోడు\s*పో|నీచ\s*జాతి|మ్లేచ్ఛుడు)/g,
+  // Bengali hate
+  /(মালু|মালুর\s*বাচ্চা|বিহারি\s*চোর|হিন্দু\s*স্কাম)/g,
+  // Calls for violence against groups
+  /\b(kill\s*all\s*(muslims|hindus|sikhs|christians|jews|gays|lesbians|trans|blacks|whites|indians|pakistanis|bangladeshis|chinese|tamils|brahmins|dalits))\b/gi,
+  /\b((muslims|hindus|sikhs|christians|jews|gays|lesbians|trans|blacks|whites|indians|pakistanis|bangladeshis|chinese|dalits|brahmins)\s*should\s*(die|be\s*killed|burn|hang|be\s*hanged|be\s*shot|leave))\b/gi,
+  /\b(go\s*back\s*to\s*(your\s*country|pakistan|bangladesh|africa|china))\b/gi,
+  // Dehumanizing language
+  /\b((muslims|hindus|jews|blacks|gays|trans|dalits)\s*are\s*(animals|dogs|pigs|vermin|cockroaches|rats|cancer))\b/gi,
 ];
 
 // ========================================
@@ -262,14 +302,25 @@ const CONTACT_FILENAME_PATTERNS = [
 // TYPES
 // ========================================
 
-export type ViolationType = 'phone' | 'email' | 'social_media' | 'contact_intent' | 'sexual_content' | 'harmful_content' | 'blocked_attachment' | 'number_words';
+export type ViolationType = 'phone' | 'email' | 'social_media' | 'contact_intent' | 'sexual_content' | 'harmful_content' | 'hate_speech' | 'blocked_attachment' | 'number_words';
 
 export interface ModerationResult {
   isBlocked: boolean;
   reason?: string;
   detectedType?: ViolationType;
   sanitizedMessage?: string;
+  /** Words/phrases that triggered the block — useful for audio beep timing */
+  matches?: string[];
 }
+
+/**
+ * Combined export for downstream consumers (audio/video moderation hooks).
+ * The audio hook uses these to decide which words to beep over a transcript.
+ */
+export const SPEECH_BLOCKLIST_PATTERNS = [
+  ...SEXUAL_CONTENT_PATTERNS,
+  ...HATE_SPEECH_PATTERNS,
+];
 
 // ========================================
 // MAIN MODERATION FUNCTION
@@ -284,32 +335,52 @@ export function moderateMessage(message: string): ModerationResult {
   }
 
   const normalizedMessage = message.toLowerCase().replace(/\s+/g, ' ').trim();
+  const collectMatches = (pattern: RegExp): string[] => {
+    pattern.lastIndex = 0;
+    const found = message.match(pattern) || normalizedMessage.match(pattern) || [];
+    return Array.from(new Set(found));
+  };
 
   // 1. Sexual content (highest priority)
   for (const pattern of SEXUAL_CONTENT_PATTERNS) {
-    pattern.lastIndex = 0;
-    if (pattern.test(message) || pattern.test(normalizedMessage)) {
+    const matches = collectMatches(pattern);
+    if (matches.length) {
       return {
         isBlocked: true,
         reason: 'Sexual or explicit content is strictly prohibited.',
         detectedType: 'sexual_content',
+        matches,
       };
     }
   }
 
-  // 2. Harmful/threatening content
+  // 2. Hate speech (slurs, religious/caste/racial hatred, calls for violence)
+  for (const pattern of HATE_SPEECH_PATTERNS) {
+    const matches = collectMatches(pattern);
+    if (matches.length) {
+      return {
+        isBlocked: true,
+        reason: 'Hate speech, slurs, and discriminatory language are not allowed.',
+        detectedType: 'hate_speech',
+        matches,
+      };
+    }
+  }
+
+  // 3. Harmful/threatening content
   for (const pattern of HARMFUL_CONTENT_PATTERNS) {
-    pattern.lastIndex = 0;
-    if (pattern.test(message) || pattern.test(normalizedMessage)) {
+    const matches = collectMatches(pattern);
+    if (matches.length) {
       return {
         isBlocked: true,
         reason: 'Threatening or harmful content is not allowed.',
         detectedType: 'harmful_content',
+        matches,
       };
     }
   }
 
-  // 3. Phone numbers (digits, words, symbols)
+  // 4. Phone numbers (digits, words, symbols)
   for (const pattern of PHONE_PATTERNS) {
     pattern.lastIndex = 0;
     if (pattern.test(message) || pattern.test(normalizedMessage)) {
