@@ -634,7 +634,7 @@ const PhotoUploadScreen = () => {
           className="w-full max-w-md mt-6"
           size="lg"
           onClick={handleNext}
-          disabled={verificationState !== "verified" || additionalPhotos.length < MAX_ADDITIONAL_PHOTOS}
+          disabled={!selfiePreview || additionalPhotos.length < MAX_ADDITIONAL_PHOTOS}
         >
           Continue
         </Button>
