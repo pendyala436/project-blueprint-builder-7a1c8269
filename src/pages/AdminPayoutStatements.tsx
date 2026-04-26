@@ -3,6 +3,7 @@
  * Spec §7: KYC-based payout statement (10 columns from Bank KYC).
  */
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import AdminNav from '@/components/AdminNav';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
