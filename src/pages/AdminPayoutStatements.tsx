@@ -70,11 +70,12 @@ const AdminPayoutStatements = () => {
     setIsLoading(false);
   };
 
-  const handleGenerate = async (type: 'mid_month' | 'end_month') => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    const result = await triggerPayoutSnapshot(type);
+    const result = await generatePayoutSnapshot();
     if (result.success) {
-      toast({ title: 'Payout Generated', description: `${result.count} women processed.` });
+      const skipMsg = result.skipped ? ` • ${result.skipped} skipped (no KYC)` : '';
+      toast({ title: 'Payout Generated', description: `${result.count} women processed${skipMsg}.` });
       loadRecords();
     } else {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
