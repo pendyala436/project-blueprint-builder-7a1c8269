@@ -304,14 +304,20 @@ const AdminKYCManagement = () => {
 
       if (error) throw error;
 
-      // Also update profile verification
-      await supabase
-        .from("profiles")
-        .update({ is_verified: true, updated_at: new Date().toISOString() })
-        .eq("user_id", selectedKYC.user_id);
+      // Also update profile verification (both profiles and female_profiles)
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ is_verified: true, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+        supabase
+          .from("female_profiles")
+          .update({ is_verified: true, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+      ]);
 
       toast.success("KYC approved successfully");
-      setSelectedKYC({ ...selectedKYC, verification_status: "approved" });
+      setSelectedKYC({ ...selectedKYC, verification_status: "approved", rejection_reason: null });
       loadStats();
     } catch (error) {
       console.error("Error approving KYC:", error);
