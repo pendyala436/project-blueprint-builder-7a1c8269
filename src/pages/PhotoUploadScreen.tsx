@@ -522,7 +522,7 @@ const PhotoUploadScreen = () => {
         </Card>
 
         {/* Additional Photos Section */}
-        <Card className="w-full max-w-sm p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
           <div className="flex items-center gap-2 mb-3">
             <Upload className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-foreground">Additional Photos <span className="text-destructive">*</span></h2>
@@ -535,28 +535,34 @@ const PhotoUploadScreen = () => {
             ref={additionalFileInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleAdditionalPhoto(file);
+              const files = e.target.files;
+              if (files && files.length > 0) handleAdditionalPhotos(files);
               e.target.value = "";
             }}
             className="hidden"
           />
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {additionalPhotos.map((photo, index) => (
-              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group animate-in fade-in duration-300">
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group animate-in fade-in duration-300 bg-muted">
                 <img
                   src={photo}
                   alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain cursor-zoom-in"
+                  onClick={() => setLightboxSrc(photo)}
                 />
                 <button
-                  onClick={() => removeAdditionalPhoto(index)}
-                  className="absolute top-1 right-1 p-1 bg-destructive/90 text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => { e.stopPropagation(); removeAdditionalPhoto(index); }}
+                  className="absolute top-1 right-1 p-1.5 bg-destructive/90 text-destructive-foreground rounded-full opacity-90 hover:opacity-100 transition-opacity"
+                  aria-label={`Remove photo ${index + 1}`}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
+                <span className="absolute bottom-1 left-1 text-[10px] bg-background/70 text-foreground px-1.5 py-0.5 rounded">
+                  {index + 1}
+                </span>
               </div>
             ))}
 
@@ -567,7 +573,7 @@ const PhotoUploadScreen = () => {
                 onDragLeave={handleDragLeave}
                 onClick={() => additionalFileInputRef.current?.click()}
                 className={`
-                  aspect-square rounded-lg border-2 border-dashed flex items-center justify-center
+                  aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1
                   cursor-pointer transition-all duration-200
                   ${isDragging 
                     ? "border-primary bg-primary/10" 
@@ -575,15 +581,40 @@ const PhotoUploadScreen = () => {
                   }
                 `}
               >
-                <Plus className="h-6 w-6 text-muted-foreground" />
+                <Plus className="h-7 w-7 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground">Add photo(s)</span>
               </div>
             )}
           </div>
 
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            Add up to {MAX_ADDITIONAL_PHOTOS} more photos to your profile
+            Tap a photo to view full size. You can select multiple photos at once. Up to {MAX_ADDITIONAL_PHOTOS} required.
           </p>
         </Card>
+
+        {/* Lightbox for full-clear photo preview */}
+        {lightboxSrc && (
+          <div
+            className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={() => setLightboxSrc(null)}
+          >
+            <img
+              src={lightboxSrc}
+              alt="Full preview"
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              className="absolute top-4 right-4"
+              onClick={() => setLightboxSrc(null)}
+              aria-label="Close preview"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
 
         {/* Continue Button */}
         <Button
