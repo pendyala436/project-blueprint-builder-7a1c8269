@@ -178,7 +178,7 @@ async function verifyAuthAndGetUser(req: Request, serviceClient?: any): Promise<
 
     return { isValid: true, userId: user.id };
   } catch (err) {
-    console.log(`[AUTH] Token validation error: ${err.message}`);
+    console.log(`[AUTH] Token validation error: ${(err as Error)?.message ?? String(err)}`);
     return { isValid: false, error: 'Token validation failed' };
   }
 }
