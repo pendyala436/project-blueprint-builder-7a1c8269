@@ -483,6 +483,8 @@ const AdminKYCManagement = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <ScrollArea className="h-[calc(100dvh-280px)] min-h-[400px] pr-3">
+
               {!selectedUserId && (
                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                   <FileCheck className="h-12 w-12 mb-4 opacity-50" />
@@ -702,6 +704,7 @@ const AdminKYCManagement = () => {
                   )}
                 </div>
               )}
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
