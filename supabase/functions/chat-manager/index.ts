@@ -178,7 +178,7 @@ async function verifyAuthAndGetUser(req: Request, serviceClient?: any): Promise<
 
     return { isValid: true, userId: user.id };
   } catch (err) {
-    console.log(`[AUTH] Token validation error: ${err.message}`);
+    console.log(`[AUTH] Token validation error: ${(err as Error)?.message ?? String(err)}`);
     return { isValid: false, error: 'Token validation failed' };
   }
 }
@@ -1528,7 +1528,7 @@ serve(async (req) => {
           .from("active_chat_sessions")
           .update({
             total_minutes: newTotalMinutes,
-            total_earned: newTotalEarned
+            total_earned: session.total_earned + womenEarnings
           })
           .eq("chat_id", chat_id);
 
