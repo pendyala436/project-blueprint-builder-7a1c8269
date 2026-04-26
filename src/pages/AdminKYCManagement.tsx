@@ -285,9 +285,6 @@ const AdminKYCManagement = () => {
     await loadKYCForUser(userId);
   };
 
-  const handleViewDetails = (kyc: KYCRecord) => {
-    setDetailDialogOpen(true);
-  };
 
   const handleApproveKYC = async () => {
     if (!selectedKYC) return;
