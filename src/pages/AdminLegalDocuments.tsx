@@ -351,18 +351,21 @@ const AdminLegalDocuments = () => {
     if (!confirm(`Are you sure you want to delete "${document.name}"?`)) return;
 
     try {
-      // Delete from storage
-      await supabase.storage
-        .from('legal-documents')
-        .remove([document.file_path]);
-
-      // Delete from database
+      // Delete from database first (RLS-protected source of truth)
       const { error } = await supabase
         .from('legal_documents')
         .delete()
         .eq('id', document.id);
 
       if (error) throw error;
+
+      // Then remove storage file (best-effort; orphan is harmless)
+      if (document.file_path) {
+        const { error: storageErr } = await supabase.storage
+          .from('legal-documents')
+          .remove([document.file_path]);
+        if (storageErr) console.warn('[LegalDocs] Storage cleanup failed:', storageErr.message);
+      }
 
       toast.success("Document deleted", { description: `${document.name} has been deleted` });
 
