@@ -14,8 +14,8 @@
 // ========================================
 
 const SEXUAL_CONTENT_PATTERNS = [
-  // English
-  /\b(sex|nude[s]?|naked|porn|xxx|nsfw|erotic|orgasm|masturbat|blowjob|handjob|anal\s*sex|oral\s*sex|threesome|gangbang|fetish|bondage|bdsm|strip\s*tease|lap\s*dance|one\s*night\s*stand|hookup|hook\s*up|booty\s*call|f[*\s]?u[*\s]?c[*\s]?k|d[*\s]?i[*\s]?c[*\s]?k|p[*\s]?u[*\s]?s[*\s]?s[*\s]?y|c[*\s]?o[*\s]?c[*\s]?k|a[*\s]?s[*\s]?s\s*h[*\s]?o[*\s]?l[*\s]?e|cum\s*shot|creampie|milf|dildo|vibrator|slutt?y?|whor[e]?|bitch)\b/gi,
+  // English (expanded)
+  /\b(sex|sexy|sexting|nude[s]?|naked|porn|porno|pornography|xxx|nsfw|erotic|erotica|orgasm|masturbat\w*|blowjob|handjob|rimjob|footjob|titjob|anal\s*sex|oral\s*sex|threesome|gangbang|orgy|fetish|bondage|bdsm|kinky|strip\s*tease|lap\s*dance|one\s*night\s*stand|hookup|hook\s*up|booty\s*call|friends?\s*with\s*benefits|fwb|nsa|f[*\s]?u[*\s]?c[*\s]?k|d[*\s]?i[*\s]?c[*\s]?k|p[*\s]?u[*\s]?s[*\s]?s[*\s]?y|c[*\s]?o[*\s]?c[*\s]?k|a[*\s]?s[*\s]?s\s*h[*\s]?o[*\s]?l[*\s]?e|cum\s*shot|cumshot|creampie|milf|dilf|gilf|dildo|vibrator|sex\s*toy|fleshlight|slutt?y?|whor[e]?|bitch|hoe|thot|camgirl|escort|prostitut\w*|hooker|callgirl|cuckold|incest|pedo|loli|shota|bestiality|voyeur|exhibition|upskirt|downblouse|cleavage|nipple|breast|boob[s]?|tit[s]?|titt(?:y|ies)|areola|labia|clit|clitoris|vagina|penis|erection|ejaculat\w*|sperm|semen|cum|jizz|squirt|wet\s*pussy|hard\s*on|boner|stiffy|deepthroat|gagging|choking|spank|bukkake|gloryhole|swing(?:er|ing)|polyamor\w*)\b/gi,
   /\b(send\s*(me\s*)?(nudes?|pics?|photos?|body\s*pics?))\b/gi,
   /\b(show\s*(me\s*)?(your\s*)?(body|boobs?|tits?|ass|butt|privates?))\b/gi,
   /\b(let'?s?\s*(have\s*)?sex|wanna\s*(f[*]?ck|bang|smash|screw))\b/gi,
