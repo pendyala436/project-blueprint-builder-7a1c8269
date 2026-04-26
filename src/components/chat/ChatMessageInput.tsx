@@ -225,6 +225,7 @@ export const ChatMessageInput: React.FC<ChatMessageInputProps> = memo(({
               'rounded-xl border-muted-foreground/20',
               'focus-visible:ring-primary/50',
               'text-lg',
+              moderationWarning && 'border-destructive text-destructive placeholder:text-destructive/60 focus-visible:ring-destructive',
             )}
             aria-label={labels.placeholder}
           />
