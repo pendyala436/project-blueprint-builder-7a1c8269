@@ -356,6 +356,7 @@ const AdminUserLookup = () => {
 
                 {/* Profile Tab */}
                 <TabsContent value="profile">
+                  <ScrollArea className="h-[calc(100dvh-260px)] min-h-[400px] pr-3">
                   <Card>
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-4">
@@ -449,10 +450,12 @@ const AdminUserLookup = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  </ScrollArea>
                 </TabsContent>
 
                 {/* Wallet Tab */}
                 <TabsContent value="wallet">
+                  <ScrollArea className="h-[calc(100dvh-260px)] min-h-[400px] pr-3">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -486,10 +489,12 @@ const AdminUserLookup = () => {
                       )}
                     </CardContent>
                   </Card>
+                  </ScrollArea>
                 </TabsContent>
 
                 {/* Chats Tab */}
                 <TabsContent value="chats">
+                  <ScrollArea className="h-[calc(100dvh-260px)] min-h-[400px] pr-3">
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -520,11 +525,13 @@ const AdminUserLookup = () => {
                       )}
                     </CardContent>
                   </Card>
+                  </ScrollArea>
                 </TabsContent>
 
                 {/* KYC Tab (Indian women only) */}
                 {selectedUser.is_indian && selectedUser.gender?.toLowerCase() === "female" && (
                   <TabsContent value="kyc">
+                    <ScrollArea className="h-[calc(100dvh-260px)] min-h-[400px] pr-3">
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -599,6 +606,7 @@ const AdminUserLookup = () => {
                         )}
                       </CardContent>
                     </Card>
+                    </ScrollArea>
                   </TabsContent>
                 )}
               </Tabs>
