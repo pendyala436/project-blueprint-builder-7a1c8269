@@ -3465,11 +3465,16 @@ export type Database = {
       }
       women_payout_snapshots: {
         Row: {
+          account_holder_name: string | null
+          address: string | null
           already_paid: number
+          app_sno: number | null
           bank_account_number: string | null
           bank_name: string | null
           bank_reference: string | null
+          beneficiary_purpose: string | null
           created_at: string
+          email_address: string | null
           full_name: string
           gross_earned: number
           id: string
@@ -3477,23 +3482,31 @@ export type Database = {
           incremental_payable: number
           ist_month: string
           ist_year: number
+          mobile_number: string | null
           net_payable: number
           payment_status: string
           processed_at: string | null
           processed_by: string | null
+          skipped_reason: string | null
           snapshot_ist_date: string
           snapshot_ist_datetime: string
           snapshot_type: string
+          upi_vpa: string | null
           user_id: string
           wallet_balance_at_snapshot: number
           withdrawal_fee_amount: number
         }
         Insert: {
+          account_holder_name?: string | null
+          address?: string | null
           already_paid?: number
+          app_sno?: number | null
           bank_account_number?: string | null
           bank_name?: string | null
           bank_reference?: string | null
+          beneficiary_purpose?: string | null
           created_at?: string
+          email_address?: string | null
           full_name: string
           gross_earned?: number
           id?: string
@@ -3501,23 +3514,31 @@ export type Database = {
           incremental_payable?: number
           ist_month: string
           ist_year: number
+          mobile_number?: string | null
           net_payable?: number
           payment_status?: string
           processed_at?: string | null
           processed_by?: string | null
+          skipped_reason?: string | null
           snapshot_ist_date: string
           snapshot_ist_datetime: string
           snapshot_type: string
+          upi_vpa?: string | null
           user_id: string
           wallet_balance_at_snapshot?: number
           withdrawal_fee_amount?: number
         }
         Update: {
+          account_holder_name?: string | null
+          address?: string | null
           already_paid?: number
+          app_sno?: number | null
           bank_account_number?: string | null
           bank_name?: string | null
           bank_reference?: string | null
+          beneficiary_purpose?: string | null
           created_at?: string
+          email_address?: string | null
           full_name?: string
           gross_earned?: number
           id?: string
@@ -3525,13 +3546,16 @@ export type Database = {
           incremental_payable?: number
           ist_month?: string
           ist_year?: number
+          mobile_number?: string | null
           net_payable?: number
           payment_status?: string
           processed_at?: string | null
           processed_by?: string | null
+          skipped_reason?: string | null
           snapshot_ist_date?: string
           snapshot_ist_datetime?: string
           snapshot_type?: string
+          upi_vpa?: string | null
           user_id?: string
           wallet_balance_at_snapshot?: number
           withdrawal_fee_amount?: number
@@ -3914,6 +3938,7 @@ export type Database = {
         | { Args: { user_id_param: string }; Returns: boolean }
       is_protected_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_super_user: { Args: { user_email: string }; Returns: boolean }
+      ist_now: { Args: never; Returns: string }
       join_group_atomic: {
         Args: {
           p_group_id: string
@@ -4039,6 +4064,7 @@ export type Database = {
         }
         Returns: Json
       }
+      process_monthly_payout: { Args: never; Returns: Json }
       process_video_billing:
         | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
         | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
