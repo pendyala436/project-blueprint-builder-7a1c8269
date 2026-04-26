@@ -173,7 +173,151 @@ You expressly acknowledge and agree that:
 This unilateral-change right is exercised in good faith and subject only to the non-waivable rights granted to users by Indian law (DPDP 2023, Consumer Protection Act 2019) and applicable foreign mandatory law (e.g., GDPR Art. 22, EU consumer law). Where local mandatory law requires advance notice for a specific category of change (e.g., material privacy changes under GDPR), that legal minimum is honoured for affected users only.
 
 16. CONTACT / GRIEVANCE OFFICER (per IT Rules 2021)
-Grievance Officer: support@meowmeow.app | Response within 24 hours, resolution within 15 days as required by Rule 3(2) of the IT (Intermediary Guidelines) Rules 2021.`
+Grievance Officer: support@meowmeow.app | Response within 24 hours, resolution within 15 days as required by Rule 3(2) of the IT (Intermediary Guidelines) Rules 2021.
+
+═══════════════════════════════════════════════════════════
+17. DATING-APP LEGAL & COMPLIANCE FRAMEWORK (GLOBAL + INDIA)
+═══════════════════════════════════════════════════════════
+Meow Meow operates as an online dating / opposite-sex social-communication platform and complies with the following layered legal framework. This section is informational and binding; users accept its applicability.
+
+🇮🇳 PART A — INDIA: CORE LAWS & REGULATIONS
+
+A.1 Information Technology Act, 2000 (IT Act)
+Primary law for digital platforms in India. We are an "intermediary" under this Act.
+• Sec 69A — Government may order blocking of unlawful content; we will comply.
+• Sec 66 / 66E / 67 / 67A / 67B — Cybercrime, privacy violation, obscene & sexually explicit material, child sexual abuse material. Strictly prohibited; reported to authorities.
+• Sec 79 — Safe-harbour protection conditional on observing IT Rules 2021 due-diligence; we observe these obligations to retain safe-harbour.
+
+A.2 Digital Personal Data Protection Act, 2023 (DPDP Act)
+India's primary privacy statute. We:
+• Obtain free, specific, informed, unconditional, unambiguous CONSENT before collecting personal data.
+• State a CLEAR PURPOSE for every data category (matching, billing, safety).
+• Honour the right to CORRECT, ERASE, and WITHDRAW consent (DPDP §§11-13).
+• NOTIFY the Data Protection Board of India and affected users of any personal-data breach (DPDP §8(6)).
+• Apply heightened protection to data the user uploads in a dating context — photos, location signals, chat content, gender, and any inference of sexual orientation.
+
+A.3 IT (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021
+We comply with all due-diligence obligations:
+• A GRIEVANCE OFFICER located in India (see §16).
+• User-complaint mechanism with 24 h acknowledgement and 15-day resolution (Rule 3(2)(a)).
+• Takedown of unlawful content within 36 h of valid order (Rule 3(1)(d)) and within 24 h for non-consensual intimate imagery (Rule 3(2)(b)).
+• Cooperation with law enforcement; user-traceability where ordered by competent authority for specified serious offences (Rule 4(2), where applicable to "significant social-media intermediaries").
+
+A.4 IT Rules — Online Safety & Child Protection
+• Strict 18+ minimum age — no underage accounts permitted.
+• AI-assisted age verification at registration plus DOB cross-check.
+• Mandatory reporting of child sexual exploitation under POCSO 2012 §§19-22 and IT Act §67B.
+
+A.5 Bharatiya Nyaya Sanhita 2023 (replacing IPC 1860)
+Relevant offences for dating-context misconduct:
+• §75 — Sexual harassment; §76 — Assault to disrobe; §77 — Voyeurism; §78 — Stalking; §79 — Insult to modesty.
+• §316/318/319 — Cheating, cheating by personation (catfishing, fake identity).
+• §351 — Criminal intimidation; §356 — Defamation.
+• §196/197/299 — Hate speech and inciting religious / communal disharmony.
+
+A.6 Consumer Protection Act, 2019
+Covers misleading subscriptions, opaque auto-renewals, refund disputes, and any monetised feature. We:
+• Display all rates and charges clearly inside the App before payment.
+• Do not auto-renew subscriptions without explicit consent.
+• Provide a refund mechanism for failed/duplicate transactions per RBI guidelines (see §6).
+• Maintain an internal redressal process before consumer-forum escalation.
+
+A.7 RBI / Payment Regulations
+Applicable because the App offers a wallet and processes UPI/card/net-banking payments:
+• Recharges and payouts are routed only through RBI-licensed Payment Aggregators (Razorpay/Stripe/Paddle/etc.).
+• We comply with the Payment and Settlement Systems Act 2007 and the RBI Master Directions on Prepaid Payment Instruments.
+• Card data is tokenised by PCI-DSS Level-1 processors; raw card numbers are never stored.
+• Failed transactions are auto-reversed per RBI Turnaround-Time circular 2019.
+
+🌍 PART B — EUROPE: GDPR
+
+B.1 Applicability
+The General Data Protection Regulation (Reg. (EU) 2016/679) applies whenever EU/EEA users access the App.
+
+B.2 Key Requirements We Honour
+• EXPLICIT, opt-in consent — never implied or pre-ticked (Art. 4(11), 7).
+• Right of ACCESS to personal data (Art. 15).
+• Right to ERASURE / "right to be forgotten" (Art. 17).
+• Right to DATA PORTABILITY in machine-readable form (Art. 20).
+• Personal-data BREACH NOTIFICATION to the supervisory authority within 72 hours (Art. 33) and to affected users without undue delay (Art. 34).
+
+B.3 Special-Category Data (Art. 9)
+Dating apps inevitably process sensitive data: facial biometrics from selfies, precise location signals (when used), and inferences about sexual orientation. We process such data only with EXPLICIT OPT-IN consent (Art. 9(2)(a)) and apply additional safeguards (encryption, minimisation, short retention).
+
+🇺🇸 PART C — UNITED STATES
+
+C.1 California — CCPA / CPRA
+For users in California we honour:
+• Right to KNOW what personal information is collected, used, and shared.
+• Right to DELETE personal information.
+• Right to OPT OUT of "sale" or "sharing" of personal information (we do not sell).
+• Right to LIMIT use of sensitive personal information.
+• Right to NON-DISCRIMINATION for exercising privacy rights.
+
+C.2 FTC Act (Federal Trade Commission)
+We do not engage in deceptive or unfair trade practices. Specifically prohibited:
+• Fake / bot profiles operated by the platform.
+• Hidden, obscure, or hard-to-cancel subscriptions ("ROSCA" — Restore Online Shoppers' Confidence Act compliance).
+• Misleading claims about matching algorithms or success rates.
+
+C.3 COPPA — Children's Online Privacy Protection Act
+We never knowingly collect data from anyone under 13. Combined with our 18+ floor, no minors are permitted on the platform; underage accounts discovered are deleted within 7 days.
+
+🌐 PART D — INTERNATIONAL / GLOBAL PLATFORM RULES
+
+D.1 App Store Guidelines
+Apple App Store:
+• We declare every category of data collected and any tracking in App Privacy.
+• We meet Apple's dating-app rules: 17+/18+ rating, no promotion of explicit sexual content, robust moderation.
+Google Play:
+• Complete Data-Safety section disclosure.
+• Built-in user reporting and blocking tools.
+• Active content-moderation system (AI + human).
+
+D.2 PCI-DSS (Payment Card Industry Data Security Standard)
+All cardholder data is processed exclusively by PCI-DSS Level-1 certified processors. We do not store PAN, CVV, or full card numbers on our infrastructure.
+
+D.3 Other Jurisdictions
+Where users access from other regions, equivalent local laws are observed: UK GDPR + DPA 2018, Canada PIPEDA, Brazil LGPD, Australia Privacy Act 1988, Singapore PDPA, UAE PDPL, Japan APPI, South Korea PIPA, and others.
+
+🔐 PART E — CORE PRIVACY PRINCIPLES (ALL LAWS COMBINED)
+
+E.1 Consent — explicit opt-in for location, profile visibility, photo / biometric verification, and matching.
+E.2 Data Minimisation — we collect only what is needed to operate the App and comply with law.
+E.3 Security — TLS 1.3 in transit, AES-256 at rest, OTP / OAuth-style secure authentication, RLS-isolated databases, MFA on admin accounts.
+E.4 User Rights — every user can: delete account, export data, block/report any other user, and control profile visibility.
+E.5 Retention — chat bodies auto-purged every 15 minutes; inactive accounts may be deleted after extended dormancy; statutory records (tax, payments, KYC) retained only for the legally mandated period.
+
+🚨 PART F — DATING-APP-SPECIFIC LEGAL RISKS & SAFEGUARDS
+
+F.1 High-Risk Areas: fake profiles, harassment, sexual exploitation, underage access, location-tracking misuse, romance scams, sextortion, image-based abuse, trafficking.
+F.2 Safeguards Implemented:
+• AI age & gender verification at registration with periodic re-checks.
+• In-app Report and Block on every profile, chat, audio call, video call, and group call.
+• Layered content moderation — AI pre-publication filters + human review of reports.
+• Identity controls — one account per natural person; device & IP fingerprinting; anti-VPN heuristics.
+• Dedicated Trust & Safety / Grievance Officer team (see §16).
+
+📜 PART G — TERMS-OF-SERVICE COVERAGE CHECKLIST
+This document expressly addresses, as required for dating-platform ToS:
+✓ Eligibility (strict 18+) — see §2.
+✓ User responsibilities & prohibited conduct — see §5.
+✓ Content ownership & licence — see §8.
+✓ Data usage policy — see Privacy Policy.
+✓ Payment / wallet terms — see §6.
+✓ Refund policy — see Payments, Refunds & Payouts policy.
+✓ Account termination rules — see §10.
+✓ Liability disclaimer — see §§11-12.
+✓ Anti-abuse policy — see §5 and Anti-Sexual Content & Hate-Speech policies.
+✓ Privacy-policy linkage — see Privacy Policy document.
+
+⚖️ PART H — SUMMARY OF APPLICABLE LAW
+
+INDIA: IT Act 2000 · DPDP Act 2023 · IT (Intermediary Guidelines) Rules 2021 · Bharatiya Nyaya Sanhita 2023 · POCSO 2012 · Consumer Protection Act 2019 · Income Tax Act 1961 · CGST/SGST/IGST Acts · PMLA 2002 · FEMA 1999 · Payment & Settlement Systems Act 2007 · RBI PPI Master Directions.
+GLOBAL: EU GDPR · UK GDPR + DPA 2018 · CCPA / CPRA (California) · FTC Act + ROSCA (US) · COPPA (US) · PIPEDA (Canada) · LGPD (Brazil) · Australian Privacy Act 1988 · Singapore PDPA · UAE PDPL · Japan APPI · South Korea PIPA.
+PLATFORMS: Apple App Store Review Guidelines · Google Play Developer Policies · PCI-DSS v4.0.
+
+By accepting these Terms you acknowledge that the above framework governs your use of Meow Meow regardless of your physical location, and you submit to the jurisdiction and dispute-resolution mechanism described in §14.`
   },
   {
     id: "privacy_policy",
