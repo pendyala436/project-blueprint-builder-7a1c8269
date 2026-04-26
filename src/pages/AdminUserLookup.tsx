@@ -509,8 +509,8 @@ const AdminUserLookup = () => {
                                   <span className="text-xs text-muted-foreground">{new Date(chat.started_at).toLocaleString()}</span>
                                 </div>
                                 <div className="flex gap-4 text-xs text-muted-foreground">
-                                  <span>Duration: {chat.total_minutes.toFixed(1)} min</span>
-                                  <span>Earned: ₹{chat.total_earned.toFixed(2)}</span>
+                                  <span>Duration: {Number(chat.total_minutes ?? 0).toFixed(1)} min</span>
+                                  <span>Earned: ₹{Number(chat.total_earned ?? 0).toFixed(2)}</span>
                                 </div>
                                 {chat.ended_at && <p className="text-xs">Ended: {new Date(chat.ended_at).toLocaleString()}</p>}
                               </div>
