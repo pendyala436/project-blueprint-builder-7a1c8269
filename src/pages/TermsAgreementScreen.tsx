@@ -512,8 +512,8 @@ All such transfers use SCCs / IDTA / DPDP §16 mechanisms with encryption in tra
 3. PAYMENT DATA
 Card / UPI credentials are tokenised by PCI-DSS Level 1 processors and never stored on our servers. Aggregated transaction records are retained for 8 years as required by the Companies Act 2013 and GST Act.
 
-4. NO KYC FOR WOMEN
-No KYC, PAN, Aadhaar, bank, or UPI data is collected or stored for female users because no money is paid out to them. They earn only non-monetary in-app virtual coins.
+4. KYC DATA (WOMEN)
+PAN, Aadhaar (stored masked / last-4 only after verification), bank or UPI handle for identity matching, IFSC, and address proof are stored encrypted in India, segregated from operational tables, accessible only to authorised compliance staff under audit logging. KYC is collected for identity verification, anti-fraud, age confirmation, and statutory compliance — never as a basis for any monetary payment. Women earn only non-monetary in-app virtual coins.
 
 5. USER CONSENT
 By creating an account you provide express, informed consent under DPDP §6 / GDPR Art. 6 & 9 for storage in India and the cross-border transfers described above.
