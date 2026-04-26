@@ -59,6 +59,7 @@ const kycSchema = z.object({
   ifsc_code: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format"),
   account_type: z.string().default("savings"),
   upi_id: z.string().regex(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/, "Invalid UPI ID format (e.g. name@upi)").optional().or(z.literal("")),
+  beneficiary_purpose: z.string().default("others"),
 
   // Section 7: Nominee Details
   nominee_name: z.string().optional(),
@@ -129,6 +130,8 @@ export function WomenKYCForm() {
   const [existingKYC, setExistingKYC] = useState<KYCRecord | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [editingApproved, setEditingApproved] = useState(false);
+  const [appId, setAppId] = useState<string | null>(null);
+  const [appSno, setAppSno] = useState<number | null>(null);
 
   // File uploads
   const [aadhaarFront, setAadhaarFront] = useState<File | null>(null);
@@ -166,6 +169,7 @@ export function WomenKYCForm() {
       ifsc_code: "",
       account_type: "savings",
       upi_id: "",
+      beneficiary_purpose: "others",
       aadhaar_number: "",
       id_type: "pan",
       id_number: "",
@@ -188,6 +192,17 @@ export function WomenKYCForm() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       setUserId(session.user.id);
+
+      // Fetch App ID + SNO from profiles (single source of truth)
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('app_id, app_sno')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (profileRow) {
+        setAppId((profileRow as any).app_id ?? null);
+        setAppSno((profileRow as any).app_sno ?? null);
+      }
 
       const { data, error } = await supabase
         .from('women_kyc')
@@ -226,7 +241,8 @@ export function WomenKYCForm() {
           account_number: data.account_number,
           ifsc_code: data.ifsc_code,
           account_type: (data as any).account_type || "savings",
-          upi_id: (data as any).upi_id || "",
+          upi_id: (data as any).upi_id || (data as any).upi_vpa || "",
+          beneficiary_purpose: (data as any).beneficiary_purpose || "others",
           aadhaar_number: (data as any).aadhaar_number || "",
           id_type: (data.id_type === 'aadhaar' ? 'pan' : data.id_type) as any,
           id_number: data.id_type === 'aadhaar' ? "" : data.id_number,
@@ -308,6 +324,8 @@ export function WomenKYCForm() {
         ifsc_code: data.ifsc_code.toUpperCase().trim(),
         account_type: data.account_type || "savings",
         upi_id: data.upi_id?.trim() || null,
+        upi_vpa: data.upi_id?.trim() || null,
+        beneficiary_purpose: data.beneficiary_purpose || "others",
         aadhaar_number: data.aadhaar_number.trim(),
         aadhaar_front_url: aadhaarFrontUrl,
         aadhaar_back_url: aadhaarBackUrl,
