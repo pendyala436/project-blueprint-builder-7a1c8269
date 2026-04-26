@@ -4061,9 +4061,6 @@ export type Database = {
         Returns: Json
       }
       process_monthly_payout: { Args: never; Returns: Json }
-      process_video_billing:
-        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
-        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
       process_video_billing_v2: {
         Args: {
           p_idempotency?: string
@@ -4074,28 +4071,6 @@ export type Database = {
         }
         Returns: Json
       }
-      process_wallet_transaction:
-        | {
-            Args: {
-              p_amount: number
-              p_description?: string
-              p_reference_id?: string
-              p_type: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_description?: string
-              p_idempotency_key?: string
-              p_reference_id?: string
-              p_type: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
       process_withdrawal: {
         Args: {
           p_account_no: string
