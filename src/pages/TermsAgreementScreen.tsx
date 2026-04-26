@@ -464,7 +464,7 @@ Meow Meow is the data controller for personal data processed through the App.
 2. LAWFUL BASES (Art. 6)
 • Consent (Art. 6(1)(a)) — optional features, marketing.
 • Contract (Art. 6(1)(b)) — providing the App.
-• Legal obligation (Art. 6(1)(c)) — tax, KYC, law enforcement.
+• Legal obligation (Art. 6(1)(c)) — tax on men's recharges, law enforcement.
 • Legitimate interest (Art. 6(1)(f)) — fraud, security, abuse prevention.
 
 3. SPECIAL CATEGORY DATA (Art. 9)
