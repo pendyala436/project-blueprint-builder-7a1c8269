@@ -729,7 +729,7 @@ const AdminPolicyAlerts = () => {
       </Dialog>
 
       {/* Send Message Dialog */}
-      <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+      <Dialog open={messageDialogOpen} onOpenChange={(open) => { setMessageDialogOpen(open); if (!open) { setMessageContent(""); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
