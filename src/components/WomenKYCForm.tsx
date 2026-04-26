@@ -399,6 +399,12 @@ export function WomenKYCForm() {
           <CardDescription>Your KYC has been verified. You can receive payouts.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {(appId || appSno !== null) && (
+            <div className="grid grid-cols-2 gap-4 text-sm p-3 rounded-lg bg-primary/5 border border-primary/20">
+              {appId && <div><Label className="text-muted-foreground">App ID</Label><p className="font-mono font-semibold text-primary">{appId}</p></div>}
+              {appSno !== null && <div><Label className="text-muted-foreground">Beneficiary ID / S.No</Label><p className="font-mono font-semibold text-primary">{appSno}</p></div>}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><Label className="text-muted-foreground">Full Name</Label><p className="font-medium">{existingKYC.full_name_as_per_bank}</p></div>
             <div><Label className="text-muted-foreground">Bank</Label><p className="font-medium">{existingKYC.bank_name}</p></div>
@@ -406,7 +412,8 @@ export function WomenKYCForm() {
             <div><Label className="text-muted-foreground">IFSC</Label><p className="font-medium">{existingKYC.ifsc_code}</p></div>
             <div><Label className="text-muted-foreground">Aadhaar</Label><p className="font-medium">****{(existingKYC.aadhaar_number || '').slice(-4)}</p></div>
             <div><Label className="text-muted-foreground">ID Proof</Label><p className="font-medium">{getIdTypeLabel(existingKYC.id_type)}: ****{existingKYC.id_number.slice(-4)}</p></div>
-            {(existingKYC as any).upi_id && <div><Label className="text-muted-foreground">UPI ID</Label><p className="font-medium">{(existingKYC as any).upi_id}</p></div>}
+            <div><Label className="text-muted-foreground">Beneficiary Purpose</Label><p className="font-medium capitalize">{(existingKYC as any).beneficiary_purpose || 'others'}</p></div>
+            {((existingKYC as any).upi_id || (existingKYC as any).upi_vpa) && <div><Label className="text-muted-foreground">UPI VPA</Label><p className="font-medium">{(existingKYC as any).upi_id || (existingKYC as any).upi_vpa}</p></div>}
           </div>
           <div className="pt-2 border-t">
             <p className="text-xs text-muted-foreground mb-2">Editing will reset your KYC status to pending for re-verification.</p>
@@ -454,6 +461,12 @@ export function WomenKYCForm() {
         )}
       </CardHeader>
       <CardContent>
+        {(appId || appSno !== null) && (
+          <div className="grid grid-cols-2 gap-4 text-sm p-3 mb-6 rounded-lg bg-primary/5 border border-primary/20">
+            {appId && <div><Label className="text-muted-foreground text-xs">App ID</Label><p className="font-mono font-semibold text-primary">{appId}</p></div>}
+            {appSno !== null && <div><Label className="text-muted-foreground text-xs">Beneficiary ID / S.No</Label><p className="font-mono font-semibold text-primary">{appSno}</p></div>}
+          </div>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
@@ -652,7 +665,19 @@ export function WomenKYCForm() {
                     </Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="upi_id" render={({ field }) => (
-                  <FormItem><FormLabel>UPI ID</FormLabel><FormControl><Input {...field} placeholder="e.g. yourname@upi" disabled={!isEditable} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>UPI VPA</FormLabel><FormControl><Input {...field} placeholder="e.g. yourname@upi" disabled={!isEditable} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="beneficiary_purpose" render={({ field }) => (
+                  <FormItem><FormLabel>Beneficiary Purpose *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditable}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="others">Others</SelectItem>
+                        <SelectItem value="salary">Salary</SelectItem>
+                        <SelectItem value="reimbursement">Reimbursement</SelectItem>
+                        <SelectItem value="vendor_payment">Vendor Payment</SelectItem>
+                      </SelectContent>
+                    </Select><FormMessage /></FormItem>
                 )} />
               </div>
             </div>
