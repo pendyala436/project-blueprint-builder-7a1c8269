@@ -232,17 +232,15 @@ const AdminPayoutStatements = () => {
           </Card>
         </div>
 
-        {/* Generate Buttons */}
+        {/* Generate Button — captures all women's current wallet balance + Bank KYC */}
         <Card className="p-4 flex flex-wrap gap-3 items-center">
           <Calendar className="w-5 h-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Generate Payout:</span>
-          <Button size="sm" onClick={() => handleGenerate('mid_month')} disabled={isGenerating}>
-            {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-            Mid Month (16th)
-          </Button>
-          <Button size="sm" onClick={() => handleGenerate('end_month')} disabled={isGenerating}>
-            {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-            End Month (1st)
+          <span className="text-sm text-muted-foreground">
+            Generate a payout snapshot for all eligible women (closing wallet balance at this moment, sourced from Bank KYC):
+          </span>
+          <Button size="sm" onClick={handleGenerate} disabled={isGenerating}>
+            {isGenerating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Download className="w-4 h-4 mr-1" />}
+            Generate Now
           </Button>
         </Card>
 
