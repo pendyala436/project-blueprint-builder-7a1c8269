@@ -537,7 +537,7 @@ DO
 DON'T
 • No sexual, nude, semi-nude, suggestive, or pornographic content.
 • No harassment, hate speech, threats, defamation, casteism, racism, communalism, or discrimination.
-• No requests for or sharing of phone, WhatsApp, Instagram, Snapchat, Telegram, email, address, UPI/Paytm/PhonePe/GPay, bank details, or any external contact.
+• No requests for or sharing of phone, Instagram, Snapchat, Telegram, email, address, UPI/Paytm/PhonePe/GPay, bank details, or any external contact.
 • No requests for or offers of money, gifts, "loans", crypto, or investments.
 • No prostitution, escort, sugar-baby, or commercial sexual services.
 • No catfishing, impersonation, or use of someone else's photos.
