@@ -704,14 +704,25 @@ const WomenDashboardScreen = () => {
         setUserName(fullName.split(" ")[0]);
       }
 
-      // Fetch employee ID (for women only) - non-blocking
+      // Fetch App ID (single source of truth: profiles.app_id, fallback to female_profiles.employee_id)
       supabase
-        .from("female_profiles")
-        .select("employee_id")
+        .from("profiles")
+        .select("app_id")
         .eq("user_id", user.id)
         .maybeSingle()
         .then(({ data }) => {
-          if (data?.employee_id) setEmployeeId(data.employee_id);
+          if ((data as any)?.app_id) {
+            setEmployeeId((data as any).app_id);
+          } else {
+            supabase
+              .from("female_profiles")
+              .select("employee_id")
+              .eq("user_id", user.id)
+              .maybeSingle()
+              .then(({ data: fp }) => {
+                if (fp?.employee_id) setEmployeeId(fp.employee_id);
+              });
+          }
         });
 
       const womanLanguage = womanLanguages?.[0]?.language_name || 
@@ -1611,7 +1622,7 @@ const WomenDashboardScreen = () => {
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
         {employeeId && (
           <Badge variant="outline" className="mt-1 font-mono text-[11px] border-primary/40 text-primary">
-            Employee ID: {employeeId}
+            App ID: {employeeId}
           </Badge>
         )}
         <p className="text-xs text-muted-foreground mt-1">{currentWomanLanguage} • {currentWomanCountry}</p>
