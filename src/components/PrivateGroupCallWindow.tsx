@@ -145,6 +145,7 @@ export function PrivateGroupCallWindow({
     localVideoRef,
     remoteVideoRef,
     hostStream,
+    hostStatus,
     goLive,
     joinStream,
     endStream,
@@ -406,6 +407,19 @@ export function PrivateGroupCallWindow({
     if (error) toast.error(error);
   }, [error]);
 
+  // Notify participants of host status changes
+  const prevHostStatusRef = useRef(hostStatus);
+  useEffect(() => {
+    if (isOwner) return;
+    const prev = prevHostStatusRef.current;
+    if (prev === hostStatus) return;
+    prevHostStatusRef.current = hostStatus;
+    if (hostStatus === 'away') toast.info('Host stepped away');
+    else if (hostStatus === 'muted') toast.info('Host muted their mic');
+    else if (hostStatus === 'camera-off') toast.info('Host turned off camera');
+    else if (hostStatus === 'live' && prev !== 'live') toast.success('Host is back');
+  }, [hostStatus, isOwner]);
+
   // Fetch gifts
   useEffect(() => {
     const fetchGifts = async () => {
@@ -605,6 +619,22 @@ export function PrivateGroupCallWindow({
               {isLive && (
                 <Badge className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0">
                   <Radio className="h-2.5 w-2.5 animate-pulse" /> LIVE
+                </Badge>
+              )}
+              {hostStatus && hostStatus !== 'live' && (
+                <Badge
+                  className={`text-[10px] px-1.5 py-0 h-4 gap-0.5 border-0 ${
+                    hostStatus === 'away' ? 'bg-amber-500 text-black' :
+                    hostStatus === 'muted' ? 'bg-slate-600 text-white' :
+                    hostStatus === 'camera-off' ? 'bg-slate-700 text-white' :
+                    'bg-red-600 text-white'
+                  }`}
+                  title={`Host is ${hostStatus.replace('-', ' ')}`}
+                >
+                  {hostStatus === 'away' && 'Host away'}
+                  {hostStatus === 'muted' && 'Host muted'}
+                  {hostStatus === 'camera-off' && 'Camera off'}
+                  {hostStatus === 'left' && 'Host left'}
                 </Badge>
               )}
               <span className="text-white/70 text-[11px] flex items-center gap-0.5">

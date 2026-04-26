@@ -72,7 +72,10 @@ interface PrivateGroupCallState {
   totalEarnings: number;
   isRefunding: boolean;
   hostStream: MediaStream | null; // Host's remote stream for participants
+  hostStatus: HostStatus; // Host presence/activity state visible to all
 }
+
+export type HostStatus = 'live' | 'away' | 'muted' | 'camera-off' | 'left';
 
 export function usePrivateGroupCall({
   groupId,
@@ -98,6 +101,7 @@ export function usePrivateGroupCall({
     totalEarnings: 0,
     isRefunding: false,
     hostStream: null,
+    hostStatus: 'live',
   });
 
   const pricing = { groupCallRatePerMinute: 4 };
@@ -680,6 +684,7 @@ export function usePrivateGroupCall({
         // and we did NOT receive an explicit `stream-ended` broadcast, every
         // participant should be auto-disconnected from the call.
         if (leaverWasHost && !isOwner) {
+          setState(prev => ({ ...prev, hostStatus: 'left' }));
           toast.info('Host disconnected. The call has ended.');
           cleanup();
           onSessionEnd?.(true); // refund unused balance
@@ -702,6 +707,7 @@ export function usePrivateGroupCall({
       })
       .on('broadcast', { event: 'stream-ended' }, ({ payload }) => {
         if (!isOwner) {
+          setState(prev => ({ ...prev, hostStatus: 'left' }));
           toast.info(payload.refunded ? 'Host ended the call. Unused balance refunded.' : 'The call has ended.');
           cleanup();
           onSessionEnd?.(payload.refunded);
@@ -770,6 +776,12 @@ export function usePrivateGroupCall({
               participants: Array.from(sessionRef.current?.participants.values() || []),
             }));
           }
+        }
+      })
+      .on('broadcast', { event: 'host-status' }, ({ payload }) => {
+        // Participants update their view of the host's current status
+        if (!isOwner && payload?.status) {
+          setState(prev => ({ ...prev, hostStatus: payload.status as HostStatus }));
         }
       });
 
@@ -987,6 +999,7 @@ export function usePrivateGroupCall({
       totalEarnings: 0,
       isRefunding: false,
       hostStream: null,
+      hostStatus: 'live',
     });
   }, []);
 
@@ -1013,14 +1026,26 @@ export function usePrivateGroupCall({
     cleanup();
     onSessionEnd?.(processRefundsFlag);
   }, [cleanup, onSessionEnd]);
+  // Broadcast host status to all participants (host only)
+  const broadcastHostStatus = useCallback((status: HostStatus) => {
+    if (!isOwner || !channelRef.current) return;
+    setState(prev => ({ ...prev, hostStatus: status }));
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'host-status',
+      payload: { status },
+    });
+  }, [isOwner]);
+
   // Toggle video (host only)
   const toggleVideo = useCallback((enabled: boolean) => {
     if (localStream.current && isOwner) {
       localStream.current.getVideoTracks().forEach(track => {
         track.enabled = enabled;
       });
+      broadcastHostStatus(enabled ? 'live' : 'camera-off');
     }
-  }, [isOwner]);
+  }, [isOwner, broadcastHostStatus]);
 
   // Toggle audio (host can always toggle, participant only if host enabled their mic)
   const toggleAudio = useCallback((enabled: boolean) => {
@@ -1028,8 +1053,11 @@ export function usePrivateGroupCall({
       localStream.current.getAudioTracks().forEach(track => {
         track.enabled = enabled;
       });
+      if (isOwner) {
+        broadcastHostStatus(enabled ? 'live' : 'muted');
+      }
     }
-  }, []);
+  }, [isOwner, broadcastHostStatus]);
 
   // Host enables/disables a specific participant's mic
   const enableParticipantMic = useCallback((participantId: string, enabled: boolean) => {
@@ -1060,6 +1088,25 @@ export function usePrivateGroupCall({
       cleanup();
     };
   }, [cleanup]);
+
+  // Host: broadcast 'away' / 'live' on tab visibility changes while live
+  useEffect(() => {
+    if (!isOwner || !state.isLive) return;
+    const handleVisibility = () => {
+      const isHidden = document.visibilityState === 'hidden';
+      // When returning, restore status based on current track state
+      if (!isHidden && localStream.current) {
+        const audioOn = localStream.current.getAudioTracks().some(t => t.enabled);
+        const videoOn = localStream.current.getVideoTracks().some(t => t.enabled);
+        const next: HostStatus = !videoOn ? 'camera-off' : !audioOn ? 'muted' : 'live';
+        broadcastHostStatus(next);
+      } else if (isHidden) {
+        broadcastHostStatus('away');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isOwner, state.isLive, broadcastHostStatus]);
 
   return {
     ...state,
