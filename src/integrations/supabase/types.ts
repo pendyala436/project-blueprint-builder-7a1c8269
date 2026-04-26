@@ -3742,6 +3742,7 @@ export type Database = {
         Args: { p_month: number; p_user_id: string; p_year: number }
         Returns: Json
       }
+      generate_payout_snapshot_now: { Args: never; Returns: Json }
       get_analytics_summary:
         | { Args: { p_end_date: string; p_start_date: string }; Returns: Json }
         | {
