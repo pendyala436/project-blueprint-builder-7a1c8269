@@ -51,7 +51,11 @@ const AdminBackupManagement = () => {
   const fetchBackupsCb = useCallback(() => { fetchBackups(); }, []);
 
   useEffect(() => {
-    fetchBackups();
+    // Mark any backups stuck in 'in_progress' for >30min as failed, then load
+    (async () => {
+      try { await supabase.rpc('mark_stalled_backups'); } catch (e) { /* non-fatal */ }
+      fetchBackups();
+    })();
   }, []);
 
   // Real-time subscription using standardized hook
@@ -80,9 +84,13 @@ const AdminBackupManagement = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchBackups();
-    setRefreshing(false);
-    toast.success("Refreshed", { description: "Backup list updated" });
+    try {
+      await supabase.rpc('mark_stalled_backups').then(() => {}).catch(() => {});
+      await fetchBackups();
+      toast.success("Refreshed", { description: "Backup list updated" });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const triggerManualBackup = async () => {
@@ -110,78 +118,40 @@ const AdminBackupManagement = () => {
   };
 
   const handleDownloadBackup = async (backup: BackupLog) => {
-    if (backup.storage_path) {
-      // Download from storage if available
-      toast("Downloading Backup", { description: "Fetching backup file from storage..." });
-      try {
-        const { data, error } = await supabase.storage
-          .from('backups')
-          .download(backup.storage_path);
+    if (!backup.storage_path) {
+      toast.error("No backup file available", {
+        description: "This backup has no stored file. Trigger a fresh manual backup to download.",
+      });
+      return;
+    }
 
-        if (error) throw error;
+    toast("Downloading Backup", { description: "Fetching backup file from storage..." });
+    try {
+      const { data, error } = await supabase.storage
+        .from('backups')
+        .download(backup.storage_path);
 
-        const url = URL.createObjectURL(data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `meow_backup_${format(new Date(backup.started_at), 'yyyy-MM-dd_HHmm')}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+      if (error) throw error;
 
-        toast.success("Backup Downloaded", { description: `Downloaded ${formatBytes(backup.size_bytes)}` });
-      } catch (error: any) {
-        console.error("Storage download error:", error);
-        toast.error("Download Failed", { description: "Could not download from storage. Try a fresh backup." });
-      }
-    } else {
-      // Fallback: live export from database
-      toast("Exporting Database", { description: "Querying tables and generating backup file..." });
-      try {
-        const tables = [
-          'profiles', 'male_profiles', 'female_profiles', 'user_roles',
-          'chat_messages', 'active_chat_sessions', 'matches',
-          'ledger_transactions', 'gift_transactions', 'gifts',
-          'chat_pricing', 'language_groups', 'language_limits',
-          'admin_settings', 'app_settings', 'legal_documents',
-          'moderation_reports', 'audit_logs', 'backup_logs',
-          'notifications', 'women_kyc', 'withdrawal_requests',
-          'attendance', 'absence_records',
-          'private_groups', 'group_memberships', 'group_messages',
-          'community_announcements', 'community_disputes',
-          'admin_broadcast_messages', 'admin_user_messages',
-          'monthly_statements', 'monthly_wallet_summary',
-        ];
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      const ext = backup.storage_path.endsWith('.sql.gz') ? 'sql.gz' : 'json';
+      a.download = `meow_backup_${format(new Date(backup.started_at), 'yyyy-MM-dd_HHmm')}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Defer revoke so download can start
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-        const backupData: Record<string, any[]> = {};
-        for (const table of tables) {
-          try {
-            const { data, error } = await (supabase as any).from(table).select('*').limit(10000);
-            if (!error && data) backupData[table] = data;
-          } catch { /* skip */ }
-        }
-
-        const exportObj = {
-          backup_id: backup.id,
-          backup_type: backup.backup_type,
-          exported_at: new Date().toISOString(),
-          tables_exported: Object.keys(backupData).length,
-          total_rows: Object.values(backupData).reduce((sum, rows) => sum + rows.length, 0),
-          data: backupData,
-        };
-
-        const jsonStr = JSON.stringify(exportObj, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `meow_backup_${format(new Date(backup.started_at), 'yyyy-MM-dd_HHmm')}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        toast.success("Backup Downloaded", { description: `Exported ${Object.keys(backupData).length} tables, ${exportObj.total_rows} rows` });
-      } catch (error: any) {
-        console.error("Download error:", error);
-        toast.error("Download Failed", { description: error.message || "Failed to export database" });
-      }
+      toast.success("Backup Downloaded", { description: `Downloaded ${formatBytes(backup.size_bytes)}` });
+    } catch (error: any) {
+      console.error("Storage download error:", error);
+      toast.error("Download Failed", {
+        description: error?.message?.includes('Object not found') || error?.message?.includes('not found')
+          ? "Backup file no longer exists in storage. Trigger a fresh backup."
+          : `Could not download backup: ${error?.message || 'Unknown error'}`,
+      });
     }
   };
 
@@ -469,12 +439,13 @@ const AdminBackupManagement = () => {
                           )}
                         </div>
                       </div>
-                      {backup.status === "completed" && (
+                      {backup.status === "completed" && backup.storage_path && (
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           className="text-muted-foreground hover:text-foreground"
                           onClick={() => handleDownloadBackup(backup)}
+                          title="Download backup file"
                         >
                           <Download className="w-4 h-4" />
                         </Button>
