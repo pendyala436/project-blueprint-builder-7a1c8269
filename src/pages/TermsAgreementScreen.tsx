@@ -170,7 +170,7 @@ These Terms are governed by the laws of India. Subject to the Arbitration and Co
 
 15. ADMIN DISCRETION & UNILATERAL CHANGES (NO USER NOTICE REQUIRED)
 You expressly acknowledge and agree that:
-• The administrator of Meow Meow has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, virtual-coin balance, virtual-coin grant or revocation, KYC requirement (men only), moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
+• The administrator of Meow Meow has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, virtual-coin balance, virtual-coin grant or revocation, KYC requirement (men and women), moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
 • The administrator MAY ADD, MODIFY, REPLACE, SUSPEND, OR REMOVE any rule, policy, feature, price, or limit at ANY TIME, EFFECTIVE IMMEDIATELY, WITHOUT PRIOR NOTICE, individual notification, email, push, or in-app banner to end-users.
 • The current version of these Terms and all linked policies, as published in the App at the moment of any user action, governs that action. It is the user's responsibility to review the Terms periodically.
 • Continued use of the App after any change constitutes full and final acceptance of the change. The user's sole remedy in case of disagreement is to stop using the App and request account deletion.
