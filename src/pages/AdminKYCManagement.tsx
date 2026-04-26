@@ -347,6 +347,18 @@ const AdminKYCManagement = () => {
 
       if (error) throw error;
 
+      // Revoke verified flag on profiles when KYC is rejected
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .update({ is_verified: false, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+        supabase
+          .from("female_profiles")
+          .update({ is_verified: false, updated_at: new Date().toISOString() })
+          .eq("user_id", selectedKYC.user_id),
+      ]);
+
       toast.success("KYC rejected");
       setSelectedKYC({ ...selectedKYC, verification_status: "rejected", rejection_reason: rejectionReason.trim() });
       setRejectDialogOpen(false);
