@@ -337,7 +337,7 @@ This Policy explains what personal data we collect, why, how we use it, and the 
 1. DATA WE COLLECT
 (a) Identity & profile: full name, gender, date of birth, age, country, state, languages, mother tongue, profile photo / live selfie.
 (b) Account: email, phone, hashed password, device ID, IP address (truncated where possible), user-agent.
-(c) KYC (men only, where required by payment processor for high-value recharges): name on card / UPI handle as returned by the processor. Women are NOT asked for any KYC because no money flows to them.
+(c) KYC: (i) From women — PAN, Aadhaar (stored masked / last-4 only after verification), bank account or UPI handle for identity matching, IFSC, address proof, and a live selfie. Collected for identity verification, anti-fraud, age confirmation, and statutory compliance — never as a basis for any monetary payment. (ii) From men — name on card / UPI handle as returned by the payment processor for high-value recharges.
 (d) Communications metadata: who chatted/called whom, duration, billing seconds. Chat message bodies are end-to-end encrypted in transit and auto-deleted (see §7).
 (e) Payment data: amounts, GST, payment method type, transaction status. Full card / UPI credentials are handled directly by PCI-DSS compliant processors and never stored on our servers.
 (f) Technical & safety: crash logs, abuse reports, moderation actions, AI verification scores.
