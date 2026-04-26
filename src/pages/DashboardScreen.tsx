@@ -427,7 +427,7 @@ const DashboardScreen = () => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'ledger_transactions', filter: `user_id=eq.${currentUserId}` },
+        { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${currentUserId}` },
         () => { loadWalletBalance(); }
       )
       .on(

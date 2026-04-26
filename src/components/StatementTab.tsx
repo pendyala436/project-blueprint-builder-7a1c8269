@@ -143,7 +143,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
     loadStatement();
   }, [loadStatement]);
 
-  // Real-time: auto-refresh when ledger_transactions change for this user
+  // Real-time: auto-refresh when wallet_transactions change for this user
+  // (wallet_transactions is the canonical source of truth — see ledger unification)
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
@@ -151,7 +152,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'ledger_transactions',
+        table: 'wallet_transactions',
         filter: `user_id=eq.${userId}`,
       }, () => { loadStatement(); })
       .on('postgres_changes', {
