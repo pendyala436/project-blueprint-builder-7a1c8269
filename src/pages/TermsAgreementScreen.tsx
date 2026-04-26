@@ -488,7 +488,7 @@ You may complain to your national Data Protection Authority — e.g., the Irish 
 The App is 18+ only; consent of a parent for users below 16 is not applicable.
 
 9. DPIA
-A Data Protection Impact Assessment has been performed for biometric verification, AI moderation, and the men's recharge / virtual-coin processing flows.`
+A Data Protection Impact Assessment has been performed for biometric verification, AI moderation, women's KYC processing, and the men's recharge / virtual-coin processing flows.`
   },
   {
     id: "data_storage_policy",
