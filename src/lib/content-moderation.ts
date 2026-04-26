@@ -20,33 +20,44 @@ const SEXUAL_CONTENT_PATTERNS = [
   /\b(show\s*(me\s*)?(your\s*)?(body|boobs?|tits?|ass|butt|privates?))\b/gi,
   /\b(let'?s?\s*(have\s*)?sex|wanna\s*(f[*]?ck|bang|smash|screw))\b/gi,
   /\b(horny|turned\s*on|get\s*laid|make\s*love|sleep\s*with\s*me)\b/gi,
-  // Hindi/Urdu
-  /\b(chod|chud|lund|gaand|bhosdi|randi|chut|maderchod|behenchod|chudai|jhaant|muth|hilana)\b/gi,
-  /\b(चोद|चूत|लंड|गांड|भोसडी|रंडी|चुदाई|मादरचोद|बहनचोद|मूठ|हिलाना)\b/g,
-  // Tamil
-  /\b(otha|thevdiya|pundai|sunni|oombu|koothi|myiru)\b/gi,
-  /\b(ஓத்தா|தேவடியா|புண்டை|சுன்னி|ஊம்பு|கூதி)\b/g,
-  // Telugu
-  /\b(dengey|modda|gudda|lanja|pooku|sulli)\b/gi,
-  /\b(దెంగేయ్|మొడ్డ|గుద్ద|లంజ|పూకు|సుల్లి)\b/g,
-  // Bengali
-  /\b(choda|baal|magir?|gud|dhon|magi|chudi)\b/gi,
-  /\b(চোদা|বাল|মাগি|গুদ|ধোন|চুদি)\b/g,
-  // Kannada
-  /\b(tunne|tull|sule|bolimaga|ninge)\b/gi,
-  /\b(ತುನ್ನೆ|ತುಳ್ಳ|ಸೂಳೆ|ಬೋಳಿಮಗ)\b/g,
-  // Malayalam
-  /\b(kunna|pooru|thendi|myiru|poorr)\b/gi,
-  /\b(കുണ്ണ|പൂറ്|തെണ്ടി|മൈര്)\b/g,
-  // Marathi
-  /\b(zavadya|jhavla|madharchod|zhavne|randya)\b/gi,
-  /\b(झवाड्या|झवला|मादरचोद|झवणे|रांडया)\b/g,
-  // Gujarati
-  /\b(chodu|chodvu|gand|lodo|bhosad)\b/gi,
-  /\b(ચોદુ|ગાંડ|લોડો|ભોસડ)\b/g,
-  // Punjabi
-  /\b(lann|phuddi|kanjri|chod|bhosad|kutti)\b/gi,
-  /\b(ਲੰਨ|ਫੁੱਦੀ|ਕੰਜਰੀ|ਚੋਦ|ਕੁੱਤੀ)\b/g,
+  // ========== HINDI / URDU (Romanized — Hinglish) ==========
+  /\b(chod\w*|chud\w*|chudai|chudwa\w*|chudak\w*|chudasi|chinaal|lund|loda|lauda|laude|launde|lawde|gaand|gandu|gaandu|bhosd[ai]\w*|bhosdike|bhosdiwale|bhonsdi|randi|randwa|raand|chut|chutiya|chutiyap|chutmarani|chutiye|maderchod|madarchod|maaderchod|madhrchod|behenchod|bhenchod|bhencho|bsdk|mkb|jhaant|jhant|jhand|muth|muthal|hilana|hilake|hilao|hilane|gandfat|gandmara|gandmar|gandmasti|tatti|tatte|fudi|fuddi|chuchi|chuchiyan|momme|mamme|kuttiya|haraamzad\w*|haramzad\w*|kamine|kamini|raand\w*|rakhel|aiyaash|aiyash|sutta|nashe|gilf)\b/gi,
+  // Hindi (Devanagari)
+  /(चोद|चूद|चुदाई|चुदक्कड़|चुदासी|लंड|लौड़ा|लौड़े|लौंड़े|गांड|गाण्ड|गांडू|भोसड़ी|भोसड़ीके|भोंसड़ी|रंडी|रांड|चूत|चुतिया|चूतिये|चूतमारानी|मादरचोद|बहनचोद|भेनचोद|झांट|झांटू|मूठ|हिलाना|हिलाओ|गंदफट|गांडमारा|टट्टी|फुद्दी|चूची|चूचियाँ|कुत्तिया|हरामज़ादा|हरामी|कमीना|कमीनी|आयाश)/g,
+  // Urdu (Nastaliq script)
+  /(چود|چودائی|لنڈ|لوڑا|گانڈ|بھوسڑی|رنڈی|چوت|چتیا|مادرچود|بہنچود|ہراامزادہ|کمینہ|کتیا)/g,
+  // ========== TAMIL ==========
+  /\b(otha|othha|oththa|thevdiya|thevidiya|thevudiya|pundai|poondai|sunni|soonni|oombu|oomba|koothi|kooth|myiru|maire|naaye|naai|punda|kena|loosu|kayadi|paei|kazhuthai|panni|kena\s*panni)\b/gi,
+  /(ஓத்தா|ஓத்த|தேவடியா|தேவிடியா|புண்டை|பூண்டை|சுன்னி|ஊம்பு|கூதி|மைரு|மைரே|நாயே|பண்டா|கேனா|பன்னி|கழுதை)/g,
+  // ========== TELUGU ==========
+  /\b(dengey|denga|dengu|dengaalaa|modda|moddha|gudda|guddha|lanja|lanjakodaka|pooku|pukulo|sulli|gajji|saami|nikamma|naayi|donga|gaddida|battayi)\b/gi,
+  /(దెంగేయ్|దెంగు|దెంగా|మొడ్డ|గుద్ద|లంజ|లంజకొడక|పూకు|సుల్లి|నాయీ|దొంగ)/g,
+  // ========== BENGALI ==========
+  /\b(choda|chodachudi|baal|maagi|magir?|gud|dhon|magi|chudi|chudai|khanki|khankir|chodam|chudam|chudte|baalpanti|hagamuto|gandu|laar|laund|kutta|kuttar|shala|shali|harami|magiir)\b/gi,
+  /(চোদা|চোদাচুদি|বাল|মাগি|গুদ|ধোন|চুদি|চুদাই|খানকি|খানকির|গাণ্ডু|হারামি|কুত্তা|কুত্তার|শালা|শালী)/g,
+  // ========== KANNADA ==========
+  /\b(tunne|tunni|tull|tulli|sule|sulemaga|bolimaga|bevarsi|munde|kotari|naayi|kelsa|gubbi|hode|aithu|hennu\s*kelsa)\b/gi,
+  /(ತುನ್ನೆ|ತುಳ್ಳ|ತುಳ್ಳಿ|ಸೂಳೆ|ಸೂಳೇಮಗ|ಬೋಳಿಮಗ|ಬೇವರ್ಸಿ|ಮುಂಡೆ|ನಾಯಿ)/g,
+  // ========== MALAYALAM ==========
+  /\b(kunna|kunne|pooru|poori|thendi|thendiyole|myiru|myire|poorr|patti|naaye|kazhuvere|kandam|chettan\s*pooru|thayoli|thayolimol|achanammede|kazhuvera|nayinte\s*mone|porimol)\b/gi,
+  /(കുണ്ണ|പൂറ്|പൂറി|തെണ്ടി|തെണ്ടിയോളെ|മൈര്|പട്ടി|നായേ|കഴുവേറെ|തായോളി|പൂറിമോള്)/g,
+  // ========== MARATHI ==========
+  /\b(zavadya|zavadi|jhavla|jhavnar|madharchod|zhavne|randya|randichi|aaichya|aaichi\s*gand|bahnchod|gandya|kutra|sali|gadhav|chyaayla|tujhya\s*aaichi)\b/gi,
+  /(झवाड्या|झवाडी|झवला|झवणार|मादरचोद|झवणे|रांडया|रांडीची|आईच्या|गांड|गांड्या|भेनचोद|च्यायला|कुत्रा|गाढव)/g,
+  // ========== GUJARATI ==========
+  /\b(chodu|chodvu|chodva|gand|gandu|lodo|laudo|bhosad|bhosadi|chutiya|randi|saala|saali|kutra|gadhedo|haramkhor|chinaal|harami)\b/gi,
+  /(ચોદુ|ચોદવુ|ગાંડ|ગાંડુ|લોડો|લૌડો|ભોસડ|ભોસડી|ચૂતિયા|રંડી|હરામી|હરામખોર|કૂતરા|ગધેડો)/g,
+  // ========== PUNJABI ==========
+  /\b(lann|laun|laund|phuddi|phudi|kanjri|kanjar|chod|chodu|bhosad|bhosadi|kutti|kuttiye|gashti|paindu|chinaal|haraami|teri\s*maa|teri\s*pen|behnchod|maderchod|saala|saali|gadha)\b/gi,
+  /(ਲੰਨ|ਲੌਣ|ਫੁੱਦੀ|ਫੁਡੀ|ਕੰਜਰੀ|ਕੰਜਰ|ਚੋਦ|ਭੋਸੜ|ਭੋਸੜੀ|ਕੁੱਤੀ|ਕੁੱਤੀਏ|ਗਸ਼ਤੀ|ਪੈਂਡੂ|ਹਰਾਮੀ|ਮਾਦਰਚੋਦ|ਬਹਿਣਚੋਦ)/g,
+  // ========== ODIA / ORIYA ==========
+  /\b(maguni|nakata|maaichoda|bhainchoda|gandi|kukura|haraami|chutiya|randi)\b/gi,
+  /(ମାଗୁଣି|ନକଟା|ମାଇଚୋଦା|ଭଇଁଚୋଦା|ଗଣ୍ଡି|କୁକୁର|ହରାମୀ|ଚୁତିଆ|ରଣ୍ଡୀ)/g,
+  // ========== ASSAMESE ==========
+  /\b(maguni|chuda|chudai|chudri|gud|dhon|magi|harami|kutta|sala|sali)\b/gi,
+  /(মাগুনি|চুদা|চুদাই|গুদ|ধোন|মাগি|হারামি|কুকুৰ)/g,
+  // ========== KASHMIRI / SINDHI / NEPALI / KONKANI ==========
+  /\b(thoo|saale|kaminey|gandu|chutiya|randi|harami|kuttiya|nepali\s*chodne|saala\s*chor)\b/gi,
   // Arabic
   /\b(kos|ayre|sharmouta|nikni|zobb|teezi|manyak|sharmoot)\b/gi,
   /\b(كس|زب|شرموطة|طيزي|منيك)\b/g,
