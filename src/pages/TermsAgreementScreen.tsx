@@ -291,7 +291,7 @@ E.1 Consent — explicit opt-in for location, profile visibility, photo / biomet
 E.2 Data Minimisation — we collect only what is needed to operate the App and comply with law.
 E.3 Security — TLS 1.3 in transit, AES-256 at rest, OTP / OAuth-style secure authentication, RLS-isolated databases, MFA on admin accounts.
 E.4 User Rights — every user can: delete account, export data, block/report any other user, and control profile visibility.
-E.5 Retention — chat bodies auto-purged every 15 minutes; inactive accounts may be deleted after extended dormancy; statutory records (tax, payments, KYC) retained only for the legally mandated period.
+E.5 Retention — chat bodies auto-purged every 15 minutes; inactive accounts may be deleted after extended dormancy; statutory records (men's payment receipts, GST) retained only for the legally mandated period.
 
 🚨 PART F — DATING-APP-SPECIFIC LEGAL RISKS & SAFEGUARDS
 
