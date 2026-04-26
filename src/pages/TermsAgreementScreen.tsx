@@ -43,342 +43,503 @@ interface LegalDocument {
   required: boolean;
 }
 
+const EFFECTIVE_DATE = "26 April 2026";
+
 const legalDocuments: LegalDocument[] = [
   {
     id: "terms_of_service",
     title: "Terms of Service",
     icon: <ScrollText className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – GLOBAL CHAT-ONLY FRIEND APP
-Terms of Service (TOS)
+    content: `MEOW MEOW — TERMS OF SERVICE
+Effective: ${EFFECTIVE_DATE}
 
-1. Acceptance of Terms
-By creating an account or using Meow Meow, you agree to these Terms of Service. If you disagree, do not use the app.
+1. ACCEPTANCE
+By creating an account or using Meow Meow ("the App", "we", "us"), you enter a binding agreement with the operator of Meow Meow. If you do not agree, you must not use the App.
 
-2. Eligibility
-• You must be 18 or older.
-• Only Male and Female gender options are allowed.
-• One account per user.
-• You must provide accurate information.
+2. ELIGIBILITY (STRICT 18+)
+• You must be at least 18 years old (or the legal age of majority in your jurisdiction, whichever is higher).
+• The App is intended exclusively for residents of India and verified Indian users.
+• Only two gender options are supported: Male and Female. Gender is verified using AI face/photo analysis.
+• One natural person = one account. Duplicate, fake, bot, or shared accounts are prohibited.
+• You must provide truthful, accurate, and current information at registration and keep it updated.
+• Use of VPN, Tor, GPS spoofing, or any tool to misrepresent your location, identity, gender, or age is forbidden and will result in permanent ban and forfeiture of any wallet balance or earnings.
 
-3. Nature of Service
-• Chat-only global friend platform
-• No video calls
-• No audio calls
-• No media sharing (temporary only, auto-deleted)
-• Plain text messaging only
-• Only online users are visible
-• Matching based on gender + language rules
+3. NATURE OF SERVICE
+Meow Meow is an opposite-sex social and communication platform offering:
+• Real-time text chat with auto-translation across 100+ languages.
+• 1:1 audio and video calls (WhatsApp-style) initiated by men and accepted by women.
+• Private flower-themed group video calls (up to 50 rooms).
+• Language-specific community group chat for women.
+Chat is text-only — no media attachments. The service is provided online and depends on network connectivity, third-party infrastructure, and user availability.
 
-4. Prohibited Conduct
-Users must NOT:
-• Send sexual content
-• Harass, threaten, or abuse
-• Ask for or send contact details
-• Engage in illegal activity
-• Impersonate others
-• Create multiple accounts
-• Attempt to involve minors
-• Engage in prostitution or escort services
-• Scam or manipulate users
-• Attempt chargebacks
-• Use VPN to fake region
-• Circumvent gender restrictions
+4. ACCOUNT REGISTRATION & VERIFICATION
+• Email, phone, gender, age, country (India), state, languages and a live selfie are required.
+• AI face verification confirms a real, single, live human and estimates gender; mismatched photos are rejected.
+• Female users must complete a 9-section Bank KYC (PAN, Aadhaar, bank account, IFSC, UPI, address proof) to receive payouts. KYC data is encrypted and used only for payout, taxation, and anti-fraud purposes.
+• We may re-verify identity at any time and suspend access pending verification.
 
-5. Payments (Men Only)
-• Wallet recharge is non-refundable
-• Coins do not expire
-• Fraud → permanent suspension
+5. PROHIBITED CONDUCT
+You shall NOT, directly or indirectly:
+(a) Post, send, or solicit any sexual, obscene, pornographic, nude, semi-nude, erotic, or sexually-suggestive content (zero-tolerance — see Anti-Sexual Content Policy).
+(b) Engage with, attempt to engage with, or depict minors in any sexual or grooming context. Such conduct will be reported to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC, INTERPOL, and local police, and the offender's full data will be preserved for law enforcement.
+(c) Harass, stalk, threaten, defame, dox, blackmail, sextort, hate-speech, intimidate, or discriminate against any user on grounds of religion, caste, race, gender, sexual orientation, disability, or nationality.
+(d) Solicit, exchange, or share personal contact details (phone, WhatsApp, Telegram, Instagram, Snapchat, email, address, social handles, payment apps such as UPI/Paytm/PhonePe/GPay) inside chat, calls, or profile.
+(e) Solicit prostitution, escort services, sugar-daddy/sugar-baby arrangements, or any commercial sexual activity.
+(f) Run, promote, or fall for any romance scam, advance-fee fraud, investment scam, crypto scam, "lottery" scam, fake-emergency scam, "pig butchering", catfishing, or impersonation.
+(g) Upload, transmit, or distribute viruses, malware, spyware, scraping bots, automation scripts, or attempt reverse engineering, penetration testing, or denial-of-service.
+(h) Circumvent gender, age, geography, payment, or moderation controls.
+(i) Use the App for money laundering, terror financing, hawala, or any activity prohibited under the Prevention of Money Laundering Act 2002, FEMA 1999, UAPA 1967, or international sanctions (OFAC, UN, EU).
+(j) Infringe any copyright, trademark, trade secret, publicity, or privacy right.
+(k) Engage in chargeback fraud, "friendly fraud", or recharge with stolen cards/UPI.
+(l) Sell, transfer, rent, or share your account.
 
-6. Earnings & Payouts (Women Only)
-• Women can earn from chat activity
-• ID verification may be required
-• Payout thresholds apply
-• Fraud or fake activity forfeits earnings
+6. PAYMENTS — MEN (Wallet & Coins)
+• Men recharge their in-app wallet using INR via authorized payment processors (Razorpay/Paddle/Stripe etc.).
+• Per-second pro-rated billing applies to chat, calls, and groups (see in-app rates).
+• 18% GST is charged on each recharge as required under the CGST/SGST/IGST Acts and is included in the displayed price.
+• Coins/balance are NON-REFUNDABLE except where mandated by Indian Consumer Protection Act 2019 or RBI guidelines.
+• Initiating a chargeback without first contacting support is treated as fraud and results in permanent ban + reporting to the payment network.
 
-7. Data Storage Consent
-You agree that your data may be stored and processed in India or other Asia-based data centers for performance, security, and compliance.
+7. EARNINGS & PAYOUTS — WOMEN
+• Female users earn a share of men's spend on chats/calls/groups they participate in.
+• Earnings appear in the in-app Statement and Wallet ledger as a single source of truth.
+• Bi-monthly snapshots (1st and 16th) are generated; payouts are processed to the verified bank/UPI listed in KYC.
+• TDS under section 194-O / 194-R / 194-S of the Income Tax Act 1961 may be deducted; a TDS certificate (Form 16A) is issued where applicable.
+• Earnings from fake activity, collusion, automation, sexual content, contact-sharing, or manipulation are forfeited and the account is permanently banned.
 
-8. Account Termination
-We may suspend or terminate accounts without notice for any policy violation.
+8. CONTENT LICENSE
+You retain ownership of content you create. By submitting it, you grant Meow Meow a worldwide, royalty-free, non-exclusive, sub-licensable licence to host, store, transmit, translate, moderate, and display it solely to operate, improve, and protect the service.
 
-9. Disclaimer
-The service is provided "AS IS". We are not liable for user behavior or technical issues.
+9. AI-ASSISTED FEATURES
+The App uses AI for: face/liveness detection, gender estimation, age estimation, language detection, real-time translation, content moderation, and fraud detection. AI outputs may be wrong; you may request human review of any adverse automated decision.
 
-10. Governing Law
-Subject to the jurisdiction of the company's registration.`
+10. SUSPENSION & TERMINATION
+We may suspend, restrict, shadow-ban, or permanently terminate your account at our sole discretion, without prior notice, for any breach of these Terms or applicable law. You may delete your account at any time from Settings; certain data will be retained as described in the Data Retention Policy.
+
+11. DISCLAIMERS
+THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE". TO THE MAXIMUM EXTENT PERMITTED BY LAW WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND ACCURACY. WE DO NOT GUARANTEE COMPATIBILITY, FRIENDSHIP, RELATIONSHIP, OR ANY SPECIFIC OUTCOME WITH ANY OTHER USER.
+
+12. LIMITATION OF LIABILITY
+To the maximum extent permitted by law, our aggregate liability for any claim arising out of or relating to the App is limited to the amount you paid into your wallet in the 3 months preceding the claim, or INR 10,000, whichever is lower. We are not liable for indirect, incidental, special, consequential, exemplary, or punitive damages, lost profits, or loss of data.
+
+13. INDEMNITY
+You will defend, indemnify, and hold harmless Meow Meow, its directors, employees, and agents from any claim, loss, liability, or expense (including legal fees) arising from your breach of these Terms, your content, or your conduct.
+
+14. GOVERNING LAW & JURISDICTION
+These Terms are governed by the laws of India. Subject to the Arbitration and Conciliation Act 1996, disputes will be referred to a sole arbitrator in Bengaluru, Karnataka. Courts at Bengaluru have exclusive jurisdiction. Foreign users additionally consent to Indian jurisdiction and waive forum non-conveniens objections.
+
+15. CHANGES
+We may update these Terms at any time. Material changes will be notified in-app at least 7 days before they take effect. Continued use after the effective date constitutes acceptance.
+
+16. CONTACT / GRIEVANCE OFFICER (per IT Rules 2021)
+Grievance Officer: support@meowmeow.app | Response within 24 hours, resolution within 15 days as required by Rule 3(2) of the IT (Intermediary Guidelines) Rules 2021.`
   },
   {
     id: "privacy_policy",
     title: "Privacy Policy",
     icon: <Shield className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – PRIVACY POLICY
+    content: `MEOW MEOW — PRIVACY POLICY
+Effective: ${EFFECTIVE_DATE}
 
-1. Information We Collect
-• Name, gender, age, DOB
-• Languages & mother tongue
-• Country & region
-• Online/offline status
-• Device information
-• Payment history
-• Earnings history (women)
-• Chat messages are auto-deleted after 15 minutes.
+This Policy explains what personal data we collect, why, how we use it, and the rights you have under the Digital Personal Data Protection Act, 2023 (India), the EU/UK GDPR, the California Consumer Privacy Act / CPRA, Canada PIPEDA, Brazil LGPD, the Australian Privacy Act 1988, and other applicable laws.
 
-2. Sensitive Data
-We do not collect:
-• Contacts
-• Social accounts
-• Personal media files (permanent)
+1. DATA WE COLLECT
+(a) Identity & profile: full name, gender, date of birth, age, country, state, languages, mother tongue, profile photo / live selfie.
+(b) Account: email, phone, hashed password, device ID, IP address (truncated where possible), user-agent.
+(c) KYC (women only, payout users): PAN, Aadhaar (masked, last 4), bank account, IFSC, UPI ID, address proof.
+(d) Communications metadata: who chatted/called whom, duration, billing seconds. Chat message bodies are end-to-end encrypted in transit and auto-deleted (see §7).
+(e) Payment data: amounts, GST, payment method type, transaction status. Full card / UPI credentials are handled directly by PCI-DSS compliant processors and never stored on our servers.
+(f) Technical & safety: crash logs, abuse reports, moderation actions, AI verification scores.
 
-3. How We Use Data
-• Matching
-• Communication
-• Safety
-• Fraud detection
-• Legal compliance
+2. SENSITIVE PERSONAL DATA
+We treat the following as sensitive and apply additional safeguards:
+• Biometric data (face embeddings used only for liveness/gender check — discarded after verification).
+• Government IDs (encrypted at rest, access-logged, used only for payout & legal compliance).
+We do NOT collect: contacts list, social-media accounts, browsing history outside the App, health data, religious or political opinions.
 
-4. Data Storage & Transfer
-Your data may be stored in:
-• India
-• Singapore
-• Japan
-• UAE
-• Any Asia-based secure data center
+3. LEGAL BASIS (DPDP / GDPR Art. 6)
+• Consent — for marketing, optional features, AI gender verification.
+• Performance of contract — to operate the App, process payments, deliver chats/calls.
+• Legal obligation — tax (Income Tax Act 1961, GST), KYC (PMLA 2002), grievance redressal (IT Rules 2021), child-safety reporting (POCSO 2012).
+• Legitimate interest — fraud prevention, security, service improvement, balanced against your rights.
 
-All storage is compliant with GDPR, CCPA, DPDP India, and global privacy frameworks.
+4. PURPOSES OF USE
+Account creation; matching opposite-sex users; chat/call/group delivery; AI translation; AI face/gender/age verification; per-second billing & GST invoicing; women's payouts & TDS; safety, moderation, anti-spam; complying with court orders, tax filings, and government requests; communicating service notices.
 
-5. Your Rights
-• Delete account
-• Request data export
-• Correct personal data
-• Withdraw consent
+5. AI AUTOMATED PROCESSING
+Decisions made wholly or partly by AI (gender mismatch, content takedown, fraud flag) can be appealed to a human reviewer at support@meowmeow.app within 30 days. We do not perform political profiling or sell biometric data.
 
-6. Data Sharing
-We may share limited data with:
-• Payment processors
-• Payout providers
-• Law enforcement (only when legally required)
+6. SHARING & DISCLOSURE
+We share data only with:
+(a) Sub-processors under written contracts: Supabase (database & auth), Lovable AI Gateway, Razorpay/Stripe/Paddle (payments), TURN/STUN providers (calls), email/SMS gateways.
+(b) Government, regulator, court, or law-enforcement when legally compelled (CrPC §91, IT Act §69, DPDP §17, foreign MLATs).
+(c) Successor entity in a merger, acquisition, or asset sale (with continued protection).
+We do NOT sell or rent personal data to advertisers or data brokers.
 
-7. Data Retention
-• Chat: 15 minutes
-• Payments: 7 years
-• Logs: 30–90 days
-• Account data: Until the user deletes account`
+7. RETENTION
+• Chat message bodies — deleted automatically every 15 minutes.
+• Account & profile — until you delete the account, then 30 days grace.
+• Payment & GST records — 8 years (Companies Act 2013, GST Act).
+• KYC & TDS — 8 years from last transaction (PMLA, Income Tax Act).
+• Server & security logs — 30–180 days.
+• Court-preserved data — until release.
+
+8. CROSS-BORDER TRANSFERS
+Primary storage is in India. Limited data may be processed in Singapore, Japan, the EU, or the United States by sub-processors. Transfers rely on:
+• DPDP §16 notified-country mechanism,
+• EU Standard Contractual Clauses (SCCs) + Transfer Impact Assessment,
+• UK IDTA, Swiss FDPIC clauses where applicable.
+
+9. YOUR RIGHTS
+Subject to applicable law you may:
+• Access a copy of your data (DPDP §11, GDPR Art.15, CCPA "right to know").
+• Correct inaccurate data (DPDP §12, GDPR Art.16).
+• Erase your data ("right to be forgotten" — DPDP §12, GDPR Art.17, CCPA "right to delete").
+• Restrict or object to processing (GDPR Art.18/21).
+• Port your data in a machine-readable format (GDPR Art.20).
+• Withdraw consent at any time without affecting prior lawful processing.
+• Opt out of "sale/share" — we do not sell, but you can confirm via support.
+• Lodge a complaint with the Data Protection Board of India, your EU/UK supervisory authority, the California Privacy Protection Agency, or other regulator.
+Exercise rights at: privacy@meowmeow.app — response within 30 days.
+
+10. CHILDREN
+The App is strictly 18+. We do not knowingly process data of anyone under 18. If we discover an underage account, we delete it immediately and, where the user appears to be in danger, report to authorities under the POCSO Act 2012 and US COPPA equivalents.
+
+11. SECURITY
+TLS 1.3 in transit, AES-256 at rest, role-based access, MFA on admin, RLS-enforced database isolation, daily backups, 24/7 monitoring. No method is 100% secure; we will notify you and the regulator within 72 hours of a notifiable breach (DPDP §8(6), GDPR Art.33-34).
+
+12. COOKIES & SIMILAR
+We use only strictly-necessary first-party cookies / local storage for session, auth, and language preference. No third-party advertising trackers.
+
+13. DATA PROTECTION OFFICER (DPO) & GRIEVANCE OFFICER
+DPO / Grievance Officer (India): privacy@meowmeow.app — acknowledges within 24 h, resolves within 15 days (IT Rules 2021, Rule 3(2)(a)).
+
+14. UPDATES
+Material changes notified in-app 7 days in advance. Last updated: ${EFFECTIVE_DATE}.`
   },
   {
     id: "security_policy",
     title: "Security Policy",
     icon: <Lock className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – SECURITY POLICY
+    content: `MEOW MEOW — SECURITY POLICY
+Effective: ${EFFECTIVE_DATE}
 
-1. Encryption
-• Data in transit: TLS 1.3
-• Data at rest: AES-256
-• Chat messages encrypted end-to-end
+1. ENCRYPTION
+• In transit: TLS 1.3 for all client-server traffic; DTLS-SRTP for media (audio/video calls).
+• At rest: AES-256 GCM for databases, KYC documents, and backups.
+• Passwords: hashed with bcrypt/argon2id + per-user salt.
 
-2. Infrastructure
-• Servers hosted in India and Asia-proof regions
-• Firewalls, DDoS protection, access logs
+2. INFRASTRUCTURE
+• Cloud-native deployment on hardened, region-isolated servers.
+• Web Application Firewall, DDoS mitigation, rate-limiting on auth & payment endpoints.
+• coturn TURN/STUN servers with short-lived credentials for calls.
+• Network segmentation between application, database, and admin tiers.
 
-3. Access Control
-• Staff access is limited
-• Multi-factor security on admin panel
+3. ACCESS CONTROL
+• Principle of least privilege; role-based access (RBAC) enforced in DB via Row-Level Security.
+• Multi-factor authentication on all admin accounts.
+• Quarterly access reviews; immediate revocation on role change.
+• Privileged actions are append-only audit-logged.
 
-4. Monitoring
-• 24/7 automated threat monitoring
-• Abuse detection
-• Fraud prevention AI
+4. DEVELOPMENT & SUPPLY CHAIN
+• OWASP ASVS-aligned secure SDLC.
+• Dependency scanning, SAST, secret-scanning in CI.
+• No production data in development or test environments.
 
-5. Backup & Recovery
-• Daily secure backups
-• Region-redundant storage`
+5. MONITORING & INCIDENT RESPONSE
+• 24/7 automated anomaly detection (failed-login spikes, abuse patterns, fraud signals).
+• Incident response plan with RTO 4 h / RPO 1 h.
+• Notifiable breach: regulator + affected users informed within 72 h, per DPDP §8(6) and GDPR Art.33-34.
+
+6. BACKUPS & DISASTER RECOVERY
+• Encrypted, geo-redundant daily backups, 30-day retention.
+• Quarterly DR drills.
+
+7. RESPONSIBLE DISCLOSURE
+Researchers may report vulnerabilities to security@meowmeow.app. We commit not to pursue legal action for good-faith research that respects user privacy and avoids service disruption.`
   },
   {
     id: "gdpr_compliance",
-    title: "GDPR Compliance",
+    title: "GDPR / UK GDPR Compliance",
     icon: <Globe className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – GDPR COMPLIANCE STATEMENT
+    content: `MEOW MEOW — EU / UK GDPR COMPLIANCE STATEMENT
+Effective: ${EFFECTIVE_DATE}
 
-1. Lawful Basis
-We process user data under:
-• Consent
-• Legitimate Interest
-• Legal obligation
+1. CONTROLLER
+Meow Meow is the data controller for personal data processed through the App.
 
-2. Data Subject Rights
-EU users may:
-• Access data
-• Request data deletion
-• Correct data
-• Restrict processing
-• Withdraw consent
-• Request portability
+2. LAWFUL BASES (Art. 6)
+• Consent (Art. 6(1)(a)) — optional features, marketing.
+• Contract (Art. 6(1)(b)) — providing the App.
+• Legal obligation (Art. 6(1)(c)) — tax, KYC, law enforcement.
+• Legitimate interest (Art. 6(1)(f)) — fraud, security, abuse prevention.
 
-3. Cross-Border Transfers
-User data may be transferred to India and Asia.
-We use:
-• Standard Contractual Clauses (SCC)
-• Encryption
-• Privacy-by-design`
+3. SPECIAL CATEGORY DATA (Art. 9)
+Biometric face data is processed under Art. 9(2)(a) explicit consent for the limited purpose of liveness and gender verification. Templates are not retained beyond verification.
+
+4. DATA SUBJECT RIGHTS (Art. 15-22)
+Access, rectification, erasure, restriction, portability, objection, no automated decision without human review. Requests: privacy@meowmeow.app — response within 30 days.
+
+5. INTERNATIONAL TRANSFERS (Chapter V)
+Transfers to India and other non-adequacy countries rely on EU SCCs (Decision 2021/914) and the UK IDTA, with Transfer Impact Assessments and supplementary measures (encryption, pseudonymisation).
+
+6. DPO & EU/UK REPRESENTATIVE
+DPO: privacy@meowmeow.app
+We will appoint a representative under GDPR Art. 27 / UK DPA Art. 27 for users in the EU/EEA and UK if our processing volume crosses the statutory threshold.
+
+7. SUPERVISORY AUTHORITY
+You may complain to your national Data Protection Authority — e.g., the Irish DPC, the UK ICO, the French CNIL.
+
+8. CHILDREN (Art. 8)
+The App is 18+ only; consent of a parent for users below 16 is not applicable.
+
+9. DPIA
+A Data Protection Impact Assessment has been performed for biometric verification, AI moderation, and women's earnings/KYC processing.`
   },
   {
     id: "data_storage_policy",
-    title: "Data Storage & Localization",
+    title: "Data Localization & Storage",
     icon: <Database className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – DATA STORAGE & LOCALIZATION POLICY
+    content: `MEOW MEOW — DATA LOCALIZATION & STORAGE POLICY
+Effective: ${EFFECTIVE_DATE}
 
-1. Storage Regions
-Your data may be stored in:
-• India
-• Asia (Singapore, Japan, Indonesia, UAE)
-• Compliant with local & global privacy laws
+1. PRIMARY STORAGE
+Primary databases and backups are located in India to comply with:
+• Digital Personal Data Protection Act, 2023.
+• RBI Storage of Payment System Data (April 2018) — payment data is stored only in India.
+• SEBI / IRDAI guidance where applicable.
 
-2. User Consent
-By using Meow Meow, you fully consent to storage and processing in India or Asia.
+2. SECONDARY PROCESSING
+Limited operational data may be processed in:
+• Singapore, Japan, the EU, the United States — for sub-processors (Supabase, payment, email/SMS, AI gateway).
+All such transfers use SCCs / IDTA / DPDP §16 mechanisms with encryption in transit and at rest.
 
-3. Compliance
-Fully adheres to:
-• DPDP India Act 2023
-• GDPR
-• CCPA
-• ISO 27001
+3. PAYMENT DATA
+Card / UPI credentials are tokenised by PCI-DSS Level 1 processors and never stored on our servers. Aggregated transaction records are retained for 8 years as required by the Companies Act 2013 and GST Act.
 
-4. Security Measures
-• Encrypted databases
-• Redundant backups
-• Access isolation`
+4. KYC DATA
+Stored encrypted in India, segregated from operational tables, accessible only to authorised payout & compliance staff under audit logging.
+
+5. USER CONSENT
+By creating an account you provide express, informed consent under DPDP §6 / GDPR Art. 6 & 9 for storage in India and the cross-border transfers described above.
+
+6. CERTIFICATIONS / FRAMEWORKS
+Aligned with: ISO/IEC 27001:2022, ISO/IEC 27701, NIST CSF, SOC 2 Type II controls (sub-processor level).`
   },
   {
     id: "user_guidelines",
-    title: "User Guidelines",
+    title: "Community Guidelines",
     icon: <Users className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – USER GUIDELINES
+    content: `MEOW MEOW — COMMUNITY GUIDELINES
+Effective: ${EFFECTIVE_DATE}
 
-Allowed Behavior
-• Respect others
-• Use real information
-• Follow safety rules
+DO
+• Be respectful and treat every user with dignity.
+• Use truthful information and your real photo.
+• Use the in-app translator — chat in any language.
+• Block and report anyone who makes you uncomfortable.
 
-Not Allowed
-• Harassment
-• Sexual content
-• Asking for money
-• Sharing contact details
-• External communication (WhatsApp, Instagram, etc.)
-• Fraud or scams`
+DON'T
+• No sexual, nude, semi-nude, suggestive, or pornographic content.
+• No harassment, hate speech, threats, defamation, casteism, racism, communalism, or discrimination.
+• No requests for or sharing of phone, WhatsApp, Instagram, Snapchat, Telegram, email, address, UPI/Paytm/PhonePe/GPay, bank details, or any external contact.
+• No requests for or offers of money, gifts, "loans", crypto, or investments.
+• No prostitution, escort, sugar-baby, or commercial sexual services.
+• No catfishing, impersonation, or use of someone else's photos.
+• No spam, advertising, or promotion of third-party services.
+• No bots, scripts, automation, or scraping.
+• No content that exploits or endangers minors — instant ban + criminal report.
+• No off-platform meet-ups arranged for sexual exploitation, trafficking, or abuse.
+
+REPORTING
+Use the in-app Report button or email report@meowmeow.app. Reports are reviewed within 24 hours; emergencies (CSAM, threats to life) are escalated immediately.`
   },
   {
     id: "anti_sexual_content",
-    title: "Anti-Sexual Content Policy",
+    title: "Anti-Sexual Content & Child-Safety Policy",
     icon: <Ban className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – ANTI-SEXUAL CONTENT POLICY
+    content: `MEOW MEOW — ANTI-SEXUAL CONTENT & CHILD-SAFETY POLICY
+Effective: ${EFFECTIVE_DATE}
 
-Zero Tolerance:
-• Erotic chats
-• Sexual roleplay
-• Nudity
-• Pornographic content
-• Sexual harassment
-• Sexual exploitation
-• Minor sexual content (permanent ban + law enforcement report)
+ZERO TOLERANCE — sending, soliciting, or hinting at any of the following results in IMMEDIATE permanent ban, forfeiture of wallet/earnings, and reporting to authorities:
+• Erotic chat, sexual roleplay, sexting, "dirty talk".
+• Nudity, semi-nudity, sexual imagery.
+• Pornographic, obscene, or vulgar language.
+• Sexual harassment, unsolicited sexual advances, sextortion.
+• Non-consensual intimate imagery ("revenge porn") — covered by IT Act §66E, BNS §75, and similar global laws.
+• Voyeurism, upskirt, or recordings without consent.
+• Solicitation of prostitution, escort, sugar-baby, or commercial sexual services.
 
-Violations will result in immediate account suspension and potential legal action.`
+CHILD SEXUAL ABUSE MATERIAL (CSAM) — ZERO TOLERANCE
+• Any content involving a minor (real or simulated, AI-generated included) is a criminal offence under:
+  – Protection of Children from Sexual Offences Act 2012 (POCSO),
+  – Information Technology Act 2000 §67B,
+  – Bharatiya Nyaya Sanhita 2023,
+  – US 18 USC §2252/2252A, UK Protection of Children Act 1978, EU Directive 2011/93/EU, and global equivalents.
+• We hash-match against industry CSAM databases and proactively scan for such material.
+• Discoveries are preserved and reported to:
+  – National Cyber Crime Reporting Portal (cybercrime.gov.in),
+  – NCMEC CyberTipline (United States),
+  – INTERPOL ICSE,
+  – Local police of the offender's jurisdiction.
+• Account, IP, device fingerprint, payment info, and chat metadata are preserved as required by law.
+
+LIVE-CALL ABUSE
+Live audio/video calls are subject to the same rules. Recording and AI scanning may be performed for safety/abuse detection in compliance with applicable wiretap and privacy laws; users are notified before each call.
+
+CONSENT
+Even between consenting adults, sexual content is prohibited on this platform. Use a service designed for adult content elsewhere.`
   },
   {
     id: "payments_policy",
-    title: "Payments & Payouts",
+    title: "Payments, Refunds & Payouts",
     icon: <CreditCard className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – PAYMENTS & PAYOUTS POLICY
+    content: `MEOW MEOW — PAYMENTS, REFUNDS & PAYOUTS POLICY
+Effective: ${EFFECTIVE_DATE}
 
-For Men
-• Wallet recharge
-• No refunds
-• Chargebacks = instant ban
+A. WALLET RECHARGE (MEN)
+• Recharge via Razorpay / Stripe / Paddle / authorised UPI in INR.
+• Prices are inclusive of 18% GST under CGST/SGST/IGST Acts; GST invoice issued on request.
+• Per-second pro-rated billing for chat, calls, and groups (rate card visible in-app).
+• Wallet balance is non-transferable and tied to a single verified account.
 
-For Women
-• Earn from chat engagement
-• ID verification required
-• Minimum payout threshold
-• Fraud forfeits earnings`
+B. REFUND POLICY
+In line with the Consumer Protection Act 2019 and RBI guidelines:
+• Recharges are non-refundable except where (i) duplicate charge, (ii) failed transaction with debit, (iii) verified system error.
+• Refund requests must be raised within 7 days at billing@meowmeow.app; eligible refunds are processed within 7 working days to the original payment method.
+• Unused coins are not refundable on account closure.
+
+C. CHARGEBACKS / FRAUD
+• Initiating a chargeback without contacting support first is treated as fraud.
+• Result: permanent ban, blacklist with payment processors, forfeiture of balance, and possible legal action under BNS §316/318 (cheating), PMLA, and the Payment and Settlement Systems Act 2007.
+
+D. PAYOUTS (WOMEN)
+• Earnings ledger is the single source of truth (ledger_transactions table).
+• Bi-monthly snapshot on the 1st and 16th of each month.
+• Minimum payout threshold and processing time displayed in the Payouts screen.
+• Payout to verified bank/UPI in KYC; mismatched names will be rejected.
+
+E. TAXES (PAYOUTS)
+• TDS may be deducted under the Income Tax Act 1961 (sec 194-O / 194-R / 194-S as applicable).
+• Form 16A / TDS certificate issued where required.
+• Women users are responsible for declaring earnings in their personal income-tax return.
+
+F. ANTI-MONEY LAUNDERING
+We comply with the Prevention of Money Laundering Act 2002 and FATF guidance. Suspicious transactions are reported to FIU-IND.`
   },
   {
     id: "content_moderation",
-    title: "Content Moderation",
+    title: "Content Moderation & Enforcement",
     icon: <Eye className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – CONTENT MODERATION POLICY
+    content: `MEOW MEOW — CONTENT MODERATION & ENFORCEMENT POLICY
+Effective: ${EFFECTIVE_DATE}
 
-Actions Taken
-• Warning
-• Temporary suspension
-• Permanent ban
-• Shadow ban
-• Legal escalation
+1. WHAT WE MODERATE
+Profile photos, display names, bio, chat messages, group names, call behaviour (where lawful), reports filed by users.
 
-Moderation Tools
-• AI detection
-• Manual review
-• Keyword filters
+2. METHODS
+• Pre-publication AI checks (face/gender, prohibited keywords, contact-detail patterns, abusive language).
+• Real-time multilingual filters across 132+ languages.
+• Post-publication user reports + 24-hour human review.
+• Random audits of high-risk accounts.
 
-All content is subject to review and moderation to ensure platform safety.`
+3. ACTIONS
+Tiered enforcement based on severity, history, and intent:
+(i) Warning + content removal,
+(ii) Temporary suspension (24 h – 30 days),
+(iii) Permanent ban + forfeiture of balance/earnings,
+(iv) Shadow-restriction of visibility,
+(v) Law-enforcement referral (CSAM, threats, fraud, trafficking).
+
+4. APPEALS
+Users may appeal any action within 30 days at appeals@meowmeow.app. Human reviewer (different from the original moderator) decides within 15 days, in line with IT Rules 2021 §3(2) and the EU Digital Services Act Art. 20 (where applicable).
+
+5. TRANSPARENCY
+We publish an annual transparency report summarising removals, suspensions, government requests, and CSAM reports.
+
+6. STATUTORY COMPLIANCE
+We act as an "intermediary" under IT Act 2000 §79 and observe due-diligence under IT (Intermediary Guidelines and Digital Media Ethics Code) Rules 2021. We will take down unlawful content within 36 hours of a valid court / government order, and within 24 hours for non-consensual intimate imagery (Rule 3(2)(b)).`
   },
   {
     id: "age_verification",
-    title: "Age Verification",
+    title: "Age Verification (18+ Only)",
     icon: <UserCheck className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – AGE VERIFICATION POLICY
+    content: `MEOW MEOW — AGE VERIFICATION POLICY
+Effective: ${EFFECTIVE_DATE}
 
-• Minimum age 18
-• AI-assisted face/age verification
-• Fake age → immediate ban
-• No minor content allowed
-
-All users must verify their age before accessing the platform.`
+• Strict minimum age: 18 years (or higher local age of majority).
+• Date of birth is collected at registration; AI age-estimation cross-checks the live selfie.
+• Suspected underage accounts are immediately suspended; the user is asked for government-ID proof.
+• If under-18 status is confirmed, the account and all data are deleted within 7 days, and where there is reason to believe the minor is at risk, a report is filed under POCSO 2012, IT Act §67B, and equivalent foreign laws.
+• Misrepresentation of age is a fraud against the platform and may be a criminal offence (BNS §318 — cheating).
+• Parents/guardians who discover that a minor created an account may write to safety@meowmeow.app for immediate removal.`
   },
   {
     id: "ai_disclosure",
     title: "AI Usage Disclosure",
     icon: <Bot className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – AI USAGE DISCLOSURE
+    content: `MEOW MEOW — AI USAGE DISCLOSURE
+Effective: ${EFFECTIVE_DATE}
 
-AI is used for:
-• Gender verification
-• Gender verification
-• Fraud prevention
-• Content moderation
-• Age estimation
+We use artificial intelligence to keep the App safe, fair, and useful.
 
-AI is NOT used for:
-• Final suspension decisions
-• Payout approvals
+USED FOR
+• Face & liveness detection (anti-spoofing).
+• Gender estimation from selfie.
+• Age estimation.
+• Real-time language detection & translation across 100+ languages.
+• Prohibited-content classification (sexual, violent, hateful, contact-info patterns).
+• Fraud, bot, and abuse detection.
 
-All AI-assisted decisions are subject to human review upon user request.`
+NOT USED FOR
+• Final permanent-ban decisions without human review.
+• Final payout approval/rejection without human review.
+• Profiling for advertising, political, or insurance pricing purposes.
+• Sale of biometric or behavioural data to third parties.
+
+GOVERNANCE
+• Models are evaluated for bias on Indian skin tones, languages, and demographics.
+• EU AI Act (Regulation 2024/1689): biometric categorisation and emotion-inference are limited to safety contexts permitted under Art. 5 / Annex III; users are informed when interacting with AI features.
+• You can request human review of any AI-driven decision at ai-review@meowmeow.app within 30 days.`
   },
   {
     id: "data_retention",
-    title: "Data Retention",
+    title: "Data Retention & Deletion",
     icon: <Clock className="w-4 h-4" />,
     required: true,
-    content: `MEOW MEOW – DATA RETENTION POLICY
+    content: `MEOW MEOW — DATA RETENTION & DELETION POLICY
+Effective: ${EFFECTIVE_DATE}
 
-Data Type              | Retention Period
------------------------|------------------
-Chat messages          | 15 minutes
-Payment records        | 7 years
-Device logs            | 30–90 days
-Account data           | Until user deletes
-Fraud data             | 90 days
+Data Type                       | Retention
+--------------------------------|------------------------------------------
+Chat message bodies             | Auto-deleted every 15 minutes
+Chat sessions metadata          | 30 days, then anonymised
+Audio/video call recordings     | NOT recorded (signalling logs 30 days)
+Account & profile               | Until deletion + 30-day grace period
+Wallet ledger transactions      | 8 years (Companies Act, GST Act)
+KYC documents (women)           | 8 years from last transaction (PMLA)
+TDS / tax records               | 8 years (Income Tax Act 1961)
+Server / security logs          | 30–180 days
+Abuse / fraud evidence          | 90 days, longer if under investigation
+CSAM evidence                   | Preserved indefinitely for law enforcement
+Court / government holds        | Until release order
 
-Users may request early deletion of their data by contacting support, subject to legal requirements.`
+DELETION RIGHT
+Request account deletion any time from Settings or at privacy@meowmeow.app. We delete or anonymise all non-statutorily-retained data within 30 days, in compliance with DPDP §12, GDPR Art.17, CCPA / CPRA right-to-delete, and similar laws.
+
+EXCEPTIONS
+We may retain limited data where necessary to: (a) comply with law, (b) resolve disputes, (c) enforce agreements, (d) protect against fraud, (e) preserve evidence for criminal proceedings.`
   }
 ];
 
