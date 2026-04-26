@@ -217,22 +217,22 @@ const AdditionalPhotosScreen = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center px-6 pb-8 overflow-y-auto relative z-10">
+      <main className="flex-1 flex flex-col items-center px-4 pb-6 overflow-y-auto relative z-10">
         <ScreenTitle
           title="Add 5 More Photos"
           subtitle="Upload 5 clear photos to complete your profile"
           logoSize="md"
-          className="mb-6"
+          className="mb-4"
         />
 
-        <Card className="w-full max-w-md p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
+        <Card className="w-full max-w-2xl p-4 bg-card/70 backdrop-blur-xl border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
           <div className="flex items-center gap-2 mb-3">
             <Upload className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-foreground">
+            <h2 className="font-semibold text-foreground text-sm">
               Additional Photos <span className="text-destructive">*</span>
             </h2>
             <span className="ml-auto text-xs text-muted-foreground">
-              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS} (all required)
+              {additionalPhotos.length}/{MAX_ADDITIONAL_PHOTOS} required
             </span>
           </div>
 
@@ -249,7 +249,8 @@ const AdditionalPhotosScreen = () => {
             className="hidden"
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* 5 slots in one row so all photo upload buttons are always visible */}
+          <div className="grid grid-cols-5 gap-2">
             {additionalPhotos.map((photo, index) => (
               <div
                 key={index}
@@ -258,7 +259,7 @@ const AdditionalPhotosScreen = () => {
                 <img
                   src={photo}
                   alt={`Photo ${index + 1}`}
-                  className="w-full h-full object-contain cursor-zoom-in"
+                  className="w-full h-full object-cover cursor-zoom-in"
                   onClick={() => setLightboxSrc(photo)}
                 />
                 <button
@@ -266,12 +267,12 @@ const AdditionalPhotosScreen = () => {
                     e.stopPropagation();
                     removeAdditionalPhoto(index);
                   }}
-                  className="absolute top-1 right-1 p-1.5 bg-destructive/90 text-destructive-foreground rounded-full opacity-90 hover:opacity-100 transition-opacity"
+                  className="absolute top-0.5 right-0.5 p-1 bg-destructive/90 text-destructive-foreground rounded-full opacity-95 hover:opacity-100 transition-opacity"
                   aria-label={`Remove photo ${index + 1}`}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </button>
-                <span className="absolute bottom-1 left-1 text-[10px] bg-background/70 text-foreground px-1.5 py-0.5 rounded">
+                <span className="absolute bottom-0.5 left-0.5 text-[9px] bg-background/70 text-foreground px-1 py-0.5 rounded">
                   {index + 1}
                 </span>
               </div>
@@ -281,6 +282,7 @@ const AdditionalPhotosScreen = () => {
               length: MAX_ADDITIONAL_PHOTOS - additionalPhotos.length,
             }).map((_, i) => {
               const isFirstEmpty = i === 0;
+              const slotNumber = additionalPhotos.length + i + 1;
               return (
                 <div
                   key={`empty-${i}`}
@@ -289,25 +291,39 @@ const AdditionalPhotosScreen = () => {
                   onDragLeave={isFirstEmpty ? handleDragLeave : undefined}
                   onClick={() => additionalFileInputRef.current?.click()}
                   className={`
-                    aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1
+                    aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-0.5
                     cursor-pointer transition-all duration-200
                     ${isFirstEmpty && isDragging
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50 hover:bg-primary/5"
                     }
                   `}
+                  aria-label={`Add photo ${slotNumber}`}
                 >
-                  <Plus className="h-7 w-7 text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground">
-                    Photo {additionalPhotos.length + i + 1}
+                  <Plus className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-[9px] text-muted-foreground leading-none">
+                    {slotNumber}
                   </span>
                 </div>
               );
             })}
           </div>
 
+          {/* Bulk-add helper for users who prefer a big button */}
+          {additionalPhotos.length < MAX_ADDITIONAL_PHOTOS && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-3 gap-2"
+              onClick={() => additionalFileInputRef.current?.click()}
+            >
+              <Plus className="h-4 w-4" />
+              Add {MAX_ADDITIONAL_PHOTOS - additionalPhotos.length} more photo{MAX_ADDITIONAL_PHOTOS - additionalPhotos.length === 1 ? "" : "s"}
+            </Button>
+          )}
+
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            Tap a photo to view full size. You can select multiple photos at once.
+            Tap any slot to upload. You can select multiple photos at once. Tap a photo to preview full size.
           </p>
         </Card>
 
