@@ -59,6 +59,7 @@ const kycSchema = z.object({
   ifsc_code: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format"),
   account_type: z.string().default("savings"),
   upi_id: z.string().regex(/^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/, "Invalid UPI ID format (e.g. name@upi)").optional().or(z.literal("")),
+  beneficiary_purpose: z.string().default("others"),
 
   // Section 7: Nominee Details
   nominee_name: z.string().optional(),
@@ -129,6 +130,8 @@ export function WomenKYCForm() {
   const [existingKYC, setExistingKYC] = useState<KYCRecord | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [editingApproved, setEditingApproved] = useState(false);
+  const [appId, setAppId] = useState<string | null>(null);
+  const [appSno, setAppSno] = useState<number | null>(null);
 
   // File uploads
   const [aadhaarFront, setAadhaarFront] = useState<File | null>(null);
@@ -166,6 +169,7 @@ export function WomenKYCForm() {
       ifsc_code: "",
       account_type: "savings",
       upi_id: "",
+      beneficiary_purpose: "others",
       aadhaar_number: "",
       id_type: "pan",
       id_number: "",
@@ -188,6 +192,17 @@ export function WomenKYCForm() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
       setUserId(session.user.id);
+
+      // Fetch App ID + SNO from profiles (single source of truth)
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('app_id, app_sno')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (profileRow) {
+        setAppId((profileRow as any).app_id ?? null);
+        setAppSno((profileRow as any).app_sno ?? null);
+      }
 
       const { data, error } = await supabase
         .from('women_kyc')
@@ -226,7 +241,8 @@ export function WomenKYCForm() {
           account_number: data.account_number,
           ifsc_code: data.ifsc_code,
           account_type: (data as any).account_type || "savings",
-          upi_id: (data as any).upi_id || "",
+          upi_id: (data as any).upi_id || (data as any).upi_vpa || "",
+          beneficiary_purpose: (data as any).beneficiary_purpose || "others",
           aadhaar_number: (data as any).aadhaar_number || "",
           id_type: (data.id_type === 'aadhaar' ? 'pan' : data.id_type) as any,
           id_number: data.id_type === 'aadhaar' ? "" : data.id_number,
@@ -308,6 +324,8 @@ export function WomenKYCForm() {
         ifsc_code: data.ifsc_code.toUpperCase().trim(),
         account_type: data.account_type || "savings",
         upi_id: data.upi_id?.trim() || null,
+        upi_vpa: data.upi_id?.trim() || null,
+        beneficiary_purpose: data.beneficiary_purpose || "others",
         aadhaar_number: data.aadhaar_number.trim(),
         aadhaar_front_url: aadhaarFrontUrl,
         aadhaar_back_url: aadhaarBackUrl,
@@ -381,6 +399,12 @@ export function WomenKYCForm() {
           <CardDescription>Your KYC has been verified. You can receive payouts.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {(appId || appSno !== null) && (
+            <div className="grid grid-cols-2 gap-4 text-sm p-3 rounded-lg bg-primary/5 border border-primary/20">
+              {appId && <div><Label className="text-muted-foreground">App ID</Label><p className="font-mono font-semibold text-primary">{appId}</p></div>}
+              {appSno !== null && <div><Label className="text-muted-foreground">Beneficiary ID / S.No</Label><p className="font-mono font-semibold text-primary">{appSno}</p></div>}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><Label className="text-muted-foreground">Full Name</Label><p className="font-medium">{existingKYC.full_name_as_per_bank}</p></div>
             <div><Label className="text-muted-foreground">Bank</Label><p className="font-medium">{existingKYC.bank_name}</p></div>
@@ -388,7 +412,8 @@ export function WomenKYCForm() {
             <div><Label className="text-muted-foreground">IFSC</Label><p className="font-medium">{existingKYC.ifsc_code}</p></div>
             <div><Label className="text-muted-foreground">Aadhaar</Label><p className="font-medium">****{(existingKYC.aadhaar_number || '').slice(-4)}</p></div>
             <div><Label className="text-muted-foreground">ID Proof</Label><p className="font-medium">{getIdTypeLabel(existingKYC.id_type)}: ****{existingKYC.id_number.slice(-4)}</p></div>
-            {(existingKYC as any).upi_id && <div><Label className="text-muted-foreground">UPI ID</Label><p className="font-medium">{(existingKYC as any).upi_id}</p></div>}
+            <div><Label className="text-muted-foreground">Beneficiary Purpose</Label><p className="font-medium capitalize">{(existingKYC as any).beneficiary_purpose || 'others'}</p></div>
+            {((existingKYC as any).upi_id || (existingKYC as any).upi_vpa) && <div><Label className="text-muted-foreground">UPI VPA</Label><p className="font-medium">{(existingKYC as any).upi_id || (existingKYC as any).upi_vpa}</p></div>}
           </div>
           <div className="pt-2 border-t">
             <p className="text-xs text-muted-foreground mb-2">Editing will reset your KYC status to pending for re-verification.</p>
@@ -436,6 +461,12 @@ export function WomenKYCForm() {
         )}
       </CardHeader>
       <CardContent>
+        {(appId || appSno !== null) && (
+          <div className="grid grid-cols-2 gap-4 text-sm p-3 mb-6 rounded-lg bg-primary/5 border border-primary/20">
+            {appId && <div><Label className="text-muted-foreground text-xs">App ID</Label><p className="font-mono font-semibold text-primary">{appId}</p></div>}
+            {appSno !== null && <div><Label className="text-muted-foreground text-xs">Beneficiary ID / S.No</Label><p className="font-mono font-semibold text-primary">{appSno}</p></div>}
+          </div>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
@@ -634,7 +665,19 @@ export function WomenKYCForm() {
                     </Select><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="upi_id" render={({ field }) => (
-                  <FormItem><FormLabel>UPI ID</FormLabel><FormControl><Input {...field} placeholder="e.g. yourname@upi" disabled={!isEditable} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>UPI VPA</FormLabel><FormControl><Input {...field} placeholder="e.g. yourname@upi" disabled={!isEditable} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="beneficiary_purpose" render={({ field }) => (
+                  <FormItem><FormLabel>Beneficiary Purpose *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditable}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="others">Others</SelectItem>
+                        <SelectItem value="salary">Salary</SelectItem>
+                        <SelectItem value="reimbursement">Reimbursement</SelectItem>
+                        <SelectItem value="vendor_payment">Vendor Payment</SelectItem>
+                      </SelectContent>
+                    </Select><FormMessage /></FormItem>
                 )} />
               </div>
             </div>

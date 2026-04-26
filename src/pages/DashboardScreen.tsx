@@ -155,6 +155,7 @@ const DashboardScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [appId, setAppId] = useState<string | null>(null);
   const [userPhoto, setUserPhoto] = useState<string | null>(null); // User's photo for chat validation
   const { incomingCall, clearIncomingCall } = useIncomingCallListener(currentUserId || null, "male");
   const [userCountry, setUserCountry] = useState("IN");
@@ -711,7 +712,7 @@ const DashboardScreen = () => {
       // Wrap profile fetch in timeout to prevent hang
       const profilePromise = supabase
         .from("profiles")
-        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url")
+        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, app_id")
         .eq("user_id", user.id)
         .maybeSingle();
       
@@ -719,7 +720,7 @@ const DashboardScreen = () => {
         setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
       );
       
-      let mainProfile: { gender?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null } | null = null;
+      let mainProfile: { gender?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; app_id?: string | null } | null = null;
       try {
         const result = await Promise.race([profilePromise, profileTimeout]);
         mainProfile = result.data;
@@ -772,6 +773,8 @@ const DashboardScreen = () => {
       if (fullName) {
         setUserName(fullName.split(" ")[0]);
       }
+      // App ID (GESS-M-<n>) from profiles — single source of truth
+      if (mainProfile?.app_id) setAppId(mainProfile.app_id);
       
       // Use country from main profiles table
       const userCountryValue = mainProfile?.country;
@@ -1718,6 +1721,11 @@ const DashboardScreen = () => {
           </AvatarFallback>
         </Avatar>
         <h2 className="text-lg font-bold text-foreground">{userName || "User"}</h2>
+        {appId && (
+          <Badge variant="outline" className="mt-1 font-mono text-[11px] border-primary/40 text-primary">
+            App ID: {appId}
+          </Badge>
+        )}
         <p className="text-xs text-muted-foreground">{userLanguage} • {userCountryName || userCountry}</p>
         <Badge className={cn("mt-2 text-[10px] text-primary-foreground", getStatusColor())}>
           {getStatusText()}

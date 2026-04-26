@@ -2127,6 +2127,8 @@ export type Database = {
           age: number | null
           ai_approved: boolean | null
           ai_disapproval_reason: string | null
+          app_id: string | null
+          app_sno: number | null
           approval_status: string
           avg_response_time_seconds: number | null
           bio: string | null
@@ -2185,6 +2187,8 @@ export type Database = {
           age?: number | null
           ai_approved?: boolean | null
           ai_disapproval_reason?: string | null
+          app_id?: string | null
+          app_sno?: number | null
           approval_status?: string
           avg_response_time_seconds?: number | null
           bio?: string | null
@@ -2243,6 +2247,8 @@ export type Database = {
           age?: number | null
           ai_approved?: boolean | null
           ai_disapproval_reason?: string | null
+          app_id?: string | null
+          app_sno?: number | null
           approval_status?: string
           avg_response_time_seconds?: number | null
           bio?: string | null
@@ -3300,8 +3306,10 @@ export type Database = {
           address_proof_type: string | null
           address_proof_url: string | null
           annual_income_range: string | null
+          app_sno: number | null
           bank_branch_name: string | null
           bank_name: string
+          beneficiary_purpose: string
           city: string | null
           consent_given: boolean
           consent_timestamp: string | null
@@ -3337,6 +3345,7 @@ export type Database = {
           selfie_url: string | null
           state: string | null
           updated_at: string
+          upi_vpa: string | null
           user_id: string
           verification_status: string
           verified_at: string | null
@@ -3352,8 +3361,10 @@ export type Database = {
           address_proof_type?: string | null
           address_proof_url?: string | null
           annual_income_range?: string | null
+          app_sno?: number | null
           bank_branch_name?: string | null
           bank_name: string
+          beneficiary_purpose?: string
           city?: string | null
           consent_given?: boolean
           consent_timestamp?: string | null
@@ -3389,6 +3400,7 @@ export type Database = {
           selfie_url?: string | null
           state?: string | null
           updated_at?: string
+          upi_vpa?: string | null
           user_id: string
           verification_status?: string
           verified_at?: string | null
@@ -3404,8 +3416,10 @@ export type Database = {
           address_proof_type?: string | null
           address_proof_url?: string | null
           annual_income_range?: string | null
+          app_sno?: number | null
           bank_branch_name?: string | null
           bank_name?: string
+          beneficiary_purpose?: string
           city?: string | null
           consent_given?: boolean
           consent_timestamp?: string | null
@@ -3441,6 +3455,7 @@ export type Database = {
           selfie_url?: string | null
           state?: string | null
           updated_at?: string
+          upi_vpa?: string | null
           user_id?: string
           verification_status?: string
           verified_at?: string | null
