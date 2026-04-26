@@ -15,17 +15,6 @@ import { getFlowerImage } from '@/assets/flowers';
 const TIP_INFO = 'Tips are optional — 50% reaches host.';
 const MAX_HOSTS_PER_GROUP = 3;
 
-const FLOWER_EMOJIS: Record<string, string> = {
-  Rose: '🌹', Lily: '🌸', Jasmine: '🌼', Orchid: '🌺', Sunflower: '🌻',
-  Tulip: '🌷', Lotus: '🪷', Daisy: '🌼', Lavender: '💜', Marigold: '🏵️',
-  Hibiscus: '🌺', Magnolia: '🌷', Peony: '🌸', Camellia: '🌼', Iris: '🪻',
-  Poppy: '🌺', Bluebell: '🔔', Carnation: '🌷', Chrysanthemum: '🌼', Dahlia: '🌸',
-  Freesia: '🌼', Gardenia: '🤍', Geranium: '🌷', Hyacinth: '💐', Petunia: '🌸',
-  Primrose: '🌼', Rhododendron: '🌺', Snowdrop: '❄️', Verbena: '💜', Violet: '🟣',
-  Zinnia: '🌻', Anemone: '🌸', Azalea: '🌺', Begonia: '🌷', Buttercup: '🌼',
-  Clematis: '💜', Cosmos: '🌸', Dandelion: '🌼', Foxglove: '🌷', Heather: '💜',
-};
-
 interface PrivateGroup {
   id: string; name: string; description: string | null; min_gift_amount: number;
   access_type: string; is_active: boolean; is_live: boolean; stream_id: string | null;
