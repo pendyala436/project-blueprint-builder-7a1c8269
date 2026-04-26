@@ -80,30 +80,11 @@ const AdminPerformanceMonitoring = () => {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [currentMetrics, setCurrentMetrics] = useState<SystemMetric | null>(null);
   const [isLive, setIsLive] = useState(true);
+  const isLiveRef = useRef(isLive);
+  isLiveRef.current = isLive;
+  const noDataToastShownRef = useRef(false);
 
-  useEffect(() => {
-    loadData();
-    
-    // #19: Replace setInterval with realtime subscription
-    const channel = supabase
-      .channel('performance-metrics-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_metrics' }, () => {
-        if (isLive) loadData(true);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
-        if (isLive) loadData(true);
-      })
-      .subscribe((status) => {
-        // FIX #19 (partial): Error handler for channel
-        if (status === 'CHANNEL_ERROR') {
-          console.warn('[Performance] Realtime channel error, will auto-reconnect');
-        }
-      });
-
-    return () => { supabase.removeChannel(channel); };
-  }, [timeRange, isLive]);
-
-  const getTimeRangeMinutes = () => {
+  const getTimeRangeMinutes = useCallback(() => {
     switch (timeRange) {
       case "15m": return 15;
       case "1h": return 60;
@@ -111,46 +92,48 @@ const AdminPerformanceMonitoring = () => {
       case "24h": return 1440;
       default: return 60;
     }
-  };
+  }, [timeRange]);
 
-  const loadData = async (silent = false) => {
+  const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const minutes = getTimeRangeMinutes();
       const startTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
 
-      // Fetch real metrics from database
       const { data: metricsData, error: metricsError } = await supabase
         .from("system_metrics")
         .select("*")
         .gte("recorded_at", startTime)
         .order("recorded_at", { ascending: true })
-        .limit(100);
+        .limit(500);
 
       if (metricsError) throw metricsError;
 
-      // Fetch real alerts from database
       const { data: alertsData, error: alertsError } = await supabase
         .from("system_alerts")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (alertsError) throw alertsError;
 
       const fetchedMetrics = metricsData || [];
       setMetrics(fetchedMetrics);
-      
-      // FIX #15: Show warning when no metrics data is available
-      if (fetchedMetrics.length === 0) {
-        toast.info("No metrics data", { description: "Ensure the collect-metrics Edge Function is running.", duration: 5000 });
+
+      // Show "no data" toast only once per session, not on every realtime tick
+      if (fetchedMetrics.length === 0 && !silent && !noDataToastShownRef.current) {
+        noDataToastShownRef.current = true;
+        toast.info("No metrics data", {
+          description: "Ensure the collect-metrics Edge Function is running.",
+          duration: 5000,
+        });
+      } else if (fetchedMetrics.length > 0) {
+        noDataToastShownRef.current = false;
       }
 
-      // Set current metrics to the latest one
       if (fetchedMetrics.length > 0) {
         setCurrentMetrics(fetchedMetrics[fetchedMetrics.length - 1]);
       } else {
-        // No data - show zeros
         setCurrentMetrics({
           id: '',
           cpu_usage: 0,
@@ -174,7 +157,28 @@ const AdminPerformanceMonitoring = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [getTimeRangeMinutes]);
+
+  useEffect(() => {
+    loadData();
+
+    // Realtime subscription — read isLive via ref so toggling Live doesn't tear down the channel
+    const channel = supabase
+      .channel('performance-metrics-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_metrics' }, () => {
+        if (isLiveRef.current) loadData(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
+        if (isLiveRef.current) loadData(true);
+      })
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[Performance] Realtime channel error, will auto-reconnect');
+        }
+      });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [timeRange, loadData]);
 
   const resolveAlert = async (alertId: string) => {
     try {
