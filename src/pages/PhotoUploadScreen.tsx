@@ -566,25 +566,31 @@ const PhotoUploadScreen = () => {
               </div>
             ))}
 
-            {additionalPhotos.length < MAX_ADDITIONAL_PHOTOS && (
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onClick={() => additionalFileInputRef.current?.click()}
-                className={`
-                  aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1
-                  cursor-pointer transition-all duration-200
-                  ${isDragging 
-                    ? "border-primary bg-primary/10" 
-                    : "border-border hover:border-primary/50 hover:bg-primary/5"
-                  }
-                `}
-              >
-                <Plus className="h-7 w-7 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground">Add photo(s)</span>
-              </div>
-            )}
+            {Array.from({ length: MAX_ADDITIONAL_PHOTOS - additionalPhotos.length }).map((_, i) => {
+              const isFirstEmpty = i === 0;
+              return (
+                <div
+                  key={`empty-${i}`}
+                  onDrop={isFirstEmpty ? handleDrop : undefined}
+                  onDragOver={isFirstEmpty ? handleDragOver : undefined}
+                  onDragLeave={isFirstEmpty ? handleDragLeave : undefined}
+                  onClick={() => additionalFileInputRef.current?.click()}
+                  className={`
+                    aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1
+                    cursor-pointer transition-all duration-200
+                    ${isFirstEmpty && isDragging
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50 hover:bg-primary/5"
+                    }
+                  `}
+                >
+                  <Plus className="h-7 w-7 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">
+                    Photo {additionalPhotos.length + i + 1}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <p className="text-xs text-muted-foreground mt-3 text-center">
