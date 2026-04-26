@@ -1018,14 +1018,26 @@ export function usePrivateGroupCall({
     cleanup();
     onSessionEnd?.(processRefundsFlag);
   }, [cleanup, onSessionEnd]);
+  // Broadcast host status to all participants (host only)
+  const broadcastHostStatus = useCallback((status: HostStatus) => {
+    if (!isOwner || !channelRef.current) return;
+    setState(prev => ({ ...prev, hostStatus: status }));
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'host-status',
+      payload: { status },
+    });
+  }, [isOwner]);
+
   // Toggle video (host only)
   const toggleVideo = useCallback((enabled: boolean) => {
     if (localStream.current && isOwner) {
       localStream.current.getVideoTracks().forEach(track => {
         track.enabled = enabled;
       });
+      broadcastHostStatus(enabled ? 'live' : 'camera-off');
     }
-  }, [isOwner]);
+  }, [isOwner, broadcastHostStatus]);
 
   // Toggle audio (host can always toggle, participant only if host enabled their mic)
   const toggleAudio = useCallback((enabled: boolean) => {
@@ -1033,8 +1045,11 @@ export function usePrivateGroupCall({
       localStream.current.getAudioTracks().forEach(track => {
         track.enabled = enabled;
       });
+      if (isOwner) {
+        broadcastHostStatus(enabled ? 'live' : 'muted');
+      }
     }
-  }, []);
+  }, [isOwner, broadcastHostStatus]);
 
   // Host enables/disables a specific participant's mic
   const enableParticipantMic = useCallback((participantId: string, enabled: boolean) => {
