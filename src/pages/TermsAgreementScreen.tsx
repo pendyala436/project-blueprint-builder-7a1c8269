@@ -229,7 +229,7 @@ Covers misleading subscriptions, opaque auto-renewals, refund disputes, and any 
 
 A.7 RBI / Payment Regulations
 Applicable because the App offers a wallet and processes UPI/card/net-banking payments:
-• Recharges and payouts are routed only through RBI-licensed Payment Aggregators (Razorpay/Stripe/Paddle/etc.).
+• Recharges (men only) are routed only through RBI-licensed Payment Aggregators (Razorpay/Stripe/Paddle/etc.). No outbound payments are made to women.
 • We comply with the Payment and Settlement Systems Act 2007 and the RBI Master Directions on Prepaid Payment Instruments.
 • Card data is tokenised by PCI-DSS Level-1 processors; raw card numbers are never stored.
 • Failed transactions are auto-reversed per RBI Turnaround-Time circular 2019.
