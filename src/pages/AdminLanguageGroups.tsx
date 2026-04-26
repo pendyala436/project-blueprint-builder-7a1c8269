@@ -65,7 +65,8 @@ const AdminLanguageGroups = () => {
       const { data, error } = await supabase
         .from("language_groups")
         .select("*")
-        .order("priority", { ascending: true });
+        .order("priority", { ascending: true })
+        .order("name", { ascending: true });
 
       if (error) throw error;
       setGroups(data || []);
