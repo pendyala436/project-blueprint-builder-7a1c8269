@@ -91,7 +91,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
    • Immoral Traffic (Prevention) Act 1956 (no solicitation of prostitution / escort / sugar arrangements),
    • POCSO Act 2012 for any content involving minors,
    • EU Directive 2011/93/EU, US 18 USC §§2252/2252A/2422, UK Protection of Children Act 1978, and equivalent laws worldwide.
-   Live audio/video/group calls are continuously moderated; any sexual exposure ends the call instantly, permanently bans the user, forfeits all balance/earnings, and may be referred to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC CyberTipline, INTERPOL ICSE, and local police.
+   Live audio/video/group calls are continuously moderated; any sexual exposure ends the call instantly, permanently bans the user, forfeits all balance and virtual coins, and may be referred to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC CyberTipline, INTERPOL ICSE, and local police.
 
 (b) CHILD PROTECTION — Engage with, attempt to engage with, groom, or depict any minor in any sexual, romantic, or exploitative context. Mandatory reporting under POCSO 2012, IT Act §67B, US 18 USC §2258A (NCMEC), and similar laws. All evidence (account, IP, device, payments, chat) is preserved indefinitely for law enforcement.
 
