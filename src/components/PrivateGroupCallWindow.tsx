@@ -145,6 +145,7 @@ export function PrivateGroupCallWindow({
     localVideoRef,
     remoteVideoRef,
     hostStream,
+    hostStatus,
     goLive,
     joinStream,
     endStream,
