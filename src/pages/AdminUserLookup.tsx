@@ -572,11 +572,11 @@ const AdminUserLookup = () => {
                               <h4 className="font-semibold text-sm">Uploaded Documents</h4>
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 {[
-                                  { label: "Aadhaar Front", url: kycData.aadhaar_front_url },
-                                  { label: "Aadhaar Back", url: kycData.aadhaar_back_url },
-                                  { label: "ID Front", url: kycData.id_proof_front_url },
-                                  { label: "ID Back", url: kycData.id_proof_back_url },
-                                  { label: "Selfie", url: kycData.selfie_url },
+                                  { label: "Aadhaar Front", key: "aadhaar_front_url", url: kycSignedUrls.aadhaar_front_url || kycData.aadhaar_front_url },
+                                  { label: "Aadhaar Back", key: "aadhaar_back_url", url: kycSignedUrls.aadhaar_back_url || kycData.aadhaar_back_url },
+                                  { label: "ID Front", key: "id_proof_front_url", url: kycSignedUrls.id_proof_front_url || kycData.id_proof_front_url },
+                                  { label: "ID Back", key: "id_proof_back_url", url: kycSignedUrls.id_proof_back_url || kycData.id_proof_back_url },
+                                  { label: "Selfie", key: "selfie_url", url: kycSignedUrls.selfie_url || kycData.selfie_url },
                                 ].map(doc => (
                                   <div key={doc.label} className="text-center">
                                     <p className="text-xs text-muted-foreground mb-1">{doc.label}</p>
