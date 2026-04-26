@@ -1465,74 +1465,50 @@ serve(async (req) => {
           );
         }
 
-        // Atomic deduct from man's wallet (prevents stale-read race conditions)
-        const { data: newBalance, error: debitError } = await supabase.rpc('atomic_wallet_debit', {
-          p_wallet_id: wallet.id,
-          p_amount: menCharge
+        // ✅ Canonical billing via single RPC — debits man, credits woman, writes wallet_transactions,
+        // updates session totals, enforces idempotency. Single source of truth.
+        const { data: billResult, error: billError } = await supabase.rpc('process_chat_billing', {
+          p_session_id: session.id,
+          p_minutes: fractionalMinutes,
         });
 
-        if (debitError || newBalance === -1) {
-          console.error('[HEARTBEAT] Atomic debit failed — insufficient balance or error');
+        const result = (billResult ?? {}) as Record<string, unknown>;
+
+        if (billError || result.success === false) {
+          const errMsg = String(result.error ?? billError?.message ?? 'Billing failed');
+          console.error('[HEARTBEAT] process_chat_billing failed:', errMsg);
+          if (result.session_ended === true || /insufficient/i.test(errMsg)) {
+            return new Response(
+              JSON.stringify({ success: false, message: 'Insufficient balance' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
           return new Response(
-            JSON.stringify({ success: false, message: "Insufficient balance" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ success: false, message: errMsg }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        // Record in ledger (append-only, source of truth for frontend)
-        await supabase
-          .from("ledger_transactions")
-          .insert({
-            user_id: session.man_user_id,
-            transaction_type: "chat_debit",
-            debit: menCharge,
-            credit: 0,
-            counterparty_id: session.woman_user_id,
-            session_id: session.id,
-            rate_per_minute: session.rate_per_minute,
-            duration_seconds: Math.floor(secondsElapsed),
-            description: `Chat debit - ${fractionalMinutes.toFixed(1)} min at ₹${session.rate_per_minute}/min`
-          });
+        const menCharged = Number(result.charged ?? 0);
+        const womenEarnings = Number(result.earned ?? 0);
 
-        // Only Indian women earn from chats
-        const womenEarnings = womanIsIndian ? fractionalMinutes * womenEarningRate : 0;
-        
+        // Mirror to women_earnings (kept for legacy reporting / payout snapshots)
         if (womenEarnings > 0) {
-          const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
-          await Promise.all([
-            supabase.from("women_earnings").insert({
-              user_id: session.woman_user_id,
-              chat_session_id: session.id,
-              amount: womenEarnings,
-              earning_type: "chat",
-              description: `Chat earning - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
-            }),
-            supabase.from("ledger_transactions").insert({
-              user_id: session.woman_user_id,
-              transaction_type: "chat_earning",
-              debit: 0,
-              credit: womenEarnings,
-              counterparty_id: session.man_user_id,
-              session_id: session.id,
-              rate_per_minute: womenEarningRate,
-              duration_seconds: Math.floor(secondsElapsed),
-              description: `Chat earning - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
-            }),
-            // Credit woman's wallet balance
-            ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
-          ]);
+          await supabase.from('women_earnings').insert({
+            user_id: session.woman_user_id,
+            chat_session_id: session.id,
+            amount: womenEarnings,
+            earning_type: 'chat',
+            description: `Chat earning - ${fractionalMinutes.toFixed(1)} min`,
+          });
         }
 
-        // Update session totals
-        await supabase
-          .from("active_chat_sessions")
-          .update({
-            total_minutes: newTotalMinutes,
-            total_earned: session.total_earned + womenEarnings
-          })
-          .eq("chat_id", chat_id);
+        // Refresh remaining balance for response
+        const { data: postBalRow } = await supabase
+          .from('wallets').select('balance').eq('user_id', session.man_user_id).maybeSingle();
+        const newBalance = Number(postBalRow?.balance ?? 0);
 
-        console.log(`Heartbeat processed: ${chat_id}, ${fractionalMinutes.toFixed(3)} min billed, men charged: ${menCharge.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
+        console.log(`Heartbeat processed: ${chat_id}, ${fractionalMinutes.toFixed(3)} min billed, men charged: ${menCharged.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
 
         return new Response(
           JSON.stringify({
