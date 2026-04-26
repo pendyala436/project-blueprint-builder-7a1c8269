@@ -1,6 +1,6 @@
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import AdminNav from "@/components/AdminNav";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
@@ -80,30 +80,11 @@ const AdminPerformanceMonitoring = () => {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [currentMetrics, setCurrentMetrics] = useState<SystemMetric | null>(null);
   const [isLive, setIsLive] = useState(true);
+  const isLiveRef = useRef(isLive);
+  isLiveRef.current = isLive;
+  const noDataToastShownRef = useRef(false);
 
-  useEffect(() => {
-    loadData();
-    
-    // #19: Replace setInterval with realtime subscription
-    const channel = supabase
-      .channel('performance-metrics-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_metrics' }, () => {
-        if (isLive) loadData(true);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
-        if (isLive) loadData(true);
-      })
-      .subscribe((status) => {
-        // FIX #19 (partial): Error handler for channel
-        if (status === 'CHANNEL_ERROR') {
-          console.warn('[Performance] Realtime channel error, will auto-reconnect');
-        }
-      });
-
-    return () => { supabase.removeChannel(channel); };
-  }, [timeRange, isLive]);
-
-  const getTimeRangeMinutes = () => {
+  const getTimeRangeMinutes = useCallback(() => {
     switch (timeRange) {
       case "15m": return 15;
       case "1h": return 60;
@@ -111,46 +92,48 @@ const AdminPerformanceMonitoring = () => {
       case "24h": return 1440;
       default: return 60;
     }
-  };
+  }, [timeRange]);
 
-  const loadData = async (silent = false) => {
+  const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const minutes = getTimeRangeMinutes();
       const startTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
 
-      // Fetch real metrics from database
       const { data: metricsData, error: metricsError } = await supabase
         .from("system_metrics")
         .select("*")
         .gte("recorded_at", startTime)
         .order("recorded_at", { ascending: true })
-        .limit(100);
+        .limit(500);
 
       if (metricsError) throw metricsError;
 
-      // Fetch real alerts from database
       const { data: alertsData, error: alertsError } = await supabase
         .from("system_alerts")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       if (alertsError) throw alertsError;
 
       const fetchedMetrics = metricsData || [];
       setMetrics(fetchedMetrics);
-      
-      // FIX #15: Show warning when no metrics data is available
-      if (fetchedMetrics.length === 0) {
-        toast.info("No metrics data", { description: "Ensure the collect-metrics Edge Function is running.", duration: 5000 });
+
+      // Show "no data" toast only once per session, not on every realtime tick
+      if (fetchedMetrics.length === 0 && !silent && !noDataToastShownRef.current) {
+        noDataToastShownRef.current = true;
+        toast.info("No metrics data", {
+          description: "Ensure the collect-metrics Edge Function is running.",
+          duration: 5000,
+        });
+      } else if (fetchedMetrics.length > 0) {
+        noDataToastShownRef.current = false;
       }
 
-      // Set current metrics to the latest one
       if (fetchedMetrics.length > 0) {
         setCurrentMetrics(fetchedMetrics[fetchedMetrics.length - 1]);
       } else {
-        // No data - show zeros
         setCurrentMetrics({
           id: '',
           cpu_usage: 0,
@@ -174,7 +157,28 @@ const AdminPerformanceMonitoring = () => {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [getTimeRangeMinutes]);
+
+  useEffect(() => {
+    loadData();
+
+    // Realtime subscription — read isLive via ref so toggling Live doesn't tear down the channel
+    const channel = supabase
+      .channel('performance-metrics-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_metrics' }, () => {
+        if (isLiveRef.current) loadData(true);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
+        if (isLiveRef.current) loadData(true);
+      })
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[Performance] Realtime channel error, will auto-reconnect');
+        }
+      });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [timeRange, loadData]);
 
   const resolveAlert = async (alertId: string) => {
     try {
@@ -233,43 +237,51 @@ const AdminPerformanceMonitoring = () => {
     unit: string; 
     icon: any;
     thresholds: { warning: number; critical: number };
-  }) => (
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Icon className={`h-5 w-5 ${getGaugeColor(value, thresholds)}`} />
-            <span className="text-sm font-medium text-muted-foreground">{title}</span>
+  }) => {
+    // Normalize: if thresholds exceed 100, scale relative to 1.25× critical so the bar always reflects load
+    const scaleMax = thresholds.critical > 100 ? thresholds.critical * 1.25 : 100;
+    const pct = Math.min(100, Math.max(0, (value / scaleMax) * 100));
+    const warnPct = Math.min(100, (thresholds.warning / scaleMax) * 100);
+    const critPct = Math.min(100, (thresholds.critical / scaleMax) * 100);
+
+    return (
+      <Card className="relative overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-5 w-5 ${getGaugeColor(value, thresholds)}`} />
+              <span className="text-sm font-medium text-muted-foreground">{title}</span>
+            </div>
+            <Badge 
+              variant={value >= thresholds.critical ? "destructive" : value >= thresholds.warning ? "secondary" : "outline"}
+              className="text-xs"
+            >
+              {value >= thresholds.critical ? "Critical" : value >= thresholds.warning ? "Warning" : "Normal"}
+            </Badge>
           </div>
-          <Badge 
-            variant={value >= thresholds.critical ? "destructive" : value >= thresholds.warning ? "secondary" : "outline"}
-            className="text-xs"
-          >
-            {value >= thresholds.critical ? "Critical" : value >= thresholds.warning ? "Warning" : "Normal"}
-          </Badge>
-        </div>
-        <div className="space-y-3">
-          <div className={`text-3xl font-bold ${getGaugeColor(value, thresholds)} transition-all duration-500`}>
-            {value.toFixed(1)}{unit}
+          <div className="space-y-3">
+            <div className={`text-3xl font-bold ${getGaugeColor(value, thresholds)} transition-all duration-500`}>
+              {value.toFixed(1)}{unit}
+            </div>
+            <div className="relative h-3 bg-secondary rounded-full overflow-hidden">
+              <div 
+                className={`absolute inset-y-0 left-0 ${getProgressColor(value, thresholds)} rounded-full transition-all duration-700 ease-out`}
+                style={{ width: `${pct}%` }}
+              />
+              <div 
+                className="absolute inset-y-0 border-l-2 border-dashed border-amber-500 opacity-50"
+                style={{ left: `${warnPct}%` }}
+              />
+              <div 
+                className="absolute inset-y-0 border-l-2 border-dashed border-destructive opacity-50"
+                style={{ left: `${critPct}%` }}
+              />
+            </div>
           </div>
-          <div className="relative h-3 bg-secondary rounded-full overflow-hidden">
-            <div 
-              className={`absolute inset-y-0 left-0 ${getProgressColor(value, thresholds)} rounded-full transition-all duration-700 ease-out`}
-              style={{ width: `${Math.min(value, 100)}%` }}
-            />
-            <div 
-              className="absolute inset-y-0 border-l-2 border-dashed border-amber-500 opacity-50"
-              style={{ left: `${thresholds.warning}%` }}
-            />
-            <div 
-              className="absolute inset-y-0 border-l-2 border-dashed border-destructive opacity-50"
-              style={{ left: `${thresholds.critical}%` }}
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (adminLoading || !isAdmin) {
     return (
@@ -333,7 +345,7 @@ const AdminPerformanceMonitoring = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            Live updates enabled (refreshes every 10s)
+            Live updates enabled (realtime via Supabase)
           </div>
         )}
 
