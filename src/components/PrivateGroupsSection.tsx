@@ -10,6 +10,7 @@ import { PrivateGroupCallWindow } from './PrivateGroupCallWindow';
 import { MAX_PARTICIPANTS } from '@/hooks/usePrivateGroupCall';
 import { INDIAN_LANGUAGES } from '@/data/supportedLanguages';
 import { cn } from '@/lib/utils';
+import { getFlowerImage } from '@/assets/flowers';
 
 const TIP_INFO = 'Tips are optional — 50% reaches host.';
 const MAX_HOSTS_PER_GROUP = 3;
@@ -227,10 +228,17 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
               )}
             >
               <div className={cn(
-                "w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0",
-                isLive ? "bg-primary/10 ring-2 ring-accent" : "bg-muted"
+                "w-11 h-11 rounded-full overflow-hidden shrink-0 bg-muted",
+                isLive && "ring-2 ring-accent"
               )}>
-                {FLOWER_EMOJIS[group.name] || '🌸'}
+                <img
+                  src={getFlowerImage(group.name)}
+                  alt={group.name}
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               <div className="flex-1 min-w-0">
