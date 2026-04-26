@@ -296,6 +296,7 @@ const AdminKYCManagement = () => {
         .from("women_kyc")
         .update({
           verification_status: "approved",
+          rejection_reason: null,
           verified_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
