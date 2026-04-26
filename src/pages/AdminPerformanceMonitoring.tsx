@@ -237,43 +237,51 @@ const AdminPerformanceMonitoring = () => {
     unit: string; 
     icon: any;
     thresholds: { warning: number; critical: number };
-  }) => (
-    <Card className="relative overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Icon className={`h-5 w-5 ${getGaugeColor(value, thresholds)}`} />
-            <span className="text-sm font-medium text-muted-foreground">{title}</span>
+  }) => {
+    // Normalize: if thresholds exceed 100, scale relative to 1.25× critical so the bar always reflects load
+    const scaleMax = thresholds.critical > 100 ? thresholds.critical * 1.25 : 100;
+    const pct = Math.min(100, Math.max(0, (value / scaleMax) * 100));
+    const warnPct = Math.min(100, (thresholds.warning / scaleMax) * 100);
+    const critPct = Math.min(100, (thresholds.critical / scaleMax) * 100);
+
+    return (
+      <Card className="relative overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-5 w-5 ${getGaugeColor(value, thresholds)}`} />
+              <span className="text-sm font-medium text-muted-foreground">{title}</span>
+            </div>
+            <Badge 
+              variant={value >= thresholds.critical ? "destructive" : value >= thresholds.warning ? "secondary" : "outline"}
+              className="text-xs"
+            >
+              {value >= thresholds.critical ? "Critical" : value >= thresholds.warning ? "Warning" : "Normal"}
+            </Badge>
           </div>
-          <Badge 
-            variant={value >= thresholds.critical ? "destructive" : value >= thresholds.warning ? "secondary" : "outline"}
-            className="text-xs"
-          >
-            {value >= thresholds.critical ? "Critical" : value >= thresholds.warning ? "Warning" : "Normal"}
-          </Badge>
-        </div>
-        <div className="space-y-3">
-          <div className={`text-3xl font-bold ${getGaugeColor(value, thresholds)} transition-all duration-500`}>
-            {value.toFixed(1)}{unit}
+          <div className="space-y-3">
+            <div className={`text-3xl font-bold ${getGaugeColor(value, thresholds)} transition-all duration-500`}>
+              {value.toFixed(1)}{unit}
+            </div>
+            <div className="relative h-3 bg-secondary rounded-full overflow-hidden">
+              <div 
+                className={`absolute inset-y-0 left-0 ${getProgressColor(value, thresholds)} rounded-full transition-all duration-700 ease-out`}
+                style={{ width: `${pct}%` }}
+              />
+              <div 
+                className="absolute inset-y-0 border-l-2 border-dashed border-amber-500 opacity-50"
+                style={{ left: `${warnPct}%` }}
+              />
+              <div 
+                className="absolute inset-y-0 border-l-2 border-dashed border-destructive opacity-50"
+                style={{ left: `${critPct}%` }}
+              />
+            </div>
           </div>
-          <div className="relative h-3 bg-secondary rounded-full overflow-hidden">
-            <div 
-              className={`absolute inset-y-0 left-0 ${getProgressColor(value, thresholds)} rounded-full transition-all duration-700 ease-out`}
-              style={{ width: `${Math.min(value, 100)}%` }}
-            />
-            <div 
-              className="absolute inset-y-0 border-l-2 border-dashed border-amber-500 opacity-50"
-              style={{ left: `${thresholds.warning}%` }}
-            />
-            <div 
-              className="absolute inset-y-0 border-l-2 border-dashed border-destructive opacity-50"
-              style={{ left: `${thresholds.critical}%` }}
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (adminLoading || !isAdmin) {
     return (
