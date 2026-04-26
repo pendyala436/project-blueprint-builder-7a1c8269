@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, Wallet, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp, IndianRupee } from 'lucide-react';
 import { getWomenBalance } from '@/services/ledger-wallet.service';
 import { StatementTab } from '@/components/StatementTab';
 
@@ -90,6 +90,15 @@ const WomenWalletScreen = () => {
             <TrendingUp className="w-4 h-4" />
             <span className="text-sm">Today's Earnings: ₹{todayEarnings.toFixed(2)}</span>
           </div>
+          <Button
+            disabled
+            aria-disabled="true"
+            variant="secondary"
+            className="w-full mt-4 gap-2 opacity-50 cursor-not-allowed bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20"
+          >
+            <IndianRupee className="w-4 h-4" />
+            Withdraw
+          </Button>
         </Card>
       </div>
 
