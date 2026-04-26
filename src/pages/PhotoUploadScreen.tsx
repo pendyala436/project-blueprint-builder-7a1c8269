@@ -39,7 +39,8 @@ const PhotoUploadScreen = () => {
     const existing = sessionStorage.getItem("pendingPhotoData");
     if (existing) {
       setSelfiePreview(existing);
-      setVerificationState("verified");
+      // Keep state "idle" so user can re-verify if needed; Verify button stays visible
+      setVerificationState("idle");
     }
     const storedGender = sessionStorage.getItem("userGender");
     if (storedGender === "male" || storedGender === "female") {
