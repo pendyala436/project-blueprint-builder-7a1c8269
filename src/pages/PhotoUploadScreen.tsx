@@ -156,24 +156,34 @@ const PhotoUploadScreen = () => {
         const detected = result.detectedGender;
         setDetectedGender(detected);
 
-        if ((detected === "male" || detected === "female") && expectedGender !== detected) {
-          // Auto-correct the user's gender selection based on AI verification
+        const isMismatch =
+          (detected === "male" || detected === "female") &&
+          expectedGender !== null &&
+          expectedGender !== detected;
+
+        if (isMismatch) {
+          // Mismatch → warn the user and auto-switch the stored gender
           sessionStorage.setItem("userGender", detected);
           setSelectedGender(detected);
           setGenderChanged(true);
           toast({
-            title: "Gender updated by AI",
-            description: `We detected ${detected}. Your profile gender has been changed from ${expectedGender ?? "unset"} to ${detected}.`,
+            title: "⚠️ Gender mismatch — auto-corrected",
+            description: `You selected ${expectedGender}, but the AI detected ${detected}. Your profile gender has been switched to ${detected}.`,
+            variant: "destructive",
           });
         }
+        // If detected === expectedGender → silent, no extra toast/action
 
         setVerificationState("verified");
-        toast({
-          title: "Selfie verified ✨",
-          description: result.confidence && (detected === "male" || detected === "female")
-            ? `Gender detected as ${detected} (${Math.round(result.confidence * 100)}% confidence)`
-            : (result.reason || "Your photo has been verified"),
-        });
+        if (!isMismatch) {
+          toast({
+            title: "Selfie verified ✨",
+            description:
+              result.confidence && (detected === "male" || detected === "female")
+                ? `Gender confirmed as ${detected} (${Math.round(result.confidence * 100)}% confidence)`
+                : result.reason || "Your photo has been verified",
+          });
+        }
       } else {
         setVerificationState("failed");
         toast({
