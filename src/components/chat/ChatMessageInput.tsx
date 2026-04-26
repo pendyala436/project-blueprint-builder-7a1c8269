@@ -2,9 +2,10 @@ import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, AlertTriangle } from 'lucide-react';
 import { chatRateLimiter } from '@/lib/validation';
 import { translateText } from '@/lib/translation-service';
+import { moderateMessage } from '@/lib/content-moderation';
 
 // Dynamic labels — translated live via Lingva, no hardcoded values
 const DEFAULT_LABELS = { placeholder: 'Type a message...', send: 'Send', preview: 'Preview' };
