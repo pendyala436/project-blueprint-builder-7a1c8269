@@ -38,6 +38,7 @@ const PhotoUploadScreen = () => {
   // Additional photos state
   const [additionalPhotos, setAdditionalPhotos] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const handleSelfieCapture = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
