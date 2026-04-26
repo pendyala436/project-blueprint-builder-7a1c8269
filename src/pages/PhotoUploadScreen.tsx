@@ -442,11 +442,12 @@ const PhotoUploadScreen = () => {
             </Button>
           ) : (
             <div className="relative">
-              <div className="relative rounded-xl overflow-hidden aspect-square animate-in fade-in duration-500">
+              <div className="relative rounded-xl overflow-hidden aspect-square animate-in fade-in duration-500 bg-muted">
                 <img
                   src={selfiePreview}
                   alt="Selfie preview"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain cursor-zoom-in"
+                  onClick={() => setLightboxSrc(selfiePreview)}
                 />
                 
                 {verificationState === "verifying" && (
