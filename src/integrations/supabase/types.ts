@@ -3919,58 +3919,19 @@ export type Database = {
         }
         Returns: Json
       }
-      ledger_bill_session:
-        | {
-            Args: {
-              p_duration_seconds?: number
-              p_man_charge: number
-              p_man_id: string
-              p_minute_number: number
-              p_session_id: string
-              p_session_type: string
-              p_woman_earn: number
-              p_woman_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_man_charge: number
-              p_man_id: string
-              p_minute_number: number
-              p_session_id: string
-              p_session_type: string
-              p_woman_earn: number
-              p_woman_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_duration_seconds?: number
-              p_man_charge: number
-              p_man_id: string
-              p_minute_number: number
-              p_session_id: string
-              p_session_type: string
-              p_woman_earn: number
-              p_woman_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_duration_seconds?: number
-              p_man_charge: number
-              p_man_id: string
-              p_minute_number: number
-              p_session_id: string
-              p_session_type: string
-              p_woman_earn: number
-              p_woman_id: string
-            }
-            Returns: Json
-          }
+      ledger_bill_session: {
+        Args: {
+          p_duration_seconds?: number
+          p_man_charge: number
+          p_man_id: string
+          p_minute_number: number
+          p_session_id: string
+          p_session_type: string
+          p_woman_earn: number
+          p_woman_id: string
+        }
+        Returns: Json
+      }
       ledger_recharge: {
         Args: {
           p_amount: number
@@ -4016,18 +3977,10 @@ export type Database = {
         Args: { p_call_id: string; p_call_type?: string }
         Returns: Json
       }
-      process_chat_billing:
-        | {
-            Args: {
-              p_idempotency?: string
-              p_man_id: string
-              p_minutes: number
-              p_session_id: string
-              p_woman_id: string
-            }
-            Returns: Json
-          }
-        | { Args: { p_minutes: number; p_session_id: string }; Returns: Json }
+      process_chat_billing: {
+        Args: { p_minutes: number; p_session_id: string }
+        Returns: Json
+      }
       process_gift_billing: {
         Args: {
           p_gift_name?: string
@@ -4047,9 +4000,7 @@ export type Database = {
         }
         Returns: Json
       }
-      process_group_billing:
-        | { Args: { p_group_id: string }; Returns: Json }
-        | { Args: { p_group_id: string; p_minutes?: number }; Returns: Json }
+      process_group_billing: { Args: { p_group_id: string }; Returns: Json }
       process_group_billing_v2: {
         Args: {
           p_group_id: string
