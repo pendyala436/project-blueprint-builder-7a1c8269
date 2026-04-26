@@ -72,7 +72,10 @@ interface PrivateGroupCallState {
   totalEarnings: number;
   isRefunding: boolean;
   hostStream: MediaStream | null; // Host's remote stream for participants
+  hostStatus: HostStatus; // Host presence/activity state visible to all
 }
+
+export type HostStatus = 'live' | 'away' | 'muted' | 'camera-off' | 'left';
 
 export function usePrivateGroupCall({
   groupId,
