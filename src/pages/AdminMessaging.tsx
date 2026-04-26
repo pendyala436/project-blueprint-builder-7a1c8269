@@ -304,18 +304,24 @@ const AdminMessaging = () => {
   };
 
   const searchUsers = async () => {
-    if (!searchQuery.trim()) return;
+    const q = searchQuery.trim();
+    if (!q) return;
     setIsSearching(true);
     try {
+      // Sanitize for PostgREST .or() — strip chars that would break filter syntax
+      const safe = q.replace(/[,()*\\]/g, ' ').replace(/%/g, '').slice(0, 80);
       const { data, error } = await supabase
         .from('profiles')
         .select('user_id, full_name, gender, country, is_indian')
-        .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(20);
 
-      if (!error && data) setSearchResults(data as UserProfile[]);
-    } catch {
-      toast.error('Search failed');
+      if (error) throw error;
+      setSearchResults((data as UserProfile[]) || []);
+    } catch (err: any) {
+      console.error('[AdminMessaging] search failed:', err);
+      toast.error('Search failed', { description: err?.message || 'Try a different query' });
+      setSearchResults([]);
     } finally {
       setIsSearching(false);
     }
@@ -323,12 +329,14 @@ const AdminMessaging = () => {
 
   const deleteMessage = async (id: string) => {
     const { error } = await supabase.from('admin_user_messages').delete().eq('id', id);
-    if (!error) {
-      setMessages(prev => prev.filter(m => m.id !== id));
-      setChatMessages(prev => prev.filter(m => m.id !== id));
-      setThreadMessages(prev => prev.filter(m => m.id !== id));
-      toast.success('Message deleted');
+    if (error) {
+      toast.error('Delete failed', { description: error.message });
+      return;
     }
+    setMessages(prev => prev.filter(m => m.id !== id));
+    setChatMessages(prev => prev.filter(m => m.id !== id));
+    setThreadMessages(prev => prev.filter(m => m.id !== id));
+    toast.success('Message deleted');
   };
 
   const getGroupLabel = (group: string) => GROUP_CONFIG.find(g => g.key === group)?.label || group;
