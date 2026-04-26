@@ -371,7 +371,8 @@ We do NOT sell or rent personal data to advertisers or data brokers.
 • Chat message bodies — deleted automatically every 15 minutes.
 • Account & profile — until you delete the account, then 30 days grace.
 • Payment & GST records — 8 years (Companies Act 2013, GST Act).
-• Men's payment receipts & GST records — 8 years (Companies Act, GST Act). No tax records are kept for women because no money is paid to them.
+• Men's payment receipts & GST records — 8 years (Companies Act, GST Act).
+• Women's KYC documents — retained for the period required by PMLA / RBI rules and applicable law (typically up to 8 years from last activity), then securely deleted; users may request earlier deletion subject to law.
 • Server & security logs — 30–180 days.
 • Court-preserved data — until release.
 
