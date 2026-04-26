@@ -68,7 +68,7 @@ By creating an account or using Meow Meow ("the App", "we", "us"), you enter a b
 3. NATURE OF SERVICE
 Meow Meow is an opposite-sex social and communication platform offering:
 • Real-time text chat with auto-translation across 100+ languages.
-• 1:1 audio and video calls (WhatsApp-style) — initiated by men, accepted by women, billed per second.
+• 1:1 audio and video calls — initiated by men, accepted by women, billed per second.
 • Private flower-themed group video & audio calls (up to 50 rooms, multi-participant).
 • Language-specific community group chat for women.
 All communication channels — chat, audio calls, video calls, and group calls — are expressly permitted within the App and governed by the same prohibitions, moderation, and safety rules. Chat is text-only (no media attachments). The service is online-only and depends on network, third-party infrastructure, and user availability.
@@ -107,7 +107,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
 
 (d) HARASSMENT, STALKING & ABUSE — No threats, intimidation, defamation, doxxing, blackmail, sextortion, repeated unwanted contact after block, image-based abuse ("revenge porn"), or coordinated brigading. Covered by BNS §§78 (stalking), §79 (insult to modesty), §351 (criminal intimidation), §356 (defamation); IT Act §66E; and equivalents abroad.
 
-(e) PRIVACY & CONTACT-SHARING — Do not solicit, exchange, or share personal contact details (phone, WhatsApp, Telegram, Instagram, Snapchat, email, postal address, social handles) or external payment apps (UPI, Paytm, PhonePe, GPay, bank account). All chat, audio, video, and group conversations must remain inside the App.
+(e) PRIVACY & CONTACT-SHARING — Do not solicit, exchange, or share personal contact details (phone, Telegram, Instagram, Snapchat, email, postal address, social handles) or external payment apps (UPI, Paytm, PhonePe, GPay, bank account). All chat, audio, video, and group conversations must remain inside the App.
 
 (f) FRAUD & SCAMS — No romance scams, advance-fee fraud, investment / crypto / "lottery" / fake-emergency / "pig-butchering" scams, catfishing, impersonation, or coordinated inauthentic behaviour. Punishable under BNS §§316, 318 (cheating), §319 (cheating by personation), IT Act §66C/§66D, and global fraud statutes.
 
@@ -537,7 +537,7 @@ DO
 DON'T
 • No sexual, nude, semi-nude, suggestive, or pornographic content.
 • No harassment, hate speech, threats, defamation, casteism, racism, communalism, or discrimination.
-• No requests for or sharing of phone, WhatsApp, Instagram, Snapchat, Telegram, email, address, UPI/Paytm/PhonePe/GPay, bank details, or any external contact.
+• No requests for or sharing of phone, Instagram, Snapchat, Telegram, email, address, UPI/Paytm/PhonePe/GPay, bank details, or any external contact.
 • No requests for or offers of money, gifts, "loans", crypto, or investments.
 • No prostitution, escort, sugar-baby, or commercial sexual services.
 • No catfishing, impersonation, or use of someone else's photos.
