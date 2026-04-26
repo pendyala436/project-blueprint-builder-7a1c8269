@@ -549,10 +549,12 @@ const AdminModerationScreen = () => {
    * Applies search and status filters to reports.
    */
   const filteredReports = reports.filter(r => {
-    // Search filter: match user name or content
-    const matchesSearch = getUserName(r.reported_user_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (r.content?.toLowerCase().includes(searchTerm.toLowerCase()));
-    // Status filter
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term ||
+      getUserName(r.reported_user_id).toLowerCase().includes(term) ||
+      getUserName(r.reporter_id).toLowerCase().includes(term) ||
+      r.report_type?.toLowerCase().includes(term) ||
+      (r.content?.toLowerCase().includes(term) ?? false);
     const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
