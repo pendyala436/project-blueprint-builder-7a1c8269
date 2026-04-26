@@ -715,8 +715,8 @@ Chat sessions metadata          | 30 days, then anonymised
 Audio/video call recordings     | NOT recorded (signalling logs 30 days)
 Account & profile               | Until deletion + 30-day grace period
 Wallet ledger transactions      | 8 years (Companies Act, GST Act)
-KYC documents (women)           | 8 years from last transaction (PMLA)
-TDS / tax records               | 8 years (Income Tax Act 1961)
+Virtual coin ledger (women)     | Lifetime of account (no monetary value)
+Men's GST / payment receipts    | 8 years (Companies Act, GST Act)
 Server / security logs          | 30–180 days
 Abuse / fraud evidence          | 90 days, longer if under investigation
 CSAM evidence                   | Preserved indefinitely for law enforcement
