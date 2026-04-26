@@ -1492,16 +1492,7 @@ serve(async (req) => {
         const menCharged = Number(result.charged ?? 0);
         const womenEarnings = Number(result.earned ?? 0);
 
-        // Mirror to women_earnings (kept for legacy reporting / payout snapshots)
-        if (womenEarnings > 0) {
-          await supabase.from('women_earnings').insert({
-            user_id: session.woman_user_id,
-            chat_session_id: session.id,
-            amount: womenEarnings,
-            earning_type: 'chat',
-            description: `Chat earning - ${fractionalMinutes.toFixed(1)} min`,
-          });
-        }
+        // Note: process_chat_billing already writes women_earnings for Indian women — no duplicate insert here.
 
         // Refresh remaining balance for response
         const { data: postBalRow } = await supabase
