@@ -63,7 +63,7 @@ By creating an account or using Meow Meow ("the App", "we", "us"), you enter a b
 • Only two gender options are supported: Male and Female. Gender is verified using AI face/photo analysis.
 • One natural person = one account. Duplicate, fake, bot, or shared accounts are prohibited.
 • You must provide truthful, accurate, and current information at registration and keep it updated.
-• Use of VPN, Tor, GPS spoofing, or any tool to misrepresent your location, identity, gender, or age is forbidden and will result in permanent ban and forfeiture of any wallet balance or earnings.
+• Use of VPN, Tor, GPS spoofing, or any tool to misrepresent your location, identity, gender, or age is forbidden and will result in permanent ban and forfeiture of any wallet balance or virtual coins.
 
 3. NATURE OF SERVICE
 Meow Meow is an opposite-sex social and communication platform offering:
@@ -76,7 +76,7 @@ All communication channels — chat, audio calls, video calls, and group calls �
 4. ACCOUNT REGISTRATION & VERIFICATION
 • Email, phone, gender, age, country (India), state, languages and a live selfie are required.
 • AI face verification confirms a real, single, live human and estimates gender; mismatched photos are rejected.
-• Female users who choose to receive payouts must complete a 9-section Bank KYC (PAN, Aadhaar, bank account, IFSC, UPI, address proof). Completing KYC is OPTIONAL — a woman may use the App socially without ever requesting a payout. KYC data is encrypted and used only for payout, taxation, and anti-fraud purposes.
+• Female users are NOT required to submit any bank, PAN, Aadhaar, UPI, or KYC information. Women do not earn or receive any money on the platform; participation is purely social and voluntary (see §7).
 • We may re-verify identity at any time and suspend access pending verification.
 
 5. PROHIBITED CONDUCT — SEXUAL CONTENT, HATE SPEECH & MORE
@@ -91,7 +91,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
    • Immoral Traffic (Prevention) Act 1956 (no solicitation of prostitution / escort / sugar arrangements),
    • POCSO Act 2012 for any content involving minors,
    • EU Directive 2011/93/EU, US 18 USC §§2252/2252A/2422, UK Protection of Children Act 1978, and equivalent laws worldwide.
-   Live audio/video/group calls are continuously moderated; any sexual exposure ends the call instantly, permanently bans the user, forfeits all balance/earnings, and may be referred to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC CyberTipline, INTERPOL ICSE, and local police.
+   Live audio/video/group calls are continuously moderated; any sexual exposure ends the call instantly, permanently bans the user, forfeits all balance and virtual coins, and may be referred to the National Cyber Crime Reporting Portal (cybercrime.gov.in), NCMEC CyberTipline, INTERPOL ICSE, and local police.
 
 (b) CHILD PROTECTION — Engage with, attempt to engage with, groom, or depict any minor in any sexual, romantic, or exploitative context. Mandatory reporting under POCSO 2012, IT Act §67B, US 18 USC §2258A (NCMEC), and similar laws. All evidence (account, IP, device, payments, chat) is preserved indefinitely for law enforcement.
 
@@ -133,14 +133,19 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
 • Recharges are NON-REFUNDABLE except where mandated by the Consumer Protection Act 2019 or RBI guidelines.
 • Chargeback without first contacting support is treated as fraud and results in permanent ban + payment-network blacklist.
 
-7. EARNINGS & PAYOUTS — WOMEN (Discretionary, Not Mandatory)
-• A woman MAY earn a share of qualifying men's spend on her chats/calls/groups, but participation in the earnings programme is entirely OPTIONAL and DISCRETIONARY.
-• Payouts are NOT a guaranteed right, salary, wage, or employment benefit. Meow Meow is not the woman's employer; no employer-employee, principal-agent, or partnership relationship is created.
-• The administrator is NOT OBLIGATED to make any payout and may, at its sole discretion and without prior notice, withhold, delay, reduce, reverse, or refuse any payout where (i) KYC is incomplete or suspect, (ii) earnings are linked to fraud, automation, fake activity, sexual content, hate speech, or contact-sharing, (iii) a chargeback or dispute affects the underlying men's recharge, (iv) a court / tax authority / regulator orders so, (v) the platform is wound down, or (vi) for any other reasonable business or compliance ground.
-• MAXIMUM PAYOUT CEILING: ₹1,00,000 per woman per calendar month, subject to KYC and TDS. The administrator may revise this ceiling at any time without prior notice.
-• Bi-monthly snapshots (1st and 16th); payouts to the verified bank/UPI in KYC.
-• TDS under §§194-O / 194-R / 194-S of the Income Tax Act 1961 may be deducted; Form 16A issued where applicable. The woman is responsible for declaring earnings in her own income-tax return.
-• Earnings derived from fake activity, collusion, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
+7. WOMEN — VOLUNTARY PARTICIPATION & VIRTUAL COINS (NO MONEY)
+• Women use Meow Meow ENTIRELY for their own social interest — to chat, audio-call, video-call, and join group calls with verified male users. Participation is voluntary, recreational, and personal.
+• WOMEN DO NOT EARN, RECEIVE, OR HAVE ANY CLAIM TO REAL MONEY, INDIAN RUPEES, FOREIGN CURRENCY, CRYPTO, OR ANY OTHER FORM OF MONETARY VALUE FROM MEOW MEOW.
+• Their in-app activity may be acknowledged with VIRTUAL COINS — non-monetary, in-app digital tokens that:
+   – have NO cash value, NO redemption value, and NO exchange value;
+   – are NOT a currency, security, e-money, prepaid instrument, deposit, or financial product under the RBI Act 1934, Payment & Settlement Systems Act 2007, RBI PPI Master Directions, FEMA 1999, or SEBI laws;
+   – CANNOT be withdrawn, transferred to a bank, sold, gifted to another user, or converted into money or goods;
+   – may only be used inside the App for cosmetic, recognition, status, or visibility features that the administrator may add, modify, or remove at any time without notice;
+   – may be reduced, expired, frozen, or revoked by the administrator at sole discretion, without compensation.
+• NO EMPLOYMENT — Meow Meow is not the woman's employer, principal, agent, partner, contractor, or counterparty. No employer-employee, contract-of-service, contract-for-service, agency, partnership, or joint-venture relationship is created. No salary, wage, commission, fee, bonus, or other remuneration is owed.
+• NO TAX EVENT — Because no money or money's worth is received, no income, GST, TDS, or other tax obligation is created on the women's side. No PAN, Aadhaar, bank account, UPI ID, IFSC, address proof, or any other KYC document is collected from women.
+• NO PAYOUT MECHANISM exists for women on the platform. Any external request, message, or third-party offer to "convert" virtual coins into money is a scam and must be reported.
+• Virtual coins earned through fake activity, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
 
 8. CONTENT LICENSE
 You retain ownership of content you create. By submitting it, you grant Meow Meow a worldwide, royalty-free, non-exclusive, sub-licensable licence to host, store, transmit, translate, moderate, and display it solely to operate, improve, and protect the service.
@@ -165,7 +170,7 @@ These Terms are governed by the laws of India. Subject to the Arbitration and Co
 
 15. ADMIN DISCRETION & UNILATERAL CHANGES (NO USER NOTICE REQUIRED)
 You expressly acknowledge and agree that:
-• The administrator of Meow Meow has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, payout ceiling, payout eligibility, KYC requirement, moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
+• The administrator of Meow Meow has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, virtual-coin balance, virtual-coin grant or revocation, KYC requirement (men only), moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
 • The administrator MAY ADD, MODIFY, REPLACE, SUSPEND, OR REMOVE any rule, policy, feature, price, or limit at ANY TIME, EFFECTIVE IMMEDIATELY, WITHOUT PRIOR NOTICE, individual notification, email, push, or in-app banner to end-users.
 • The current version of these Terms and all linked policies, as published in the App at the moment of any user action, governs that action. It is the user's responsibility to review the Terms periodically.
 • Continued use of the App after any change constitutes full and final acceptance of the change. The user's sole remedy in case of disagreement is to stop using the App and request account deletion.
@@ -224,7 +229,7 @@ Covers misleading subscriptions, opaque auto-renewals, refund disputes, and any 
 
 A.7 RBI / Payment Regulations
 Applicable because the App offers a wallet and processes UPI/card/net-banking payments:
-• Recharges and payouts are routed only through RBI-licensed Payment Aggregators (Razorpay/Stripe/Paddle/etc.).
+• Recharges (men only) are routed only through RBI-licensed Payment Aggregators (Razorpay/Stripe/Paddle/etc.). No outbound payments are made to women.
 • We comply with the Payment and Settlement Systems Act 2007 and the RBI Master Directions on Prepaid Payment Instruments.
 • Card data is tokenised by PCI-DSS Level-1 processors; raw card numbers are never stored.
 • Failed transactions are auto-reversed per RBI Turnaround-Time circular 2019.
@@ -286,7 +291,7 @@ E.1 Consent — explicit opt-in for location, profile visibility, photo / biomet
 E.2 Data Minimisation — we collect only what is needed to operate the App and comply with law.
 E.3 Security — TLS 1.3 in transit, AES-256 at rest, OTP / OAuth-style secure authentication, RLS-isolated databases, MFA on admin accounts.
 E.4 User Rights — every user can: delete account, export data, block/report any other user, and control profile visibility.
-E.5 Retention — chat bodies auto-purged every 15 minutes; inactive accounts may be deleted after extended dormancy; statutory records (tax, payments, KYC) retained only for the legally mandated period.
+E.5 Retention — chat bodies auto-purged every 15 minutes; inactive accounts may be deleted after extended dormancy; statutory records (men's payment receipts, GST) retained only for the legally mandated period.
 
 🚨 PART F — DATING-APP-SPECIFIC LEGAL RISKS & SAFEGUARDS
 
@@ -332,7 +337,7 @@ This Policy explains what personal data we collect, why, how we use it, and the 
 1. DATA WE COLLECT
 (a) Identity & profile: full name, gender, date of birth, age, country, state, languages, mother tongue, profile photo / live selfie.
 (b) Account: email, phone, hashed password, device ID, IP address (truncated where possible), user-agent.
-(c) KYC (women only, payout users): PAN, Aadhaar (masked, last 4), bank account, IFSC, UPI ID, address proof.
+(c) KYC (men only, where required by payment processor for high-value recharges): name on card / UPI handle as returned by the processor. Women are NOT asked for any KYC because no money flows to them.
 (d) Communications metadata: who chatted/called whom, duration, billing seconds. Chat message bodies are end-to-end encrypted in transit and auto-deleted (see §7).
 (e) Payment data: amounts, GST, payment method type, transaction status. Full card / UPI credentials are handled directly by PCI-DSS compliant processors and never stored on our servers.
 (f) Technical & safety: crash logs, abuse reports, moderation actions, AI verification scores.
@@ -340,17 +345,17 @@ This Policy explains what personal data we collect, why, how we use it, and the 
 2. SENSITIVE PERSONAL DATA
 We treat the following as sensitive and apply additional safeguards:
 • Biometric data (face embeddings used only for liveness/gender check — discarded after verification).
-• Government IDs (encrypted at rest, access-logged, used only for payout & legal compliance).
+• Government IDs are NOT collected from women. From men, only payment-processor tokens are stored, encrypted at rest and access-logged.
 We do NOT collect: contacts list, social-media accounts, browsing history outside the App, health data, religious or political opinions.
 
 3. LEGAL BASIS (DPDP / GDPR Art. 6)
 • Consent — for marketing, optional features, AI gender verification.
 • Performance of contract — to operate the App, process payments, deliver chats/calls.
-• Legal obligation — tax (Income Tax Act 1961, GST), KYC (PMLA 2002), grievance redressal (IT Rules 2021), child-safety reporting (POCSO 2012).
+• Legal obligation — tax (Income Tax Act 1961, GST on men's recharges), grievance redressal (IT Rules 2021), child-safety reporting (POCSO 2012).
 • Legitimate interest — fraud prevention, security, service improvement, balanced against your rights.
 
 4. PURPOSES OF USE
-Account creation; matching opposite-sex users; chat/call/group delivery; AI translation; AI face/gender/age verification; per-second billing & GST invoicing; women's payouts & TDS; safety, moderation, anti-spam; complying with court orders, tax filings, and government requests; communicating service notices.
+Account creation; matching opposite-sex users; chat/call/group delivery; AI translation; AI face/gender/age verification; per-second billing & GST invoicing on men's recharges; awarding non-monetary virtual coins to women; safety, moderation, anti-spam; complying with court orders, tax filings, and government requests; communicating service notices.
 
 5. AI AUTOMATED PROCESSING
 Decisions made wholly or partly by AI (gender mismatch, content takedown, fraud flag) can be appealed to a human reviewer at support@meowmeow.app within 30 days. We do not perform political profiling or sell biometric data.
@@ -366,7 +371,7 @@ We do NOT sell or rent personal data to advertisers or data brokers.
 • Chat message bodies — deleted automatically every 15 minutes.
 • Account & profile — until you delete the account, then 30 days grace.
 • Payment & GST records — 8 years (Companies Act 2013, GST Act).
-• KYC & TDS — 8 years from last transaction (PMLA, Income Tax Act).
+• Men's payment receipts & GST records — 8 years (Companies Act, GST Act). No tax records are kept for women because no money is paid to them.
 • Server & security logs — 30–180 days.
 • Court-preserved data — until release.
 
@@ -413,7 +418,7 @@ Effective: ${EFFECTIVE_DATE}
 
 1. ENCRYPTION
 • In transit: TLS 1.3 for all client-server traffic; DTLS-SRTP for media (audio/video calls).
-• At rest: AES-256 GCM for databases, KYC documents, and backups.
+• At rest: AES-256 GCM for databases and backups.
 • Passwords: hashed with bcrypt/argon2id + per-user salt.
 
 2. INFRASTRUCTURE
@@ -459,7 +464,7 @@ Meow Meow is the data controller for personal data processed through the App.
 2. LAWFUL BASES (Art. 6)
 • Consent (Art. 6(1)(a)) — optional features, marketing.
 • Contract (Art. 6(1)(b)) — providing the App.
-• Legal obligation (Art. 6(1)(c)) — tax, KYC, law enforcement.
+• Legal obligation (Art. 6(1)(c)) — tax on men's recharges, law enforcement.
 • Legitimate interest (Art. 6(1)(f)) — fraud, security, abuse prevention.
 
 3. SPECIAL CATEGORY DATA (Art. 9)
@@ -482,7 +487,7 @@ You may complain to your national Data Protection Authority — e.g., the Irish 
 The App is 18+ only; consent of a parent for users below 16 is not applicable.
 
 9. DPIA
-A Data Protection Impact Assessment has been performed for biometric verification, AI moderation, and women's earnings/KYC processing.`
+A Data Protection Impact Assessment has been performed for biometric verification, AI moderation, and the men's recharge / virtual-coin processing flows.`
   },
   {
     id: "data_storage_policy",
@@ -506,8 +511,8 @@ All such transfers use SCCs / IDTA / DPDP §16 mechanisms with encryption in tra
 3. PAYMENT DATA
 Card / UPI credentials are tokenised by PCI-DSS Level 1 processors and never stored on our servers. Aggregated transaction records are retained for 8 years as required by the Companies Act 2013 and GST Act.
 
-4. KYC DATA
-Stored encrypted in India, segregated from operational tables, accessible only to authorised payout & compliance staff under audit logging.
+4. NO KYC FOR WOMEN
+No KYC, PAN, Aadhaar, bank, or UPI data is collected or stored for female users because no money is paid out to them. They earn only non-monetary in-app virtual coins.
 
 5. USER CONSENT
 By creating an account you provide express, informed consent under DPDP §6 / GDPR Art. 6 & 9 for storage in India and the cross-border transfers described above.
@@ -552,7 +557,7 @@ Use the in-app Report button or email report@meowmeow.app. Reports are reviewed 
     content: `MEOW MEOW — ANTI-SEXUAL CONTENT & CHILD-SAFETY POLICY
 Effective: ${EFFECTIVE_DATE}
 
-ZERO TOLERANCE — sending, soliciting, or hinting at any of the following results in IMMEDIATE permanent ban, forfeiture of wallet/earnings, and reporting to authorities:
+ZERO TOLERANCE — sending, soliciting, or hinting at any of the following results in IMMEDIATE permanent ban, forfeiture of wallet balance and virtual coins, and reporting to authorities:
 • Erotic chat, sexual roleplay, sexting, "dirty talk".
 • Nudity, semi-nudity, sexual imagery.
 • Pornographic, obscene, or vulgar language.
@@ -605,19 +610,17 @@ C. CHARGEBACKS / FRAUD
 • Initiating a chargeback without contacting support first is treated as fraud.
 • Result: permanent ban, blacklist with payment processors, forfeiture of balance, and possible legal action under BNS §316/318 (cheating), PMLA, and the Payment and Settlement Systems Act 2007.
 
-D. PAYOUTS (WOMEN)
-• Earnings ledger is the single source of truth (ledger_transactions table).
-• Bi-monthly snapshot on the 1st and 16th of each month.
-• Minimum payout threshold and processing time displayed in the Payouts screen.
-• Payout to verified bank/UPI in KYC; mismatched names will be rejected.
+D. WOMEN — VIRTUAL COINS ONLY (NO MONEY)
+• Women DO NOT receive any payout, salary, fee, commission, or other monetary value from Meow Meow.
+• Their participation is voluntary and personal; activity may be acknowledged with non-monetary in-app virtual coins.
+• Virtual coins have NO cash value, are NOT redeemable, NOT transferable, NOT a currency, and NOT a financial instrument under any law.
+• No bank account, UPI ID, PAN, Aadhaar, IFSC, address proof, or other KYC document is collected from women.
 
-E. TAXES (PAYOUTS)
-• TDS may be deducted under the Income Tax Act 1961 (sec 194-O / 194-R / 194-S as applicable).
-• Form 16A / TDS certificate issued where required.
-• Women users are responsible for declaring earnings in their personal income-tax return.
+E. NO TAX EVENT FOR WOMEN
+Because no money or money's worth is paid to women, no income, GST, TDS, Form 16A, or other tax obligation is generated by the platform on the women's side. Women are not "deductees" under §§194-O / 194-R / 194-S of the Income Tax Act 1961 in respect of Meow Meow activity.
 
 F. ANTI-MONEY LAUNDERING
-We comply with the Prevention of Money Laundering Act 2002 and FATF guidance. Suspicious transactions are reported to FIU-IND.`
+We comply with the Prevention of Money Laundering Act 2002 and FATF guidance on the inbound side (men's recharges). Suspicious recharge patterns are flagged and may be reported to FIU-IND. No outbound money flows to users.`
   },
   {
     id: "content_moderation",
@@ -640,7 +643,7 @@ Profile photos, display names, bio, chat messages, group names, call behaviour (
 Tiered enforcement based on severity, history, and intent:
 (i) Warning + content removal,
 (ii) Temporary suspension (24 h – 30 days),
-(iii) Permanent ban + forfeiture of balance/earnings,
+(iii) Permanent ban + forfeiture of wallet balance and virtual coins,
 (iv) Shadow-restriction of visibility,
 (v) Law-enforcement referral (CSAM, threats, fraud, trafficking).
 
@@ -688,7 +691,7 @@ USED FOR
 
 NOT USED FOR
 • Final permanent-ban decisions without human review.
-• Final payout approval/rejection without human review.
+• Final virtual-coin grant or revocation without human review where significant.
 • Profiling for advertising, political, or insurance pricing purposes.
 • Sale of biometric or behavioural data to third parties.
 
@@ -712,8 +715,8 @@ Chat sessions metadata          | 30 days, then anonymised
 Audio/video call recordings     | NOT recorded (signalling logs 30 days)
 Account & profile               | Until deletion + 30-day grace period
 Wallet ledger transactions      | 8 years (Companies Act, GST Act)
-KYC documents (women)           | 8 years from last transaction (PMLA)
-TDS / tax records               | 8 years (Income Tax Act 1961)
+Virtual coin ledger (women)     | Lifetime of account (no monetary value)
+Men's GST / payment receipts    | 8 years (Companies Act, GST Act)
 Server / security logs          | 30–180 days
 Abuse / fraud evidence          | 90 days, longer if under investigation
 CSAM evidence                   | Preserved indefinitely for law enforcement
