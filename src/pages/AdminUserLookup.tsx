@@ -477,7 +477,7 @@ const AdminUserLookup = () => {
                                   <p className="text-xs text-muted-foreground">{new Date(tx.created_at).toLocaleString()}</p>
                                 </div>
                                 <span className={tx.credit > 0 ? "text-primary font-semibold" : "text-destructive font-semibold"}>
-                                  {tx.credit > 0 ? "+" : "-"}₹{(tx.credit > 0 ? tx.credit : tx.debit).toFixed(2)}
+                                  {Number(tx.credit) > 0 ? "+" : "-"}₹{(Number(tx.credit) > 0 ? Number(tx.credit) : Number(tx.debit ?? 0)).toFixed(2)}
                                 </span>
                               </div>
                             ))}
