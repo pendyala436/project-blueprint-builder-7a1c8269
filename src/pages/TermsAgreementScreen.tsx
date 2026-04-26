@@ -143,7 +143,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
    – may only be used inside the App for cosmetic, recognition, status, or visibility features that the administrator may add, modify, or remove at any time without notice;
    – may be reduced, expired, frozen, or revoked by the administrator at sole discretion, without compensation.
 • NO EMPLOYMENT — Meow Meow is not the woman's employer, principal, agent, partner, contractor, or counterparty. No employer-employee, contract-of-service, contract-for-service, agency, partnership, or joint-venture relationship is created. No salary, wage, commission, fee, bonus, or other remuneration is owed.
-• NO TAX EVENT — Because no money or money's worth is received, no income, GST, TDS, or other tax obligation is created on the women's side. No PAN, Aadhaar, bank account, UPI ID, IFSC, address proof, or any other KYC document is collected from women.
+• NO TAX EVENT — Because no money or money's worth is received, no income, GST, TDS, or other tax obligation is created on the women's side, even where the platform has collected KYC documents (PAN, Aadhaar, bank/UPI handle, address proof) from her. KYC is held exclusively for identity verification, anti-fraud, age confirmation, and statutory compliance, and is never the basis of any monetary payment.
 • NO PAYOUT MECHANISM exists for women on the platform. Any external request, message, or third-party offer to "convert" virtual coins into money is a scam and must be reported.
 • Virtual coins earned through fake activity, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
 
