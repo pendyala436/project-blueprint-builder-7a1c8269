@@ -504,9 +504,18 @@ export function usePrivateGroupCall({
           return;
         }
 
-        // Call atomic server-side billing RPC
-        const { data, error } = await supabase.rpc('process_group_billing', {
+        // Single source of truth: call canonical v2 RPC
+        const manIds = Array.from(session.participants.values())
+          .filter(p => !p.isOwner)
+          .map(p => p.id);
+        const minuteIdx = Math.floor(Date.now() / 60000);
+        const { data, error } = await supabase.rpc('process_group_billing_v2', {
           p_group_id: session.groupId,
+          p_session_id: session.sessionId,
+          p_host_id: session.hostId,
+          p_man_ids: manIds,
+          p_minutes: 1,
+          p_idempotency: `group:${session.sessionId}:${minuteIdx}`,
         });
 
         if (error) {
@@ -518,21 +527,13 @@ export function usePrivateGroupCall({
           success: boolean;
           duplicate_skipped?: boolean;
           active_count?: number;
-          total_charged?: number;
           host_earned?: number;
-          removed_users?: string[];
+          removed_men?: string[];
           error?: string;
         };
 
         if (!result.success) {
           console.error('[GROUP] Billing failed:', result.error);
-          return;
-        }
-
-        if (result.duplicate_skipped) {
-          // Host already billed this cycle — reset missed counter
-          missedHostCycles = 0;
-          console.log('[GROUP] Duplicate billing skipped (host is active)');
           return;
         }
 
@@ -543,8 +544,8 @@ export function usePrivateGroupCall({
         }
 
         // Handle removed users (insufficient balance)
-        if (result.removed_users && result.removed_users.length > 0) {
-          for (const removedId of result.removed_users) {
+        if (result.removed_men && result.removed_men.length > 0) {
+          for (const removedId of result.removed_men) {
             session.participants.delete(removedId);
             onParticipantLeave?.(removedId, 'insufficient_balance');
 
@@ -564,7 +565,7 @@ export function usePrivateGroupCall({
           viewerCount: session.participants.size,
         }));
 
-        console.log(`[GROUP] Billing: ${result.active_count} men billed ₹${result.total_charged}, host earned ₹${result.host_earned}`);
+        console.log(`[GROUP] Billing: ${result.active_count} men billed, host earned ₹${result.host_earned}`);
       } catch (err) {
         console.error('[GROUP] Billing error:', err);
       } finally {

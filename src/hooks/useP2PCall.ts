@@ -166,9 +166,14 @@ export const useP2PCall = ({
     }
 
     try {
-      const { data, error } = await supabase.rpc('process_video_billing', {
+      // Single source of truth: use canonical v2 RPC (writes only to wallet_transactions)
+      const minuteIdx = Math.floor(Date.now() / 60000);
+      const { data, error } = await supabase.rpc('process_video_billing_v2', {
         p_session_id: sessionId,
-        p_minutes: 1 // Bill 1 minute at a time
+        p_man_id: isInitiator ? currentUserId : remoteUserId,
+        p_woman_id: isInitiator ? remoteUserId : currentUserId,
+        p_minutes: 1, // Bill 1 minute at a time
+        p_idempotency: `video:${sessionId}:${minuteIdx}`,
       });
 
       if (error) {
@@ -932,9 +937,12 @@ export const useP2PCall = ({
       if (remainingMinutes > 0.083) { // More than 5 seconds unbilled
         console.log(`[P2P] Final billing: ${remainingMinutes.toFixed(2)} remaining minutes`);
         try {
-          await supabase.rpc('process_video_billing', {
+          await supabase.rpc('process_video_billing_v2', {
             p_session_id: currentSession.id,
-            p_minutes: Math.max(1, Math.ceil(remainingMinutes))
+            p_man_id: isInitiator ? currentUserId : remoteUserId,
+            p_woman_id: isInitiator ? remoteUserId : currentUserId,
+            p_minutes: Math.max(1, Math.ceil(remainingMinutes)),
+            p_idempotency: `video:${currentSession.id}:final`,
           });
           console.log('[P2P] Final billing processed');
         } catch (err) {
