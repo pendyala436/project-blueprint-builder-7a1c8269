@@ -159,6 +159,7 @@ const AppShell = () => {
             <Route path="/basic-info" element={<RouteSuspense><BasicInfoScreen /></RouteSuspense>} />
             <Route path="/personal-details" element={<RouteSuspense><PersonalDetailsScreen /></RouteSuspense>} />
             <Route path="/photo-upload" element={<RouteSuspense><PhotoUploadScreen /></RouteSuspense>} />
+            <Route path="/additional-photos" element={<RouteSuspense><AdditionalPhotosScreen /></RouteSuspense>} />
             <Route path="/location-setup" element={<RouteSuspense><LocationSetupScreen /></RouteSuspense>} />
             <Route path="/language-preferences" element={<RouteSuspense><LanguagePreferencesScreen /></RouteSuspense>} />
             <Route path="/password-setup" element={<RouteSuspense><PasswordSetupScreen /></RouteSuspense>} />
