@@ -121,7 +121,26 @@ const AdminLanguageGroups = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const filteredLanguages = languages.filter(
+  // Build a merged list of available languages: base list + any codes already
+  // present in saved groups or in the current form (e.g., regional variants
+  // like en-US, hi-IN that aren't in the base list).
+  const extraCodes = Array.from(
+    new Set([
+      ...groups.flatMap((g) => g.languages),
+      ...formLanguages,
+    ])
+  ).filter((code) => !languages.some((l) => l.code === code));
+
+  const allLanguages = [
+    ...languages,
+    ...extraCodes.map((code) => ({
+      code,
+      name: getLanguageName(code),
+      nativeName: getLanguageNativeName(code),
+    })),
+  ];
+
+  const filteredLanguages = allLanguages.filter(
     (lang) =>
       lang.name.toLowerCase().includes(languageSearch.toLowerCase()) ||
       lang.nativeName.toLowerCase().includes(languageSearch.toLowerCase()) ||
