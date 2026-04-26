@@ -352,12 +352,14 @@ const AdditionalPhotosScreen = () => {
 
         <Button
           variant="aurora"
-          className="w-full max-w-md mt-6"
+          className="w-full max-w-2xl mt-4"
           size="lg"
           onClick={handleNext}
           disabled={additionalPhotos.length < MAX_ADDITIONAL_PHOTOS}
         >
-          Continue
+          {additionalPhotos.length < MAX_ADDITIONAL_PHOTOS
+            ? `Upload ${MAX_ADDITIONAL_PHOTOS - additionalPhotos.length} more to continue`
+            : "Continue"}
         </Button>
       </main>
     </div>
