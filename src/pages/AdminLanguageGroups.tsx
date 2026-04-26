@@ -537,7 +537,7 @@ const AdminLanguageGroups = () => {
               {/* Available Languages */}
               <ScrollArea className="h-48 border rounded-lg">
                 <div className="p-2 grid grid-cols-2 gap-1">
-                  {filteredLanguages.slice(0, 100).map((lang) => (
+                  {(languageSearch ? filteredLanguages : filteredLanguages.slice(0, 100)).map((lang) => (
                     <button
                       key={lang.code}
                       type="button"
