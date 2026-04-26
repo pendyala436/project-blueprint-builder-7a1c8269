@@ -490,6 +490,16 @@ export function usePrivateGroupCall({
       try {
         const session = sessionRef.current;
 
+        // Gate: only bill when at least one man (non-host participant) is present.
+        // Host earns nothing while alone live; billing pauses when all men leave and
+        // resumes automatically when the next man joins.
+        const nonHostCount = Array.from(session.participants.values())
+          .filter(p => !p.isOwner).length;
+        if (nonHostCount === 0) {
+          console.log('[GROUP] No men in room — billing paused');
+          return;
+        }
+
         // Call atomic server-side billing RPC
         const { data, error } = await supabase.rpc('process_group_billing', {
           p_group_id: session.groupId,
