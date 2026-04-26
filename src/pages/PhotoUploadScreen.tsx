@@ -39,7 +39,8 @@ const PhotoUploadScreen = () => {
     const existing = sessionStorage.getItem("pendingPhotoData");
     if (existing) {
       setSelfiePreview(existing);
-      setVerificationState("verified");
+      // Keep state "idle" so user can re-verify if needed; Verify button stays visible
+      setVerificationState("idle");
     }
     const storedGender = sessionStorage.getItem("userGender");
     if (storedGender === "male" || storedGender === "female") {
@@ -428,26 +429,30 @@ const PhotoUploadScreen = () => {
                 >
                   Retake
                 </Button>
-                {verificationState !== "verified" && (
-                  <Button
-                    size="sm"
-                    className="flex-1 gap-2"
-                    onClick={verifySelfie}
-                    disabled={verificationState === "verifying" || isVerifying}
-                  >
-                    {verificationState === "verifying" ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Verifying
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4" />
-                        Verify
-                      </>
-                    )}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  className="flex-1 gap-2"
+                  onClick={verifySelfie}
+                  disabled={verificationState === "verifying" || isVerifying}
+                  variant={verificationState === "verified" ? "outline" : "default"}
+                >
+                  {verificationState === "verifying" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Verifying
+                    </>
+                  ) : verificationState === "verified" ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Re-verify
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Verify Gender
+                    </>
+                  )}
+                </Button>
               </div>
 
               {verificationResult && verificationState !== "verifying" && (
