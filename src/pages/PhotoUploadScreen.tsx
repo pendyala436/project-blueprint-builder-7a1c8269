@@ -338,6 +338,33 @@ const PhotoUploadScreen = () => {
             )}
           </div>
 
+          {/* Gender info: selected vs AI-detected */}
+          {(selectedGender || detectedGender) && (
+            <div className={`
+              mb-3 p-2.5 rounded-lg text-xs flex items-center justify-between gap-2 flex-wrap
+              ${genderChanged
+                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                : "bg-muted/50 text-muted-foreground border border-border"
+              }
+            `}>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Selected:</span>
+                <span className="capitalize">{selectedGender ?? "—"}</span>
+              </div>
+              {detectedGender && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">AI detected:</span>
+                  <span className="capitalize">{detectedGender}</span>
+                </div>
+              )}
+              {genderChanged && (
+                <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-amber-500/20">
+                  Auto-updated
+                </span>
+              )}
+            </div>
+          )}
+
           {!selfiePreview ? (
             <Button
               variant="outline"
