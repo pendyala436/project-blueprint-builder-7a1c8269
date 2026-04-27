@@ -1064,6 +1064,12 @@ const AdminUserManagement = () => {
                                       <DropdownMenuItem onClick={() => handleOpenForceFree(user)}>
                                         <TimerOff className="h-4 w-4 mr-2 text-warning" /> Force Free Mode
                                       </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleToggleLanguageLeader(user)}>
+                                        <Crown className={cn("h-4 w-4 mr-2", user.is_language_leader ? "text-muted-foreground" : "text-amber-500")} />
+                                        {user.is_language_leader
+                                          ? "Remove Leader Badge"
+                                          : `Assign Leader Badge${user.primary_language ? ` (${user.primary_language})` : ""}`}
+                                      </DropdownMenuItem>
                                     </>
                                   )}
 
