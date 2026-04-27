@@ -54,7 +54,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="flex items-center gap-1.5 min-w-0 flex-shrink">
           <MeowLogo size="sm" />
           <span className="text-sm sm:text-base font-bold text-primary-foreground tracking-tight truncate">
-            Meow Meow
+            Meow MEOW FRND APP
           </span>
         </div>
 

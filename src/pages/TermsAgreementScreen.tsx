@@ -55,7 +55,7 @@ const legalDocuments: LegalDocument[] = [
 Effective: ${EFFECTIVE_DATE}
 
 1. ACCEPTANCE
-By creating an account or using Meow Meow ("the App", "we", "us"), you enter a binding agreement with the operator of Meow Meow. If you do not agree, you must not use the App.
+By creating an account or using Meow MEOW FRND APP ("the App", "we", "us"), you enter a binding agreement with the operator of Meow MEOW FRND APP. If you do not agree, you must not use the App.
 
 2. ELIGIBILITY (STRICT 18+)
 • You must be at least 18 years old (or the legal age of majority in your jurisdiction, whichever is higher).
@@ -66,7 +66,7 @@ By creating an account or using Meow Meow ("the App", "we", "us"), you enter a b
 • Use of VPN, Tor, GPS spoofing, or any tool to misrepresent your location, identity, gender, or age is forbidden and will result in permanent ban and forfeiture of any wallet balance or virtual coins.
 
 3. NATURE OF SERVICE
-Meow Meow is an opposite-sex social and communication platform offering:
+Meow MEOW FRND APP is an opposite-sex social and communication platform offering:
 • Real-time text chat with auto-translation across 100+ languages.
 • 1:1 audio and video calls — initiated by men, accepted by women, billed per second.
 • Private flower-themed group video & audio calls (up to 50 rooms, multi-participant).
@@ -134,7 +134,7 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
 • Chargeback without first contacting support is treated as fraud and results in permanent ban + payment-network blacklist.
 
 7. WOMEN — VOLUNTARY PARTICIPATION & VIRTUAL COINS (NO MONEY)
-• Women use Meow Meow ENTIRELY for their own social interest — to chat, audio-call, video-call, and join group calls with verified male users. Participation is voluntary, recreational, and personal.
+• Women use Meow MEOW FRND APP ENTIRELY for their own social interest — to chat, audio-call, video-call, and join group calls with verified male users. Participation is voluntary, recreational, and personal.
 • WOMEN DO NOT EARN, RECEIVE, OR HAVE ANY CLAIM TO REAL MONEY, INDIAN RUPEES, FOREIGN CURRENCY, CRYPTO, OR ANY OTHER FORM OF MONETARY VALUE FROM MEOW MEOW.
 • Their in-app activity may be acknowledged with VIRTUAL COINS — non-monetary, in-app digital tokens that:
    – have NO cash value, NO redemption value, and NO exchange value;
@@ -142,13 +142,13 @@ You shall NOT, directly or indirectly, in chat, audio, video, group calls, profi
    – CANNOT be withdrawn, transferred to a bank, sold, gifted to another user, or converted into money or goods;
    – may only be used inside the App for cosmetic, recognition, status, or visibility features that the administrator may add, modify, or remove at any time without notice;
    – may be reduced, expired, frozen, or revoked by the administrator at sole discretion, without compensation.
-• NO EMPLOYMENT — Meow Meow is not the woman's employer, principal, agent, partner, contractor, or counterparty. No employer-employee, contract-of-service, contract-for-service, agency, partnership, or joint-venture relationship is created. No salary, wage, commission, fee, bonus, or other remuneration is owed.
+• NO EMPLOYMENT — Meow MEOW FRND APP is not the woman's employer, principal, agent, partner, contractor, or counterparty. No employer-employee, contract-of-service, contract-for-service, agency, partnership, or joint-venture relationship is created. No salary, wage, commission, fee, bonus, or other remuneration is owed.
 • NO TAX EVENT — Because no money or money's worth is received, no income, GST, TDS, or other tax obligation is created on the women's side, even where the platform has collected KYC documents (PAN, Aadhaar, bank/UPI handle, address proof) from her. KYC is held exclusively for identity verification, anti-fraud, age confirmation, and statutory compliance, and is never the basis of any monetary payment.
 • NO PAYOUT MECHANISM exists for women on the platform. Any external request, message, or third-party offer to "convert" virtual coins into money is a scam and must be reported.
 • Virtual coins earned through fake activity, automation, sexual content, hate speech, or contact-sharing are forfeited and the account is permanently banned.
 
 8. CONTENT LICENSE
-You retain ownership of content you create. By submitting it, you grant Meow Meow a worldwide, royalty-free, non-exclusive, sub-licensable licence to host, store, transmit, translate, moderate, and display it solely to operate, improve, and protect the service.
+You retain ownership of content you create. By submitting it, you grant Meow MEOW FRND APP a worldwide, royalty-free, non-exclusive, sub-licensable licence to host, store, transmit, translate, moderate, and display it solely to operate, improve, and protect the service.
 
 9. AI-ASSISTED FEATURES
 The App uses AI for: face/liveness detection, gender estimation, age estimation, language detection, real-time translation, content moderation, and fraud detection. AI outputs may be wrong; you may request human review of any adverse automated decision.
@@ -163,14 +163,14 @@ THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE". TO THE MAXIMUM EXTENT PERMIT
 To the maximum extent permitted by law, our aggregate liability for any claim arising out of or relating to the App is limited to the amount you paid into your wallet in the 3 months preceding the claim, or INR 10,000, whichever is lower. We are not liable for indirect, incidental, special, consequential, exemplary, or punitive damages, lost profits, or loss of data.
 
 13. INDEMNITY
-You will defend, indemnify, and hold harmless Meow Meow, its directors, employees, and agents from any claim, loss, liability, or expense (including legal fees) arising from your breach of these Terms, your content, or your conduct.
+You will defend, indemnify, and hold harmless Meow MEOW FRND APP, its directors, employees, and agents from any claim, loss, liability, or expense (including legal fees) arising from your breach of these Terms, your content, or your conduct.
 
 14. GOVERNING LAW & JURISDICTION
 These Terms are governed by the laws of India. Subject to the Arbitration and Conciliation Act 1996, disputes will be referred to a sole arbitrator in Bengaluru, Karnataka. Courts at Bengaluru have exclusive jurisdiction. Foreign users additionally consent to Indian jurisdiction and waive forum non-conveniens objections.
 
 15. ADMIN DISCRETION & UNILATERAL CHANGES (NO USER NOTICE REQUIRED)
 You expressly acknowledge and agree that:
-• The administrator of Meow Meow has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, virtual-coin balance, virtual-coin grant or revocation, KYC requirement (men and women), moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
+• The administrator of Meow MEOW FRND APP has SOLE and ABSOLUTE DISCRETION over every rule, policy, feature, price, rate card, recharge limit, virtual-coin balance, virtual-coin grant or revocation, KYC requirement (men and women), moderation threshold, suspension, ban, content takedown, refund decision, gender/age verification outcome, and any other operational matter.
 • The administrator MAY ADD, MODIFY, REPLACE, SUSPEND, OR REMOVE any rule, policy, feature, price, or limit at ANY TIME, EFFECTIVE IMMEDIATELY, WITHOUT PRIOR NOTICE, individual notification, email, push, or in-app banner to end-users.
 • The current version of these Terms and all linked policies, as published in the App at the moment of any user action, governs that action. It is the user's responsibility to review the Terms periodically.
 • Continued use of the App after any change constitutes full and final acceptance of the change. The user's sole remedy in case of disagreement is to stop using the App and request account deletion.
@@ -183,7 +183,7 @@ Grievance Officer: support@meowmeow.app | Response within 24 hours, resolution w
 ═══════════════════════════════════════════════════════════
 17. DATING-APP LEGAL & COMPLIANCE FRAMEWORK (GLOBAL + INDIA)
 ═══════════════════════════════════════════════════════════
-Meow Meow operates as an online dating / opposite-sex social-communication platform and complies with the following layered legal framework. This section is informational and binding; users accept its applicability.
+Meow MEOW FRND APP operates as an online dating / opposite-sex social-communication platform and complies with the following layered legal framework. This section is informational and binding; users accept its applicability.
 
 🇮🇳 PART A — INDIA: CORE LAWS & REGULATIONS
 
@@ -322,7 +322,7 @@ INDIA: IT Act 2000 · DPDP Act 2023 · IT (Intermediary Guidelines) Rules 2021 �
 GLOBAL: EU GDPR · UK GDPR + DPA 2018 · CCPA / CPRA (California) · FTC Act + ROSCA (US) · COPPA (US) · PIPEDA (Canada) · LGPD (Brazil) · Australian Privacy Act 1988 · Singapore PDPA · UAE PDPL · Japan APPI · South Korea PIPA.
 PLATFORMS: Apple App Store Review Guidelines · Google Play Developer Policies · PCI-DSS v4.0.
 
-By accepting these Terms you acknowledge that the above framework governs your use of Meow Meow regardless of your physical location, and you submit to the jurisdiction and dispute-resolution mechanism described in §14.`
+By accepting these Terms you acknowledge that the above framework governs your use of Meow MEOW FRND APP regardless of your physical location, and you submit to the jurisdiction and dispute-resolution mechanism described in §14.`
   },
   {
     id: "privacy_policy",
@@ -460,7 +460,7 @@ Researchers may report vulnerabilities to security@meowmeow.app. We commit not t
 Effective: ${EFFECTIVE_DATE}
 
 1. CONTROLLER
-Meow Meow is the data controller for personal data processed through the App.
+Meow MEOW FRND APP is the data controller for personal data processed through the App.
 
 2. LAWFUL BASES (Art. 6)
 • Consent (Art. 6(1)(a)) — optional features, marketing.
@@ -612,13 +612,13 @@ C. CHARGEBACKS / FRAUD
 • Result: permanent ban, blacklist with payment processors, forfeiture of balance, and possible legal action under BNS §316/318 (cheating), PMLA, and the Payment and Settlement Systems Act 2007.
 
 D. WOMEN — VIRTUAL COINS ONLY (NO MONEY)
-• Women DO NOT receive any payout, salary, fee, commission, or other monetary value from Meow Meow.
+• Women DO NOT receive any payout, salary, fee, commission, or other monetary value from Meow MEOW FRND APP.
 • Their participation is voluntary and personal; activity may be acknowledged with non-monetary in-app virtual coins.
 • Virtual coins have NO cash value, are NOT redeemable, NOT transferable, NOT a currency, and NOT a financial instrument under any law.
 • Women may be asked for KYC (PAN, Aadhaar, bank/UPI handle, IFSC, address proof, live selfie) for identity verification, anti-fraud, age confirmation, and statutory compliance — never as a basis for monetary payment. KYC documents are encrypted, access-logged, and never sold or shared with advertisers.
 
 E. NO TAX EVENT FOR WOMEN
-Because no money or money's worth is paid to women, no income, GST, TDS, Form 16A, or other tax obligation is generated by the platform on the women's side. Women are not "deductees" under §§194-O / 194-R / 194-S of the Income Tax Act 1961 in respect of Meow Meow activity.
+Because no money or money's worth is paid to women, no income, GST, TDS, Form 16A, or other tax obligation is generated by the platform on the women's side. Women are not "deductees" under §§194-O / 194-R / 194-S of the Income Tax Act 1961 in respect of Meow MEOW FRND APP activity.
 
 F. ANTI-MONEY LAUNDERING
 We comply with the Prevention of Money Laundering Act 2002 and FATF guidance on the inbound side (men's recharges). Suspicious recharge patterns are flagged and may be reported to FIU-IND. No outbound money flows to users.`

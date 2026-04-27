@@ -95,7 +95,7 @@ export default function InstallApp() {
               <div className="text-center">
                 <h2 className="text-xl font-bold text-primary">App Installed!</h2>
                 <p className="text-muted-foreground">
-                  Meow Meow is installed on your {deviceType}
+                  Meow MEOW FRND APP is installed on your {deviceType}
                 </p>
               </div>
               <Badge variant="secondary" className="capitalize">
@@ -166,7 +166,7 @@ export default function InstallApp() {
           <div className="mx-auto mb-4">
             <MeowLogo size="lg" />
           </div>
-          <h1 className="text-2xl font-bold mb-2 font-display">Install Meow Meow</h1>
+          <h1 className="text-2xl font-bold mb-2 font-display">Install Meow MEOW FRND APP</h1>
           <p className="text-muted-foreground">
             Get the full app experience on your {deviceType}
           </p>
@@ -267,7 +267,7 @@ export default function InstallApp() {
                 <div>
                   <p className="font-medium">Tap "Add" in the top right</p>
                   <p className="text-sm text-muted-foreground">
-                    Meow Meow icon will appear on your home screen
+                    Meow MEOW FRND APP icon will appear on your home screen
                   </p>
                 </div>
               </div>
@@ -319,7 +319,7 @@ export default function InstallApp() {
                 <div>
                   <p className="font-medium">Tap "Add" to confirm</p>
                   <p className="text-sm text-muted-foreground">
-                    Meow Meow will appear on your iPad home screen
+                    Meow MEOW FRND APP will appear on your iPad home screen
                   </p>
                 </div>
               </div>
@@ -370,7 +370,7 @@ export default function InstallApp() {
                 <div>
                   <p className="font-medium">Tap "Install" to confirm</p>
                   <p className="text-sm text-muted-foreground">
-                    Meow Meow will be added to your app drawer
+                    Meow MEOW FRND APP will be added to your app drawer
                   </p>
                 </div>
               </div>
@@ -421,7 +421,7 @@ export default function InstallApp() {
                 <div>
                   <p className="font-medium">Confirm by tapping "Install"</p>
                   <p className="text-sm text-muted-foreground">
-                    Meow Meow will appear on your tablet home screen
+                    Meow MEOW FRND APP will appear on your tablet home screen
                   </p>
                 </div>
               </div>
@@ -458,7 +458,7 @@ export default function InstallApp() {
                   2
                 </div>
                 <div>
-                  <p className="font-medium">Click "Install" or "Install Meow Meow"</p>
+                  <p className="font-medium">Click "Install" or "Install Meow MEOW FRND APP"</p>
                   <p className="text-sm text-muted-foreground">
                     A prompt will appear asking to confirm
                   </p>
@@ -471,7 +471,7 @@ export default function InstallApp() {
                 <div>
                   <p className="font-medium">Launch from your applications</p>
                   <p className="text-sm text-muted-foreground">
-                    Meow Meow will open as a standalone app
+                    Meow MEOW FRND APP will open as a standalone app
                   </p>
                 </div>
               </div>

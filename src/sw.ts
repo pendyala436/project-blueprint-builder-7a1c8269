@@ -155,7 +155,7 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json();
   } catch (e) {
-    data = { title: 'Meow Meow', body: event.data.text() };
+    data = { title: 'Meow MEOW FRND APP', body: event.data.text() };
   }
 
   // Using type assertion to support vibrate and actions which are supported
@@ -176,7 +176,7 @@ self.addEventListener('push', (event) => {
   } as NotificationOptions;
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Meow Meow', options)
+    self.registration.showNotification(data.title || 'Meow MEOW FRND APP', options)
   );
 });
 

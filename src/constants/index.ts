@@ -9,7 +9,7 @@
 
 // ============= App Info =============
 
-export const APP_NAME = 'Meow Meow';
+export const APP_NAME = 'Meow MEOW FRND APP';
 export const APP_VERSION = '1.0.0';
 export const APP_DESCRIPTION = 'Real People. Real Connections';
 
