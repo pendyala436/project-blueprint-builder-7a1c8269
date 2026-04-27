@@ -740,7 +740,7 @@ export function WomenKYCForm() {
                   <div className="space-y-1 leading-none">
                     <FormLabel>I declare that the information provided is true and correct *</FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      I hereby declare that the details furnished above are true and correct to the best of my knowledge and belief. I authorize Meow Meow to verify my identity and bank details for payout purposes.
+                      I hereby declare that the details furnished above are true and correct to the best of my knowledge and belief. I authorize Meow MEOW FRND APP to verify my identity and bank details for payout purposes.
                     </p>
                   </div>
                   <FormMessage />

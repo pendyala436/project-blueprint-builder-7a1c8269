@@ -1,7 +1,7 @@
 {
-  "name": "Meow Meow - Friend & Chat",
-  "short_name": "Meow Meow",
-  "description": "Connect, chat, and find meaningful friendships with Meow Meow friend app. Available on all devices.",
+  "name": "Meow MEOW FRND APP",
+  "short_name": "Meow MEOW FRND APP",
+  "description": "Connect, chat, and find meaningful friendships with Meow MEOW FRND APP friend app. Available on all devices.",
   "start_url": "/",
   "id": "/",
   "display": "standalone",
