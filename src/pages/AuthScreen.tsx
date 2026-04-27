@@ -15,7 +15,7 @@ const AuroraBackground = lazy(() => import("@/components/AuroraBackground"));
 
 // Inline translations for instant render - no async loading needed
 const translations: Record<string, string> = {
-  'app.name': 'MEOW MEOW',
+  'app.name': 'MEOW MEOW FRND APP',
   'app.tagline': 'Real People. Real Connections',
   'auth.email': 'Email',
   'auth.password': 'Password',
@@ -361,7 +361,7 @@ const AuthScreen = () => {
             <MeowLogo size="lg" className="mx-auto mb-4" />
           </Suspense>
           <h1 className="font-display text-4xl font-bold text-primary mb-2 drop-shadow-sm">
-            {t('app.name', 'MEOW MEOW')}
+            {t('app.name', 'MEOW MEOW FRND APP')}
           </h1>
           <p className="text-primary/80 text-lg">
             {t('app.tagline', 'Real People. Real Connections')}
