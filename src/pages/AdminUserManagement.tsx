@@ -534,6 +534,39 @@ const AdminUserManagement = () => {
     } catch (error) { console.error("Error approving user:", error); toast.error("Failed to update approval status"); }
   };
 
+  // ─── Language Leader Badge ───
+  const handleToggleLanguageLeader = async (user: UserProfile) => {
+    if (user.gender?.toLowerCase() !== "female") {
+      toast.error("Leader badge is only for women");
+      return;
+    }
+    const makeLeader = !user.is_language_leader;
+    if (makeLeader && !user.primary_language) {
+      toast.error("User has no primary language set");
+      return;
+    }
+    if (makeLeader && user.approval_status !== "approved") {
+      toast.error("User must be an approved woman first");
+      return;
+    }
+    try {
+      const { error } = await supabase.rpc("admin_toggle_language_leader" as any, {
+        p_user_id: user.user_id,
+        p_make_leader: makeLeader,
+      });
+      if (error) throw error;
+      toast.success(
+        makeLeader
+          ? `Leader badge assigned for ${user.primary_language}`
+          : `Leader badge removed`
+      );
+      fetchUsers();
+    } catch (e: any) {
+      console.error("Toggle leader error:", e);
+      toast.error(e?.message || "Failed to update leader badge");
+    }
+  };
+
   // ─── Force Free Mode for Women ───
   const handleOpenForceFree = (user: UserProfile) => {
     setForceFreeUser(user);
