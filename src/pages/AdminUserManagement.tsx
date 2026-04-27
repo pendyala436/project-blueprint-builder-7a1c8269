@@ -33,7 +33,7 @@ import {
   Shield, RefreshCw, Filter, ChevronLeft, ChevronRight, ShieldCheck, ShieldAlert,
   Ban, CheckCircle, XCircle, Clock, Pause, Play, Settings, Languages, Bot, Zap,
   Heart, HeartOff, UserPlus, UserMinus, FileText, MessageSquare, Send, Megaphone,
-  Eye, ExternalLink, Home, Loader2, AlertTriangle, MinusCircle, TimerOff,
+  Eye, ExternalLink, Home, Loader2, AlertTriangle, MinusCircle, TimerOff, Crown,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
@@ -59,6 +59,7 @@ interface UserProfile {
   ai_disapproval_reason: string | null;
   account_status: string;
   approval_status: string;
+  is_language_leader?: boolean | null;
 }
 
 interface UserRole {
@@ -943,7 +944,14 @@ const AdminUserManagement = () => {
                                   )}
                                 </div>
                                 <div>
-                                  <p className="font-medium">{user.full_name || "Unknown"}</p>
+                                  <p className="font-medium flex items-center gap-1.5">
+                                    {user.full_name || "Unknown"}
+                                    {user.is_language_leader && (
+                                      <span title={`Language Leader (${user.primary_language || ""})`} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                                        <Crown className="h-3 w-3" /> Leader
+                                      </span>
+                                    )}
+                                  </p>
                                   <p className="text-xs text-muted-foreground truncate max-w-[120px]">{user.primary_language || "No language"}</p>
                                 </div>
                               </div>
