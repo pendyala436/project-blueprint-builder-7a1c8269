@@ -2152,6 +2152,7 @@ export type Database = {
           interests: string[] | null
           is_earning_eligible: boolean | null
           is_indian: boolean | null
+          is_language_leader: boolean
           is_premium: boolean | null
           is_verified: boolean | null
           language: string | null
@@ -2212,6 +2213,7 @@ export type Database = {
           interests?: string[] | null
           is_earning_eligible?: boolean | null
           is_indian?: boolean | null
+          is_language_leader?: boolean
           is_premium?: boolean | null
           is_verified?: boolean | null
           language?: string | null
@@ -2272,6 +2274,7 @@ export type Database = {
           interests?: string[] | null
           is_earning_eligible?: boolean | null
           is_indian?: boolean | null
+          is_language_leader?: boolean
           is_premium?: boolean | null
           is_verified?: boolean | null
           language?: string | null
@@ -3683,6 +3686,10 @@ export type Database = {
           user_id: string
           year: number
         }[]
+      }
+      admin_toggle_language_leader: {
+        Args: { p_make_leader: boolean; p_user_id: string }
+        Returns: Json
       }
       assign_earning_slots: { Args: never; Returns: Json }
       atomic_wallet_credit: {
