@@ -1238,16 +1238,15 @@ const DashboardScreen = () => {
     navigate('/', { replace: true });
   };
 
-  // Handle Cashfree payment return from URL params
+  // Handle Razorpay payment return from URL params (if redirect-flow used)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get('payment');
     const orderId = params.get('order_id');
     if (paymentStatus && orderId) {
-      // Verify with backend
       const verifyPayment = async () => {
         try {
-          const { data, error } = await supabase.functions.invoke('cashfree-payment/verify', {
+          const { data, error } = await supabase.functions.invoke('razorpay-payment/verify', {
             body: { orderId }
           });
           if (error) throw error;
@@ -1273,46 +1272,77 @@ const DashboardScreen = () => {
     if (processingPayment || amountINR < 1) return;
     setSelectedAmount(amountINR);
     setProcessingPayment(true);
-    
-    const gateway = ALL_GATEWAYS.find(g => g.id === selectedGateway);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) throw new Error("Session expired");
 
-      if (selectedGateway === 'cashfree') {
-        const returnUrl = `${window.location.origin}/dashboard?payment={order_status}&order_id={order_id}`;
-        const { data, error } = await supabase.functions.invoke('cashfree-payment', {
-          body: { amount: amountINR, userId: session.user.id, returnUrl }
-        });
+      // Razorpay checkout
+      const { data, error } = await supabase.functions.invoke('razorpay-payment', {
+        body: { amount: amountINR, userId: session.user.id }
+      });
 
-        if (error) throw error;
-        if (!data?.success || !data?.paymentSessionId) {
-          throw new Error(data?.error || 'Failed to create payment order');
-        }
-
-        // Load Cashfree JS SDK and redirect
-        const script = document.createElement('script');
-        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-        script.onload = () => {
-          const cashfree = (window as any).Cashfree({ mode: "production" });
-          cashfree.checkout({ paymentSessionId: data.paymentSessionId, redirectTarget: "_self" });
-        };
-        script.onerror = () => {
-          toast({ title: "Payment Error", description: "Failed to load payment gateway. Please try again.", variant: "destructive" });
-          setProcessingPayment(false);
-          setSelectedAmount(null);
-        };
-        document.head.appendChild(script);
-        return; // Don't reset state — user is being redirected
-      } else {
-        // Razorpay — placeholder
-        toast({
-          title: "Razorpay Coming Soon",
-          description: `Razorpay integration is in progress. Please use Cashfree.`,
-          variant: "destructive",
-        });
+      if (error) throw error;
+      if (!data?.success || !data?.orderId || !data?.keyId) {
+        throw new Error(data?.error || 'Failed to create Razorpay order');
       }
+
+      const loadScript = () => new Promise<boolean>((resolve) => {
+        if ((window as any).Razorpay) return resolve(true);
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.head.appendChild(script);
+      });
+
+      const ok = await loadScript();
+      if (!ok) {
+        toast({ title: "Payment Error", description: "Failed to load Razorpay. Please try again.", variant: "destructive" });
+        setProcessingPayment(false);
+        setSelectedAmount(null);
+        return;
+      }
+
+      const rzp = new (window as any).Razorpay({
+        key: data.keyId,
+        amount: amountINR * 100,
+        currency: "INR",
+        name: "Wallet Recharge",
+        order_id: data.orderId,
+        handler: async (response: any) => {
+          try {
+            const { data: vData, error: vErr } = await supabase.functions.invoke('razorpay-payment/verify', {
+              body: {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }
+            });
+            if (vErr) throw vErr;
+            if (vData?.credited) {
+              toast({ title: "Payment Successful! 🎉", description: `₹${amountINR} added to your wallet.` });
+              loadWalletBalance();
+            } else {
+              toast({ title: "Payment Not Credited", description: vData?.error || "Please contact support.", variant: "destructive" });
+            }
+          } catch (e) {
+            console.error('[Razorpay Verify]', e);
+            toast({ title: "Verification Failed", description: "Please check your wallet balance.", variant: "destructive" });
+          } finally {
+            setSelectedAmount(null);
+            setProcessingPayment(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setSelectedAmount(null);
+            setProcessingPayment(false);
+          }
+        },
+        theme: { color: "#25D366" }
+      });
+      rzp.open();
     } catch (error) {
       console.error("Recharge error:", error);
       toast({
@@ -1320,7 +1350,6 @@ const DashboardScreen = () => {
         description: "Payment could not be processed. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setSelectedAmount(null);
       setProcessingPayment(false);
     }
