@@ -440,7 +440,7 @@ const AuthScreen = () => {
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
             </div>
 
-            <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-card/95 backdrop-blur-xl sm:static sm:mx-0 sm:p-0 sm:bg-transparent sm:backdrop-blur-none">
+            <div className="-mx-3 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-card/95 backdrop-blur-xl sm:mx-0 sm:p-0 sm:bg-transparent sm:backdrop-blur-none space-y-2">
               <Button
                 variant="aurora"
                 size="lg"
@@ -449,6 +449,13 @@ const AuthScreen = () => {
               >
                 {t('auth.signup')}
               </Button>
+              <a
+                href="/PWA_Installation_Guide.docx"
+                download
+                className="block text-center text-xs sm:text-sm text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+              >
+                📥 Download PWA Installation Guide
+              </a>
             </div>
           </div>
         </Card>
