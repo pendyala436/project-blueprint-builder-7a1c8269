@@ -4146,6 +4146,7 @@ export type Database = {
         Returns: Json
       }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
+      validate_financial_sot: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
