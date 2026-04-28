@@ -941,8 +941,10 @@ export const useP2PCall = ({
       const billedMinutes = currentSession.total_minutes || 0;
       const remainingMinutes = durationMinutes - billedMinutes;
       
-      if (remainingMinutes > 0.083) { // More than 5 seconds unbilled
-        console.log(`[P2P] Final billing: ${remainingMinutes.toFixed(2)} remaining minutes`);
+      if (remainingMinutes > 0.0167) { // > 1 second unbilled
+        // Round to 2 decimal places (≈ ±0.6s) — exact pro-rated amount, NOT ceil-to-minute.
+        const exactMinutes = Math.round(remainingMinutes * 100) / 100;
+        console.log(`[P2P] Final billing: ${exactMinutes.toFixed(2)} remaining minutes`);
         try {
           const finalRpc = audioOnly ? 'process_audio_billing' : 'process_video_billing_v2';
           const finalPrefix = audioOnly ? 'audio' : 'video';
@@ -950,8 +952,8 @@ export const useP2PCall = ({
             p_session_id: currentSession.id,
             p_man_id: isInitiator ? currentUserId : remoteUserId,
             p_woman_id: isInitiator ? remoteUserId : currentUserId,
-            p_minutes: Math.max(1, Math.ceil(remainingMinutes)),
-            p_idempotency: `${finalPrefix}:${currentSession.id}:final`,
+            p_minutes: exactMinutes,
+            p_idempotency: `${finalPrefix}:${currentSession.id}:final:${exactMinutes}`,
           });
           console.log('[P2P] Final billing processed');
         } catch (err) {
