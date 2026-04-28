@@ -371,8 +371,8 @@ const AuthScreen = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pb-32 sm:pb-8 relative z-10">
-        <Card className="w-full max-w-md p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
-          <div className="space-y-6">
+        <Card className="w-full max-w-md p-4 sm:p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
+          <div className="space-y-4 sm:space-y-6">
             <EmailInput 
               value={email}
               onChange={handleEmailChange}
