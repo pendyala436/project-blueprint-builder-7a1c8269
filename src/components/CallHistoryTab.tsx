@@ -92,13 +92,20 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .order("created_at", { ascending: false })
         .limit(30);
 
-      // 3. Group call participation
-      const { data: groupAccess } = await supabase
-        .from("group_video_access")
-        .select("*, private_groups(name, owner_id)")
+      // 3. Group call participation — derive from wallet_transactions (single source of truth)
+      //    Men: debits with transaction_type 'group_charge' / 'group_call_charge'
+      //    Women: credits where description starts with 'Group call earning'
+      const { data: groupTxs } = await supabase
+        .from("wallet_transactions")
+        .select("id, amount, description, duration_seconds, rate_per_minute, created_at, transaction_type, type, session_id")
         .eq("user_id", currentUserId)
+        .or(
+          isMale
+            ? "transaction_type.eq.group_charge,transaction_type.eq.group_call_charge"
+            : "description.ilike.Group call earning%"
+        )
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       // Collect partner IDs
       const partnerIds = new Set<string>();
@@ -108,9 +115,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
       videoSessions?.forEach((s) => {
         partnerIds.add(s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id);
       });
-      groupAccess?.forEach((g: any) => {
-        if (g.private_groups?.owner_id) partnerIds.add(g.private_groups.owner_id);
-      });
+      // (Group call partners are not direct 1:1; no extra partner IDs to fetch)
 
       // Batch fetch profiles
       const profileMap = new Map<string, { full_name: string; photo_url: string }>();
@@ -172,23 +177,24 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         });
       });
 
-      // Map group access
-      groupAccess?.forEach((g: any) => {
-        const ownerId = g.private_groups?.owner_id || "";
-        const profile = profileMap.get(ownerId);
+      // Map group call transactions — derive duration & amount from wallet_transactions
+      groupTxs?.forEach((tx: any) => {
+        const secs = Number(tx.duration_seconds) || 0;
+        const mins = secs > 0 ? secs / 60 : 0;
+        const rate = Number(tx.rate_per_minute) || (isMale ? RATES.group.man : RATES.group.woman);
         items.push({
-          id: g.id,
+          id: tx.id,
           type: "group",
-          partnerId: ownerId,
-          partnerName: profile?.full_name || "Host",
-          partnerAvatar: profile?.photo_url || "",
-          status: g.is_active ? "active" : "ended",
-          startedAt: g.access_granted_at || g.created_at,
-          endedAt: g.access_expires_at || undefined,
-          totalMinutes: 0,
-          totalAmount: Number(g.gift_amount) || 0,
-          ratePerMinute: isMale ? RATES.group.man : RATES.group.woman,
-          groupName: g.private_groups?.name || "Private Group",
+          partnerId: "",
+          partnerName: "Private Group",
+          partnerAvatar: "",
+          status: "ended",
+          startedAt: tx.created_at,
+          endedAt: tx.created_at,
+          totalMinutes: mins,
+          totalAmount: Number(tx.amount) || 0,
+          ratePerMinute: rate,
+          groupName: tx.description || "Private Group Call",
         });
       });
 
