@@ -370,9 +370,9 @@ const AuthScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pb-24 sm:pb-8 relative z-10">
-        <Card className="w-full max-w-md p-4 sm:p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
-          <div className="space-y-4 sm:space-y-6">
+      <main className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pb-6 sm:pb-8 relative z-10">
+        <Card className="w-full max-w-md p-3 sm:p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
+          <div className="space-y-3 sm:space-y-6">
             <EmailInput 
               value={email}
               onChange={handleEmailChange}
@@ -440,15 +440,16 @@ const AuthScreen = () => {
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
             </div>
 
-            {/* Register Link */}
-            <Button
-              variant="aurora"
-              size="lg"
-              className="w-full"
-              onClick={() => navigate("/register")}
-            >
-              {t('auth.signup')}
-            </Button>
+            <div className="sticky bottom-0 -mx-3 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-card/95 backdrop-blur-xl sm:static sm:mx-0 sm:p-0 sm:bg-transparent sm:backdrop-blur-none">
+              <Button
+                variant="aurora"
+                size="lg"
+                className="w-full"
+                onClick={() => navigate("/register")}
+              >
+                {t('auth.signup')}
+              </Button>
+            </div>
           </div>
         </Card>
       </main>
