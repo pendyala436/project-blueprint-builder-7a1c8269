@@ -177,23 +177,24 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         });
       });
 
-      // Map group access
-      groupAccess?.forEach((g: any) => {
-        const ownerId = g.private_groups?.owner_id || "";
-        const profile = profileMap.get(ownerId);
+      // Map group call transactions — derive duration & amount from wallet_transactions
+      groupTxs?.forEach((tx: any) => {
+        const secs = Number(tx.duration_seconds) || 0;
+        const mins = secs > 0 ? secs / 60 : 0;
+        const rate = Number(tx.rate_per_minute) || (isMale ? RATES.group.man : RATES.group.woman);
         items.push({
-          id: g.id,
+          id: tx.id,
           type: "group",
-          partnerId: ownerId,
-          partnerName: profile?.full_name || "Host",
-          partnerAvatar: profile?.photo_url || "",
-          status: g.is_active ? "active" : "ended",
-          startedAt: g.access_granted_at || g.created_at,
-          endedAt: g.access_expires_at || undefined,
-          totalMinutes: 0,
-          totalAmount: Number(g.gift_amount) || 0,
-          ratePerMinute: isMale ? RATES.group.man : RATES.group.woman,
-          groupName: g.private_groups?.name || "Private Group",
+          partnerId: "",
+          partnerName: "Private Group",
+          partnerAvatar: "",
+          status: "ended",
+          startedAt: tx.created_at,
+          endedAt: tx.created_at,
+          totalMinutes: mins,
+          totalAmount: Number(tx.amount) || 0,
+          ratePerMinute: rate,
+          groupName: tx.description || "Private Group Call",
         });
       });
 
