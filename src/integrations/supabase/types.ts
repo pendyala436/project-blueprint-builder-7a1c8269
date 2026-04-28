@@ -4043,7 +4043,6 @@ export type Database = {
         }
         Returns: Json
       }
-      process_group_billing: { Args: { p_group_id: string }; Returns: Json }
       process_group_billing_v2: {
         Args: {
           p_group_id: string
