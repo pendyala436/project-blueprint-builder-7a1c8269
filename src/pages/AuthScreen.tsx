@@ -349,7 +349,7 @@ const AuthScreen = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-background">
+    <div className="min-h-screen flex flex-col relative bg-background overflow-y-auto">
       <Suspense fallback={<div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />}>
         <AuroraBackground />
       </Suspense>
