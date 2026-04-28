@@ -55,51 +55,18 @@ export interface StatementRow {
 }
 
 // ──────────── Billing ────────────
+//
+// Per-minute billing is performed exclusively by the canonical RPCs (Single
+// Source of Truth — see mem://financial/single-source-of-truth):
+//   • Chat   → `process_chat_billing`         (called via chat-manager edge fn)
+//   • Audio  → `process_audio_billing`        (called from useP2PCall)
+//   • Video  → `process_video_billing_v2`     (called from useP2PCall)
+//   • Group  → `process_group_billing_v2`     (called from usePrivateGroupCall)
+//
+// The legacy client-side `billSession` / `billGroupCall` helpers (which used
+// the non-canonical `ledger_bill_*` RPCs and double-wrote `women_earnings`)
+// have been removed to enforce the SoT contract.
 
-/** Bill a session tick — supports partial minutes via durationSeconds (default 60) */
-export async function billSession(
-  sessionId: string,
-  sessionType: SessionType,
-  manId: string,
-  womanId: string,
-  minuteNumber: number,
-  durationSeconds: number = 60
-): Promise<BillingResult> {
-  const rates = PRICING[sessionType];
-  const { data, error } = await supabase.rpc('ledger_bill_session', {
-    p_session_id: sessionId,
-    p_session_type: sessionType,
-    p_man_id: manId,
-    p_woman_id: womanId,
-    p_minute_number: minuteNumber,
-    p_man_charge: rates.man,
-    p_woman_earn: rates.woman,
-    p_duration_seconds: Math.max(1, Math.round(durationSeconds)),
-  });
-  if (error) return { success: false, error: error.message };
-  return (data as BillingResult) ?? { success: false, error: 'No response' };
-}
-
-/** Bill one tick of a private group call — supports partial minutes */
-export async function billGroupCall(
-  sessionId: string,
-  womanId: string,
-  manIds: string[],
-  minuteNumber: number,
-  durationSeconds: number = 60
-): Promise<BillingResult> {
-  const { data, error } = await supabase.rpc('ledger_bill_group_call', {
-    p_session_id: sessionId,
-    p_woman_id: womanId,
-    p_man_ids: manIds,
-    p_minute_number: minuteNumber,
-    p_charge_per_man: PRICING.private_group_call.man,
-    p_earn_per_man: PRICING.private_group_call.woman,
-    p_duration_seconds: Math.max(1, Math.round(durationSeconds)),
-  });
-  if (error) return { success: false, error: error.message };
-  return (data as BillingResult) ?? { success: false, error: 'No response' };
-}
 
 // ──────────── Wallet Operations ────────────
 
