@@ -1423,41 +1423,29 @@ serve(async (req) => {
           );
         }
         
-        // Super users don't get charged but Indian women still earn
+        // Super users: route through the SAME canonical RPC. `process_chat_billing`
+        // handles super-user bypass (no man debit) and still credits the Indian woman,
+        // writing exclusively to wallet_transactions (Single Source of Truth).
         if (isSuperUser) {
-          // Only credit Indian women
-          const womenEarnings = womanIsIndian ? fractionalMinutes * womenEarningRate : 0;
-          
-          if (womenEarnings > 0) {
-            const { data: wWallet } = await supabase.from("wallets").select("id, balance").eq("user_id", session.woman_user_id).maybeSingle();
-            await Promise.all([
-              supabase.from("women_earnings").insert({
-                user_id: session.woman_user_id,
-                chat_session_id: session.id,
-                amount: womenEarnings,
-                earning_type: "chat",
-                description: `Chat earning (super user) - ${fractionalMinutes.toFixed(1)} min at ₹${womenEarningRate}/min`
-              }),
-              ...(wWallet ? [supabase.rpc('atomic_wallet_credit', { p_wallet_id: wWallet.id, p_amount: womenEarnings })] : [])
-            ]);
+          const { data: superBill, error: superBillErr } = await supabase.rpc('process_chat_billing', {
+            p_session_id: session.id,
+            p_minutes: fractionalMinutes,
+          });
+          if (superBillErr) {
+            console.warn('[HEARTBEAT] super-user process_chat_billing error:', superBillErr.message);
           }
-
-          await supabase
-            .from("active_chat_sessions")
-            .update({
-              total_minutes: newTotalMinutes,
-              total_earned: session.total_earned + womenEarnings
-            })
-            .eq("chat_id", chat_id);
+          const sr = (superBill ?? {}) as Record<string, unknown>;
+          const womenEarnings = Number(sr.earned ?? 0);
 
           console.log(`[HEARTBEAT] Super user ${session.man_user_id} - no charge, women earned: ${womenEarnings.toFixed(2)} (indian: ${womanIsIndian})`);
-          
+
           return new Response(
             JSON.stringify({
               success: true,
               billing_started: true,
               super_user: true,
               minutes_elapsed: fractionalMinutes,
+
               women_earned: womenEarnings,
               woman_is_indian: womanIsIndian,
               message: "Super user - no charge applied"
