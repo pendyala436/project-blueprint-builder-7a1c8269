@@ -1,5 +1,5 @@
 import { lazy, Suspense, ReactNode } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -138,6 +138,8 @@ const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 /** Inner component that lives inside BrowserRouter — safe to use router hooks */
 const AppShell = () => {
   useAutoAdjustUI();
+  const location = useLocation();
+  const hideInstallPrompt = location.pathname === "/" || location.pathname === "/index";
 
   if (!isSupabaseConfigured) {
     return <ConfigError />;
@@ -209,7 +211,7 @@ const AppShell = () => {
           </Routes>
           <Toaster />
           <NetworkStatusIndicator />
-          <PWAInstallPrompt />
+          {!hideInstallPrompt && <PWAInstallPrompt />}
         </AutoLogoutWrapper>
       </UserActivityProvider>
     </SecurityProvider>
