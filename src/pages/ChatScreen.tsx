@@ -421,11 +421,8 @@ const ChatScreen = () => {
   }, [toast]);
 
   const { minutesBilled, totalCharged } = useMiniChatBilling({
-    sessionId: billingSessionId,
-    manId: billingManId,
-    womanId: billingWomanId,
+    chatId: activeChatId,
     isActive: isSessionActive && !!billingSessionId,
-    sessionType: 'chat',
     onInsufficientBalance: handleInsufficientBalance,
   });
 
