@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, Download } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { classifyError } from "@/lib/errors";
@@ -370,7 +370,7 @@ const AuthScreen = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pb-32 sm:pb-8 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pb-24 sm:pb-8 relative z-10">
         <Card className="w-full max-w-md p-4 sm:p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
           <div className="space-y-4 sm:space-y-6">
             <EmailInput 
@@ -451,23 +451,6 @@ const AuthScreen = () => {
             </Button>
           </div>
         </Card>
-
-        {/* App Installation Guide Download */}
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            const link = document.createElement('a');
-            link.href = '/app-installation-guide.txt';
-            link.download = 'App-Installation-Guide.txt';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }}
-          className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          <span>Download App Installation Guide (All Devices)</span>
-        </button>
       </main>
     </div>
   );
