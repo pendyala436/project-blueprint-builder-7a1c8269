@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { classifyError } from "@/lib/errors";
@@ -348,8 +348,15 @@ const AuthScreen = () => {
     setShowPassword(prev => !prev);
   }, []);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollByAmount = useCallback((delta: number) => {
+    const el = scrollRef.current;
+    if (el) el.scrollBy({ top: delta, behavior: "smooth" });
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col relative bg-background overflow-y-auto">
+    <div ref={scrollRef} className="min-h-screen flex flex-col relative bg-background overflow-y-auto">
       <Suspense fallback={<div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />}>
         <AuroraBackground />
       </Suspense>
@@ -460,6 +467,26 @@ const AuthScreen = () => {
           </div>
         </Card>
       </main>
+
+      {/* Floating scroll toggle — helps reach Sign Up button on small screens */}
+      <div className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 flex flex-col gap-2">
+        <button
+          type="button"
+          aria-label="Scroll up"
+          onClick={() => scrollByAmount(-300)}
+          className="w-10 h-10 rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-md flex items-center justify-center hover:bg-primary transition-all active:scale-95 border border-primary/30"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Scroll down to Sign Up"
+          onClick={() => scrollByAmount(300)}
+          className="w-10 h-10 rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-md flex items-center justify-center hover:bg-primary transition-all active:scale-95 border border-primary/30"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 };
