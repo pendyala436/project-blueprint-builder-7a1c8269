@@ -1287,6 +1287,11 @@ const DashboardScreen = () => {
         throw new Error(data?.error || 'Failed to create Razorpay order');
       }
 
+      // Server returns gross (charged) and walletAmount (credited).
+      const grossAmount: number = Number(data.grossAmount ?? amountINR);
+      const walletAmount: number = Number(data.walletAmount ?? amountINR);
+      const feeAmount: number = Number(data.feeAmount ?? 0);
+
       const loadScript = () => new Promise<boolean>((resolve) => {
         if ((window as any).Razorpay) return resolve(true);
         const script = document.createElement('script');
@@ -1306,9 +1311,10 @@ const DashboardScreen = () => {
 
       const rzp = new (window as any).Razorpay({
         key: data.keyId,
-        amount: amountINR * 100,
+        amount: Math.round(grossAmount * 100),
         currency: "INR",
         name: "Wallet Recharge",
+        description: `₹${walletAmount} to wallet (+ ₹${feeAmount.toFixed(2)} gateway fee)`,
         order_id: data.orderId,
         handler: async (response: any) => {
           try {
@@ -1321,7 +1327,13 @@ const DashboardScreen = () => {
             });
             if (vErr) throw vErr;
             if (vData?.credited) {
-              toast({ title: "Payment Successful! 🎉", description: `₹${amountINR} added to your wallet.` });
+              toast({
+                title: "Payment Successful! 🎉",
+                description: `₹${vData.amount} credited to wallet (paid ₹${vData.gross ?? grossAmount} incl. 3% fee).`,
+              });
+              loadWalletBalance();
+            } else if (vData?.alreadyCredited) {
+              toast({ title: "Already Credited", description: "This payment was already processed." });
               loadWalletBalance();
             } else {
               toast({ title: "Payment Not Credited", description: vData?.error || "Please contact support.", variant: "destructive" });
@@ -1888,8 +1900,19 @@ const DashboardScreen = () => {
                   </div>
                 </div>
               )}
+              {selectedAmount ? (() => {
+                const gross = Math.ceil(selectedAmount * 1.03 * 100) / 100;
+                const fee = (gross - selectedAmount).toFixed(2);
+                return (
+                  <div className="rounded-md border border-border/50 bg-muted/40 p-2.5 text-xs space-y-1">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Wallet credit</span><span className="font-medium">₹{selectedAmount.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Gateway fee (3%)</span><span>+ ₹{fee}</span></div>
+                    <div className="flex justify-between border-t border-border/40 pt-1 font-semibold"><span>You pay</span><span>₹{gross.toFixed(2)}</span></div>
+                  </div>
+                );
+              })() : null}
               <Button variant="aurora" className="w-full gap-2" onClick={() => selectedAmount && handleRecharge(selectedAmount)} disabled={!selectedAmount || processingPayment}>
-                {processingPayment ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><CreditCard className="h-4 w-4" />{selectedAmount ? `Pay ${formatLocalCurrency(selectedAmount)}` : "Select Amount"}</>}
+                {processingPayment ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><CreditCard className="h-4 w-4" />{selectedAmount ? `Pay ₹${(Math.ceil(selectedAmount * 1.03 * 100) / 100).toFixed(2)}` : "Select Amount"}</>}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground text-center">Secure payment via {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name}</p>
