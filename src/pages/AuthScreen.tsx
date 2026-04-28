@@ -348,8 +348,15 @@ const AuthScreen = () => {
     setShowPassword(prev => !prev);
   }, []);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollByAmount = useCallback((delta: number) => {
+    const el = scrollRef.current;
+    if (el) el.scrollBy({ top: delta, behavior: "smooth" });
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col relative bg-background overflow-y-auto">
+    <div ref={scrollRef} className="min-h-screen flex flex-col relative bg-background overflow-y-auto">
       <Suspense fallback={<div className="fixed inset-0 -z-10 bg-gradient-to-br from-background via-background to-secondary/30" />}>
         <AuroraBackground />
       </Suspense>
