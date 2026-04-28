@@ -355,22 +355,22 @@ const AuthScreen = () => {
       </Suspense>
       
       {/* Header */}
-      <header className="px-6 pt-8 pb-4 relative z-10">
+      <header className="px-6 pt-4 pb-2 sm:pt-8 sm:pb-4 relative z-10">
         <div className="text-center">
-          <Suspense fallback={<div className="w-20 h-20 mx-auto mb-4 bg-primary/20 rounded-full animate-pulse" />}>
-            <MeowLogo size="lg" className="mx-auto mb-4" />
+          <Suspense fallback={<div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-2 sm:mb-4 bg-primary/20 rounded-full animate-pulse" />}>
+            <MeowLogo size="lg" className="mx-auto mb-2 sm:mb-4" />
           </Suspense>
-          <h1 className="font-display text-4xl font-bold text-primary mb-2 drop-shadow-sm">
+          <h1 className="font-display text-2xl sm:text-4xl font-bold text-primary mb-1 sm:mb-2 drop-shadow-sm">
             {t('app.name', 'MEOW MEOW FRND APP')}
           </h1>
-          <p className="text-primary/80 text-lg">
+          <p className="text-primary/80 text-sm sm:text-lg">
             {t('app.tagline', 'Real People. Real Connections')}
           </p>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-start sm:justify-center px-4 sm:px-6 pb-32 sm:pb-8 relative z-10">
         <Card className="w-full max-w-md p-6 bg-card/90 backdrop-blur-xl border border-primary/20 shadow-lg animate-slide-up">
           <div className="space-y-6">
             <EmailInput 
