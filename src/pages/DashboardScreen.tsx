@@ -136,7 +136,6 @@ interface PaymentGateway {
 
 // Payment gateways for men's wallet recharge
 const INDIAN_GATEWAYS: PaymentGateway[] = [
-  { id: "cashfree", name: "Cashfree", logo: "⚡", description: "Cards, UPI, Netbanking", features: ["Cards", "UPI", "Netbanking"] },
   { id: "razorpay", name: "Razorpay", logo: "💳", description: "Cards, UPI, Wallets, EMI", features: ["Cards", "UPI", "Wallets", "EMI"] },
 ];
 
