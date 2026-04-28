@@ -184,7 +184,7 @@ const DashboardScreen = () => {
   const [showFriendsPanel, setShowFriendsPanel] = useState(false);
   const [showAdminChat, setShowAdminChat] = useState(false);
   const [showAdminMessages, setShowAdminMessages] = useState(false);
-  const [selectedGateway, setSelectedGateway] = useState("cashfree");
+  const [selectedGateway, setSelectedGateway] = useState("razorpay");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
