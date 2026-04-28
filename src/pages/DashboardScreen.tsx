@@ -1287,6 +1287,11 @@ const DashboardScreen = () => {
         throw new Error(data?.error || 'Failed to create Razorpay order');
       }
 
+      // Server returns gross (charged) and walletAmount (credited).
+      const grossAmount: number = Number(data.grossAmount ?? amountINR);
+      const walletAmount: number = Number(data.walletAmount ?? amountINR);
+      const feeAmount: number = Number(data.feeAmount ?? 0);
+
       const loadScript = () => new Promise<boolean>((resolve) => {
         if ((window as any).Razorpay) return resolve(true);
         const script = document.createElement('script');
@@ -1306,9 +1311,10 @@ const DashboardScreen = () => {
 
       const rzp = new (window as any).Razorpay({
         key: data.keyId,
-        amount: amountINR * 100,
+        amount: Math.round(grossAmount * 100),
         currency: "INR",
         name: "Wallet Recharge",
+        description: `₹${walletAmount} to wallet (+ ₹${feeAmount.toFixed(2)} gateway fee)`,
         order_id: data.orderId,
         handler: async (response: any) => {
           try {
@@ -1321,7 +1327,13 @@ const DashboardScreen = () => {
             });
             if (vErr) throw vErr;
             if (vData?.credited) {
-              toast({ title: "Payment Successful! 🎉", description: `₹${amountINR} added to your wallet.` });
+              toast({
+                title: "Payment Successful! 🎉",
+                description: `₹${vData.amount} credited to wallet (paid ₹${vData.gross ?? grossAmount} incl. 3% fee).`,
+              });
+              loadWalletBalance();
+            } else if (vData?.alreadyCredited) {
+              toast({ title: "Already Credited", description: "This payment was already processed." });
               loadWalletBalance();
             } else {
               toast({ title: "Payment Not Credited", description: vData?.error || "Please contact support.", variant: "destructive" });
