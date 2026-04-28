@@ -166,15 +166,22 @@ export const useP2PCall = ({
     }
 
     try {
-      // Single source of truth: use canonical v2 RPC (writes only to wallet_transactions)
+      // Single source of truth: canonical RPCs (write only to wallet_transactions).
+      //   audio-only → process_audio_billing  (₹6/min man, ₹3/min woman)
+      //   video      → process_video_billing_v2 (₹8/min man, ₹4/min woman)
       const minuteIdx = Math.floor(Date.now() / 60000);
-      const { data, error } = await supabase.rpc('process_video_billing_v2', {
+      const manId = isInitiator ? currentUserId : remoteUserId;
+      const womanId = isInitiator ? remoteUserId : currentUserId;
+      const rpcName = audioOnly ? 'process_audio_billing' : 'process_video_billing_v2';
+      const idemPrefix = audioOnly ? 'audio' : 'video';
+      const { data, error } = await supabase.rpc(rpcName, {
         p_session_id: sessionId,
-        p_man_id: isInitiator ? currentUserId : remoteUserId,
-        p_woman_id: isInitiator ? remoteUserId : currentUserId,
-        p_minutes: 1, // Bill 1 minute at a time
-        p_idempotency: `video:${sessionId}:${minuteIdx}`,
+        p_man_id: manId,
+        p_woman_id: womanId,
+        p_minutes: 1,
+        p_idempotency: `${idemPrefix}:${sessionId}:${minuteIdx}`,
       });
+
 
       if (error) {
         console.error('[P2P] Billing error:', error);
@@ -937,12 +944,14 @@ export const useP2PCall = ({
       if (remainingMinutes > 0.083) { // More than 5 seconds unbilled
         console.log(`[P2P] Final billing: ${remainingMinutes.toFixed(2)} remaining minutes`);
         try {
-          await supabase.rpc('process_video_billing_v2', {
+          const finalRpc = audioOnly ? 'process_audio_billing' : 'process_video_billing_v2';
+          const finalPrefix = audioOnly ? 'audio' : 'video';
+          await supabase.rpc(finalRpc, {
             p_session_id: currentSession.id,
             p_man_id: isInitiator ? currentUserId : remoteUserId,
             p_woman_id: isInitiator ? remoteUserId : currentUserId,
             p_minutes: Math.max(1, Math.ceil(remainingMinutes)),
-            p_idempotency: `video:${currentSession.id}:final`,
+            p_idempotency: `${finalPrefix}:${currentSession.id}:final`,
           });
           console.log('[P2P] Final billing processed');
         } catch (err) {

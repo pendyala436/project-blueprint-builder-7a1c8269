@@ -1,103 +1,103 @@
 /**
- * useMiniChatBilling — Per-minute billing ticker for active chat sessions.
+ * useMiniChatBilling — Drives canonical chat billing via the `chat-manager`
+ * edge function (Single Source of Truth: `process_chat_billing` RPC writing to
+ * `wallet_transactions`).
  *
  * Behaviour:
- *  - Starts a 60s interval the moment a session becomes active.
- *  - Each tick calls `ledger_bill_session` (full minute).
- *  - On stop (session ends / unmount) it bills the remaining partial seconds
- *    so short chats (e.g. 25s, 90s) are still charged accurately.
+ *  - Pings `action: "heartbeat"` every 60s while the session is active.
+ *  - On unmount / session end, fires a final heartbeat to settle the
+ *    elapsed seconds since the last tick. (The `end_chat` action also
+ *    runs final billing server-side, so this is belt-and-braces.)
+ *  - Detects insufficient-balance responses and notifies the caller.
+ *
+ * Does NOT call `ledger_bill_session` (non-canonical, removed).
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { billSession, PRICING } from '@/services/ledger-wallet.service';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseMiniChatBillingProps {
-  sessionId: string | null;
-  manId: string;
-  womanId: string;
+  chatId: string | null;
   isActive: boolean;
-  sessionType?: 'chat' | 'audio_call' | 'video_call';
   onInsufficientBalance?: () => void;
+  /** kept for backwards-compat with existing call sites */
+  sessionId?: string | null;
+  manId?: string;
+  womanId?: string;
+  sessionType?: 'chat' | 'audio_call' | 'video_call';
+}
+
+interface HeartbeatResponse {
+  success: boolean;
+  message?: string;
+  men_charged?: number;
+  women_earned?: number;
+  minutes_elapsed?: number;
+  remaining_balance?: number;
 }
 
 export function useMiniChatBilling({
-  sessionId,
-  manId,
-  womanId,
+  chatId,
   isActive,
-  sessionType = 'chat',
   onInsufficientBalance,
 }: UseMiniChatBillingProps) {
   const [minutesBilled, setMinutesBilled] = useState(0);
   const [totalCharged, setTotalCharged] = useState(0);
   const [isBilling, setIsBilling] = useState(false);
-  const minuteRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastTickAtRef = useRef<number>(0);
-  const sessionRef = useRef<{ id: string; man: string; woman: string } | null>(null);
+  const chatIdRef = useRef<string | null>(null);
 
-  const billTick = useCallback(async (durationSeconds: number) => {
-    const ctx = sessionRef.current;
-    if (!ctx) return;
-    if (durationSeconds <= 0) return;
-
-    minuteRef.current += 1;
-    const result = await billSession(
-      ctx.id,
-      sessionType,
-      ctx.man,
-      ctx.woman,
-      minuteRef.current,
-      durationSeconds,
-    );
-
-    if (result.success) {
-      if (!result.duplicate_skipped) {
-        setMinutesBilled(prev => prev + Math.round((durationSeconds / 60) * 100) / 100);
-        setTotalCharged(prev => prev + (result.charged ?? PRICING[sessionType].man * (durationSeconds / 60)));
+  const sendHeartbeat = useCallback(async () => {
+    const cid = chatIdRef.current;
+    if (!cid) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('chat-manager', {
+        body: { action: 'heartbeat', chat_id: cid },
+      });
+      if (error) {
+        console.warn('[chat-billing] heartbeat error:', error.message);
+        return;
       }
-    } else if (result.error?.includes('Insufficient balance')) {
-      onInsufficientBalance?.();
+      const r = (data ?? {}) as HeartbeatResponse;
+      if (r.success === false && /insufficient/i.test(r.message ?? '')) {
+        onInsufficientBalance?.();
+        return;
+      }
+      if (typeof r.minutes_elapsed === 'number' && r.minutes_elapsed > 0) {
+        setMinutesBilled(prev => prev + r.minutes_elapsed!);
+      }
+      if (typeof r.men_charged === 'number' && r.men_charged > 0) {
+        setTotalCharged(prev => prev + r.men_charged!);
+      }
+    } catch (e) {
+      console.warn('[chat-billing] heartbeat failed:', e);
     }
-  }, [sessionType, onInsufficientBalance]);
+  }, [onInsufficientBalance]);
 
   useEffect(() => {
-    if (isActive && sessionId && manId && womanId) {
-      sessionRef.current = { id: sessionId, man: manId, woman: womanId };
-      lastTickAtRef.current = Date.now();
+    if (isActive && chatId) {
+      chatIdRef.current = chatId;
       setIsBilling(true);
-
-      intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        const elapsed = Math.round((now - lastTickAtRef.current) / 1000);
-        lastTickAtRef.current = now;
-        // Bill full ticks (≈60s); use actual elapsed for accuracy across throttled tabs
-        void billTick(elapsed);
-      }, 60_000);
-
+      // Tick every 60s; canonical RPC handles fractional minutes server-side.
+      intervalRef.current = setInterval(() => { void sendHeartbeat(); }, 60_000);
       return () => {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-        // Settle remaining partial seconds since the last tick
-        const remaining = Math.round((Date.now() - lastTickAtRef.current) / 1000);
-        if (remaining > 0 && sessionRef.current) {
-          void billTick(remaining);
-        }
-        sessionRef.current = null;
+        // Final settle on stop (server `end_chat` also settles — idempotent).
+        void sendHeartbeat();
+        chatIdRef.current = null;
         setIsBilling(false);
       };
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setIsBilling(false);
     }
-  }, [isActive, sessionId, manId, womanId, billTick]);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setIsBilling(false);
+  }, [isActive, chatId, sendHeartbeat]);
 
   const reset = useCallback(() => {
-    minuteRef.current = 0;
     setMinutesBilled(0);
     setTotalCharged(0);
   }, []);
