@@ -115,9 +115,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
       videoSessions?.forEach((s) => {
         partnerIds.add(s.man_user_id === currentUserId ? s.woman_user_id : s.man_user_id);
       });
-      groupAccess?.forEach((g: any) => {
-        if (g.private_groups?.owner_id) partnerIds.add(g.private_groups.owner_id);
-      });
+      // (Group call partners are not direct 1:1; no extra partner IDs to fetch)
 
       // Batch fetch profiles
       const profileMap = new Map<string, { full_name: string; photo_url: string }>();
