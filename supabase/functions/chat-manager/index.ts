@@ -1180,7 +1180,9 @@ serve(async (req) => {
         
         const isBillingPaused = session.status === "billing_paused";
 
-        const MESSAGE_INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes in milliseconds
+        // Billing rule: starts only when BOTH parties have replied within 2 min of each other
+        // and BOTH are online; pauses only when BOTH have been idle for 2+ min.
+        const MESSAGE_INACTIVITY_TIMEOUT_MS = 120000; // 2 minutes in milliseconds
         const now = new Date();
 
         // Get messages from both parties to check two-way conversation
@@ -1231,73 +1233,80 @@ serve(async (req) => {
           );
         }
 
-        // Check 3-minute inactivity from either party - PAUSE BILLING (don't disconnect)
+        // ─── BILLING GATE ───────────────────────────────────────────────
+        // Rule: bill ONLY when
+        //   (a) both have messaged at least once,
+        //   (b) the gap between their two latest messages is ≤ 2 min
+        //       (i.e. both replied within 2 min of each other),
+        //   (c) both are online,
+        //   (d) at least one of them has spoken within the last 2 min
+        //       (i.e. NOT BOTH idle for ≥ 2 min).
+        // Otherwise pause billing (chat stays connected).
         const manLastMessageTime = new Date(manMessages[0].created_at).getTime();
         const womanLastMessageTime = new Date(womanMessages[0].created_at).getTime();
         const nowTime = now.getTime();
-
         const manInactiveMs = nowTime - manLastMessageTime;
         const womanInactiveMs = nowTime - womanLastMessageTime;
+        const replyGapMs = Math.abs(manLastMessageTime - womanLastMessageTime);
 
-        // If either party hasn't replied for 3 minutes, PAUSE BILLING (chat stays connected)
-        if (manInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS) {
-          console.log(`[HEARTBEAT] Man ${session.man_user_id} inactive for ${Math.floor(manInactiveMs / 1000)}s - PAUSING billing (chat stays connected)`);
-          
-          // Update session to mark billing as paused
+        // (c) Both online?
+        const { data: presence } = await supabase
+          .from("user_status")
+          .select("user_id, is_online")
+          .in("user_id", [session.man_user_id, session.woman_user_id]);
+        const onlineMap = new Map((presence ?? []).map((p: any) => [p.user_id, !!p.is_online]));
+        const manOnline = onlineMap.get(session.man_user_id) ?? false;
+        const womanOnline = onlineMap.get(session.woman_user_id) ?? false;
+        const bothOnline = manOnline && womanOnline;
+
+        // (d) Both idle for ≥ 2 min → PAUSE
+        const bothIdle = manInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS
+                      && womanInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS;
+
+        // (b) Reply gap > 2 min → not yet a mutual conversation → PAUSE
+        const replyGapTooLarge = replyGapMs > MESSAGE_INACTIVITY_TIMEOUT_MS;
+
+        const shouldPause = bothIdle || replyGapTooLarge || !bothOnline;
+
+        if (shouldPause) {
+          const reason = !bothOnline
+            ? "one or both parties offline"
+            : bothIdle
+              ? "both parties idle for 2+ minutes"
+              : "reply gap exceeds 2 minutes";
+          console.log(`[HEARTBEAT] Pausing billing for chat ${chat_id}: ${reason}`);
+
           await supabase
             .from("active_chat_sessions")
-            .update({ 
+            .update({
               last_activity_at: now.toISOString(),
-              status: "billing_paused"
+              status: "billing_paused",
             })
             .eq("chat_id", chat_id);
-          
+
           return new Response(
-            JSON.stringify({ 
-              success: true, 
+            JSON.stringify({
+              success: true,
               billing_paused: true,
               billing_started: false,
-              message: "Billing paused: Man inactive for 3+ minutes. Chat still connected - reply to resume billing.",
-              inactive_party: "man",
-              inactive_seconds: Math.floor(manInactiveMs / 1000)
+              message: `Billing paused: ${reason}. Chat still connected — reply to resume billing.`,
+              man_inactive_seconds: Math.floor(manInactiveMs / 1000),
+              woman_inactive_seconds: Math.floor(womanInactiveMs / 1000),
+              reply_gap_seconds: Math.floor(replyGapMs / 1000),
+              both_online: bothOnline,
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        if (womanInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS) {
-          console.log(`[HEARTBEAT] Woman ${session.woman_user_id} inactive for ${Math.floor(womanInactiveMs / 1000)}s - PAUSING billing (chat stays connected)`);
-          
-          // Update session to mark billing as paused
-          await supabase
-            .from("active_chat_sessions")
-            .update({ 
-              last_activity_at: now.toISOString(),
-              status: "billing_paused"
-            })
-            .eq("chat_id", chat_id);
-          
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              billing_paused: true,
-              billing_started: false,
-              message: "Billing paused: Woman inactive for 3+ minutes. Chat still connected - reply to resume billing.",
-              inactive_party: "woman",
-              inactive_seconds: Math.floor(womanInactiveMs / 1000)
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        // Both parties are active (within 3 minutes) - resume billing if it was paused
+        // All gates passed — resume billing if it was paused
         if (isBillingPaused) {
-          console.log(`[HEARTBEAT] Both parties active - resuming billing for chat ${chat_id}`);
+          console.log(`[HEARTBEAT] Both parties active & online, reply gap ≤ 2 min — resuming billing for chat ${chat_id}`);
           await supabase
             .from("active_chat_sessions")
-            .update({ 
+            .update({
               status: "active",
-              last_activity_at: now.toISOString()
+              last_activity_at: now.toISOString(),
             })
             .eq("chat_id", chat_id);
         }
