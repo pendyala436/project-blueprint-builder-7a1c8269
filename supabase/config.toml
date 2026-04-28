@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.payu-payment]
 verify_jwt = false
+
+[functions.razorpay-webhook]
+verify_jwt = false
