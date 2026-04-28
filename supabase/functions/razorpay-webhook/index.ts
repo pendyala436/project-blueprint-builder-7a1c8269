@@ -1,9 +1,10 @@
-// Razorpay webhook: server-to-server payment confirmation as a safety net in
-// case the browser-side verify call doesn't reach us (network drop, app close).
-// Credits via ledger_recharge — idempotent on (user_id, payment_id).
+// Razorpay webhook: server-to-server payment confirmation as a safety net.
+// Credits the NET wallet_amount stored in order notes (not the gross charged).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+const GATEWAY_FEE_RATE = 0.03;
 const enc = new TextEncoder();
+const r2 = (n: number) => Math.round(n * 100) / 100;
 
 async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
@@ -14,13 +15,14 @@ async function hmacSha256Hex(secret: string, message: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+
   const SECRET = Deno.env.get("RAZORPAY_WEBHOOK_SECRET");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!SECRET || !SUPABASE_URL || !SERVICE_ROLE) {
+  const KEY_ID = Deno.env.get("RAZORPAY_KEY_ID");
+  const KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+  if (!SECRET || !SUPABASE_URL || !SERVICE_ROLE || !KEY_ID || !KEY_SECRET) {
     return new Response("Server not configured", { status: 500 });
   }
 
@@ -33,9 +35,7 @@ Deno.serve(async (req) => {
   }
 
   let evt: any;
-  try { evt = JSON.parse(raw); } catch {
-    return new Response("Bad JSON", { status: 400 });
-  }
+  try { evt = JSON.parse(raw); } catch { return new Response("Bad JSON", { status: 400 }); }
   const event = String(evt.event ?? "");
   if (event !== "payment.captured" && event !== "order.paid") {
     return new Response("ignored", { status: 200 });
@@ -44,20 +44,40 @@ Deno.serve(async (req) => {
   const payment = evt.payload?.payment?.entity;
   if (!payment) return new Response("No payment entity", { status: 200 });
 
-  const userId = payment.notes?.user_id;
-  const amountINR = Number(payment.amount) / 100;
+  // Webhook payment notes may not include wallet_amount (Razorpay copies order
+  // notes only sometimes), so always re-fetch the order to get the canonical net.
+  const orderId = payment.order_id as string | undefined;
+  let userId: string | undefined = payment.notes?.user_id;
+  let walletINR: number | undefined;
+  const grossINR = Number(payment.amount) / 100;
+
+  if (orderId) {
+    const auth = "Basic " + btoa(`${KEY_ID}:${KEY_SECRET}`);
+    const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${orderId}`, {
+      headers: { Authorization: auth },
+    });
+    if (orderRes.ok) {
+      const order = await orderRes.json() as { notes?: { user_id?: string; wallet_amount?: string } };
+      userId ??= order.notes?.user_id;
+      const w = Number(order.notes?.wallet_amount ?? "");
+      if (Number.isFinite(w) && w > 0) walletINR = r2(w);
+    }
+  }
+  // Fallback: derive net from gross.
+  if (!walletINR) walletINR = r2(grossINR / (1 + GATEWAY_FEE_RATE));
+
   const paymentId = payment.id as string;
-  if (!userId || !Number.isFinite(amountINR) || amountINR <= 0 || !paymentId) {
+  if (!userId || walletINR <= 0 || !paymentId) {
     return new Response("Missing fields", { status: 200 });
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
   const { error } = await admin.rpc("ledger_recharge", {
     p_user_id: userId,
-    p_amount: amountINR,
+    p_amount: walletINR,
     p_gateway: "razorpay",
     p_gateway_txn_id: paymentId,
-    p_description: `Razorpay webhook ${event} ${paymentId}`,
+    p_description: `Razorpay webhook \u20b9${walletINR} (gross \u20b9${r2(grossINR)}) ${event} ${paymentId}`,
   });
   if (error) {
     const msg = error.message ?? "";
