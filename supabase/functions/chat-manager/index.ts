@@ -1180,7 +1180,9 @@ serve(async (req) => {
         
         const isBillingPaused = session.status === "billing_paused";
 
-        const MESSAGE_INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes in milliseconds
+        // Billing rule: starts only when BOTH parties have replied within 2 min of each other
+        // and BOTH are online; pauses only when BOTH have been idle for 2+ min.
+        const MESSAGE_INACTIVITY_TIMEOUT_MS = 120000; // 2 minutes in milliseconds
         const now = new Date();
 
         // Get messages from both parties to check two-way conversation
