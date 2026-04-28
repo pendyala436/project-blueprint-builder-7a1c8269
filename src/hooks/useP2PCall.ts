@@ -944,12 +944,14 @@ export const useP2PCall = ({
       if (remainingMinutes > 0.083) { // More than 5 seconds unbilled
         console.log(`[P2P] Final billing: ${remainingMinutes.toFixed(2)} remaining minutes`);
         try {
-          await supabase.rpc('process_video_billing_v2', {
+          const finalRpc = audioOnly ? 'process_audio_billing' : 'process_video_billing_v2';
+          const finalPrefix = audioOnly ? 'audio' : 'video';
+          await supabase.rpc(finalRpc, {
             p_session_id: currentSession.id,
             p_man_id: isInitiator ? currentUserId : remoteUserId,
             p_woman_id: isInitiator ? remoteUserId : currentUserId,
             p_minutes: Math.max(1, Math.ceil(remainingMinutes)),
-            p_idempotency: `video:${currentSession.id}:final`,
+            p_idempotency: `${finalPrefix}:${currentSession.id}:final`,
           });
           console.log('[P2P] Final billing processed');
         } catch (err) {
