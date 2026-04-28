@@ -1,6 +1,11 @@
 /**
  * useMiniChatBilling — Per-minute billing ticker for active chat sessions.
- * Calls ledger_bill_session RPC every 60 seconds while chat is active.
+ *
+ * Behaviour:
+ *  - Starts a 60s interval the moment a session becomes active.
+ *  - Each tick calls `ledger_bill_session` (full minute).
+ *  - On stop (session ends / unmount) it bills the remaining partial seconds
+ *    so short chats (e.g. 25s, 90s) are still charged accurately.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { billSession, PRICING } from '@/services/ledger-wallet.service';
@@ -27,37 +32,69 @@ export function useMiniChatBilling({
   const [isBilling, setIsBilling] = useState(false);
   const minuteRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTickAtRef = useRef<number>(0);
+  const sessionRef = useRef<{ id: string; man: string; woman: string } | null>(null);
 
-  const billOneMinute = useCallback(async () => {
-    if (!sessionId || !manId || !womanId) return;
-    
+  const billTick = useCallback(async (durationSeconds: number) => {
+    const ctx = sessionRef.current;
+    if (!ctx) return;
+    if (durationSeconds <= 0) return;
+
     minuteRef.current += 1;
-    const result = await billSession(sessionId, sessionType, manId, womanId, minuteRef.current);
-    
+    const result = await billSession(
+      ctx.id,
+      sessionType,
+      ctx.man,
+      ctx.woman,
+      minuteRef.current,
+      durationSeconds,
+    );
+
     if (result.success) {
       if (!result.duplicate_skipped) {
-        setMinutesBilled(prev => prev + 1);
-        setTotalCharged(prev => prev + (result.charged || PRICING[sessionType].man));
+        setMinutesBilled(prev => prev + Math.round((durationSeconds / 60) * 100) / 100);
+        setTotalCharged(prev => prev + (result.charged ?? PRICING[sessionType].man * (durationSeconds / 60)));
       }
     } else if (result.error?.includes('Insufficient balance')) {
       onInsufficientBalance?.();
     }
-  }, [sessionId, manId, womanId, sessionType, onInsufficientBalance]);
+  }, [sessionType, onInsufficientBalance]);
 
   useEffect(() => {
-    if (isActive && sessionId) {
+    if (isActive && sessionId && manId && womanId) {
+      sessionRef.current = { id: sessionId, man: manId, woman: womanId };
+      lastTickAtRef.current = Date.now();
       setIsBilling(true);
-      // Bill first minute immediately after 60s
-      intervalRef.current = setInterval(billOneMinute, 60_000);
+
+      intervalRef.current = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.round((now - lastTickAtRef.current) / 1000);
+        lastTickAtRef.current = now;
+        // Bill full ticks (≈60s); use actual elapsed for accuracy across throttled tabs
+        void billTick(elapsed);
+      }, 60_000);
+
       return () => {
-        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        // Settle remaining partial seconds since the last tick
+        const remaining = Math.round((Date.now() - lastTickAtRef.current) / 1000);
+        if (remaining > 0 && sessionRef.current) {
+          void billTick(remaining);
+        }
+        sessionRef.current = null;
         setIsBilling(false);
       };
     } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       setIsBilling(false);
     }
-  }, [isActive, sessionId, billOneMinute]);
+  }, [isActive, sessionId, manId, womanId, billTick]);
 
   const reset = useCallback(() => {
     minuteRef.current = 0;
