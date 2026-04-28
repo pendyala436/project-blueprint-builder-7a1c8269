@@ -467,6 +467,26 @@ const AuthScreen = () => {
           </div>
         </Card>
       </main>
+
+      {/* Floating scroll toggle — helps reach Sign Up button on small screens */}
+      <div className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-50 flex flex-col gap-2">
+        <button
+          type="button"
+          aria-label="Scroll up"
+          onClick={() => scrollByAmount(-300)}
+          className="w-10 h-10 rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-md flex items-center justify-center hover:bg-primary transition-all active:scale-95 border border-primary/30"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Scroll down to Sign Up"
+          onClick={() => scrollByAmount(300)}
+          className="w-10 h-10 rounded-full bg-primary/90 text-primary-foreground shadow-lg backdrop-blur-md flex items-center justify-center hover:bg-primary transition-all active:scale-95 border border-primary/30"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 };
