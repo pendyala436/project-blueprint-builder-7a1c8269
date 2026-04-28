@@ -1900,8 +1900,19 @@ const DashboardScreen = () => {
                   </div>
                 </div>
               )}
+              {selectedAmount ? (() => {
+                const gross = Math.ceil(selectedAmount * 1.03 * 100) / 100;
+                const fee = (gross - selectedAmount).toFixed(2);
+                return (
+                  <div className="rounded-md border border-border/50 bg-muted/40 p-2.5 text-xs space-y-1">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Wallet credit</span><span className="font-medium">₹{selectedAmount.toFixed(2)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Gateway fee (3%)</span><span>+ ₹{fee}</span></div>
+                    <div className="flex justify-between border-t border-border/40 pt-1 font-semibold"><span>You pay</span><span>₹{gross.toFixed(2)}</span></div>
+                  </div>
+                );
+              })() : null}
               <Button variant="aurora" className="w-full gap-2" onClick={() => selectedAmount && handleRecharge(selectedAmount)} disabled={!selectedAmount || processingPayment}>
-                {processingPayment ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><CreditCard className="h-4 w-4" />{selectedAmount ? `Pay ${formatLocalCurrency(selectedAmount)}` : "Select Amount"}</>}
+                {processingPayment ? <RefreshCw className="h-4 w-4 animate-spin" /> : <><CreditCard className="h-4 w-4" />{selectedAmount ? `Pay ₹${(Math.ceil(selectedAmount * 1.03 * 100) / 100).toFixed(2)}` : "Select Amount"}</>}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground text-center">Secure payment via {ALL_GATEWAYS.find(g => g.id === selectedGateway)?.name}</p>
