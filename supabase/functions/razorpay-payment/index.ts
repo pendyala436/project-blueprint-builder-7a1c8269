@@ -43,7 +43,6 @@ Deno.serve(async (req) => {
   }
 
   const url = new URL(req.url);
-  const isVerify = url.pathname.endsWith("/verify");
 
   const authHeader = req.headers.get("Authorization") ?? "";
   const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
@@ -57,6 +56,13 @@ Deno.serve(async (req) => {
 
   let body: Record<string, unknown> = {};
   try { body = await req.json(); } catch { /* allow empty */ }
+
+  // /verify is signalled either by URL path (legacy) OR by presence of
+  // razorpay_payment_id in the body (preferred — supabase.functions.invoke()
+  // does not preserve sub-paths reliably).
+  const isVerify = url.pathname.endsWith("/verify")
+    || typeof body.razorpay_payment_id === "string"
+    || body.action === "verify";
 
   // ---------- VERIFY ----------
   if (isVerify) {
