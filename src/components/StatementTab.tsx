@@ -107,6 +107,13 @@ const buildTableRows = (rows: StatementRow[]) =>
 
 const STATIC_HEADERS_PREFIX = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate'];
 
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'male' }) => {
   const isMale = gender === 'male';
   const now = new Date();
@@ -121,8 +128,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
-    from: monthStart.toISOString().slice(0, 10),
-    to: new Date().toISOString().slice(0, 10),
+    from: toDateInputValue(monthStart),
+    to: toDateInputValue(now),
   });
 
   const loadStatement = useCallback(async () => {
