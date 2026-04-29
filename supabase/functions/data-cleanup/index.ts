@@ -302,16 +302,8 @@ Deno.serve(async (req) => {
         results.errors.push(`Shift earnings: ${deleteEarningsError.message}`);
       }
 
-      // Clean up old women earnings
-      const { error: deleteWomenEarningsError } = await supabase
-        .from('women_earnings')
-        .delete()
-        .lt('created_at', transactionCutoff.toISOString());
-
-      if (deleteWomenEarningsError) {
-        console.error('[Data Cleanup] Error deleting old women earnings:', deleteWomenEarningsError);
-        results.errors.push(`Women earnings: ${deleteWomenEarningsError.message}`);
-      }
+      // Note: women_earnings legacy table removed; wallet_transactions is the SoT
+      // and is retained per data-retention policy (6mo) by other cleanup paths.
     } catch (error: any) {
       console.error('[Data Cleanup] Error in transaction cleanup:', error);
       results.errors.push(`Transactions exception: ${error.message}`);
