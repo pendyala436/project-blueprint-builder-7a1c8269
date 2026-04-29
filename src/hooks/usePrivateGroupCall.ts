@@ -512,13 +512,17 @@ export function usePrivateGroupCall({
           return;
         }
 
+        // Compute deterministic minute_index from session start so it aligns with
+        // the on-join bill (minute_index=0). Heartbeat ticks bill 1, 2, 3, ...
+        const minuteIdx = Math.max(1, Math.floor((Date.now() - session.startTime) / 60000));
+
         await Promise.all(activeMen.map(async (man) => {
           // Resolve man's profile.id from his auth user_id (man.id is auth user_id)
           const { data: manProfile } = await supabase
             .from('profiles').select('id').eq('user_id', man.id).maybeSingle();
           if (!manProfile?.id) return;
 
-          const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id);
+          const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id, minuteIdx);
           if (!r.success && r.error?.includes('Insufficient balance')) {
             // Eject this man — billing failed
             console.warn('[GROUP] Ejecting man for insufficient balance:', man.id);
@@ -611,6 +615,29 @@ export function usePrivateGroupCall({
           participants: Array.from(sessionRef.current?.participants.values() || []),
           viewerCount: sessionRef.current?.participants.size || 0,
         }));
+
+        // Bill immediately on man-join so wallet_transactions records every session,
+        // even short ones that end before the first 60s billing tick.
+        // The minute_index=0 ensures idempotency vs the host's per-minute timer.
+        if (isOwner && !newParticipant.isOwner && sessionRef.current) {
+          const session = sessionRef.current;
+          (async () => {
+            try {
+              const [{ data: hostProfile }, { data: manProfile }] = await Promise.all([
+                supabase.from('profiles').select('id').eq('user_id', session.hostId).maybeSingle(),
+                supabase.from('profiles').select('id').eq('user_id', key).maybeSingle(),
+              ]);
+              if (!hostProfile?.id || !manProfile?.id) return;
+              const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id, 0);
+              if (!r.success && r.error?.includes('Insufficient balance')) {
+                console.warn('[GROUP] Ejecting man on join — insufficient balance:', key);
+                onParticipantLeave?.(key, 'insufficient_balance');
+              }
+            } catch (err) {
+              console.error('[GROUP] First-minute billing on join failed:', err);
+            }
+          })();
+        }
 
         // DON'T send offer here - wait for participant's 'participant-ready' signal
         // This avoids the race condition where the offer arrives before the participant's listeners are ready
