@@ -4158,28 +4158,17 @@ export type Database = {
         }
         Returns: Json
       }
-      ledger_recharge:
-        | {
-            Args: {
-              p_amount: number
-              p_description?: string
-              p_gateway?: string
-              p_gateway_txn_id?: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_description?: string
-              p_gateway?: string
-              p_gateway_txn_id?: string
-              p_reference_id?: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      ledger_recharge: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_gateway?: string
+          p_gateway_txn_id?: string
+          p_reference_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       ledger_withdrawal: {
         Args: {
           p_amount: number
@@ -4235,14 +4224,6 @@ export type Database = {
           p_man_ids: string[]
           p_minutes: number
           p_session_id: string
-        }
-        Returns: Json
-      }
-      process_men_recharge: {
-        Args: {
-          p_gross_amount: number
-          p_reference?: string
-          p_user_id: string
         }
         Returns: Json
       }
@@ -4330,6 +4311,15 @@ export type Database = {
         Returns: Json
       }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
+      verify_recharge_integrity: {
+        Args: never
+        Returns: {
+          duplicate_keys: number
+          ledger_recharge_total: number
+          recharge_count: number
+          user_id: string
+        }[]
+      }
       women_ledger_balance: { Args: { p_woman_id: string }; Returns: number }
     }
     Enums: {
