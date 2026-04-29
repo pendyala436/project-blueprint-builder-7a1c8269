@@ -4185,6 +4185,10 @@ export type Database = {
       send_friend_request: { Args: { p_target_user_id: string }; Returns: Json }
       should_bypass_balance: { Args: { p_user_id: string }; Returns: boolean }
       should_woman_earn: { Args: { p_user_id: string }; Returns: boolean }
+      simulate_group_call_billing: {
+        Args: { p_man_id?: string; p_minutes?: number; p_woman_id?: string }
+        Returns: Json
+      }
       start_host_session: {
         Args: {
           p_group_id: string
