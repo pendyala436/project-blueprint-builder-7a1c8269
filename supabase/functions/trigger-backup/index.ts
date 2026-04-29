@@ -13,7 +13,7 @@ interface BackupRequest {
 const BACKUP_TABLES = [
   'profiles', 'male_profiles', 'female_profiles', 'user_roles',
   'chat_messages', 'active_chat_sessions', 'matches',
-  'ledger_transactions', 'gift_transactions', 'gifts',
+  'wallet_transactions', 'wallets', 'gift_transactions', 'gifts',
   'chat_pricing', 'language_groups', 'language_limits',
   'admin_settings', 'app_settings', 'legal_documents',
   'moderation_reports', 'audit_logs', 'backup_logs',
@@ -31,7 +31,7 @@ const BACKUP_TABLES = [
 
 // Tables that may have >10k rows — paginate these
 const LARGE_TABLES = new Set([
-  'chat_messages', 'ledger_transactions', 'notifications',
+  'chat_messages', 'wallet_transactions', 'notifications',
   'audit_logs', 'language_community_messages', 'group_messages',
 ])
 
