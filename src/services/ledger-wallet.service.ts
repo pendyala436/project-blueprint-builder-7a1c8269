@@ -34,6 +34,7 @@ export interface WalletBalance {
 export interface StatementRow {
   id: string;
   session_id: string | null;
+  session_type: string | null;
   transaction_type: string;
   debit: number;
   credit: number;
