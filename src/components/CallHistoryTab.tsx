@@ -39,12 +39,12 @@ interface HistoryItem {
   isIncoming?: boolean;
 }
 
-/** Pricing rates – men pay, women earn */
+/** Pricing rates – men pay, women earn (must mirror DB get_unified_pricing()) */
 const RATES = {
   chat:  { man: 4, woman: 2 },
   audio: { man: 6, woman: 3 },
   video: { man: 8, woman: 4 },
-  group: { man: 4, woman: 0.5 },
+  group: { man: 4, woman: 2 },
 } as const;
 
 /** Show precise duration: "5 min : 26 sec" — no rounding */
