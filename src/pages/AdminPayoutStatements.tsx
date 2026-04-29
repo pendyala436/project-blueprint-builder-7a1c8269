@@ -350,6 +350,37 @@ const AdminPayoutStatements = () => {
           </Button>
         </Card>
 
+        {/* Archived Excel snapshots — never overwritten */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-semibold text-foreground">Archived Excel Snapshots</h2>
+              <p className="text-xs text-muted-foreground">Every Generate click and the 1st-of-month auto-run save a new timestamped .xlsx — older files are preserved.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadArchives}>
+              <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+            </Button>
+          </div>
+          {archives.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No archives yet for {monthFilter}.</p>
+          ) : (
+            <ul className="divide-y">
+              {archives.map(a => (
+                <li key={a.path} className="flex items-center justify-between py-2 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileSpreadsheet className="w-4 h-4 text-primary shrink-0" />
+                    <span className="font-mono truncate">{a.name}</span>
+                    {a.created_at && <span className="text-xs text-muted-foreground ml-2">{format(new Date(a.created_at), 'dd MMM yyyy HH:mm')}</span>}
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => downloadArchive(a.path, a.name)}>
+                    <Download className="w-4 h-4 mr-1" /> Download
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
         {/* Table — Spec §7: 10 columns from Bank KYC */}
         <Card className="overflow-x-auto">
           <Table>
