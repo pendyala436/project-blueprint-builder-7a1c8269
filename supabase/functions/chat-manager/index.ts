@@ -1238,13 +1238,11 @@ serve(async (req) => {
         }
 
         // ─── BILLING GATE ───────────────────────────────────────────────
-        // Rule: bill ONLY when
+        // Bill ONLY when:
         //   (a) both have messaged at least once,
-        //   (b) the gap between their two latest messages is ≤ 2 min
-        //       (i.e. both replied within 2 min of each other),
+        //   (b) gap between their two latest messages ≤ 2 min (mutual reply),
         //   (c) both are online,
-        //   (d) at least one of them has spoken within the last 2 min
-        //       (i.e. NOT BOTH idle for ≥ 2 min).
+        //   (d) at least one has spoken within the last 3 min (NOT both idle ≥ 3 min).
         // Otherwise pause billing (chat stays connected).
         const manLastMessageTime = new Date(manMessages[0].created_at).getTime();
         const womanLastMessageTime = new Date(womanMessages[0].created_at).getTime();
@@ -1263,12 +1261,12 @@ serve(async (req) => {
         const womanOnline = onlineMap.get(session.woman_user_id) ?? false;
         const bothOnline = manOnline && womanOnline;
 
-        // (d) Both idle for ≥ 2 min → PAUSE
-        const bothIdle = manInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS
-                      && womanInactiveMs >= MESSAGE_INACTIVITY_TIMEOUT_MS;
+        // (d) Both idle for ≥ 3 min → PAUSE
+        const bothIdle = manInactiveMs >= IDLE_PAUSE_MS
+                      && womanInactiveMs >= IDLE_PAUSE_MS;
 
-        // (b) Reply gap > 2 min → not yet a mutual conversation → PAUSE
-        const replyGapTooLarge = replyGapMs > MESSAGE_INACTIVITY_TIMEOUT_MS;
+        // (b) Reply gap > 2 min → not (yet) a mutual conversation → PAUSE
+        const replyGapTooLarge = replyGapMs > MUTUAL_REPLY_WINDOW_MS;
 
         const shouldPause = bothIdle || replyGapTooLarge || !bothOnline;
 
@@ -1276,7 +1274,7 @@ serve(async (req) => {
           const reason = !bothOnline
             ? "one or both parties offline"
             : bothIdle
-              ? "both parties idle for 2+ minutes"
+              ? "both parties idle for 3+ minutes"
               : "reply gap exceeds 2 minutes";
           console.log(`[HEARTBEAT] Pausing billing for chat ${chat_id}: ${reason}`);
 
