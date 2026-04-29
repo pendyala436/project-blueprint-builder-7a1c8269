@@ -2065,6 +2065,7 @@ export type Database = {
           fitness_level: string | null
           full_name: string | null
           gender: string | null
+          global_app_id: number
           has_children: boolean | null
           height_cm: number | null
           id: string
@@ -2126,6 +2127,7 @@ export type Database = {
           fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
+          global_app_id?: number
           has_children?: boolean | null
           height_cm?: number | null
           id?: string
@@ -2187,6 +2189,7 @@ export type Database = {
           fitness_level?: string | null
           full_name?: string | null
           gender?: string | null
+          global_app_id?: number
           has_children?: boolean | null
           height_cm?: number | null
           id?: string
@@ -3861,6 +3864,7 @@ export type Database = {
         }[]
       }
       get_dashboard_stats: { Args: { p_user_id: string }; Returns: Json }
+      get_global_app_id: { Args: { p_user_id?: string }; Returns: number }
       get_ledger_statement: {
         Args: { p_from_date?: string; p_to_date?: string; p_user_id: string }
         Returns: {
