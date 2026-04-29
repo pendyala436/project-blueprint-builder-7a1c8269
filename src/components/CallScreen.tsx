@@ -3,6 +3,7 @@ import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, Volume2 } from 'lucide-r
 import { ActiveCall, CallStatus } from '@/hooks/useAppCall';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { SendGiftButton } from '@/components/SendGiftButton';
 
 interface CallScreenProps {
   status: CallStatus;
@@ -201,6 +202,14 @@ export const CallScreen = ({
               label="Speaker"
               onPress={() => {}}
             />
+
+            {userGender === 'male' && activeCall.remoteUserId && (
+              <SendGiftButton
+                recipientUserId={activeCall.remoteUserId}
+                context={isVideo ? 'video_call' : 'audio_call'}
+                variant="control"
+              />
+            )}
 
             <button
               onClick={onEnd}

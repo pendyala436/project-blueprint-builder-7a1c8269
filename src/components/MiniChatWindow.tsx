@@ -27,7 +27,7 @@ import {
   MoreHorizontal
 } from "lucide-react";
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
-// GiftSendButton removed — billing system removed
+import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 
 const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
@@ -895,7 +895,13 @@ const MiniChatWindow = ({
           
           {areButtonsExpanded && (
             <>
-              {/* GiftSendButton removed — billing system removed */}
+              {userGender === 'male' && (
+                <SendGiftButton
+                  senderUserId={currentUserId}
+                  recipientUserId={partnerId}
+                  context="chat"
+                />
+              )}
               <ChatRelationshipActions
                 currentUserId={currentUserId}
                 targetUserId={partnerId}
