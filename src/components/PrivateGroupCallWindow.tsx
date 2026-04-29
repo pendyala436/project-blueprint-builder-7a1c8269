@@ -471,14 +471,23 @@ export function PrivateGroupCallWindow({
 
   const handleSendGift = async (gift: GiftItem) => {
     try {
-      const { data, error } = await supabase.rpc('process_group_tip', {
-        p_sender_id: currentUserId,
-        p_group_id: group.id,
-        p_gift_id: gift.id
+      // Resolve profile IDs (man = sender, woman = host)
+      const [{ data: manProf }, { data: womanProf }] = await Promise.all([
+        supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
+        supabase.from('profiles').select('id').eq('user_id', group.owner_id).maybeSingle(),
+      ]);
+      if (!manProf?.id || !womanProf?.id) throw new Error('Profile not found');
+
+      const { data, error } = await supabase.rpc('bill_gift_or_tip', {
+        p_man_id: manProf.id,
+        p_woman_id: womanProf.id,
+        p_amount: gift.price ?? 0,
+        p_type: 'gift',
+        p_description: `Group gift: ${gift.name ?? gift.emoji}`,
+        p_reference_id: gift.id,
       });
 
       if (error) throw error;
-
       const result = data as { success: boolean; error?: string };
 
       if (result.success) {
