@@ -189,7 +189,7 @@ const AdminUserLookup = () => {
       const isIndianFemale = user.gender?.toLowerCase() === "female" && user.is_indian;
       const [walletRes, txRes, chatRes, kycRes] = await Promise.allSettled([
         supabase.from("wallets").select("balance, currency").eq("user_id", user.user_id).maybeSingle(),
-        supabase.from("ledger_transactions").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false }).limit(50),
+        supabase.from("wallet_transactions").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false }).limit(50),
         supabase.from("active_chat_sessions").select("*").or(`man_user_id.eq.${user.user_id},woman_user_id.eq.${user.user_id}`).order("started_at", { ascending: false }).limit(50),
         isIndianFemale
           ? supabase.from("women_kyc").select("*").eq("user_id", user.user_id).maybeSingle()
