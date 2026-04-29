@@ -3035,6 +3035,72 @@ export type Database = {
           },
         ]
       }
+      wallet_transactions_purged_audit: {
+        Row: {
+          amount: number | null
+          balance_after: number | null
+          billing_metadata: Json | null
+          created_at: string | null
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          idempotency_key: string | null
+          purge_reason: string
+          purged_at: string
+          rate_per_minute: number | null
+          reference_id: string | null
+          session_id: string | null
+          session_type: string | null
+          status: string | null
+          transaction_type: string | null
+          type: string | null
+          user_id: string | null
+          wallet_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          balance_after?: number | null
+          billing_metadata?: Json | null
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id: string
+          idempotency_key?: string | null
+          purge_reason: string
+          purged_at?: string
+          rate_per_minute?: number | null
+          reference_id?: string | null
+          session_id?: string | null
+          session_type?: string | null
+          status?: string | null
+          transaction_type?: string | null
+          type?: string | null
+          user_id?: string | null
+          wallet_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          balance_after?: number | null
+          billing_metadata?: Json | null
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          idempotency_key?: string | null
+          purge_reason?: string
+          purged_at?: string
+          rate_per_minute?: number | null
+          reference_id?: string | null
+          session_id?: string | null
+          session_type?: string | null
+          status?: string | null
+          transaction_type?: string | null
+          type?: string | null
+          user_id?: string | null
+          wallet_id?: string | null
+        }
+        Relationships: []
+      }
       wallets: {
         Row: {
           balance: number
