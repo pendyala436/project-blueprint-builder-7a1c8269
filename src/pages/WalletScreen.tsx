@@ -1,6 +1,6 @@
 /**
  * WalletScreen — Men's Wallet with balance, recharge, and statement.
- * Balance updates dynamically via Supabase realtime on ledger_transactions changes.
+ * Balance updates dynamically via Supabase realtime on wallet_transactions changes.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';

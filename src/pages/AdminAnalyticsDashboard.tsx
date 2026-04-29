@@ -231,7 +231,7 @@ const AdminAnalyticsDashboard = () => {
   useMultipleRealtimeSubscriptions(
     [
       "profiles",
-      "ledger_transactions",
+      "wallet_transactions",
       "matches",
     ],
     fetchAnalytics,
