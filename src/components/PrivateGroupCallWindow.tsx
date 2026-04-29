@@ -478,13 +478,17 @@ export function PrivateGroupCallWindow({
       ]);
       if (!manProf?.id || !womanProf?.id) throw new Error('Profile not found');
 
+      // Reference ID must be unique per send to avoid idempotency dedup (catalog gift.id is reused)
+      const uniqueRef = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? `gift_${group.id}_${gift.id}_${crypto.randomUUID()}`
+        : `gift_${group.id}_${gift.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const { data, error } = await supabase.rpc('bill_gift_or_tip', {
         p_man_id: manProf.id,
         p_woman_id: womanProf.id,
         p_amount: gift.price ?? 0,
         p_type: 'gift',
         p_description: `Group gift: ${gift.name ?? gift.emoji}`,
-        p_reference_id: gift.id,
+        p_reference_id: uniqueRef,
       });
 
       if (error) throw error;

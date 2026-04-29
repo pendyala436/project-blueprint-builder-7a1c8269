@@ -802,8 +802,10 @@ export function usePrivateGroupCall({
         return false;
       }
 
-      // Create session
-      const sessionId = `pgs-${groupId}-${Date.now()}`;
+      // Create session — sessionId MUST be a UUID for bill_session_minute RPC (p_session_id uuid)
+      const sessionId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       sessionRef.current = {
         sessionId,
         groupId,
@@ -915,13 +917,16 @@ export function usePrivateGroupCall({
   }, [isOwner, checkCanJoin, initParticipantMedia, setupSignaling, startBillingTimer, pricing.groupCallRatePerMinute]);
 
   // Cleanup - stops media, peer connections, channel
-  const cleanup = useCallback(() => {
+  // Only revokes group_memberships access when participant explicitly leaves (manualLeave=true).
+  // When the host ends the call, participants receive 'stream-ended' which calls cleanup(false)
+  // so they retain group access and remain group members — only the live call ends.
+  const cleanup = useCallback((manualLeave = false) => {
     // Stop timers
     if (timerRef.current) clearInterval(timerRef.current);
     if (billingRef.current) clearInterval(billingRef.current);
 
-    // If participant (not host), revoke own access so billing stops
-    if (!isOwner && groupId && currentUserId) {
+    // Revoke own group access ONLY on explicit manual leave (not when host ends call)
+    if (manualLeave && !isOwner && groupId && currentUserId) {
       supabase
         .from('group_memberships')
         .update({ has_access: false })
