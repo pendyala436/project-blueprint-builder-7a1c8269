@@ -2954,6 +2954,69 @@ export type Database = {
           },
         ]
       }
+      wallet_transactions_archive: {
+        Row: {
+          amount: number
+          archived_at: string
+          balance_after: number | null
+          billing_metadata: Json
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          idempotency_key: string
+          rate_per_minute: number | null
+          reference_id: string | null
+          session_id: string | null
+          session_type: string | null
+          status: string
+          transaction_type: string | null
+          type: string
+          user_id: string
+          wallet_id: string | null
+        }
+        Insert: {
+          amount: number
+          archived_at?: string
+          balance_after?: number | null
+          billing_metadata?: Json
+          created_at: string
+          description?: string | null
+          duration_seconds?: number | null
+          id: string
+          idempotency_key: string
+          rate_per_minute?: number | null
+          reference_id?: string | null
+          session_id?: string | null
+          session_type?: string | null
+          status?: string
+          transaction_type?: string | null
+          type: string
+          user_id: string
+          wallet_id?: string | null
+        }
+        Update: {
+          amount?: number
+          archived_at?: string
+          balance_after?: number | null
+          billing_metadata?: Json
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          idempotency_key?: string
+          rate_per_minute?: number | null
+          reference_id?: string | null
+          session_id?: string | null
+          session_type?: string | null
+          status?: string
+          transaction_type?: string | null
+          type?: string
+          user_id?: string
+          wallet_id?: string | null
+        }
+        Relationships: []
+      }
       wallet_transactions_purged_audit: {
         Row: {
           amount: number | null
@@ -3627,6 +3690,13 @@ export type Database = {
         }
         Returns: Json
       }
+      archive_old_wallet_transactions: {
+        Args: never
+        Returns: {
+          archived_count: number
+          cutoff_date: string
+        }[]
+      }
       assign_earning_slots: { Args: never; Returns: Json }
       atomic_wallet_credit: {
         Args: { p_amount: number; p_wallet_id: string }
@@ -3923,6 +3993,30 @@ export type Database = {
         Returns: Json
       }
       process_monthly_payout: { Args: never; Returns: Json }
+      query_wallet_transactions_unified: {
+        Args: {
+          p_include_archive?: boolean
+          p_limit?: number
+          p_user_id: string
+        }
+        Returns: {
+          amount: number
+          balance_after: number
+          billing_metadata: Json
+          created_at: string
+          description: string
+          duration_seconds: number
+          id: string
+          rate_per_minute: number
+          reference_id: string
+          session_type: string
+          source: string
+          status: string
+          transaction_type: string
+          type: string
+          user_id: string
+        }[]
+      }
       r2: { Args: { v: number }; Returns: number }
       reconcile_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
