@@ -22,20 +22,38 @@ interface StatementTabProps {
   gender?: 'male' | 'female';
 }
 
-const SESSION_TYPES = ['chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge',
-  'private_group_call_charge', 'private_group_call_earning',
-  'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning'];
+// Session-style transaction types written by canonical billing RPCs (men debits + women credits)
+const SESSION_TYPES = [
+  'chat', 'audio_call', 'video_call', 'group_call', 'private_group_call',
+  'chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge', 'private_group_call_charge',
+  'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning', 'private_group_call_earning',
+];
 
-const CREDIT_TYPES = ['credit', 'recharge', 'refund', 'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning', 'private_group_call_earning', 'gift_received', 'gift_earning', 'tip_earning'];
+// Anything that increases the wallet (credit side of unified ledger)
+const CREDIT_TYPES = [
+  'credit', 'recharge', 'refund',
+  'chat_earning', 'audio_call_earning', 'video_call_earning',
+  'group_call_earning', 'private_group_call_earning',
+  'gift_received', 'gift_earning', 'tip_earning', 'tip_received',
+];
 
 const getTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
+    // Recharge / credit
     recharge: 'Wallet Recharge', credit: 'Credit', refund: 'Refund',
+    // Men spending (canonical RPC writes the bare session_type)
+    chat: 'Chat', audio_call: 'Audio Call', video_call: 'Video Call',
+    group_call: 'Group Call', private_group_call: 'Group Call',
+    // Legacy "_charge" aliases
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
     group_call_charge: 'Group Call', private_group_call_charge: 'Group Call',
-    debit: 'Debit', withdrawal: 'Withdrawal',
-    gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_debit: 'Gift Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received', gift_credit: 'Gift Received',
-    tip_charge: 'Tip Sent', tip_earning: 'Tip Received',
+    // Withdrawals (women)
+    debit: 'Debit', withdrawal: 'Withdrawal', withdrawal_fee: 'Withdrawal Fee',
+    // Gifts & tips
+    gift: 'Gift Sent', gift_charge: 'Gift Sent', gift_debit: 'Gift Sent',
+    gift_received: 'Gift Received', gift_earning: 'Gift Received', gift_credit: 'Gift Received',
+    tip: 'Tip Sent', tip_charge: 'Tip Sent', tip_earning: 'Tip Received', tip_received: 'Tip Received',
+    // Women earnings
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
     private_group_call_earning: 'Group Earning',
