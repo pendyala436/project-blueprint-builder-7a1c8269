@@ -3890,6 +3890,7 @@ export type Database = {
           reference_id: string
           running_balance: number
           session_id: string
+          session_type: string
           transaction_type: string
         }[]
       }
