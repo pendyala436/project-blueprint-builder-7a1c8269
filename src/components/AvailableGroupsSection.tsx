@@ -72,11 +72,16 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       if (list.length === 0) { setRows([]); return; }
 
       const groupIds = Array.from(new Set(list.map(h => h.group_id)));
-      const { data: groups } = await supabase
-        .from('private_groups').select('*').in('id', groupIds);
+      const hostIds = Array.from(new Set(list.map(h => h.host_id)));
+      const [{ data: groups }, { data: hostProfiles }] = await Promise.all([
+        supabase.from('private_groups').select('*').in('id', groupIds),
+        supabase.from('profiles').select('id, host_number').in('id', hostIds),
+      ]);
 
       const groupMap = new Map<string, PrivateGroup>();
       (groups as any[] || []).forEach(g => groupMap.set(g.id, g));
+      const hostNumberMap = new Map<string, number | null>();
+      (hostProfiles as any[] || []).forEach(p => hostNumberMap.set(p.id, p.host_number ?? null));
 
       const built: LiveHostRow[] = list
         .map(h => {
@@ -86,6 +91,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
             group: g,
             host_id: h.host_id,
             host_name: h.host_name || 'Host',
+            host_number: hostNumberMap.get(h.host_id) ?? null,
             host_language: h.host_language || null,
             participant_count: h.participant_count || 0,
           } as LiveHostRow;
