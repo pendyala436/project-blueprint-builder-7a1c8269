@@ -422,63 +422,6 @@ export type Database = {
         }
         Relationships: []
       }
-      billing_ledger: {
-        Row: {
-          amount: number
-          balance_after: number
-          created_at: string
-          currency: string
-          description: string | null
-          duration_minutes: number | null
-          entry_type: string
-          id: string
-          idempotency_key: string | null
-          man_id: string
-          rate_applied: number | null
-          reference_id: string | null
-          session_id: string | null
-          session_type: string
-          status: string
-          woman_id: string | null
-        }
-        Insert: {
-          amount: number
-          balance_after: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          duration_minutes?: number | null
-          entry_type: string
-          id?: string
-          idempotency_key?: string | null
-          man_id: string
-          rate_applied?: number | null
-          reference_id?: string | null
-          session_id?: string | null
-          session_type: string
-          status?: string
-          woman_id?: string | null
-        }
-        Update: {
-          amount?: number
-          balance_after?: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          duration_minutes?: number | null
-          entry_type?: string
-          id?: string
-          idempotency_key?: string | null
-          man_id?: string
-          rate_applied?: number | null
-          reference_id?: string | null
-          session_id?: string | null
-          session_type?: string
-          status?: string
-          woman_id?: string | null
-        }
-        Relationships: []
-      }
       chat_messages: {
         Row: {
           chat_id: string
@@ -760,51 +703,6 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      earnings_ledger: {
-        Row: {
-          amount: number
-          created_at: string
-          currency: string
-          description: string | null
-          duration_minutes: number | null
-          entry_type: string
-          id: string
-          man_id: string | null
-          rate_applied: number | null
-          session_id: string | null
-          session_type: string
-          woman_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          duration_minutes?: number | null
-          entry_type?: string
-          id?: string
-          man_id?: string | null
-          rate_applied?: number | null
-          session_id?: string | null
-          session_type: string
-          woman_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          currency?: string
-          description?: string | null
-          duration_minutes?: number | null
-          entry_type?: string
-          id?: string
-          man_id?: string | null
-          rate_applied?: number | null
-          session_id?: string | null
-          session_type?: string
-          woman_id?: string
         }
         Relationships: []
       }
@@ -1430,51 +1328,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ledger_transactions: {
-        Row: {
-          counterparty_id: string | null
-          created_at: string
-          credit: number
-          debit: number
-          description: string | null
-          duration_seconds: number | null
-          id: string
-          rate_per_minute: number | null
-          reference_id: string | null
-          session_id: string | null
-          transaction_type: string
-          user_id: string
-        }
-        Insert: {
-          counterparty_id?: string | null
-          created_at?: string
-          credit?: number
-          debit?: number
-          description?: string | null
-          duration_seconds?: number | null
-          id?: string
-          rate_per_minute?: number | null
-          reference_id?: string | null
-          session_id?: string | null
-          transaction_type: string
-          user_id: string
-        }
-        Update: {
-          counterparty_id?: string | null
-          created_at?: string
-          credit?: number
-          debit?: number
-          description?: string | null
-          duration_seconds?: number | null
-          id?: string
-          rate_per_minute?: number | null
-          reference_id?: string | null
-          session_id?: string | null
-          transaction_type?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       legal_documents: {
         Row: {
           created_at: string
@@ -1943,72 +1796,6 @@ export type Database = {
           status?: string
           txn_id?: string
           updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      platform_ledger: {
-        Row: {
-          balance_after: number
-          counterparty_id: string | null
-          created_at_ist: string
-          credit: number
-          debit: number
-          description: string | null
-          duration_minutes: number | null
-          entry_type: string
-          id: string
-          idempotency_key: string | null
-          ist_date: string | null
-          ist_month: string | null
-          ist_year: number | null
-          rate_per_unit: number | null
-          reference_number: string | null
-          session_id: string | null
-          session_type: string | null
-          user_gender: string
-          user_id: string
-        }
-        Insert: {
-          balance_after?: number
-          counterparty_id?: string | null
-          created_at_ist?: string
-          credit?: number
-          debit?: number
-          description?: string | null
-          duration_minutes?: number | null
-          entry_type: string
-          id?: string
-          idempotency_key?: string | null
-          ist_date?: string | null
-          ist_month?: string | null
-          ist_year?: number | null
-          rate_per_unit?: number | null
-          reference_number?: string | null
-          session_id?: string | null
-          session_type?: string | null
-          user_gender: string
-          user_id: string
-        }
-        Update: {
-          balance_after?: number
-          counterparty_id?: string | null
-          created_at_ist?: string
-          credit?: number
-          debit?: number
-          description?: string | null
-          duration_minutes?: number | null
-          entry_type?: string
-          id?: string
-          idempotency_key?: string | null
-          ist_date?: string | null
-          ist_month?: string | null
-          ist_year?: number | null
-          rate_per_unit?: number | null
-          reference_number?: string | null
-          session_id?: string | null
-          session_type?: string | null
-          user_gender?: string
           user_id?: string
         }
         Relationships: []
@@ -3440,65 +3227,6 @@ export type Database = {
         }
         Relationships: []
       }
-      women_earnings: {
-        Row: {
-          amount: number
-          chat_session_id: string | null
-          created_at: string
-          description: string | null
-          earning_type: string
-          group_id: string | null
-          id: string
-          idempotency_key: string | null
-          man_user_id: string | null
-          minutes_billed: number | null
-          private_call_id: string | null
-          rate_per_minute: number | null
-          user_id: string
-          video_session_id: string | null
-        }
-        Insert: {
-          amount: number
-          chat_session_id?: string | null
-          created_at?: string
-          description?: string | null
-          earning_type?: string
-          group_id?: string | null
-          id?: string
-          idempotency_key?: string | null
-          man_user_id?: string | null
-          minutes_billed?: number | null
-          private_call_id?: string | null
-          rate_per_minute?: number | null
-          user_id: string
-          video_session_id?: string | null
-        }
-        Update: {
-          amount?: number
-          chat_session_id?: string | null
-          created_at?: string
-          description?: string | null
-          earning_type?: string
-          group_id?: string | null
-          id?: string
-          idempotency_key?: string | null
-          man_user_id?: string | null
-          minutes_billed?: number | null
-          private_call_id?: string | null
-          rate_per_minute?: number | null
-          user_id?: string
-          video_session_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "women_earnings_chat_session_id_fkey"
-            columns: ["chat_session_id"]
-            isOneToOne: false
-            referencedRelation: "active_chat_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       women_kyc: {
         Row: {
           aadhaar_back_url: string | null
@@ -4127,9 +3855,10 @@ export type Database = {
         }[]
       }
       get_woman_balance: { Args: { p_user_id: string }; Returns: Json }
-      get_women_transaction_history:
-        | { Args: { p_user_id: string }; Returns: Json }
-        | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
+      get_women_transaction_history: {
+        Args: { p_limit?: number; p_user_id: string }
+        Returns: Json
+      }
       get_women_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       has_role: {
         Args: {
@@ -4163,7 +3892,7 @@ export type Database = {
         Args: {
           p_amount: number
           p_description?: string
-          p_gateway?: string
+          p_gateway: string
           p_gateway_txn_id?: string
           p_reference_id?: string
           p_user_id: string

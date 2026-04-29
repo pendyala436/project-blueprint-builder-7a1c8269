@@ -269,7 +269,7 @@ const AdminDashboard = () => {
         supabase.from("chat_messages").select("*", { count: "exact", head: true }),
         supabase.from("female_profiles").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
         supabase.from("policy_violation_alerts").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("ledger_transactions").select("credit").eq("transaction_type", "recharge").gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`),
+        supabase.from("wallet_transactions").select("amount").eq("transaction_type", "recharge").eq("type","credit").gte("created_at", `${today}T00:00:00`).lte("created_at", `${today}T23:59:59`),
       ]);
 
       const getCount = (res: PromiseSettledResult<any>) => 
@@ -277,7 +277,7 @@ const AdminDashboard = () => {
 
       let todayEarnings = 0;
       if (earningsRes.status === 'fulfilled' && !earningsRes.value.error) {
-        todayEarnings = earningsRes.value.data?.reduce((acc: number, t: any) => acc + Number(t.credit), 0) || 0;
+        todayEarnings = earningsRes.value.data?.reduce((acc: number, t: any) => acc + Number(t.amount), 0) || 0;
       }
 
       setStats({
@@ -297,7 +297,7 @@ const AdminDashboard = () => {
 
   // Real-time subscriptions for dashboard stats
   useMultipleRealtimeSubscriptions(
-    ["profiles", "user_status", "active_chat_sessions", "policy_violation_alerts", "ledger_transactions"],
+    ["profiles", "user_status", "active_chat_sessions", "policy_violation_alerts", "wallet_transactions"],
     loadStats,
     isAdmin
   );

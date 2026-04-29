@@ -10,16 +10,16 @@ const corsHeaders = {
 const USER_ID_TABLES = [
   "absence_records", "attendance", "chat_wait_queue", "female_profiles",
   "group_memberships", "group_session_extensions", "group_video_access",
-  "ledger_transactions", "male_profiles", "matches", "message_reactions",
+  "male_profiles", "matches", "message_reactions",
   "monthly_statements", "monthly_wallet_summary", "notifications",
-  "password_reset_tokens", "pending_recharges", "platform_ledger",
+  "password_reset_tokens", "pending_recharges",
   "policy_violation_alerts", "processing_logs", "public_female_profiles",
   "push_subscriptions", "rate_limit_tracking", "tutorial_progress",
   "user_consent", "user_friends", "user_languages", "user_photos",
   "user_roles", "user_service_roles", "user_settings", "user_status",
   "user_warnings", "users_wallet", "wallet_recharges", "wallet_transactions",
   "wallets", "withdrawal_requests", "women_availability", "women_chat_modes",
-  "women_earnings", "women_kyc", "women_payout_snapshots",
+  "women_kyc", "women_payout_snapshots",
 ];
 
 Deno.serve(async (req) => {
