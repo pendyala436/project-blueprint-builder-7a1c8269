@@ -9,7 +9,10 @@ export function useMessageSound() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const lastPlayedRef = useRef(0);
 
-  const playMessageSound = useCallback(() => {
+  const playMessageSound = useCallback((opts?: { repeat?: number; gapMs?: number }) => {
+    const repeat = Math.max(1, Math.min(opts?.repeat ?? 1, 5));
+    const gapMs = Math.max(150, opts?.gapMs ?? 550);
+
     const now = Date.now();
     if (now - lastPlayedRef.current < 500) return;
     lastPlayedRef.current = now;
