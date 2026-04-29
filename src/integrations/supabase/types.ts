@@ -4061,6 +4061,7 @@ export type Database = {
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       reset_private_group_counts: { Args: never; Returns: undefined }
       reset_women_wallets_after_snapshot: { Args: never; Returns: Json }
+      resolve_wallet_user_id: { Args: { p_id: string }; Returns: string }
       revert_busy_to_online: { Args: { p_user_id: string }; Returns: undefined }
       run_monthly_closing: {
         Args: { p_month?: number; p_year?: number }
