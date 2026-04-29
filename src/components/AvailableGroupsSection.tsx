@@ -278,7 +278,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
                     )}
                   </div>
                   <p className="text-xs text-primary font-medium truncate mt-0.5">
-                    📹 {row.host_name}
+                    📹 {row.host_number ? `Host #${row.host_number} · ` : ''}{row.host_name}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
