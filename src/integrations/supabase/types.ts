@@ -3640,6 +3640,31 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_get_user_transactions: {
+        Args: {
+          p_include_archive?: boolean
+          p_limit?: number
+          p_user_id: string
+        }
+        Returns: {
+          amount: number
+          balance_after: number
+          billing_metadata: Json
+          created_at: string
+          description: string
+          duration_seconds: number
+          id: string
+          rate_per_minute: number
+          reference_id: string
+          session_id: string
+          session_type: string
+          source: string
+          status: string
+          transaction_type: string
+          type: string
+          user_id: string
+        }[]
+      }
       admin_list_statements: {
         Args: {
           p_gender?: string
@@ -3922,6 +3947,20 @@ export type Database = {
         Returns: {
           full_name: string
           user_id: string
+        }[]
+      }
+      get_user_group_call_history: {
+        Args: { p_is_male: boolean; p_limit?: number; p_user_id: string }
+        Returns: {
+          amount: number
+          created_at: string
+          description: string
+          duration_seconds: number
+          id: string
+          rate_per_minute: number
+          session_id: string
+          transaction_type: string
+          type: string
         }[]
       }
       get_woman_balance: { Args: { p_user_id: string }; Returns: Json }
