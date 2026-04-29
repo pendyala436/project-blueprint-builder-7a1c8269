@@ -34,7 +34,7 @@ const getTypeLabel = (type: string) => {
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
     group_call_charge: 'Group Call', private_group_call_charge: 'Group Call',
     debit: 'Debit', withdrawal: 'Withdrawal',
-    gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received',
+    gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_debit: 'Gift Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received', gift_credit: 'Gift Received',
     tip_charge: 'Tip Sent', tip_earning: 'Tip Received',
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
@@ -107,8 +107,17 @@ const buildTableRows = (rows: StatementRow[]) =>
 
 const STATIC_HEADERS_PREFIX = ['#', 'Date & Time (IST)', 'Type', 'Description', 'Start Time', 'End Time', 'Duration', 'Rate'];
 
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'male' }) => {
   const isMale = gender === 'male';
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const DEBIT_LABEL = isMale ? 'TOTAL CHARGED' : 'TOTAL WITHDRAWN';
   const CREDIT_LABEL = isMale ? 'TOTAL RECHARGED' : 'TOTAL EARNED';
   const DEBIT_COL = isMale ? 'Debit (₹)' : 'Withdrawn (₹)';
@@ -119,8 +128,8 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
-    to: new Date().toISOString().slice(0, 10),
+    from: toDateInputValue(monthStart),
+    to: toDateInputValue(now),
   });
 
   const loadStatement = useCallback(async () => {
