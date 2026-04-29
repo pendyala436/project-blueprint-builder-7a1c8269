@@ -506,30 +506,6 @@ export function usePrivateGroupCall({
 
         // Billing logic removed — group calls run without charging or earning.
         return;
-
-        // Handle removed users (insufficient balance)
-        if (result.removed_men && result.removed_men.length > 0) {
-          for (const removedId of result.removed_men) {
-            session.participants.delete(removedId);
-            onParticipantLeave?.(removedId, 'insufficient_balance');
-
-            // Notify participant to leave
-            channelRef.current?.send({
-              type: 'broadcast',
-              event: 'participant-removed',
-              payload: { participantId: removedId, reason: 'insufficient_balance' },
-            });
-          }
-        }
-
-        // Update participant count in state
-        setState(prev => ({
-          ...prev,
-          participants: Array.from(session.participants.values()),
-          viewerCount: session.participants.size,
-        }));
-
-        console.log(`[GROUP] Billing: ${result.active_count} men billed, host earned ₹${result.host_earned}`);
       } catch (err) {
         console.error('[GROUP] Billing error:', err);
       } finally {
