@@ -3919,30 +3919,18 @@ export type Database = {
         }
         Returns: Json
       }
-      bill_session_minute:
-        | {
-            Args: {
-              p_man_count?: number
-              p_man_id: string
-              p_minutes: number
-              p_session_id: string
-              p_session_type: string
-              p_woman_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_man_count?: number
-              p_man_id: string
-              p_minute_index?: number
-              p_minutes: number
-              p_session_id: string
-              p_session_type: string
-              p_woman_id: string
-            }
-            Returns: Json
-          }
+      bill_session_minute: {
+        Args: {
+          p_man_count?: number
+          p_man_id: string
+          p_minute_index?: number
+          p_minutes: number
+          p_session_id: string
+          p_session_type: string
+          p_woman_id: string
+        }
+        Returns: Json
+      }
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
       can_access_service: {
         Args: { _service: string; _user_id: string }
@@ -4206,26 +4194,6 @@ export type Database = {
         Returns: Json
       }
       process_monthly_payout: { Args: never; Returns: Json }
-      process_withdrawal: {
-        Args: {
-          p_account_no: string
-          p_amount: number
-          p_bank_name: string
-          p_idempotency?: string
-          p_ifsc_code: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
-      process_withdrawal_request: {
-        Args: {
-          p_amount: number
-          p_payment_details?: Json
-          p_payment_method?: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       r2: { Args: { v: number }; Returns: number }
       reconcile_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
