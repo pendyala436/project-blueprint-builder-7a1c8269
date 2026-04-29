@@ -163,14 +163,8 @@ export const useAppCall = (
       .update({ status: 'completed', ended_at: new Date().toISOString() })
       .eq('call_id', callId);
 
-    try {
-      await supabase.rpc('process_call_billing', {
-        p_call_id: callId,
-        p_call_type: callType,
-      });
-    } catch (e) {
-      console.error('[AppCall] Billing error:', e);
-    }
+    // Billing logic removed — call ends without charging or earning.
+    void callType;
 
     cleanup();
   }, [cleanup, setStatusSync]);

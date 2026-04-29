@@ -504,44 +504,8 @@ export function usePrivateGroupCall({
           return;
         }
 
-        // Single source of truth: call canonical v2 RPC
-        const manIds = Array.from(session.participants.values())
-          .filter(p => !p.isOwner)
-          .map(p => p.id);
-        const minuteIdx = Math.floor(Date.now() / 60000);
-        const { data, error } = await supabase.rpc('process_group_billing_v2', {
-          p_group_id: session.groupId,
-          p_session_id: session.sessionId,
-          p_host_id: session.hostId,
-          p_man_ids: manIds,
-          p_minutes: 1,
-          p_idempotency: `group:${session.sessionId}:${minuteIdx}`,
-        });
-
-        if (error) {
-          console.error('[GROUP] Billing RPC error:', error);
-          return;
-        }
-
-        const result = data as {
-          success: boolean;
-          duplicate_skipped?: boolean;
-          active_count?: number;
-          host_earned?: number;
-          removed_men?: string[];
-          error?: string;
-        };
-
-        if (!result.success) {
-          console.error('[GROUP] Billing failed:', result.error);
-          return;
-        }
-
-        // Update host earnings
-        if (result.host_earned && result.host_earned > 0) {
-          session.totalEarnings += result.host_earned;
-          setState(prev => ({ ...prev, totalEarnings: session.totalEarnings }));
-        }
+        // Billing logic removed — group calls run without charging or earning.
+        return;
 
         // Handle removed users (insufficient balance)
         if (result.removed_men && result.removed_men.length > 0) {
