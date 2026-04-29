@@ -128,9 +128,14 @@ export function minimumBalanceFor(sessionType: SessionType, pricing: UnifiedPric
 
 // ─── Per-minute Billing ────────────────────────────────────────────────
 
+/**
+ * Pass `minuteIndex` (0,1,2,...) — the elapsed-minute counter for the session —
+ * so the server can dedupe heartbeats deterministically.
+ * Without it, the server falls back to wall-clock minute floor (less safe).
+ */
 export async function billMinute(
   sessionId: string, sessionType: SessionType, minutes: number,
-  manId: string, womanId: string, manCount = 1,
+  manId: string, womanId: string, manCount = 1, minuteIndex?: number,
 ): Promise<BillingResult> {
   const { data, error } = await supabase.rpc('bill_session_minute', {
     p_session_id: sessionId,
@@ -139,20 +144,21 @@ export async function billMinute(
     p_man_id: manId,
     p_woman_id: womanId,
     p_man_count: manCount,
+    p_minute_index: minuteIndex ?? null,
   });
   if (error) return { success: false, error: error.message };
   return (data as unknown as BillingResult) ?? { success: false, error: 'No response' };
 }
 
-export const billChatMinute = (s: string, m: number, mid: string, wid: string) =>
-  billMinute(s, 'chat', m, mid, wid);
-export const billAudioCallMinute = (s: string, m: number, mid: string, wid: string) =>
-  billMinute(s, 'audio_call', m, mid, wid);
-export const billVideoCallMinute = (s: string, m: number, mid: string, wid: string) =>
-  billMinute(s, 'video_call', m, mid, wid);
+export const billChatMinute = (s: string, m: number, mid: string, wid: string, idx?: number) =>
+  billMinute(s, 'chat', m, mid, wid, 1, idx);
+export const billAudioCallMinute = (s: string, m: number, mid: string, wid: string, idx?: number) =>
+  billMinute(s, 'audio_call', m, mid, wid, 1, idx);
+export const billVideoCallMinute = (s: string, m: number, mid: string, wid: string, idx?: number) =>
+  billMinute(s, 'video_call', m, mid, wid, 1, idx);
 /** Group call: call ONCE PER ACTIVE MAN per heartbeat; woman earns per call. */
-export const billGroupCallMinute = (s: string, m: number, mid: string, wid: string) =>
-  billMinute(s, 'private_group_call', m, mid, wid, 1);
+export const billGroupCallMinute = (s: string, m: number, mid: string, wid: string, idx?: number) =>
+  billMinute(s, 'private_group_call', m, mid, wid, 1, idx);
 
 // ─── Gifts & Tips ──────────────────────────────────────────────────────
 
