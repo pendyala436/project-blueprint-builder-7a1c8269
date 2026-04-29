@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 // useChatPricing removed — billing system removed
 import { toast } from 'sonner';
 import { ICE_SERVERS_SFU } from '@/lib/iceServers';
+import { billGroupCallMinute } from '@/services/billing.service';
 
 export const MAX_PARTICIPANTS = 100;
 // No hard time limit — sessions run until the host ends them or midnight reset.
@@ -493,19 +494,37 @@ export function usePrivateGroupCall({
 
       try {
         const session = sessionRef.current;
+        if (!session) return;
 
-        // Gate: only bill when at least one man (non-host participant) is present.
-        // Host earns nothing while alone live; billing pauses when all men leave and
-        // resumes automatically when the next man joins.
-        const nonHostCount = Array.from(session.participants.values())
-          .filter(p => !p.isOwner).length;
-        if (nonHostCount === 0) {
+        // Only the host (woman) drives billing — bills each non-host (man) individually.
+        // Participants run this timer only as a passive heartbeat fallback (no-op here).
+        if (!isOwner) return;
+
+        // Resolve woman (host) profile.id
+        const { data: hostProfile } = await supabase
+          .from('profiles').select('id').eq('user_id', session.hostId).maybeSingle();
+        if (!hostProfile?.id) return;
+
+        // Bill every active man currently in the room
+        const activeMen = Array.from(session.participants.values()).filter(p => !p.isOwner);
+        if (activeMen.length === 0) {
           console.log('[GROUP] No men in room — billing paused');
           return;
         }
 
-        // Billing logic removed — group calls run without charging or earning.
-        return;
+        await Promise.all(activeMen.map(async (man) => {
+          // Resolve man's profile.id from his auth user_id (man.id is auth user_id)
+          const { data: manProfile } = await supabase
+            .from('profiles').select('id').eq('user_id', man.id).maybeSingle();
+          if (!manProfile?.id) return;
+
+          const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id);
+          if (!r.success && r.error?.includes('Insufficient balance')) {
+            // Eject this man — billing failed
+            console.warn('[GROUP] Ejecting man for insufficient balance:', man.id);
+            onParticipantLeave?.(man.id, 'insufficient_balance');
+          }
+        }));
       } catch (err) {
         console.error('[GROUP] Billing error:', err);
       } finally {
