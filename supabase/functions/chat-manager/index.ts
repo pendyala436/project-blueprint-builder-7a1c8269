@@ -1180,9 +1180,13 @@ serve(async (req) => {
         
         const isBillingPaused = session.status === "billing_paused";
 
-        // Billing rule: starts only when BOTH parties have replied within 2 min of each other
-        // and BOTH are online; pauses only when BOTH have been idle for 2+ min.
-        const MESSAGE_INACTIVITY_TIMEOUT_MS = 120000; // 2 minutes in milliseconds
+        // Billing rule:
+        //   START: both parties reply to each other within 2 min (mutual-reply gap ≤ 2 min)
+        //          AND both are online.
+        //   STOP : neither party has spoken for 3 min (both idle ≥ 3 min) → pause.
+        //   RESUME: as soon as both reply each other again under 2 min, billing restarts.
+        const MUTUAL_REPLY_WINDOW_MS = 120000; // 2 minutes — start/resume threshold
+        const IDLE_PAUSE_MS           = 180000; // 3 minutes — stop threshold
         const now = new Date();
 
         // Get messages from both parties to check two-way conversation
