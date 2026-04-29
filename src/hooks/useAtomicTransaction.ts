@@ -299,9 +299,6 @@ export const useAtomicTransaction = () => {
   ): Promise<BillingResult> => {
     void sessionId; void minutes; void manId; void womanId;
     return { success: true, charged: 0, earned: 0, superUser: false };
-    } finally {
-      stopProcessing();
-    }
   }, []);
 
   /**
