@@ -1941,6 +1941,7 @@ export type Database = {
           created_at: string
           current_host_id: string | null
           current_host_name: string | null
+          current_host_number: number | null
           description: string | null
           id: string
           is_active: boolean
@@ -1958,6 +1959,7 @@ export type Database = {
           created_at?: string
           current_host_id?: string | null
           current_host_name?: string | null
+          current_host_number?: number | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -1975,6 +1977,7 @@ export type Database = {
           created_at?: string
           current_host_id?: string | null
           current_host_name?: string | null
+          current_host_number?: number | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -2068,6 +2071,7 @@ export type Database = {
           global_app_id: number
           has_children: boolean | null
           height_cm: number | null
+          host_number: number | null
           id: string
           interests: string[] | null
           is_earning_eligible: boolean | null
@@ -2130,6 +2134,7 @@ export type Database = {
           global_app_id?: number
           has_children?: boolean | null
           height_cm?: number | null
+          host_number?: number | null
           id?: string
           interests?: string[] | null
           is_earning_eligible?: boolean | null
@@ -2192,6 +2197,7 @@ export type Database = {
           global_app_id?: number
           has_children?: boolean | null
           height_cm?: number | null
+          host_number?: number | null
           id?: string
           interests?: string[] | null
           is_earning_eligible?: boolean | null
