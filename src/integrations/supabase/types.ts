@@ -2971,6 +2971,7 @@ export type Database = {
         Row: {
           amount: number
           balance_after: number | null
+          billing_metadata: Json
           created_at: string
           description: string | null
           duration_seconds: number | null
@@ -2989,6 +2990,7 @@ export type Database = {
         Insert: {
           amount: number
           balance_after?: number | null
+          billing_metadata?: Json
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
@@ -3007,6 +3009,7 @@ export type Database = {
         Update: {
           amount?: number
           balance_after?: number | null
+          billing_metadata?: Json
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
@@ -4021,7 +4024,7 @@ export type Database = {
         Returns: Json
       }
       process_chat_billing: {
-        Args: { p_minutes: number; p_session_id: string }
+        Args: { p_minutes?: number; p_session_id: string }
         Returns: Json
       }
       process_gift_billing: {
