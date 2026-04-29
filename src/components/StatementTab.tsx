@@ -109,6 +109,8 @@ const STATIC_HEADERS_PREFIX = ['#', 'Date & Time (IST)', 'Type', 'Description', 
 
 export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'male' }) => {
   const isMale = gender === 'male';
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const DEBIT_LABEL = isMale ? 'TOTAL CHARGED' : 'TOTAL WITHDRAWN';
   const CREDIT_LABEL = isMale ? 'TOTAL RECHARGED' : 'TOTAL EARNED';
   const DEBIT_COL = isMale ? 'Debit (₹)' : 'Withdrawn (₹)';
@@ -119,7 +121,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
-    from: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+    from: monthStart.toISOString().slice(0, 10),
     to: new Date().toISOString().slice(0, 10),
   });
 
