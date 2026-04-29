@@ -93,21 +93,100 @@ const AdminPayoutStatements = () => {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    // Run both: legacy KYC snapshot (powers this page's Excel/PDF export)
-    // AND unified billing snapshot (creates monthly_statements payout rows).
-    const [legacy, unified] = await Promise.all([
-      generatePayoutSnapshot(),
-      generatePayoutSnapshotNow(),
-    ]);
-    if (legacy.success) {
+    try {
+      // 1) Run both DB snapshot RPCs
+      const [legacy, unified] = await Promise.all([
+        generatePayoutSnapshot(),
+        generatePayoutSnapshotNow(),
+      ]);
+      if (!legacy.success) {
+        toast({ title: 'Error', description: legacy.error, variant: 'destructive' });
+        return;
+      }
+
+      // 2) Re-fetch the freshly generated snapshot rows for THIS month
+      const fresh = (await getPayoutSnapshots(monthFilter)) as PayoutRecord[];
+      setRecords(fresh);
+
+      // 3) Build Excel from fresh rows (don't depend on async state)
+      const rows = fresh.map((r, i) => ({
+        sno: r.app_sno ?? i + 1,
+        purpose: r.beneficiary_purpose || 'Earnings Payout',
+        name: r.account_holder_name || r.full_name || '—',
+        phone: r.mobile_number || '—',
+        email: r.email_address || '—',
+        address: r.address || '—',
+        account: r.bank_account_number || '—',
+        ifsc: r.ifsc_code || '—',
+        upi: r.upi_vpa || '—',
+        amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+      }));
+      const total = fresh.reduce((s, r) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
+
+      // Timestamp in IST → YYYY-MM-DD_HH-mm-ss
+      const istNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const stamp = `${istNow.getFullYear()}-${pad(istNow.getMonth() + 1)}-${pad(istNow.getDate())}_${pad(istNow.getHours())}-${pad(istNow.getMinutes())}-${pad(istNow.getSeconds())}`;
+      const filename = `payout-${stamp}.xlsx`;
+
+      const wsData = [
+        ['Payout Statement'],
+        [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ₹${total.toFixed(2)}`, '', `Generated (IST): ${stamp}`],
+        [],
+        PAYOUT_HEADERS,
+        ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
+
+      // 4) Upload to Supabase Storage (never overwrite — unique filename)
+      const arrayBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+      const blob = new Blob([arrayBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const storagePath = `${monthFilter}/${filename}`;
+      const { error: upErr } = await supabase.storage
+        .from('payout-exports')
+        .upload(storagePath, blob, { contentType: blob.type, upsert: false });
+      if (upErr) console.warn('[Payouts] archive upload failed:', upErr.message);
+
+      // 5) Auto-download to admin device
+      XLSX.writeFile(wb, filename);
+
       const skipMsg = legacy.skipped ? ` • ${legacy.skipped} skipped (no KYC)` : '';
       const unifiedMsg = unified.success ? ` • ${unified.count ?? 0} unified statements` : '';
-      toast({ title: 'Payout Generated', description: `${legacy.count} women processed${skipMsg}${unifiedMsg}.` });
-      loadRecords();
-    } else {
-      toast({ title: 'Error', description: legacy.error, variant: 'destructive' });
+      const archiveMsg = upErr ? ' • archive failed' : ' • archived';
+      toast({ title: 'Payout Generated', description: `${legacy.count} women${skipMsg}${unifiedMsg}${archiveMsg}.` });
+      loadArchives();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Generation failed', variant: 'destructive' });
+    } finally {
+      setIsGenerating(false);
     }
-    setIsGenerating(false);
+  };
+
+  // ─── Archived Exports (Storage) ───
+  const [archives, setArchives] = useState<{ name: string; path: string; created_at?: string }[]>([]);
+  const loadArchives = async () => {
+    const { data, error } = await supabase.storage
+      .from('payout-exports')
+      .list(monthFilter, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+    if (error) { setArchives([]); return; }
+    setArchives((data || []).filter(f => f.name.endsWith('.xlsx')).map(f => ({
+      name: f.name,
+      path: `${monthFilter}/${f.name}`,
+      created_at: (f as any).created_at,
+    })));
+  };
+  useEffect(() => { loadArchives(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [monthFilter]);
+
+  const downloadArchive = async (path: string, name: string) => {
+    const { data, error } = await supabase.storage.from('payout-exports').download(path);
+    if (error || !data) { toast({ title: 'Download failed', description: error?.message, variant: 'destructive' }); return; }
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const buildRows = () => records.map((r, i) => ({
