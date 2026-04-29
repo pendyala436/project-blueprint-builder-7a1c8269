@@ -145,6 +145,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const [statement, setStatement] = useState<StatementRow[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
     from: toDateInputValue(monthStart),
     to: toDateInputValue(now),
@@ -153,6 +154,7 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
   const loadStatement = useCallback(async () => {
     if (!userId) return;
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       const [data, balance] = await Promise.all([
         getStatement(userId, dateRange.from, dateRange.to),
@@ -162,7 +164,10 @@ export const StatementTab: React.FC<StatementTabProps> = ({ userId, gender = 'ma
       ]);
       setStatement(data);
       setWalletBalance(balance);
-    } catch { /* fallback empty */ }
+    } catch (error) {
+      setStatement([]);
+      setErrorMessage(error instanceof Error ? error.message : 'Statement unavailable');
+    }
     setIsLoading(false);
   }, [userId, dateRange.from, dateRange.to, isMale]);
 
