@@ -1,27 +1,19 @@
 /**
  * Ledger Wallet Service
- * 
+ *
  * Core billing engine for per-minute charging (chat, audio, video, group calls).
  * All financial operations are executed via atomic Supabase RPCs.
- * 
- * Pricing (from system design v2.1):
- *   Chat:        Man ₹4/min, Woman ₹2/min (2× ratio)
- *   Audio Call:  Man ₹6/min, Woman ₹3/min (2× ratio)
- *   Video Call:  Man ₹8/min, Woman ₹4/min (2× ratio)
- *   Group Call:  Man ₹4/min/person, Woman ₹0.50/min/man (8× ratio)
+ *
+ * NOTE: Pricing constants and SessionType have been removed from this module.
+ * The single source of truth for pricing is the `chat_pricing` table, accessed
+ * via `fetchUnifiedPricing()` / `useUnifiedPricing()` (see billing.service.ts).
+ * This eliminates the previous stale `group_woman_rate` (0.50) duplicate.
  */
 
 import { supabase } from '@/integrations/supabase/client';
 
-// ──────────── Pricing Constants ────────────
-export const PRICING = {
-  chat:               { man: 4,  woman: 2,    platform: 2    },
-  audio_call:         { man: 6,  woman: 3,    platform: 3    },
-  video_call:         { man: 8,  woman: 4,    platform: 4    },
-  private_group_call: { man: 4,  woman: 0.50, platform: 3.50 },
-} as const;
-
-export type SessionType = keyof typeof PRICING;
+// SessionType is re-exported from billing.service to keep a single canonical type.
+export type { SessionType } from '@/services/billing.service';
 
 // ──────────── Types ────────────
 export interface BillingResult {
