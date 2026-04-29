@@ -25,8 +25,8 @@ interface GiftItem {
 }
 
 interface SendGiftButtonProps {
-  /** auth user_id of the male sender */
-  senderUserId: string;
+  /** auth user_id of the male sender. If omitted, resolved from supabase.auth */
+  senderUserId?: string;
   /** auth user_id of the female recipient (chat partner / call peer) */
   recipientUserId: string;
   /** Optional context label embedded in the wallet description (e.g. "chat", "video call") */
@@ -64,9 +64,16 @@ export const SendGiftButton = ({
     if (sending) return;
     setSending(gift.id);
     try {
+      let senderAuthId = senderUserId;
+      if (!senderAuthId) {
+        const { data: u } = await supabase.auth.getUser();
+        senderAuthId = u.user?.id;
+      }
+      if (!senderAuthId) throw new Error('Not signed in');
+
       // bill_gift_or_tip expects profiles.id, not auth user_id (mirrors group call path)
       const [{ data: manProf }, { data: womanProf }] = await Promise.all([
-        supabase.from('profiles').select('id').eq('user_id', senderUserId).maybeSingle(),
+        supabase.from('profiles').select('id').eq('user_id', senderAuthId).maybeSingle(),
         supabase.from('profiles').select('id').eq('user_id', recipientUserId).maybeSingle(),
       ]);
       if (!manProf?.id || !womanProf?.id) throw new Error('Profile not found');

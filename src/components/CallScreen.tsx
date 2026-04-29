@@ -205,7 +205,6 @@ export const CallScreen = ({
 
             {userGender === 'male' && activeCall.remoteUserId && (
               <SendGiftButton
-                senderUserId={(activeCall as any).localUserId ?? ''}
                 recipientUserId={activeCall.remoteUserId}
                 context={isVideo ? 'video_call' : 'audio_call'}
                 variant="control"
