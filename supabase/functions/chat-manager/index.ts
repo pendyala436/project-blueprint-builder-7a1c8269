@@ -1400,32 +1400,20 @@ serve(async (req) => {
         // Calculate charges for fractional minutes (per-second precision)
         const menChargeEstimate = fractionalMinutes * session.rate_per_minute;
         
-        // Super users: route through the SAME canonical RPC. `process_chat_billing`
-        // handles super-user bypass (no man debit) and still credits the Indian woman,
-        // writing exclusively to wallet_transactions (Single Source of Truth).
+        // Server-side chat billing has moved to the unified billing.service
+        // (bill_session_minute) called from the client useMiniChatBilling hook.
+        // Super users still pass through here as a no-op acknowledgment.
         if (isSuperUser) {
-          const { data: superBill, error: superBillErr } = await supabase.rpc('process_chat_billing', {
-            p_session_id: session.id,
-            p_minutes: fractionalMinutes,
-          });
-          if (superBillErr) {
-            console.warn('[HEARTBEAT] super-user process_chat_billing error:', superBillErr.message);
-          }
-          const sr = (superBill ?? {}) as Record<string, unknown>;
-          const womenEarnings = Number(sr.earned ?? 0);
-
-          console.log(`[HEARTBEAT] Super user ${session.man_user_id} - no charge, women earned: ${womenEarnings.toFixed(2)} (indian: ${womanIsIndian})`);
-
+          console.log(`[HEARTBEAT] Super user ${session.man_user_id} - billing handled by client unified RPC`);
           return new Response(
             JSON.stringify({
               success: true,
               billing_started: true,
               super_user: true,
               minutes_elapsed: fractionalMinutes,
-
-              women_earned: womenEarnings,
+              women_earned: 0,
               woman_is_indian: womanIsIndian,
-              message: "Super user - no charge applied"
+              message: "Super user - billing via unified RPC"
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
@@ -1439,41 +1427,14 @@ serve(async (req) => {
           );
         }
 
-        // ✅ Canonical billing via single RPC — debits man, credits woman, writes wallet_transactions,
-        // updates session totals, enforces idempotency. Single source of truth.
-        const { data: billResult, error: billError } = await supabase.rpc('process_chat_billing', {
-          p_session_id: session.id,
-          p_minutes: fractionalMinutes,
-        });
-
-        const result = (billResult ?? {}) as Record<string, unknown>;
-
-        if (billError || result.success === false) {
-          const errMsg = String(result.error ?? billError?.message ?? 'Billing failed');
-          console.error('[HEARTBEAT] process_chat_billing failed:', errMsg);
-          if (result.session_ended === true || /insufficient/i.test(errMsg)) {
-            return new Response(
-              JSON.stringify({ success: false, message: 'Insufficient balance' }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-          return new Response(
-            JSON.stringify({ success: false, message: errMsg }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        const menCharged = Number(result.charged ?? 0);
-        const womenEarnings = Number(result.earned ?? 0);
-
-        // Note: process_chat_billing already writes women_earnings for Indian women — no duplicate insert here.
-
-        // Refresh remaining balance for response
+        // Server-side per-minute billing has moved to client unified billing
+        // (bill_session_minute via useMiniChatBilling). Heartbeat just acks here.
+        const menCharged = 0;
+        const womenEarnings = 0;
         const { data: postBalRow } = await supabase
           .from('wallets').select('balance').eq('user_id', session.man_user_id).maybeSingle();
         const newBalance = Number(postBalRow?.balance ?? 0);
-
-        console.log(`Heartbeat processed: ${chat_id}, ${fractionalMinutes.toFixed(3)} min billed, men charged: ${menCharged.toFixed(2)}, women earned: ${womenEarnings.toFixed(2)}`);
+        console.log(`Heartbeat ack (client-billed): ${chat_id}, ${fractionalMinutes.toFixed(3)} min`);
 
         return new Response(
           JSON.stringify({
@@ -1542,28 +1503,9 @@ serve(async (req) => {
             ]);
 
             if (manMsgs?.length && womanMsgs?.length) {
-              const { data: endPricing } = await supabase
-                .from("chat_pricing")
-                .select("rate_per_minute, women_earning_rate")
-                .eq("is_active", true)
-                .maybeSingle();
-
-              // ✅ Final billing via canonical RPC — same single source of truth as heartbeat.
-              // process_chat_billing handles: super-user bypass, wallet debit, women_earnings, wallet_transactions,
-              // active_chat_sessions totals update, and idempotency.
-              const { data: finalBill, error: finalBillErr } = await supabase.rpc('process_chat_billing', {
-                p_session_id: session.id,
-                p_minutes: fractionalMinutesRemaining,
-              });
-              if (finalBillErr) {
-                console.warn('[END_CHAT] Final billing RPC error:', finalBillErr.message);
-              } else {
-                const fr = (finalBill ?? {}) as Record<string, unknown>;
-                const finalCharged = Number(fr.charged ?? 0);
-                const finalEarned = Number(fr.earned ?? 0);
-                console.log(`[END_CHAT] Final billing: men charged ₹${finalCharged.toFixed(2)}, women earned ₹${finalEarned.toFixed(2)} for ${fractionalMinutesRemaining.toFixed(1)} min`);
-              }
-
+              // Final billing also handled client-side by unified billing service.
+              // Edge function no longer charges the final fractional minute.
+              console.log(`[END_CHAT] Skipping server-side final billing — handled by client unified RPC for ${fractionalMinutesRemaining.toFixed(1)} min`);
             }
           }
 
