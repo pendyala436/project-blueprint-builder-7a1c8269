@@ -422,6 +422,63 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_ledger: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          currency: string
+          description: string | null
+          duration_minutes: number | null
+          entry_type: string
+          id: string
+          idempotency_key: string | null
+          man_id: string
+          rate_applied: number | null
+          reference_id: string | null
+          session_id: string | null
+          session_type: string
+          status: string
+          woman_id: string | null
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_minutes?: number | null
+          entry_type: string
+          id?: string
+          idempotency_key?: string | null
+          man_id: string
+          rate_applied?: number | null
+          reference_id?: string | null
+          session_id?: string | null
+          session_type: string
+          status?: string
+          woman_id?: string | null
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_minutes?: number | null
+          entry_type?: string
+          id?: string
+          idempotency_key?: string | null
+          man_id?: string
+          rate_applied?: number | null
+          reference_id?: string | null
+          session_id?: string | null
+          session_type?: string
+          status?: string
+          woman_id?: string | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           chat_id: string
@@ -703,6 +760,48 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      earnings_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          man_id: string | null
+          rate_applied: number | null
+          session_id: string | null
+          session_type: string
+          woman_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          man_id?: string | null
+          rate_applied?: number | null
+          session_id?: string | null
+          session_type: string
+          woman_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          man_id?: string | null
+          rate_applied?: number | null
+          session_id?: string | null
+          session_type?: string
+          woman_id?: string
         }
         Relationships: []
       }
@@ -1631,48 +1730,78 @@ export type Database = {
       }
       monthly_statements: {
         Row: {
+          audio_call_amount: number
+          chat_amount: number
           closing_balance: number
-          created_at: string
           excel_url: string | null
-          forwarded_balance: number
+          gender: string
+          generated_at: string
+          gift_amount: number
+          group_call_amount: number
           id: string
           month: number
+          notes: string | null
           opening_balance: number
+          paid_at: string | null
+          payout_amount: number
+          payout_status: string
           pdf_url: string | null
+          recharge_amount: number
+          tip_amount: number
           total_credit: number
           total_debit: number
-          updated_at: string
           user_id: string
+          video_call_amount: number
           year: number
         }
         Insert: {
+          audio_call_amount?: number
+          chat_amount?: number
           closing_balance?: number
-          created_at?: string
           excel_url?: string | null
-          forwarded_balance?: number
+          gender: string
+          generated_at?: string
+          gift_amount?: number
+          group_call_amount?: number
           id?: string
           month: number
+          notes?: string | null
           opening_balance?: number
+          paid_at?: string | null
+          payout_amount?: number
+          payout_status?: string
           pdf_url?: string | null
+          recharge_amount?: number
+          tip_amount?: number
           total_credit?: number
           total_debit?: number
-          updated_at?: string
           user_id: string
+          video_call_amount?: number
           year: number
         }
         Update: {
+          audio_call_amount?: number
+          chat_amount?: number
           closing_balance?: number
-          created_at?: string
           excel_url?: string | null
-          forwarded_balance?: number
+          gender?: string
+          generated_at?: string
+          gift_amount?: number
+          group_call_amount?: number
           id?: string
           month?: number
+          notes?: string | null
           opening_balance?: number
+          paid_at?: string | null
+          payout_amount?: number
+          payout_status?: string
           pdf_url?: string | null
+          recharge_amount?: number
+          tip_amount?: number
           total_credit?: number
           total_debit?: number
-          updated_at?: string
           user_id?: string
+          video_call_amount?: number
           year?: number
         }
         Relationships: []
@@ -3717,8 +3846,54 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_statements: {
+        Args: {
+          p_gender?: string
+          p_limit?: number
+          p_month?: number
+          p_offset?: number
+          p_payout_status?: string
+          p_user_id?: string
+          p_year?: number
+        }
+        Returns: {
+          audio_call_amount: number
+          chat_amount: number
+          closing_balance: number
+          excel_url: string
+          full_name: string
+          gender: string
+          generated_at: string
+          gift_amount: number
+          group_call_amount: number
+          month: number
+          opening_balance: number
+          paid_at: string
+          payout_amount: number
+          payout_status: string
+          pdf_url: string
+          recharge_amount: number
+          statement_id: string
+          tip_amount: number
+          total_credit: number
+          total_debit: number
+          user_id: string
+          video_call_amount: number
+          year: number
+        }[]
+      }
       admin_toggle_language_leader: {
         Args: { p_make_leader: boolean; p_user_id: string }
+        Returns: Json
+      }
+      admin_update_payout: {
+        Args: {
+          p_excel_url?: string
+          p_notes?: string
+          p_pdf_url?: string
+          p_statement_id: string
+          p_status?: string
+        }
         Returns: Json
       }
       assign_earning_slots: { Args: never; Returns: Json }
@@ -3729,6 +3904,28 @@ export type Database = {
       atomic_wallet_debit: {
         Args: { p_amount: number; p_wallet_id: string }
         Returns: number
+      }
+      bill_gift_or_tip: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_man_id: string
+          p_reference_id?: string
+          p_type: string
+          p_woman_id: string
+        }
+        Returns: Json
+      }
+      bill_session_minute: {
+        Args: {
+          p_man_count?: number
+          p_man_id: string
+          p_minutes: number
+          p_session_id: string
+          p_session_type: string
+          p_woman_id: string
+        }
+        Returns: Json
       }
       block_user: { Args: { p_target_user_id: string }; Returns: Json }
       can_access_service: {
@@ -3776,6 +3973,7 @@ export type Database = {
       expire_group_video_access: { Args: never; Returns: undefined }
       generate_female_employee_id: { Args: never; Returns: string }
       generate_payout_snapshot_now: { Args: never; Returns: Json }
+      generate_payout_snapshot_unified: { Args: never; Returns: Json }
       get_analytics_summary: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: Json
@@ -3821,6 +4019,7 @@ export type Database = {
           transaction_type: string
         }[]
       }
+      get_man_balance: { Args: { p_user_id: string }; Returns: Json }
       get_men_transaction_history:
         | { Args: { p_user_id: string }; Returns: Json }
         | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
@@ -3915,6 +4114,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_unified_pricing: { Args: never; Returns: Json }
       get_unrecharged_men: {
         Args: never
         Returns: {
@@ -3922,6 +4122,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_woman_balance: { Args: { p_user_id: string }; Returns: Json }
       get_women_transaction_history:
         | { Args: { p_user_id: string }; Returns: Json }
         | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
@@ -3954,16 +4155,28 @@ export type Database = {
         }
         Returns: Json
       }
-      ledger_recharge: {
-        Args: {
-          p_amount: number
-          p_description?: string
-          p_gateway?: string
-          p_gateway_txn_id?: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
+      ledger_recharge:
+        | {
+            Args: {
+              p_amount: number
+              p_description?: string
+              p_gateway?: string
+              p_gateway_txn_id?: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_description?: string
+              p_gateway?: string
+              p_gateway_txn_id?: string
+              p_reference_id?: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       ledger_withdrawal: {
         Args: {
           p_amount: number
@@ -4066,6 +4279,10 @@ export type Database = {
       reset_private_group_counts: { Args: never; Returns: undefined }
       reset_women_wallets_after_snapshot: { Args: never; Returns: Json }
       revert_busy_to_online: { Args: { p_user_id: string }; Returns: undefined }
+      run_monthly_closing: {
+        Args: { p_month?: number; p_year?: number }
+        Returns: Json
+      }
       safe_ledger_insert: {
         Args: {
           p_counterparty_id: string
