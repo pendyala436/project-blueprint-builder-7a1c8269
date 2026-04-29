@@ -64,8 +64,63 @@ Deno.serve(async (req) => {
 
     console.log("[monthly-payout-processor] Success:", JSON.stringify(data));
 
+    // Archive a timestamped Excel snapshot to storage (never overwrites)
+    let archive: { path?: string; error?: string } = {};
+    try {
+      const XLSX = await import("https://esm.sh/xlsx@0.18.5");
+      const istNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${istNow.getFullYear()}-${pad(istNow.getMonth() + 1)}-${pad(istNow.getDate())}_${pad(istNow.getHours())}-${pad(istNow.getMinutes())}-${pad(istNow.getSeconds())}`;
+      const monthKey = `${istNow.getFullYear()}-${pad(istNow.getMonth() + 1)}`;
+      const filename = `payout-${stamp}.xlsx`;
+
+      // Pull this month's snapshot rows
+      const { data: snaps } = await supabase
+        .from("women_payout_snapshots")
+        .select("app_sno, beneficiary_purpose, account_holder_name, full_name, mobile_number, email_address, address, bank_account_number, ifsc_code, upi_vpa, wallet_balance_at_snapshot, ist_month, ist_year, snapshot_ist_date")
+        .eq("ist_month", String(istNow.getMonth() + 1).padStart(2, "0"))
+        .eq("ist_year", istNow.getFullYear())
+        .order("app_sno", { ascending: true });
+
+      const rows = (snaps || []).map((r: any, i: number) => [
+        r.app_sno ?? i + 1,
+        r.beneficiary_purpose || "Earnings Payout",
+        r.account_holder_name || r.full_name || "—",
+        r.mobile_number || "—",
+        r.email_address || "—",
+        r.address || "—",
+        r.bank_account_number || "—",
+        r.ifsc_code || "—",
+        r.upi_vpa || "—",
+        Number(r.wallet_balance_at_snapshot || 0).toFixed(2),
+      ]);
+      const total = (snaps || []).reduce((s: number, r: any) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
+      const headers = ["Beneficiary ID / S.No","Beneficiary Purpose","Name","Phone Number","Email ID","Address","Account Number","IFSC Code","UPI VPA","Amount (₹)"];
+      const wsData = [
+        ["Payout Statement (Auto — Monthly)"],
+        [`Period: ${monthKey}`, "", "Currency: INR", "", `Women: ${rows.length}`, "", `Total: ₹${total.toFixed(2)}`, "", `Generated (IST): ${stamp}`],
+        [],
+        headers,
+        ...rows,
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Payouts");
+      const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+
+      const path = `${monthKey}/${filename}`;
+      const { error: upErr } = await supabase.storage
+        .from("payout-exports")
+        .upload(path, new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), { upsert: false });
+      if (upErr) archive = { error: upErr.message };
+      else archive = { path };
+    } catch (xe) {
+      archive = { error: xe instanceof Error ? xe.message : String(xe) };
+      console.error("[monthly-payout-processor] archive failed:", xe);
+    }
+
     return new Response(
-      JSON.stringify({ success: true, result: data }),
+      JSON.stringify({ success: true, result: data, archive }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
