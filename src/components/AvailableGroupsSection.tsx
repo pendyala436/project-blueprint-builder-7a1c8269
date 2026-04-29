@@ -147,17 +147,18 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
         p_group_id: row.group.id, p_user_id: currentUserId, p_max_participants: MAX_PARTICIPANTS,
       });
       if (joinError) throw joinError;
-      const result = joinResult as { success: boolean; error?: string };
+      const result = joinResult as { success: boolean; error?: string; host_id?: string };
       if (!result.success) {
         toast.error(result.error || 'Could not join group');
         preStream.getTracks().forEach(t => t.stop());
         setJoiningKey(null);
         return;
       }
-      // Tag which host this member joined → drives billing attribution
-      await supabase.from('group_memberships').update({
-        joined_host_id: row.host_id,
-      }).eq('group_id', row.group.id).eq('user_id', currentUserId);
+      // joined_host_id is now set atomically inside join_group_atomic RPC.
+      // Defensive sync in case the host changed between fetch and join.
+      if (result.host_id && result.host_id !== row.host_id) {
+        console.warn('[AvailableGroups] Host changed during join:', row.host_id, '→', result.host_id);
+      }
 
       setActiveGroupStream(preStream);
       setActiveRow(row);
