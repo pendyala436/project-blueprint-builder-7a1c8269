@@ -34,7 +34,7 @@ const getTypeLabel = (type: string) => {
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
     group_call_charge: 'Group Call', private_group_call_charge: 'Group Call',
     debit: 'Debit', withdrawal: 'Withdrawal',
-    gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received',
+    gift: 'Gift/Tip Sent', gift_charge: 'Gift/Tip Sent', gift_debit: 'Gift Sent', gift_received: 'Gift/Tip Received', gift_earning: 'Gift/Tip Received', gift_credit: 'Gift Received',
     tip_charge: 'Tip Sent', tip_earning: 'Tip Received',
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
