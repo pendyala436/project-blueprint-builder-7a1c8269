@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import AdminNav from "@/components/AdminNav";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { GroupCallBillingTester } from "@/components/admin/GroupCallBillingTester";
 
 interface AdminSetting {
   id: string;
@@ -485,6 +486,9 @@ const AdminSettings = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Admin diagnostic: live group-call billing test */}
+        <GroupCallBillingTester />
       </div>
     </AdminNav>
   );
