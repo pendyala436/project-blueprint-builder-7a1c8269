@@ -1371,24 +1371,18 @@ serve(async (req) => {
           );
         }
 
-        // Bill fractional minutes (per-second precision: seconds / 60) per spec
+        // Bill fractional minutes (per-second precision: seconds / 60) per spec.
+        // NOTE: Do NOT pre-update last_activity_at here — the canonical RPC
+        // `process_chat_billing` performs the atomic claim itself. Updating it
+        // here would invalidate the RPC's claim and cause it to silently
+        // return `duplicate_skipped: true` for every heartbeat, resulting in
+        // ZERO billing rows in wallet_transactions (the bug we are fixing).
         const fractionalMinutes = secondsElapsed / 60;
-        // Advance last_activity_at to now (no remainder carry-forward needed with per-second precision)
-        const newLastActivity = new Date(lastActivity.getTime() + Math.floor(secondsElapsed) * 1000);
 
-        // RACE CONDITION GUARD: Atomically update last_activity_at only if it hasn't changed
-        // This prevents two concurrent heartbeats from both billing for the same period
-        const { data: lockResult, error: lockError } = await supabase
-          .from("active_chat_sessions")
-          .update({ last_activity_at: newLastActivity.toISOString() })
-          .eq("chat_id", chat_id)
-          .eq("last_activity_at", session.last_activity_at)
-          .select("id")
-          .maybeSingle();
+        // Soft duplicate-skip flag — kept for response shape compatibility.
+        const lockResult: { id: string } | null = { id: session.id };
 
         if (!lockResult) {
-          // Another heartbeat already processed this period - skip to avoid duplicate billing
-          console.log(`[HEARTBEAT] Skipping duplicate heartbeat for chat ${chat_id} (last_activity_at already updated)`);
           return new Response(
             JSON.stringify({
               success: true,
