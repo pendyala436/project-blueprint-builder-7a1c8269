@@ -42,37 +42,48 @@ const CREDIT_TYPES = [
   'gift_received', 'gift_earning', 'tip_earning', 'tip_received',
 ];
 
-const getTypeLabel = (type: string) => {
+const SESSION_KIND_LABEL: Record<string, string> = {
+  chat: 'Chat',
+  audio_call: 'Audio Call',
+  video_call: 'Video Call',
+  group_call: 'Group Call',
+  private_group_call: 'Group Call',
+};
+
+const getTypeLabel = (row: StatementRow) => {
+  const t = row.transaction_type;
+  // Prefer the session category (chat / audio / video / group) for session rows
+  if ((t === 'session_charge' || t === 'session_earning') && row.session_type) {
+    const base = SESSION_KIND_LABEL[row.session_type] ?? row.session_type;
+    return t === 'session_earning' ? `${base} Earning` : base;
+  }
   const labels: Record<string, string> = {
-    // Recharge / credit
     recharge: 'Wallet Recharge', credit: 'Credit', refund: 'Refund',
-    // Men spending (canonical RPC writes the bare session_type)
     chat: 'Chat', audio_call: 'Audio Call', video_call: 'Video Call',
     group_call: 'Group Call', private_group_call: 'Group Call',
-    // Legacy "_charge" aliases
     chat_charge: 'Chat', audio_call_charge: 'Audio Call', video_call_charge: 'Video Call',
     group_call_charge: 'Group Call', private_group_call_charge: 'Group Call',
-    // Withdrawals (women)
-    debit: 'Debit', withdrawal: 'Withdrawal', withdrawal_fee: 'Withdrawal Fee',
-    // Gifts & tips
+    debit: 'Debit', withdrawal: 'Withdrawal', withdrawal_fee: 'Withdrawal Fee', payout: 'Payout',
     gift: 'Gift Sent', gift_charge: 'Gift Sent', gift_debit: 'Gift Sent',
     gift_received: 'Gift Received', gift_earning: 'Gift Received', gift_credit: 'Gift Received',
     tip: 'Tip Sent', tip_charge: 'Tip Sent', tip_earning: 'Tip Received', tip_received: 'Tip Received',
-    // Women earnings
     chat_earning: 'Chat Earning', audio_call_earning: 'Audio Earning',
     video_call_earning: 'Video Earning', group_call_earning: 'Group Earning',
     private_group_call_earning: 'Group Earning',
     earning: 'Earning',
   };
-  return labels[type] || type?.replace(/_/g, ' ');
+  return labels[t] || t?.replace(/_/g, ' ');
 };
 
 const isCredit = (type: string) => CREDIT_TYPES.includes(type);
-const isSession = (type: string) => SESSION_TYPES.includes(type);
+// A row represents a billed session minute when it has duration + rate metadata
+const isSession = (row: StatementRow) =>
+  SESSION_TYPES.includes(row.transaction_type) ||
+  (row.duration_seconds != null && row.rate_per_minute != null);
 
 const getTypeWithRate = (row: StatementRow): string => {
-  const label = getTypeLabel(row.transaction_type);
-  if (isSession(row.transaction_type) && row.rate_per_minute != null) {
+  const label = getTypeLabel(row);
+  if (isSession(row) && row.rate_per_minute != null) {
     return `${label} — ₹${row.rate_per_minute.toFixed(2)}/min`;
   }
   return label;
