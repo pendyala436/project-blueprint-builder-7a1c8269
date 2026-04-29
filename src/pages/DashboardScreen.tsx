@@ -1246,8 +1246,8 @@ const DashboardScreen = () => {
     if (paymentStatus && orderId) {
       const verifyPayment = async () => {
         try {
-          const { data, error } = await supabase.functions.invoke('razorpay-payment/verify', {
-            body: { orderId }
+          const { data, error } = await supabase.functions.invoke('razorpay-payment', {
+            body: { action: 'verify', orderId }
           });
           if (error) throw error;
           if (data?.credited) {
@@ -1318,8 +1318,9 @@ const DashboardScreen = () => {
         order_id: data.orderId,
         handler: async (response: any) => {
           try {
-            const { data: vData, error: vErr } = await supabase.functions.invoke('razorpay-payment/verify', {
+            const { data: vData, error: vErr } = await supabase.functions.invoke('razorpay-payment', {
               body: {
+                action: 'verify',
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
