@@ -142,7 +142,10 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
 
       setActiveGroupStream(preStream);
       setActiveGroup({ ...group, is_live: true, current_host_id: currentUserId, current_host_name: userName });
-      toast.success(`You are live in ${group.name} (${pickedLanguage})`);
+      // Fetch host number for display
+      const { data: meProf } = await supabase.from('profiles').select('host_number').eq('id', currentUserId).maybeSingle();
+      const hostNum = (meProf as any)?.host_number;
+      toast.success(`You are live in ${group.name} (${pickedLanguage})${hostNum ? ` — Host #${hostNum}` : ''}`);
     } catch (error: any) {
       preStream.getTracks().forEach(t => t.stop());
       toast.error('Unable to go live', { description: classifyError(error, 'start the live stream').message });
