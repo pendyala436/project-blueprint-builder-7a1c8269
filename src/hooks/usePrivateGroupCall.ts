@@ -512,13 +512,17 @@ export function usePrivateGroupCall({
           return;
         }
 
+        // Compute deterministic minute_index from session start so it aligns with
+        // the on-join bill (minute_index=0). Heartbeat ticks bill 1, 2, 3, ...
+        const minuteIdx = Math.max(1, Math.floor((Date.now() - session.startTime) / 60000));
+
         await Promise.all(activeMen.map(async (man) => {
           // Resolve man's profile.id from his auth user_id (man.id is auth user_id)
           const { data: manProfile } = await supabase
             .from('profiles').select('id').eq('user_id', man.id).maybeSingle();
           if (!manProfile?.id) return;
 
-          const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id);
+          const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id, minuteIdx);
           if (!r.success && r.error?.includes('Insufficient balance')) {
             // Eject this man — billing failed
             console.warn('[GROUP] Ejecting man for insufficient balance:', man.id);
