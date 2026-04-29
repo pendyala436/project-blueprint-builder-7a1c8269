@@ -90,7 +90,7 @@ const getTypeWithRate = (row: StatementRow): string => {
 };
 
 const getDurationDisplay = (row: StatementRow): string => {
-  if (!isSession(row.transaction_type)) return '—';
+  if (!isSession(row)) return '—';
   if (row.duration_seconds == null) return '—';
   const totalSecs = Math.round(row.duration_seconds);
   const m = Math.floor(totalSecs / 60);
@@ -99,19 +99,19 @@ const getDurationDisplay = (row: StatementRow): string => {
 };
 
 const getStartTime = (row: StatementRow): string => {
-  if (!isSession(row.transaction_type) || row.duration_seconds == null) return '—';
+  if (!isSession(row) || row.duration_seconds == null) return '—';
   const endDate = new Date(row.created_at);
   const startDate = new Date(endDate.getTime() - row.duration_seconds * 1000);
   return format(startDate, 'HH:mm:ss');
 };
 
 const getEndTime = (row: StatementRow): string => {
-  if (!isSession(row.transaction_type) || row.duration_seconds == null) return '—';
+  if (!isSession(row) || row.duration_seconds == null) return '—';
   return format(new Date(row.created_at), 'HH:mm:ss');
 };
 
 const getRateDisplay = (row: StatementRow): string => {
-  if (!isSession(row.transaction_type) || row.rate_per_minute == null) return '—';
+  if (!isSession(row) || row.rate_per_minute == null) return '—';
   return `₹${row.rate_per_minute.toFixed(2)}/min`;
 };
 
