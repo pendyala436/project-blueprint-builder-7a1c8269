@@ -92,20 +92,12 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
         .order("created_at", { ascending: false })
         .limit(30);
 
-      // 3. Group call participation — derive from wallet_transactions (single source of truth)
-      //    Men: debits with transaction_type 'group_charge' / 'group_call_charge'
-      //    Women: credits where description starts with 'Group call earning'
-      const { data: groupTxs } = await supabase
-        .from("wallet_transactions")
-        .select("id, amount, description, duration_seconds, rate_per_minute, created_at, transaction_type, type, session_id")
-        .eq("user_id", currentUserId)
-        .or(
-          isMale
-            ? "transaction_type.eq.group_charge,transaction_type.eq.group_call_charge"
-            : "description.ilike.Group call earning%"
-        )
-        .order("created_at", { ascending: false })
-        .limit(50);
+      // 3. Group call participation — unified from wallet_transactions + archive
+      //    (>3 month old records live in wallet_transactions_archive)
+      const { data: groupTxs } = await supabase.rpc(
+        "get_user_group_call_history" as any,
+        { p_user_id: currentUserId, p_is_male: isMale, p_limit: 50 }
+      );
 
       // Collect partner IDs
       const partnerIds = new Set<string>();
