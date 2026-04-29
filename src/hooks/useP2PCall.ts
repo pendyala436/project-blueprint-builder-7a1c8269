@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ICE_SERVERS } from '@/lib/iceServers';
+import { billMinute } from '@/services/billing.service';
 
 /**
  * P2P WebRTC Video Call Hook
@@ -166,10 +167,28 @@ export const useP2PCall = ({
     }
 
     try {
-      // Billing logic removed — calls run without charging or earning.
-      void sessionId; void audioOnly; void isInitiator; void remoteUserId;
+      // Resolve profile IDs (billing uses profile.id, not auth user_id)
+      const [{ data: manProfile }, { data: womanProfile }] = await Promise.all([
+        supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
+        supabase.from('profiles').select('id').eq('user_id', remoteUserId).maybeSingle(),
+      ]);
+      if (!manProfile?.id || !womanProfile?.id) {
+        console.warn('[P2P] Cannot bill — profile lookup failed');
+        return;
+      }
+      const sessionType = audioOnly ? 'audio_call' : 'video_call';
+      const result = await billMinute(sessionId, sessionType, 1.0, manProfile.id, womanProfile.id);
+      if (!result.success) {
+        if (result.error?.includes('Insufficient balance')) {
+          toast({ title: 'Insufficient balance', description: 'Call ending — please recharge.', variant: 'destructive' });
+          setState(prev => ({ ...prev, callStatus: 'ended' }));
+          onCallEnded?.();
+        } else if (!result.duplicate_skipped) {
+          console.error('[P2P] Billing error:', result.error);
+        }
+      }
     } catch (err) {
-      console.error('[P2P] Billing skipped (logic removed):', err);
+      console.error('[P2P] Billing failed:', err);
     } finally {
       billingInProgressRef.current = false;
     }
