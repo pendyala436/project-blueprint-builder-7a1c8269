@@ -3777,6 +3777,17 @@ export type Database = {
         }
         Returns: Json
       }
+      bill_group_gift_or_tip: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_group_id: string
+          p_man_id: string
+          p_reference_id?: string
+          p_type: string
+        }
+        Returns: Json
+      }
       bill_session_minute: {
         Args: {
           p_man_count?: number
