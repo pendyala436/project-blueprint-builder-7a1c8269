@@ -3772,6 +3772,17 @@ export type Database = {
         Args: { p_amount: number; p_wallet_id: string }
         Returns: number
       }
+      audit_wallet_table_grants: {
+        Args: never
+        Returns: {
+          can_delete: boolean
+          can_insert: boolean
+          can_select: boolean
+          can_update: boolean
+          grantee: string
+          table_name: string
+        }[]
+      }
       bill_gift_or_tip: {
         Args: {
           p_amount: number
