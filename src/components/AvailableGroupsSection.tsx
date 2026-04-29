@@ -23,6 +23,7 @@ interface LiveHostRow {
   group: PrivateGroup;
   host_id: string;
   host_name: string;
+  host_number: number | null;
   host_language: string | null;
   participant_count: number;
 }
