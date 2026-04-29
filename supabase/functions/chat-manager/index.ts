@@ -1398,24 +1398,7 @@ serve(async (req) => {
         }
 
         // Calculate charges for fractional minutes (per-second precision)
-        const menCharge = fractionalMinutes * session.rate_per_minute;
-        const newTotalMinutes = session.total_minutes + fractionalMinutes;
-        
-        if (!isSuperUser && (!wallet || wallet.balance < menCharge)) {
-          // End chat due to insufficient balance - auto-disconnect
-          await endChatSession(supabase, chat_id, "insufficient_balance", session);
-          console.log(`[HEARTBEAT] Auto-disconnecting chat ${chat_id} due to insufficient balance. Required: ${menCharge}, Available: ${wallet?.balance || 0}`);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "Insufficient balance - chat ended", 
-              end_chat: true,
-              balance_required: menCharge,
-              balance_available: wallet?.balance || 0
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        const menChargeEstimate = fractionalMinutes * session.rate_per_minute;
         
         // Super users: route through the SAME canonical RPC. `process_chat_billing`
         // handles super-user bypass (no man debit) and still credits the Indian woman,
@@ -1496,10 +1479,16 @@ serve(async (req) => {
           JSON.stringify({
             success: true, 
             billing_started: true,
-            minutes_elapsed: fractionalMinutes,
-            men_charged: menCharge,
+              minutes_elapsed: Number(result.billable_minutes ?? fractionalMinutes),
+              duration_seconds: Number(result.duration_seconds ?? Math.round(fractionalMinutes * 60)),
+              men_charged: menCharged,
             women_earned: womenEarnings,
-            remaining_balance: newBalance
+              remaining_balance: newBalance,
+              man_rate_per_minute: Number(result.man_rate_per_minute ?? session.rate_per_minute),
+              woman_rate_per_minute: Number(result.woman_rate_per_minute ?? womenEarningRate),
+              duplicate_skipped: result.duplicate_skipped === true,
+              end_chat: result.session_ended === true,
+              estimated_charge: Number(menChargeEstimate.toFixed(2))
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
