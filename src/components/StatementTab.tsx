@@ -374,7 +374,13 @@ h1{font-size:18pt;margin-bottom:4pt}
 
       {/* Transaction Table */}
       <div className="overflow-x-auto">
-        {statement.length === 0 ? (
+        {errorMessage ? (
+          <div className="text-center py-16 px-4">
+            <Wallet className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
+            <p className="text-destructive text-sm font-medium">Statement unavailable</p>
+            <p className="text-muted-foreground text-xs mt-1">{errorMessage}</p>
+          </div>
+        ) : statement.length === 0 ? (
           <div className="text-center py-16">
             <Wallet className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">No transactions found</p>
