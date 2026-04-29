@@ -4018,18 +4018,6 @@ export type Database = {
         }
         Returns: Json
       }
-      ledger_bill_group_call: {
-        Args: {
-          p_charge_per_man: number
-          p_duration_seconds?: number
-          p_earn_per_man: number
-          p_man_ids: string[]
-          p_minute_number: number
-          p_session_id: string
-          p_woman_id: string
-        }
-        Returns: Json
-      }
       ledger_bill_session: {
         Args: {
           p_duration_seconds?: number
