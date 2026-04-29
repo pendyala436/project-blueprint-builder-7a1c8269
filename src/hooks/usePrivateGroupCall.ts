@@ -504,68 +504,8 @@ export function usePrivateGroupCall({
           return;
         }
 
-        // Single source of truth: call canonical v2 RPC
-        const manIds = Array.from(session.participants.values())
-          .filter(p => !p.isOwner)
-          .map(p => p.id);
-        const minuteIdx = Math.floor(Date.now() / 60000);
-        const { data, error } = await supabase.rpc('process_group_billing_v2', {
-          p_group_id: session.groupId,
-          p_session_id: session.sessionId,
-          p_host_id: session.hostId,
-          p_man_ids: manIds,
-          p_minutes: 1,
-          p_idempotency: `group:${session.sessionId}:${minuteIdx}`,
-        });
-
-        if (error) {
-          console.error('[GROUP] Billing RPC error:', error);
-          return;
-        }
-
-        const result = data as {
-          success: boolean;
-          duplicate_skipped?: boolean;
-          active_count?: number;
-          host_earned?: number;
-          removed_men?: string[];
-          error?: string;
-        };
-
-        if (!result.success) {
-          console.error('[GROUP] Billing failed:', result.error);
-          return;
-        }
-
-        // Update host earnings
-        if (result.host_earned && result.host_earned > 0) {
-          session.totalEarnings += result.host_earned;
-          setState(prev => ({ ...prev, totalEarnings: session.totalEarnings }));
-        }
-
-        // Handle removed users (insufficient balance)
-        if (result.removed_men && result.removed_men.length > 0) {
-          for (const removedId of result.removed_men) {
-            session.participants.delete(removedId);
-            onParticipantLeave?.(removedId, 'insufficient_balance');
-
-            // Notify participant to leave
-            channelRef.current?.send({
-              type: 'broadcast',
-              event: 'participant-removed',
-              payload: { participantId: removedId, reason: 'insufficient_balance' },
-            });
-          }
-        }
-
-        // Update participant count in state
-        setState(prev => ({
-          ...prev,
-          participants: Array.from(session.participants.values()),
-          viewerCount: session.participants.size,
-        }));
-
-        console.log(`[GROUP] Billing: ${result.active_count} men billed, host earned ₹${result.host_earned}`);
+        // Billing logic removed — group calls run without charging or earning.
+        return;
       } catch (err) {
         console.error('[GROUP] Billing error:', err);
       } finally {

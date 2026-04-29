@@ -259,58 +259,14 @@ export const useAtomicTransaction = () => {
     giftId: string,
     message?: string
   ): Promise<GiftResult> => {
-    startProcessing();
-    
-    try {
-      const { data, error } = await supabase.rpc("process_gift_transaction", {
-        p_sender_id: senderId,
-        p_receiver_id: receiverId,
-        p_gift_id: giftId,
-        p_message: message || null,
-      });
-
-      if (error) throw error;
-
-      const result = data as Record<string, unknown>;
-
-      if (!result.success) {
-        toast({
-          title: "Gift Failed",
-          description: (result.error as string) || "Unable to send gift",
-          variant: "destructive",
-        });
-        return { success: false, error: result.error as string };
-      }
-
-      toast({
-        title: "Gift Sent!",
-        description: `${result.gift_emoji} ${result.gift_name} sent successfully`,
-      });
-
-      return {
-        success: true,
-        giftTransactionId: result.gift_transaction_id as string,
-        walletTransactionId: result.wallet_transaction_id as string,
-        previousBalance: result.previous_balance as number,
-        newBalance: result.new_balance as number,
-        giftName: result.gift_name as string,
-        giftEmoji: result.gift_emoji as string,
-        superUserBypass: result.super_user_bypass as boolean,
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Gift sending failed";
-      console.error("Gift error:", err);
-      
-      toast({
-        title: "Gift Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      
-      return { success: false, error: errorMessage };
-    } finally {
-      stopProcessing();
-    }
+    // Gift/tip billing logic removed — feature disabled until rebuilt.
+    void senderId; void receiverId; void giftId; void message;
+    toast({
+      title: "Gifts Disabled",
+      description: "Gift sending is temporarily disabled.",
+      variant: "destructive",
+    });
+    return { success: false, error: "Gift system disabled" };
   }, [toast]);
 
   /**
@@ -324,39 +280,8 @@ export const useAtomicTransaction = () => {
     sessionId: string,
     minutes: number
   ): Promise<BillingResult> => {
-    startProcessing();
-    
-    try {
-      const { data, error } = await supabase.rpc("process_chat_billing", {
-        p_session_id: sessionId,
-        p_minutes: minutes,
-      });
-
-      if (error) throw error;
-
-      const result = data as Record<string, unknown>;
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error as string,
-          sessionEnded: result.session_ended as boolean || false,
-        };
-      }
-
-      return {
-        success: true,
-        charged: result.charged as number,
-        earned: result.earned as number,
-        superUser: result.super_user as boolean || false,
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Billing failed";
-      console.error("Billing error:", err);
-      return { success: false, error: errorMessage };
-    } finally {
-      stopProcessing();
-    }
+    void sessionId; void minutes;
+    return { success: true, charged: 0, earned: 0, superUser: false };
   }, []);
 
   /**
@@ -372,45 +297,8 @@ export const useAtomicTransaction = () => {
     manId?: string,
     womanId?: string,
   ): Promise<BillingResult> => {
-    startProcessing();
-
-    try {
-      if (!manId || !womanId) {
-        return { success: false, error: "manId/womanId required for video billing" };
-      }
-      const { data, error } = await supabase.rpc("process_video_billing_v2", {
-        p_session_id: sessionId,
-        p_man_id: manId,
-        p_woman_id: womanId,
-        p_minutes: minutes,
-        p_idempotency: `video:${sessionId}:${Math.floor(Date.now() / 60000)}`,
-      });
-
-      if (error) throw error;
-
-      const result = data as Record<string, unknown>;
-
-      if (!result.success) {
-        return {
-          success: false,
-          error: result.error as string,
-          sessionEnded: result.session_ended as boolean || false,
-        };
-      }
-
-      return {
-        success: true,
-        charged: result.charged as number,
-        earned: result.earned as number,
-        superUser: result.super_user as boolean || false,
-      };
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Video billing failed";
-      console.error("Video billing error:", err);
-      return { success: false, error: errorMessage };
-    } finally {
-      stopProcessing();
-    }
+    void sessionId; void minutes; void manId; void womanId;
+    return { success: true, charged: 0, earned: 0, superUser: false };
   }, []);
 
   /**

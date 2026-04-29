@@ -166,56 +166,10 @@ export const useP2PCall = ({
     }
 
     try {
-      // Single source of truth: canonical RPCs (write only to wallet_transactions).
-      //   audio-only → process_audio_billing  (₹6/min man, ₹3/min woman)
-      //   video      → process_video_billing_v2 (₹8/min man, ₹4/min woman)
-      const minuteIdx = Math.floor(Date.now() / 60000);
-      const manId = isInitiator ? currentUserId : remoteUserId;
-      const womanId = isInitiator ? remoteUserId : currentUserId;
-      const rpcName = audioOnly ? 'process_audio_billing' : 'process_video_billing_v2';
-      const idemPrefix = audioOnly ? 'audio' : 'video';
-      const { data, error } = await supabase.rpc(rpcName, {
-        p_session_id: sessionId,
-        p_man_id: manId,
-        p_woman_id: womanId,
-        p_minutes: 1,
-        p_idempotency: `${idemPrefix}:${sessionId}:${minuteIdx}`,
-      });
-
-
-      if (error) {
-        console.error('[P2P] Billing error:', error);
-        // If insufficient balance, end call
-        if (error.message?.includes('insufficient') || error.message?.includes('Insufficient')) {
-          toast({
-            title: "Insufficient Balance",
-            description: "Call ended due to low balance. Please recharge.",
-            variant: "destructive",
-          });
-          endCall();
-        }
-        billingInProgressRef.current = false;
-        return;
-      }
-
-      console.log('[P2P] Billing processed:', data);
-
-      // Check if session was ended due to insufficient funds
-      const result = data as Record<string, unknown> | null;
-      if (result?.session_ended) {
-        toast({
-          title: "Call Ended",
-          description: "Insufficient wallet balance. Please recharge to continue.",
-          variant: "destructive",
-        });
-        endCall();
-      }
-      
-      if (result?.duplicate_skipped) {
-        console.log('[P2P] Duplicate billing skipped by server');
-      }
+      // Billing logic removed — calls run without charging or earning.
+      void sessionId; void audioOnly; void isInitiator; void remoteUserId;
     } catch (err) {
-      console.error('[P2P] Billing failed:', err);
+      console.error('[P2P] Billing skipped (logic removed):', err);
     } finally {
       billingInProgressRef.current = false;
     }
@@ -937,31 +891,9 @@ export const useP2PCall = ({
       .maybeSingle();
 
     if (currentSession) {
-      // FINAL BILLING: Bill remaining partial minute since last billing interval
-      const billedMinutes = currentSession.total_minutes || 0;
-      const remainingMinutes = durationMinutes - billedMinutes;
-      
-      if (remainingMinutes > 0.0167) { // > 1 second unbilled
-        // Round to 2 decimal places (≈ ±0.6s) — exact pro-rated amount, NOT ceil-to-minute.
-        const exactMinutes = Math.round(remainingMinutes * 100) / 100;
-        console.log(`[P2P] Final billing: ${exactMinutes.toFixed(2)} remaining minutes`);
-        try {
-          const finalRpc = audioOnly ? 'process_audio_billing' : 'process_video_billing_v2';
-          const finalPrefix = audioOnly ? 'audio' : 'video';
-          await supabase.rpc(finalRpc, {
-            p_session_id: currentSession.id,
-            p_man_id: isInitiator ? currentUserId : remoteUserId,
-            p_woman_id: isInitiator ? remoteUserId : currentUserId,
-            p_minutes: exactMinutes,
-            p_idempotency: `${finalPrefix}:${currentSession.id}:final:${exactMinutes}`,
-          });
-          console.log('[P2P] Final billing processed');
-        } catch (err) {
-          console.error('[P2P] Final billing failed:', err);
-        }
-      }
+      // Final billing removed — duration is recorded on the session row only.
 
-      // Read back the RPC-updated totals to avoid double-counting
+      // Read back session totals (will be 0 with billing disabled)
       const { data: updatedSession } = await supabase
         .from('video_call_sessions')
         .select('total_minutes, total_earned')

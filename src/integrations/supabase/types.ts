@@ -3717,45 +3717,6 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_get_statement_detail: {
-        Args: { p_month: number; p_user_id: string; p_year: number }
-        Returns: {
-          balance_after: number
-          credit: number
-          debit: number
-          description: string
-          duration_minutes: number
-          rate_per_minute: number
-          session_id: string
-          transaction_id: string
-          txn_date: string
-          txn_type: string
-        }[]
-      }
-      admin_search_statements: {
-        Args: {
-          p_limit?: number
-          p_month?: number
-          p_offset?: number
-          p_user_id?: string
-          p_year?: number
-        }
-        Returns: {
-          closing_balance: number
-          created_at: string
-          excel_url: string
-          full_name: string
-          gender: string
-          month: number
-          opening_balance: number
-          pdf_url: string
-          statement_id: string
-          total_credit: number
-          total_debit: number
-          user_id: string
-          year: number
-        }[]
-      }
       admin_toggle_language_leader: {
         Args: { p_make_leader: boolean; p_user_id: string }
         Returns: Json
@@ -3814,10 +3775,6 @@ export type Database = {
       cleanup_video_sessions: { Args: never; Returns: undefined }
       expire_group_video_access: { Args: never; Returns: undefined }
       generate_female_employee_id: { Args: never; Returns: string }
-      generate_monthly_statement: {
-        Args: { p_month: number; p_user_id: string; p_year: number }
-        Returns: Json
-      }
       generate_payout_snapshot_now: { Args: never; Returns: Json }
       get_analytics_summary: {
         Args: { p_end_date: string; p_start_date: string }
@@ -3874,27 +3831,6 @@ export type Database = {
           balance: number
           user_id: string
         }[]
-      }
-      get_my_statement_detail: {
-        Args: { p_month: number; p_year: number }
-        Returns: {
-          credit: number
-          debit: number
-          description: string
-          duration_seconds: number
-          end_time: string
-          rate_per_minute: number
-          running_balance: number
-          session_id: string
-          start_time: string
-          transaction_id: string
-          txn_date: string
-          txn_type: string
-        }[]
-      }
-      get_my_statement_summary: {
-        Args: { p_month: number; p_year: number }
-        Returns: Json
       }
       get_offline_women_for_daily_ping: {
         Args: never
@@ -4018,19 +3954,6 @@ export type Database = {
         }
         Returns: Json
       }
-      ledger_bill_session: {
-        Args: {
-          p_duration_seconds?: number
-          p_man_charge: number
-          p_man_id: string
-          p_minute_number: number
-          p_session_id: string
-          p_session_type: string
-          p_woman_earn: number
-          p_woman_id: string
-        }
-        Returns: Json
-      }
       ledger_recharge: {
         Args: {
           p_amount: number
@@ -4073,10 +3996,6 @@ export type Database = {
         }
         Returns: Json
       }
-      process_call_billing: {
-        Args: { p_call_id: string; p_call_type: string }
-        Returns: Json
-      }
       process_chat_billing: {
         Args: { p_minutes?: number; p_session_id: string }
         Returns: Json
@@ -4091,15 +4010,6 @@ export type Database = {
         }
         Returns: Json
       }
-      process_gift_transaction: {
-        Args: {
-          p_gift_id: string
-          p_message?: string
-          p_receiver_id: string
-          p_sender_id: string
-        }
-        Returns: Json
-      }
       process_group_billing_v2: {
         Args: {
           p_group_id: string
@@ -4111,22 +4021,6 @@ export type Database = {
         }
         Returns: Json
       }
-      process_group_tip:
-        | {
-            Args: {
-              p_gift_name?: string
-              p_group_id: string
-              p_host_id: string
-              p_idempotency?: string
-              p_man_id: string
-              p_tip_value: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
-            Returns: Json
-          }
       process_men_recharge: {
         Args: {
           p_gross_amount: number
@@ -4215,7 +4109,6 @@ export type Database = {
         Returns: Json
       }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
-      validate_financial_sot: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
