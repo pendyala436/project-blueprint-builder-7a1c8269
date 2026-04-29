@@ -646,7 +646,8 @@ export function usePrivateGroupCall({
         if (leaverWasHost && !isOwner) {
           setState(prev => ({ ...prev, hostStatus: 'left' }));
           toast.info('Host disconnected. The call has ended.');
-          cleanup();
+          // Host dropped — end the call but keep participants in the group
+          cleanup(false);
           onSessionEnd?.(true); // refund unused balance
           return;
         }
@@ -669,14 +670,16 @@ export function usePrivateGroupCall({
         if (!isOwner) {
           setState(prev => ({ ...prev, hostStatus: 'left' }));
           toast.info(payload.refunded ? 'Host ended the call. Unused balance refunded.' : 'The call has ended.');
-          cleanup();
+          // Host explicitly ended call — keep participants in the group
+          cleanup(false);
           onSessionEnd?.(payload.refunded);
         }
       })
       .on('broadcast', { event: 'participant-removed' }, ({ payload }) => {
         if (payload.participantId === currentUserId) {
           toast.error('You were removed: Insufficient balance');
-          cleanup();
+          // Participant ejected for insufficient balance — revoke access
+          cleanup(true);
         }
       })
       .on('broadcast', { event: 'join-rejected' }, ({ payload }) => {
@@ -684,7 +687,8 @@ export function usePrivateGroupCall({
           if (payload.reason === 'group_full') {
             toast.error(`Group is full (max ${MAX_PARTICIPANTS} participants)`);
           }
-          cleanup();
+          // Join rejected (group full) — revoke any membership
+          cleanup(true);
         }
       })
       // Participant signals it's ready to receive WebRTC offer

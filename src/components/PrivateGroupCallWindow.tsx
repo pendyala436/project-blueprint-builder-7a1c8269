@@ -560,7 +560,8 @@ export function PrivateGroupCallWindow({
     if (isOwner && isLive && !confirmEndWithMembers()) return;
     isStoppingRef.current = true;
     try {
-      if (isOwner && isLive) { await endStream(true); } else { cleanup(); }
+      // Participant clicking close = manual leave → revoke group access
+      if (isOwner && isLive) { await endStream(true); } else { cleanup(true); }
     } catch (err) {
       console.error(err);
     }
