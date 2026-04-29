@@ -471,20 +471,18 @@ export function PrivateGroupCallWindow({
 
   const handleSendGift = async (gift: GiftItem) => {
     try {
-      // Resolve profile IDs (man = sender, woman = host)
-      const [{ data: manProf }, { data: womanProf }] = await Promise.all([
-        supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
-        supabase.from('profiles').select('id').eq('user_id', group.owner_id).maybeSingle(),
-      ]);
-      if (!manProf?.id || !womanProf?.id) throw new Error('Profile not found');
+      // Resolve sender (man) profile id; host is resolved server-side from private_groups.current_host_id
+      const { data: manProf } = await supabase
+        .from('profiles').select('id').eq('user_id', currentUserId).maybeSingle();
+      if (!manProf?.id) throw new Error('Profile not found');
 
       // Reference ID must be unique per send to avoid idempotency dedup (catalog gift.id is reused)
       const uniqueRef = (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? `gift_${group.id}_${gift.id}_${crypto.randomUUID()}`
         : `gift_${group.id}_${gift.id}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const { data, error } = await supabase.rpc('bill_gift_or_tip', {
+      const { data, error } = await supabase.rpc('bill_group_gift_or_tip', {
+        p_group_id: group.id,
         p_man_id: manProf.id,
-        p_woman_id: womanProf.id,
         p_amount: gift.price ?? 0,
         p_type: 'gift',
         p_description: `Group gift: ${gift.name ?? gift.emoji}`,
