@@ -770,6 +770,7 @@ export type Database = {
           currency: string
           description: string | null
           duration_minutes: number | null
+          entry_type: string
           id: string
           man_id: string | null
           rate_applied: number | null
@@ -783,6 +784,7 @@ export type Database = {
           currency?: string
           description?: string | null
           duration_minutes?: number | null
+          entry_type?: string
           id?: string
           man_id?: string | null
           rate_applied?: number | null
@@ -796,6 +798,7 @@ export type Database = {
           currency?: string
           description?: string | null
           duration_minutes?: number | null
+          entry_type?: string
           id?: string
           man_id?: string | null
           rate_applied?: number | null
@@ -4187,6 +4190,7 @@ export type Database = {
         Returns: Json
       }
       mark_stalled_backups: { Args: never; Returns: number }
+      men_ledger_balance: { Args: { p_man_id: string }; Returns: number }
       migrate_existing_wallets_to_ledger: { Args: never; Returns: Json }
       now_ist: { Args: never; Returns: string }
       perform_monthly_earning_rotation: { Args: never; Returns: Json }
@@ -4326,6 +4330,7 @@ export type Database = {
         Returns: Json
       }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
+      women_ledger_balance: { Args: { p_woman_id: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
