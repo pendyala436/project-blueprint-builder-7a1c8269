@@ -103,7 +103,7 @@ export const PRICING_DEFAULTS: UnifiedPricing = {
   audio_man_rate: 6, audio_woman_rate: 3,
   video_man_rate: 8, video_woman_rate: 4,
   group_man_rate: 4, group_woman_rate: 2,
-  gift_woman_pct: 50, tip_woman_pct: 100,
+  gift_woman_pct: 50, tip_woman_pct: 50,
   withdrawal_fee_pct: 5, min_withdrawal_amount: 5000,
   currency: 'INR',
 };
