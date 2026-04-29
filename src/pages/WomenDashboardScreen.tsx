@@ -1342,9 +1342,6 @@ const WomenDashboardScreen = () => {
           <MessageCircle className="h-4 w-4 text-primary" />
           Active Chats ({womenActiveChats.length})
         </span>
-        <Button variant="ghost" size="sm" onClick={fetchWomenActiveChats} disabled={loadingWomenChats} className="h-7 w-7 p-0">
-          <RefreshCw className={cn("w-3.5 h-3.5", loadingWomenChats && "animate-spin")} />
-        </Button>
       </div>
       {loadingWomenChats ? (
         <div className="flex items-center justify-center py-16">

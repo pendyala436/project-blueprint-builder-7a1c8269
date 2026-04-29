@@ -1537,9 +1537,6 @@ const DashboardScreen = () => {
           <MessageCircle className="h-4 w-4 text-primary" />
           Active Chats ({activeChats.length})
         </span>
-        <Button variant="ghost" size="sm" onClick={fetchActiveChats} disabled={loadingChats} className="h-7 w-7 p-0">
-          <RefreshCw className={cn("w-3.5 h-3.5", loadingChats && "animate-spin")} />
-        </Button>
       </div>
       {loadingChats ? (
         <div className="flex items-center justify-center py-16">
