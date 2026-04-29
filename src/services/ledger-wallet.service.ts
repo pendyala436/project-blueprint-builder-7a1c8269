@@ -109,7 +109,8 @@ export async function getStatement(userId: string, fromDate?: string, toDate?: s
     p_from_date: fromDate || null,
     p_to_date: toDate || null,
   });
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
   return (data as unknown as StatementRow[]);
 }
 
