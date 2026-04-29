@@ -19,7 +19,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { MiniChatActions } from "@/components/MiniChatActions";
-// GiftSendButton removed — billing system removed
+import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useDraggablePosition } from "@/hooks/useDraggablePosition";
 import { useResizableWindow } from "@/hooks/useResizableWindow";
@@ -516,7 +516,13 @@ const DraggableMiniChatWindow = ({
           </Button>
           {areButtonsExpanded && (
             <>
-              {/* GiftSendButton removed — billing system removed */}
+              {userGender === 'male' && (
+                <SendGiftButton
+                  senderUserId={currentUserId}
+                  recipientUserId={partnerId}
+                  context="chat"
+                />
+              )}
               <MiniChatActions currentUserId={currentUserId} targetUserId={partnerId} targetUserName={partnerName} isPartnerOnline={isPartnerOnline} onBlock={handleClose} onStopChat={handleClose} onLogOff={handleClose} />
               <Button variant="ghost" size="icon" className="h-5 w-5" onClick={toggleMaximize} title={isMaximized ? "Restore size" : "Maximize"}>
                 {isMaximized ? <Minimize2 className="h-2.5 w-2.5" /> : <Maximize2 className="h-2.5 w-2.5" />}
