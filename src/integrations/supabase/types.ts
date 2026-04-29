@@ -2976,7 +2976,7 @@ export type Database = {
           description: string | null
           duration_seconds: number | null
           id: string
-          idempotency_key: string | null
+          idempotency_key: string
           rate_per_minute: number | null
           reference_id: string | null
           session_id: string | null
@@ -2995,7 +2995,7 @@ export type Database = {
           description?: string | null
           duration_seconds?: number | null
           id?: string
-          idempotency_key?: string | null
+          idempotency_key: string
           rate_per_minute?: number | null
           reference_id?: string | null
           session_id?: string | null
@@ -3014,7 +3014,7 @@ export type Database = {
           description?: string | null
           duration_seconds?: number | null
           id?: string
-          idempotency_key?: string | null
+          idempotency_key?: string
           rate_per_minute?: number | null
           reference_id?: string | null
           session_id?: string | null
@@ -4019,10 +4019,6 @@ export type Database = {
         }
         Returns: Json
       }
-      process_call_billing: {
-        Args: { p_call_id: string; p_call_type?: string }
-        Returns: Json
-      }
       process_chat_billing: {
         Args: { p_minutes?: number; p_session_id: string }
         Returns: Json
@@ -4057,10 +4053,22 @@ export type Database = {
         }
         Returns: Json
       }
-      process_group_tip: {
-        Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
-        Returns: Json
-      }
+      process_group_tip:
+        | {
+            Args: {
+              p_gift_name?: string
+              p_group_id: string
+              p_host_id: string
+              p_idempotency?: string
+              p_man_id: string
+              p_tip_value: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: { p_gift_id: string; p_group_id: string; p_sender_id: string }
+            Returns: Json
+          }
       process_men_recharge: {
         Args: {
           p_gross_amount: number
@@ -4139,6 +4147,7 @@ export type Database = {
       stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
+      text_to_uuid: { Args: { p_text: string }; Returns: string }
       today_ist: { Args: never; Returns: string }
       unblock_user: { Args: { p_target_user_id: string }; Returns: Json }
       unfriend_user: { Args: { p_target_user_id: string }; Returns: Json }
