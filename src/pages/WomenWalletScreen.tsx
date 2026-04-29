@@ -1,6 +1,8 @@
 /**
  * WomenWalletScreen — Women's Wallet with earnings balance and statement.
- * Balance updates dynamically via Supabase realtime on ledger_transactions changes.
+ * Balance updates dynamically via Supabase realtime on wallet_transactions changes.
+ * Each earning event (chat/audio/video/group/gift) writes one wallet_transactions row,
+ * so the subscription fires for every credit as well as every recharge / debit.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
