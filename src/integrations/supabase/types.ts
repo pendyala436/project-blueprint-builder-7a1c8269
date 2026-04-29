@@ -3559,6 +3559,19 @@ export type Database = {
       }
     }
     Views: {
+      admin_half_rule_audit: {
+        Row: {
+          ended_at: string | null
+          expected_woman_earned: number | null
+          half_rule_ok: boolean | null
+          men_charged: number | null
+          session_id: string | null
+          session_type: string | null
+          started_at: string | null
+          woman_earned: number | null
+        }
+        Relationships: []
+      }
       public_female_profiles: {
         Row: {
           account_status: string | null
@@ -3639,6 +3652,25 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      admin_get_half_rule_audit: {
+        Args: { p_limit?: number; p_only_violations?: boolean }
+        Returns: {
+          ended_at: string | null
+          expected_woman_earned: number | null
+          half_rule_ok: boolean | null
+          men_charged: number | null
+          session_id: string | null
+          session_type: string | null
+          started_at: string | null
+          woman_earned: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_half_rule_audit"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       admin_get_user_transactions: {
         Args: {
@@ -3846,6 +3878,23 @@ export type Database = {
           transaction_type: string
         }[]
       }
+      get_man_active_chats: {
+        Args: { p_user_id: string }
+        Returns: {
+          chat_id: string
+          last_message: string
+          last_message_at: string
+          last_message_sender_id: string
+          partner_active_chat_count: number
+          partner_id: string
+          partner_is_online: boolean
+          partner_name: string
+          partner_photo: string
+          partner_status: string
+          session_status: string
+          unread_count: number
+        }[]
+      }
       get_man_balance: { Args: { p_user_id: string }; Returns: Json }
       get_men_transaction_history:
         | { Args: { p_user_id: string }; Returns: Json }
@@ -3961,6 +4010,23 @@ export type Database = {
           session_id: string
           transaction_type: string
           type: string
+        }[]
+      }
+      get_woman_active_chats: {
+        Args: { p_user_id: string }
+        Returns: {
+          chat_id: string
+          last_message: string
+          last_message_at: string
+          last_message_sender_id: string
+          partner_active_chat_count: number
+          partner_id: string
+          partner_is_online: boolean
+          partner_name: string
+          partner_photo: string
+          partner_status: string
+          session_status: string
+          unread_count: number
         }[]
       }
       get_woman_balance: { Args: { p_user_id: string }; Returns: Json }

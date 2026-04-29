@@ -525,109 +525,28 @@ const WomenDashboardScreen = () => {
     if (!currentUserId) return;
     setLoadingWomenChats(true);
     try {
-      // Fetch active/pending sessions AND ended sessions with unread messages
-      const [activeRes, unreadChatIdsRes] = await Promise.all([
-        supabase
-          .from("active_chat_sessions")
-          .select("chat_id, man_user_id, started_at, last_activity_at, status, total_earned")
-          .eq("woman_user_id", currentUserId)
-          .in("status", ["active", "pending"])
-          .order("last_activity_at", { ascending: false }),
-        supabase
-          .from("chat_messages")
-          .select("chat_id")
-          .eq("receiver_id", currentUserId)
-          .eq("is_read", false),
-      ]);
-
-      const unreadChatIds = new Set((unreadChatIdsRes.data || []).map((r: any) => r.chat_id));
-      let sessions = activeRes.data || [];
-
-      // Include ended sessions that still have unread messages
-      if (unreadChatIds.size > 0) {
-        const activeChatIds = new Set(sessions.map(s => s.chat_id));
-        const missingChatIds = [...unreadChatIds].filter(id => !activeChatIds.has(id));
-        if (missingChatIds.length > 0) {
-          const { data: endedSessions } = await supabase
-            .from("active_chat_sessions")
-            .select("chat_id, man_user_id, started_at, last_activity_at, status, total_earned")
-            .eq("woman_user_id", currentUserId)
-            .in("chat_id", missingChatIds)
-            .order("last_activity_at", { ascending: false });
-          if (endedSessions) sessions = [...sessions, ...endedSessions];
-        }
-      }
-
-      if (sessions.length === 0) {
-        setWomenActiveChats([]);
-        setLoadingWomenChats(false);
-        return;
-      }
-
-      const partnerIds = sessions.map(s => s.man_user_id);
-      const chatIds = sessions.map(s => s.chat_id);
-      
-      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-      const [profiles, lastMsgsRes, unreadRes, partnerStatusRes] = await Promise.all([
-        fetchPublicProfiles(partnerIds),
-        Promise.all(sessions.map(s =>
-          supabase
-            .from("chat_messages")
-            .select("message, created_at, sender_id")
-            .eq("chat_id", s.chat_id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .then(r => ({ chatId: s.chat_id, msg: r.data?.[0], fallback: s.last_activity_at }))
-        )),
-        Promise.all(chatIds.map(chatId =>
-          supabase
-            .from("chat_messages")
-            .select("id", { count: "exact", head: true })
-            .eq("chat_id", chatId)
-            .eq("receiver_id", currentUserId)
-            .eq("is_read", false)
-            .then(r => ({ chatId, count: r.count || 0 }))
-        )),
-        supabase
-          .from("user_status")
-          .select("user_id, is_online, status, active_chat_count")
-          .in("user_id", partnerIds),
-      ]);
-
-      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
-      const statusMap = new Map((partnerStatusRes.data || []).map((s: { user_id: string; is_online: boolean; status: string; active_chat_count: number | null }) => [s.user_id, s]));
-      
-      const unreadCountMap = new Map<string, number>();
-      for (const item of unreadRes) {
-        if (item.count > 0) unreadCountMap.set(item.chatId, item.count);
-      }
-
-      const chats = sessions.map(s => {
-        const profile = profileMap.get(s.man_user_id);
-        const msgInfo = lastMsgsRes.find(m => m.chatId === s.chat_id);
-        const status = statusMap.get(s.man_user_id) as { is_online: boolean; status: string; active_chat_count: number | null } | undefined;
-        return {
-          chatId: s.chat_id,
-          partnerId: s.man_user_id,
-          partnerName: profile?.full_name || "User",
-          partnerPhoto: profile?.photo_url || null,
-          lastMessage: msgInfo?.msg?.message || "",
-          lastMessageAt: msgInfo?.msg?.created_at || s.last_activity_at,
-          lastMessageSenderId: msgInfo?.msg?.sender_id || "",
-          unreadCount: unreadCountMap.get(s.chat_id) || 0,
-          partnerIsOnline: status?.is_online || false,
-          partnerStatus: status?.status || "offline",
-          partnerActiveChatCount: status?.active_chat_count || 0,
-        };
+      // Single batch RPC eliminates N+1 query pattern (audit O-004).
+      const { data, error } = await supabase.rpc('get_woman_active_chats', {
+        p_user_id: currentUserId,
       });
+      if (error) throw error;
 
-      chats.sort((a, b) => {
-        return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
-      });
-
+      const chats = ((data as any[]) || []).map(r => ({
+        chatId: r.chat_id as string,
+        partnerId: r.partner_id as string,
+        partnerName: r.partner_name as string,
+        partnerPhoto: (r.partner_photo as string) || null,
+        lastMessage: (r.last_message as string) || '',
+        lastMessageAt: r.last_message_at as string,
+        lastMessageSenderId: (r.last_message_sender_id as string) || '',
+        unreadCount: Number(r.unread_count) || 0,
+        partnerIsOnline: Boolean(r.partner_is_online),
+        partnerStatus: (r.partner_status as string) || 'offline',
+        partnerActiveChatCount: Number(r.partner_active_chat_count) || 0,
+      }));
       setWomenActiveChats(chats);
     } catch (error) {
-      console.error("[WomenDashboard] Error fetching active chats:", error);
+      console.error('[WomenDashboard] Error fetching active chats:', error);
     } finally {
       setLoadingWomenChats(false);
     }
