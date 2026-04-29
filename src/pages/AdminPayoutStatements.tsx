@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '@/hooks/use-toast';
 import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet } from 'lucide-react';
 import { generatePayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
+import { generatePayoutSnapshotNow } from '@/services/billing.service';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -92,13 +93,19 @@ const AdminPayoutStatements = () => {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    const result = await generatePayoutSnapshot();
-    if (result.success) {
-      const skipMsg = result.skipped ? ` • ${result.skipped} skipped (no KYC)` : '';
-      toast({ title: 'Payout Generated', description: `${result.count} women processed${skipMsg}.` });
+    // Run both: legacy KYC snapshot (powers this page's Excel/PDF export)
+    // AND unified billing snapshot (creates monthly_statements payout rows).
+    const [legacy, unified] = await Promise.all([
+      generatePayoutSnapshot(),
+      generatePayoutSnapshotNow(),
+    ]);
+    if (legacy.success) {
+      const skipMsg = legacy.skipped ? ` • ${legacy.skipped} skipped (no KYC)` : '';
+      const unifiedMsg = unified.success ? ` • ${unified.count ?? 0} unified statements` : '';
+      toast({ title: 'Payout Generated', description: `${legacy.count} women processed${skipMsg}${unifiedMsg}.` });
       loadRecords();
     } else {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+      toast({ title: 'Error', description: legacy.error, variant: 'destructive' });
     }
     setIsGenerating(false);
   };
