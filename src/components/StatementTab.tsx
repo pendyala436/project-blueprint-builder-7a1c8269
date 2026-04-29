@@ -24,7 +24,11 @@ interface StatementTabProps {
 
 // Session-style transaction types written by canonical billing RPCs (men debits + women credits)
 const SESSION_TYPES = [
+  // Canonical names written by bill_session_minute (transaction_type)
+  'session_charge', 'session_earning',
+  // session_type column values (when used as transaction_type by older rows)
   'chat', 'audio_call', 'video_call', 'group_call', 'private_group_call',
+  // Legacy explicit aliases
   'chat_charge', 'audio_call_charge', 'video_call_charge', 'group_call_charge', 'private_group_call_charge',
   'chat_earning', 'audio_call_earning', 'video_call_earning', 'group_call_earning', 'private_group_call_earning',
 ];
@@ -32,6 +36,7 @@ const SESSION_TYPES = [
 // Anything that increases the wallet (credit side of unified ledger)
 const CREDIT_TYPES = [
   'credit', 'recharge', 'refund',
+  'session_earning',
   'chat_earning', 'audio_call_earning', 'video_call_earning',
   'group_call_earning', 'private_group_call_earning',
   'gift_received', 'gift_earning', 'tip_earning', 'tip_received',
