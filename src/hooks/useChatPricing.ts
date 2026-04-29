@@ -10,7 +10,7 @@ export function useChatPricing() {
     ratePerMinute: 4, womenEarningRate: 2,
     audioRatePerMinute: 6, audioWomenEarningRate: 3,
     videoRatePerMinute: 8, videoWomenEarningRate: 4,
-    groupCallRatePerMinute: 4, groupCallWomenEarningRate: 2,
+    groupCallRatePerMinute: 4, groupCallWomenEarningRate: 1,
     giftWomenPercent: 50, withdrawalFeePercent: 5, minWithdrawalBalance: 5000,
   });
   const [isLoading, setIsLoading] = useState(true);
