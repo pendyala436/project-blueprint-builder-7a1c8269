@@ -34,6 +34,17 @@ import '../../features/admin/presentation/screens/admin_users_screen.dart';
 import '../../features/admin/presentation/screens/admin_finance_screen.dart';
 import '../../features/admin/presentation/screens/admin_moderation_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
+import '../../features/admin/presentation/screens/admin_payout_screen.dart';
+import '../../features/video_call/presentation/screens/incoming_call_screen.dart';
+import '../../features/video_call/presentation/screens/video_call_screen.dart';
+import '../../features/private_groups/presentation/screens/private_groups_list_screen.dart';
+import '../../features/private_groups/presentation/screens/private_group_call_screen.dart';
+import '../../features/profile/presentation/screens/friends_screen.dart';
+import '../../features/profile/presentation/screens/blocked_users_screen.dart';
+import '../../features/wallet/presentation/screens/wallet_statement_export_screen.dart';
+import '../../features/chat/presentation/screens/language_group_chat_screen.dart';
+import '../../features/kyc/presentation/screens/kyc_screen.dart';
+import '../../features/wallet/presentation/screens/recharge_screen.dart';
 import '../../shared/screens/not_found_screen.dart';
 import '../../shared/screens/approval_pending_screen.dart';
 import '../../shared/screens/welcome_tutorial_screen.dart';
@@ -77,6 +88,17 @@ class AppRoutes {
   static const String adminFinance = '/admin/finance';
   static const String adminModeration = '/admin/moderation';
   static const String adminSettings = '/admin/settings';
+  static const String adminPayouts = '/admin/payouts';
+  static const String incomingCall = '/incoming-call';
+  static const String videoCall = '/video-call';
+  static const String privateGroups = '/private-groups';
+  static const String privateGroupCall = '/private-groups/:roomId';
+  static const String friends = '/friends';
+  static const String blockedUsers = '/blocked-users';
+  static const String walletStatementExport = '/wallet/export';
+  static const String languageGroupChat = '/language-group/:code';
+  static const String kyc = '/kyc';
+  static const String recharge = '/wallet/recharge';
 }
 
 /// App Router Provider
