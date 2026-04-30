@@ -475,7 +475,8 @@ class DashboardService {
           .eq('man_user_id', userId);
       final rows = List<Map<String, dynamic>>.from(response);
       final totalSec = rows.fold<num>(0, (s, r) => s + ((r['total_seconds_used'] as num?) ?? 0));
-      return MenFreeMinutes.fromJson({'total_seconds_used': totalSec});
+      final totalMinutesUsed = (totalSec / 60).floor();
+      return MenFreeMinutes.fromJson({'free_minutes_used': totalMinutesUsed});
     } catch (_) {
       return MenFreeMinutes();
     }
