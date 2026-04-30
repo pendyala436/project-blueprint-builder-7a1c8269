@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import AdminNav from "@/components/AdminNav";
+import ScrollToggleFab from "@/components/ScrollToggleFab";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useMultipleRealtimeSubscriptions } from "@/hooks/useRealtimeSubscription";
 import { runAllCleanups } from "@/services/cleanup.service";
@@ -484,6 +485,7 @@ const AdminDashboard = () => {
           </Card>
         )}
       </div>
+      <ScrollToggleFab />
     </AdminNav>
   );
 };
