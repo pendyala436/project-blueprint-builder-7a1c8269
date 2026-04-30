@@ -952,7 +952,7 @@ export const useP2PCall = ({
     cleanup();
     setState(prev => ({ ...prev, callStatus: 'ended' }));
     onCallEnded?.();
-  }, [callId, currentUserId, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry]);
+  }, [callId, currentUserId, remoteUserId, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry, isInitiator, audioOnly, sendSignal]);
 
   // Toggle video on/off
   const toggleVideo = useCallback(() => {
