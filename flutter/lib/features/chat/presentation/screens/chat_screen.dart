@@ -94,8 +94,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _currentUserId == null || _partnerId == null) return;
 
+    // Content moderation gate (matches React content-moderation regex triggers)
+    final moderation =
+        ref.read(contentModerationServiceProvider).checkContent(text);
+    if (!moderation.isAllowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(moderation.reason ?? 'Message blocked'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
     _messageController.clear();
-    
+
     final chatService = ref.read(chatServiceProvider);
     await chatService.sendMessage(
       chatId: widget.chatId,
