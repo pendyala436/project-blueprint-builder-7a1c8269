@@ -103,6 +103,10 @@ const SETTING_KEY_MAP: Record<string, keyof AppSettings> = {
   session_timeout_minutes: "sessionTimeoutMinutes",
   max_file_upload_mb: "maxFileUploadMb",
   statements_tab_visible: "statementsTabVisible",
+  chat_enabled: "chatEnabled",
+  audio_call_enabled: "audioCallEnabled",
+  video_call_enabled: "videoCallEnabled",
+  private_groups_enabled: "privateGroupsEnabled",
 };
 
 // ─── Singleton store ────────────────────────────────────────────────
