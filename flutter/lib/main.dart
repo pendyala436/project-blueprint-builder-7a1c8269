@@ -71,6 +71,8 @@ class _MeowMeowAppState extends ConsumerState<MeowMeowApp> {
   @override
   void initState() {
     super.initState();
+    // Boot the call CPU circuit breaker.
+    VideoCallCircuitBreaker.instance.startMonitoring();
     // Register FCM token whenever the user signs in.
     Supabase.instance.client.auth.onAuthStateChange.listen((event) {
       if (event.event == AuthChangeEvent.signedIn) {
