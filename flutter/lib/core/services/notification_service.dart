@@ -99,16 +99,49 @@ class NotificationService {
     debugPrint('Background message received: ${message.notification?.title}');
   }
 
-  /// Handle notification open
+  /// Handle notification open from background/terminated state.
   static void _handleNotificationOpen(RemoteMessage message) {
     debugPrint('Notification opened: ${message.notification?.title}');
-    // Navigate to appropriate screen based on message data
+    _route(message.data);
   }
 
-  /// Handle notification tap
+  /// Handle local notification tap.
   static void _onNotificationTapped(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
-    // Navigate to appropriate screen based on payload
+    final payload = response.payload;
+    if (payload == null || !payload.contains(':')) return;
+    final parts = payload.split(':');
+    _route({'type': parts[0], 'id': parts.sublist(1).join(':')});
+  }
+
+  /// Route to the appropriate screen based on FCM data payload.
+  ///
+  /// Expected payload shapes:
+  ///   { "type": "chat",  "id": "<chatId>" }
+  ///   { "type": "match", "id": "<userId>" }
+  ///   { "type": "gift",  "id": "<senderId>" }
+  ///   { "type": "call",  "id": "<callId>", ...callerFields }
+  static void _route(Map<String, dynamic> data) {
+    final nav = rootNavigatorKey.currentState;
+    if (nav == null) return;
+    final type = data['type'] as String?;
+    final id = data['id'] as String?;
+    if (type == null || id == null) return;
+
+    switch (type) {
+      case 'chat':
+        nav.pushNamed('/chat/$id');
+        break;
+      case 'match':
+        nav.pushNamed('/profile/$id');
+        break;
+      case 'gift':
+        nav.pushNamed('/wallet');
+        break;
+      case 'call':
+        nav.pushNamed('/incoming-call', arguments: data);
+        break;
+    }
   }
 
   /// Show local notification
