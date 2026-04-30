@@ -110,14 +110,16 @@ const WomenWalletScreen = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="statement" className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mb-2">
-          <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
-        </TabsList>
-        <TabsContent value="statement" className="flex-1">
-          <StatementTab userId={userIdRef.current} gender="female" />
-        </TabsContent>
-      </Tabs>
+      {showStatements && (
+        <Tabs defaultValue="statement" className="flex-1 flex flex-col">
+          <TabsList className="mx-4 mb-2">
+            <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
+          </TabsList>
+          <TabsContent value="statement" className="flex-1">
+            <StatementTab userId={userIdRef.current} gender="female" />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };
