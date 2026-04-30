@@ -119,6 +119,7 @@ const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { pricing } = useChatPricing();
+  const { settings: appSettings } = useAppSettings();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
@@ -1074,7 +1075,6 @@ const WomenDashboardScreen = () => {
 
   const onlineMenCount = sameLanguageMen.length + otherLanguageMen.length;
   const totalUnreadCount = womenActiveChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-  const { settings: appSettings } = useAppSettings();
   const womenTabs = getWomenTabs(onlineMenCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedMen.length || undefined, !!appSettings.statementsTabVisible);
 
   const renderOnlineUsersTab = () => (
