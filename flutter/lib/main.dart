@@ -10,7 +10,6 @@ import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/push_token_service.dart';
 import 'core/services/video_call_circuit_breaker.dart';
-import 'core/theme/app_theme.dart';
 import 'shared/providers/locale_provider.dart';
 import 'shared/providers/theme_provider.dart';
 import 'shared/widgets/idle_timeout_wrapper.dart';
@@ -86,12 +85,13 @@ class _MeowMeowAppState extends ConsumerState<MeowMeowApp> {
     final router = ref.watch(appRouterProvider);
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final currentTheme = ref.watch(currentThemeProvider);
 
     return MaterialApp.router(
       title: 'Meow Meow',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: currentTheme.toThemeData(Brightness.light),
+      darkTheme: currentTheme.toThemeData(Brightness.dark),
       themeMode: themeMode,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
