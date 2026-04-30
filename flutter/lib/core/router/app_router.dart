@@ -35,6 +35,18 @@ import '../../features/admin/presentation/screens/admin_finance_screen.dart';
 import '../../features/admin/presentation/screens/admin_moderation_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
 import '../../features/admin/presentation/screens/admin_payout_screen.dart';
+import '../../features/admin/presentation/screens/admin_chat_monitoring_screen.dart';
+import '../../features/admin/presentation/screens/admin_language_groups_screen.dart';
+import '../../features/admin/presentation/screens/admin_language_limits_screen.dart';
+import '../../features/admin/presentation/screens/admin_kyc_management_screen.dart';
+import '../../features/admin/presentation/screens/admin_user_lookup_screen.dart';
+import '../../features/admin/presentation/screens/admin_policy_alerts_screen.dart';
+import '../../features/admin/presentation/screens/admin_performance_screen.dart';
+import '../../features/admin/presentation/screens/admin_legal_documents_screen.dart';
+import '../../features/admin/presentation/screens/admin_backups_screen.dart';
+import '../../features/admin/presentation/screens/admin_audit_logs_screen.dart';
+import '../../features/admin/presentation/screens/admin_messaging_screen.dart';
+import '../../features/admin/presentation/screens/admin_enable_disable_screen.dart';
 import '../../features/video_call/presentation/screens/incoming_call_screen.dart';
 import '../../features/video_call/presentation/screens/video_call_screen.dart';
 import '../../features/private_groups/presentation/screens/private_groups_list_screen.dart';
@@ -90,6 +102,18 @@ class AppRoutes {
   static const String adminModeration = '/admin/moderation';
   static const String adminSettings = '/admin/settings';
   static const String adminPayouts = '/admin/payouts';
+  static const String adminChatMonitoring = '/admin/chat-monitoring';
+  static const String adminLanguages = '/admin/languages';
+  static const String adminLanguageLimits = '/admin/language-limits';
+  static const String adminKyc = '/admin/kyc';
+  static const String adminUserLookup = '/admin/user-lookup';
+  static const String adminPolicyAlerts = '/admin/policy-alerts';
+  static const String adminPerformance = '/admin/performance';
+  static const String adminLegalDocuments = '/admin/legal-documents';
+  static const String adminBackups = '/admin/backups';
+  static const String adminAuditLogs = '/admin/audit-logs';
+  static const String adminMessaging = '/admin/messaging';
+  static const String adminEnableDisable = '/admin/enable-disable';
   static const String incomingCall = '/incoming-call';
   static const String videoCall = '/video-call';
   static const String privateGroups = '/private-groups';
@@ -187,6 +211,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.adminModeration, builder: (_, __) => const AdminModerationScreen()),
       GoRoute(path: AppRoutes.adminSettings, builder: (_, __) => const AdminSettingsScreen()),
       GoRoute(path: AppRoutes.adminPayouts, builder: (_, __) => const AdminPayoutScreen()),
+      GoRoute(path: AppRoutes.adminChatMonitoring, builder: (_, __) => const AdminChatMonitoringScreen()),
+      GoRoute(path: AppRoutes.adminLanguages, builder: (_, __) => const AdminLanguageGroupsScreen()),
+      GoRoute(path: AppRoutes.adminLanguageLimits, builder: (_, __) => const AdminLanguageLimitsScreen()),
+      GoRoute(path: AppRoutes.adminKyc, builder: (_, __) => const AdminKycManagementScreen()),
+      GoRoute(path: AppRoutes.adminUserLookup, builder: (_, __) => const AdminUserLookupScreen()),
+      GoRoute(path: AppRoutes.adminPolicyAlerts, builder: (_, __) => const AdminPolicyAlertsScreen()),
+      GoRoute(path: AppRoutes.adminPerformance, builder: (_, __) => const AdminPerformanceScreen()),
+      GoRoute(path: AppRoutes.adminLegalDocuments, builder: (_, __) => const AdminLegalDocumentsScreen()),
+      GoRoute(path: AppRoutes.adminBackups, builder: (_, __) => const AdminBackupsScreen()),
+      GoRoute(path: AppRoutes.adminAuditLogs, builder: (_, __) => const AdminAuditLogsScreen()),
+      GoRoute(path: AppRoutes.adminMessaging, builder: (_, __) => const AdminMessagingScreen()),
+      GoRoute(path: AppRoutes.adminEnableDisable, builder: (_, __) => const AdminEnableDisableScreen()),
 
       // Calls
       GoRoute(
