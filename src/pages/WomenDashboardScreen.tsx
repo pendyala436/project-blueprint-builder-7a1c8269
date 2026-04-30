@@ -1074,7 +1074,6 @@ const WomenDashboardScreen = () => {
 
   const onlineMenCount = sameLanguageMen.length + otherLanguageMen.length;
   const totalUnreadCount = womenActiveChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-  const { settings: appSettings } = useAppSettings();
   const womenTabs = getWomenTabs(onlineMenCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedMen.length || undefined, !!appSettings.statementsTabVisible);
 
   const renderOnlineUsersTab = () => (
