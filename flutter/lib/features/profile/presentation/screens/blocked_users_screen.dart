@@ -57,10 +57,10 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                     if (b == null) return const SizedBox.shrink();
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: b['profile_photo_url'] != null
-                            ? NetworkImage(b['profile_photo_url'] as String)
+                        backgroundImage: b['photo_url'] != null
+                            ? NetworkImage(b['photo_url'] as String)
                             : null,
-                        child: b['profile_photo_url'] == null
+                        child: b['photo_url'] == null
                             ? const Icon(Icons.person)
                             : null,
                       ),

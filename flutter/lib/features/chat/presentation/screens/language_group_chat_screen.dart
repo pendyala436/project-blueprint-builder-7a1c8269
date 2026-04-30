@@ -45,8 +45,8 @@ class _LanguageGroupChatScreenState extends State<LanguageGroupChatScreen> {
   Future<void> _load() async {
     try {
       final data = await _supabase
-          .from('language_group_messages')
-          .select('*, sender:sender_id(full_name, profile_photo_url)')
+          .from('language_community_messages')
+          .select('*, sender:sender_id(full_name, photo_url)')
           .eq('language_code', widget.languageCode)
           .order('created_at')
           .limit(200);
@@ -61,7 +61,7 @@ class _LanguageGroupChatScreenState extends State<LanguageGroupChatScreen> {
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
-          table: 'language_group_messages',
+          table: 'language_community_messages',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
             column: 'language_code',
