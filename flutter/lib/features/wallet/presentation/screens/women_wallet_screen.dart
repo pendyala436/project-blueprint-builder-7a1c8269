@@ -35,68 +35,72 @@ class _WomenWalletScreenState extends ConsumerState<WomenWalletScreen> {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) return;
 
-      // Load wallet balance
-      final walletResponse = await _supabase
-          .from('wallets')
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
+      // Canonical SoT — get_women_wallet_balance returns
+      // { available_balance, today_earnings } from wallet_transactions.
+      final walletRpc = await _supabase.rpc(
+        'get_women_wallet_balance',
+        params: {'p_user_id': userId},
+      );
 
-      // Load pricing config
+      double balance = 0;
+      double todayEarn = 0;
+      if (walletRpc is Map) {
+        balance = (walletRpc['available_balance'] as num?)?.toDouble() ?? 0;
+        todayEarn = (walletRpc['today_earnings'] as num?)?.toDouble() ?? 0;
+      }
+
+      // Pricing config
       final pricingResponse = await _supabase
           .from('chat_pricing')
           .select()
           .eq('is_active', true)
           .maybeSingle();
 
-      // Load recent earnings
+      // Recent earnings — wallet_transactions credits with earning transaction_type
       final earningsResponse = await _supabase
           .from('wallet_transactions')
           .select()
           .eq('user_id', userId)
-          .eq('type', 'chat_earning')
+          .eq('type', 'credit')
+          .inFilter('transaction_type', ['session_earning', 'gift_earning'])
           .order('created_at', ascending: false)
-          .limit(10);
+          .limit(50);
 
-      // Load pending withdrawals
+      // Pending payouts (withdrawals)
       final withdrawalResponse = await _supabase
           .from('wallet_transactions')
           .select()
           .eq('user_id', userId)
-          .eq('type', 'withdrawal')
+          .eq('transaction_type', 'payout')
           .eq('status', 'pending')
-          .limit(10);
+          .limit(20);
 
-      final pendingAmount = withdrawalResponse.fold<double>(
+      final pendingAmount = (withdrawalResponse as List).fold<double>(
         0,
-        (sum, w) => sum + (w['amount'] ?? 0).toDouble(),
+        (sum, w) => sum + ((w['amount'] as num?) ?? 0).toDouble(),
       );
 
-      // Calculate earnings
+      // Aggregate week / month earnings
+      final earningsList = List<Map<String, dynamic>>.from(earningsResponse);
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
       final startOfWeek = startOfDay.subtract(Duration(days: now.weekday - 1));
       final startOfMonth = DateTime(now.year, now.month, 1);
 
-      final earningsList = List<Map<String, dynamic>>.from(earningsResponse);
-      
-      double todayEarn = 0;
       double weekEarn = 0;
       double monthEarn = 0;
-
-      for (final earning in earningsList) {
-        final date = DateTime.tryParse(earning['created_at'] ?? '');
-        final amount = (earning['amount'] ?? 0).toDouble();
-        
+      for (final e in earningsList) {
+        final date = DateTime.tryParse(e['created_at'] ?? '');
+        final amt = ((e['amount'] as num?) ?? 0).toDouble();
         if (date != null) {
-          if (date.isAfter(startOfDay)) todayEarn += amount;
-          if (date.isAfter(startOfWeek)) weekEarn += amount;
-          if (date.isAfter(startOfMonth)) monthEarn += amount;
+          if (date.isAfter(startOfWeek)) weekEarn += amt;
+          if (date.isAfter(startOfMonth)) monthEarn += amt;
         }
       }
 
+      if (!mounted) return;
       setState(() {
-        _balance = (walletResponse?['balance'] ?? 0).toDouble();
+        _balance = balance;
         _pendingWithdrawal = pendingAmount;
         _todayEarnings = todayEarn;
         _weekEarnings = weekEarn;
@@ -106,12 +110,11 @@ class _WomenWalletScreenState extends ConsumerState<WomenWalletScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading wallet: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading wallet: $e')),
+      );
     }
   }
 
