@@ -1392,13 +1392,13 @@ const DashboardScreen = () => {
                         <Eye className="w-3.5 h-3.5 text-primary" />
                       </Button>
                       {/* Audio Call - same language only */}
-                      {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                      {settings.audioCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
                           <Phone className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       )}
                       {/* Video Call - same language only */}
-                      {userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                      {settings.videoCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
                           <Video className="w-3.5 h-3.5 text-primary" />
                         </Button>
