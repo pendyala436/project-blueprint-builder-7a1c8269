@@ -1011,8 +1011,10 @@ export function usePrivateGroupCall({
       window.removeEventListener('beforeunload', onBU);
     }
 
-    // Host: explicitly stop the host session in DB so the room flips offline immediately
-    if (isOwner && groupId) {
+    // Host: explicitly stop the host session in DB only if we actually started one.
+    // Guards against unmount-effect re-runs (deps churn / StrictMode) killing a live
+    // session that was never started by this hook instance.
+    if (isOwner && groupId && sessionRef.current) {
       supabase.rpc('stop_host_session', { p_group_id: groupId })
         .then(({ error }) => {
           if (error) console.warn('[GROUP] stop_host_session failed on cleanup:', error.message);
