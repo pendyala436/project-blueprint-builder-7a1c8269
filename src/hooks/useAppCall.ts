@@ -25,6 +25,7 @@ export const useAppCall = (
   walletBalance: number
 ) => {
   const { toast } = useToast();
+  const { settings } = useAppSettings();
   const pricing = { audioRatePerMinute: 6, videoRatePerMinute: 8 };
   const [status, setStatus] = useState<CallStatus>('idle');
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
