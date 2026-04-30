@@ -45,6 +45,7 @@ interface AppSettings {
   mobileBreakpoint: number;
   sessionTimeoutMinutes: number;
   maxFileUploadMb: number;
+  statementsTabVisible: boolean;
 }
 
 // Default fallback values (only used if database is unavailable)
