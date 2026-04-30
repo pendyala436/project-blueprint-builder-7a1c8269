@@ -157,22 +157,27 @@ class PrivateGroupService {
     }
   }
 
-  /// Send tip to host (50/50 split)
+  /// Send tip to host via canonical SoT RPC `bill_group_gift_or_tip`.
+  /// (Mirrors React group-call billing path; 50/50 split is enforced server-side.)
   Future<bool> sendTip({
     required String groupId,
     required String userId,
     required double amount,
+    String? description,
   }) async {
     try {
-      final response = await _client.rpc('process_group_tip', params: {
+      final response = await _client.rpc('bill_group_gift_or_tip', params: {
         'p_group_id': groupId,
-        'p_user_id': userId,
+        'p_man_id': userId,
         'p_amount': amount,
+        'p_type': 'tip',
+        'p_description': description ?? 'Group tip',
+        'p_reference_id': null,
       });
 
-      final data = response as Map<String, dynamic>?;
+      final data = response is Map<String, dynamic> ? response : null;
       return data?['success'] as bool? ?? false;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
