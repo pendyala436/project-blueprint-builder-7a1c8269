@@ -46,6 +46,10 @@ interface AppSettings {
   sessionTimeoutMinutes: number;
   maxFileUploadMb: number;
   statementsTabVisible: boolean;
+  chatEnabled: boolean;
+  audioCallEnabled: boolean;
+  videoCallEnabled: boolean;
+  privateGroupsEnabled: boolean;
 }
 
 // Default fallback values (only used if database is unavailable)
