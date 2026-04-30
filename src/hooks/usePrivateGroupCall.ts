@@ -820,7 +820,10 @@ export function usePrivateGroupCall({
     return channel;
   }, [groupId, currentUserId, userName, userPhoto, isOwner, onParticipantJoin, onParticipantLeave, onSessionEnd, checkCanJoin, connectToParticipant, handleOffer, handleAnswer, handleIceCandidate]);
 
-  // Go live (host only)
+  // Heartbeat ref so we can clear from goLive / cleanup
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Go live (host only) — uses canonical RPC + heartbeat + cleanup-on-unload
   const goLive = useCallback(async () => {
     if (!isOwner) return false;
 
@@ -833,10 +836,39 @@ export function usePrivateGroupCall({
         return false;
       }
 
-      // Create session — sessionId MUST be a UUID for bill_session_minute RPC (p_session_id uuid)
       const sessionId = (typeof crypto !== 'undefined' && crypto.randomUUID)
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      // Canonical host claim — atomic insert into group_active_hosts +
+      // private_groups.is_live/current_host_id update under FOR UPDATE lock.
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('start_host_session', {
+        p_group_id: groupId,
+        p_host_name: userName,
+        p_host_photo: userPhoto || null,
+        p_host_language: null,
+        p_stream_id: sessionId,
+      });
+
+      if (rpcErr) {
+        console.error('[GROUP] start_host_session RPC error:', rpcErr);
+        toast.error('Unable to go live', { description: rpcErr.message });
+        setState(prev => ({ ...prev, isConnecting: false, error: rpcErr.message }));
+        stream.getTracks().forEach(t => t.stop());
+        return false;
+      }
+      const result = rpcData as { success: boolean; error?: string } | null;
+      if (!result?.success) {
+        const msg = result?.error || 'Could not claim host slot';
+        console.error('[GROUP] start_host_session failed:', msg);
+        toast.error('Unable to go live', { description: msg });
+        setState(prev => ({ ...prev, isConnecting: false, error: msg }));
+        stream.getTracks().forEach(t => t.stop());
+        return false;
+      }
+
+      console.log('[GROUP] starting host session', { groupId, sessionId });
+
       sessionRef.current = {
         sessionId,
         groupId,
@@ -850,7 +882,7 @@ export function usePrivateGroupCall({
           joinedAt: Date.now(),
           amountPaid: 0,
           balanceRemaining: 0,
-          micEnabled: true, // Host mic always enabled
+          micEnabled: true,
         }]]),
         totalEarnings: 0,
       };
@@ -859,31 +891,44 @@ export function usePrivateGroupCall({
       startCountdownTimer();
       startBillingTimer();
 
-      // Update group status in database - set host info so tips work and other women can't go live
-      await supabase
-        .from('private_groups')
-        .update({ 
-          is_live: true, 
-          stream_id: sessionId,
-          current_host_id: currentUserId,
-          current_host_name: userName,
-        })
-        .eq('id', groupId);
-
       // Set host (woman) status to busy during live stream
       await supabase
         .from('user_status')
         .update({ status_text: 'busy', last_seen: new Date().toISOString() })
         .eq('user_id', currentUserId);
-      
+
       await supabase
         .from('women_availability')
         .update({ is_available: false, is_available_for_calls: false })
         .eq('user_id', currentUserId);
 
-      setState(prev => ({ 
-        ...prev, 
-        isConnecting: false, 
+      // ── Heartbeat: refresh every 30s so the room stays "live"
+      // Server sweep marks host inactive after 90s of silence.
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      heartbeatRef.current = setInterval(async () => {
+        const { data: hbData, error: hbErr } = await supabase.rpc('update_host_heartbeat', { p_group_id: groupId });
+        if (hbErr) {
+          console.warn('[GROUP] heartbeat error', hbErr.message);
+        } else if ((hbData as any)?.success === false) {
+          console.warn('[GROUP] heartbeat lost session, stopping live');
+          if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+        }
+      }, 30000);
+
+      // Send a stop signal if tab/window closes while live
+      const onBeforeUnload = () => {
+        try {
+          // Best-effort sync stop — sendBeacon-style via fetch keepalive
+          supabase.rpc('stop_host_session', { p_group_id: groupId });
+        } catch { /* ignore */ }
+      };
+      window.addEventListener('beforeunload', onBeforeUnload);
+      // Keep ref so cleanup can remove it
+      (sessionRef.current as any)._onBeforeUnload = onBeforeUnload;
+
+      setState(prev => ({
+        ...prev,
+        isConnecting: false,
         isLive: true,
         participants: Array.from(sessionRef.current!.participants.values()),
       }));
@@ -892,10 +937,10 @@ export function usePrivateGroupCall({
     } catch (error) {
       console.error('Error going live:', error);
       toast.error('Unable to go live', { description: 'Unable to start the live stream. Please check your connection and try again.' });
-      setState(prev => ({ 
-        ...prev, 
-        isConnecting: false, 
-        error: 'Failed to start stream' 
+      setState(prev => ({
+        ...prev,
+        isConnecting: false,
+        error: 'Failed to start stream'
       }));
       return false;
     }
