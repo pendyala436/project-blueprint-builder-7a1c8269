@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-/// Admin Audit Logs — mirrors React AdminAuditLogs.tsx
+/// Admin Audit Logs — mirrors React AdminAuditLogs.tsx.
+/// Real table: `audit_logs` with admin_email, action, action_type, resource_type, resource_id.
 class AdminAuditLogsScreen extends ConsumerStatefulWidget {
   const AdminAuditLogsScreen({super.key});
 
@@ -26,7 +27,7 @@ class _AdminAuditLogsScreenState extends ConsumerState<AdminAuditLogsScreen> {
     setState(() => _loading = true);
     try {
       final res = await _supabase
-          .from('admin_audit_log')
+          .from('audit_logs')
           .select()
           .order('created_at', ascending: false)
           .limit(200);
@@ -54,18 +55,25 @@ class _AdminAuditLogsScreenState extends ConsumerState<AdminAuditLogsScreen> {
                 itemBuilder: (_, i) {
                   final l = _logs[i];
                   final t = DateTime.tryParse(l['created_at']?.toString() ?? '');
+                  final ok = l['status'] == 'success';
                   return ListTile(
                     dense: true,
-                    leading: const Icon(Icons.history, size: 20),
-                    title: Text('${l['action'] ?? '—'} • ${l['entity_type'] ?? ''}'),
+                    leading: Icon(
+                      ok ? Icons.check_circle_outline : Icons.error_outline,
+                      size: 20,
+                      color: ok ? Colors.green : Colors.red,
+                    ),
+                    title: Text('${l['action'] ?? '—'} • ${l['resource_type'] ?? ''}'),
                     subtitle: Text(
-                      'By: ${l['admin_id'] ?? '—'}\n'
+                      'By: ${l['admin_email'] ?? l['admin_id'] ?? '—'}\n'
                       '${t != null ? DateFormat.yMd().add_Hms().format(t) : ''}',
                     ),
                     isThreeLine: true,
-                    trailing: l['entity_id'] != null
+                    trailing: l['resource_id'] != null
                         ? Text(
-                            l['entity_id'].toString().substring(0, 8),
+                            l['resource_id'].toString().length >= 8
+                                ? l['resource_id'].toString().substring(0, 8)
+                                : l['resource_id'].toString(),
                             style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
                           )
                         : null,

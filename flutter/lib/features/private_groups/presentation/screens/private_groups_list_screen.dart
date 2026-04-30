@@ -38,10 +38,10 @@ class _PrivateGroupsListScreenState extends State<PrivateGroupsListScreen> {
   Future<void> _load() async {
     try {
       final data = await _supabase
-          .from('private_group_rooms')
-          .select('*, host:host_id(id, full_name, profile_photo_url)')
+          .from('private_groups')
+          .select('*, host:current_host_id(id, full_name, photo_url)')
           .eq('is_active', true)
-          .order('room_number');
+          .order('created_at');
       setState(() {
         _rooms = List<Map<String, dynamic>>.from(data);
         _loading = false;
@@ -57,7 +57,7 @@ class _PrivateGroupsListScreenState extends State<PrivateGroupsListScreen> {
         roomId: room['id'] as String,
         roomName: room['name'] as String? ?? 'Room',
         isHost: !widget.isMale &&
-            room['host_id'] == _supabase.auth.currentUser?.id,
+            room['current_host_id'] == _supabase.auth.currentUser?.id,
       ),
     ));
   }

@@ -443,20 +443,17 @@ class DashboardService {
     }
   }
 
-  /// Get men's free chat minutes
+  /// Get men's free chat usage (real table: free_chat_usage with total_seconds_used per pair)
   Future<MenFreeMinutes> getMenFreeMinutes(String userId) async {
     try {
       final response = await _client
-          .from('men_free_minutes')
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      if (response == null) {
-        return MenFreeMinutes();
-      }
-      return MenFreeMinutes.fromJson(response);
-    } catch (e) {
+          .from('free_chat_usage')
+          .select('total_seconds_used')
+          .eq('man_user_id', userId);
+      final rows = List<Map<String, dynamic>>.from(response);
+      final totalSec = rows.fold<num>(0, (s, r) => s + ((r['total_seconds_used'] as num?) ?? 0));
+      return MenFreeMinutes.fromJson({'total_seconds_used': totalSec});
+    } catch (_) {
       return MenFreeMinutes();
     }
   }

@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-/// Admin Chat Monitoring — mirrors React AdminChatMonitoring.tsx
+/// Admin Chat Monitoring — mirrors React AdminChatMonitoring.tsx.
+/// Reads from `active_chat_sessions`.
 class AdminChatMonitoringScreen extends ConsumerStatefulWidget {
   const AdminChatMonitoringScreen({super.key});
 
@@ -26,9 +27,9 @@ class _AdminChatMonitoringScreenState extends ConsumerState<AdminChatMonitoringS
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      var query = _supabase.from('chat_sessions').select();
+      var query = _supabase.from('active_chat_sessions').select();
       if (_filter == 'active') query = query.eq('status', 'active');
-      final res = await query.order('updated_at', ascending: false).limit(100);
+      final res = await query.order('last_activity_at', ascending: false).limit(100);
       if (!mounted) return;
       setState(() {
         _sessions = List<Map<String, dynamic>>.from(res);
@@ -66,14 +67,16 @@ class _AdminChatMonitoringScreenState extends ConsumerState<AdminChatMonitoringS
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (_, i) {
                       final s = _sessions[i];
-                      final updated = DateTime.tryParse(s['updated_at']?.toString() ?? '');
+                      final updated = DateTime.tryParse(s['last_activity_at']?.toString() ?? '');
                       return ListTile(
                         leading: const CircleAvatar(child: Icon(Icons.chat)),
-                        title: Text(s['session_id']?.toString() ?? '—',
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                        title: Text(
+                          s['chat_id']?.toString() ?? '—',
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        ),
                         subtitle: Text(
-                          'Status: ${s['status'] ?? 'unknown'} • '
-                          'Msgs: ${s['message_count'] ?? 0}'
+                          'Mins: ${s['total_minutes'] ?? 0} • '
+                          '₹${s['total_earned'] ?? 0}'
                           '${updated != null ? ' • ${DateFormat.Hm().format(updated)}' : ''}',
                         ),
                         trailing: Chip(

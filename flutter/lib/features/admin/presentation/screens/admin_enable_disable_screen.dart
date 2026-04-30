@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Admin Enable/Disable — mirrors React AdminEnableDisable.tsx
-/// Toggles platform-wide feature flags.
+/// Admin Enable / Disable — mirrors React AdminEnableDisable.tsx.
+/// Real table: `app_settings` (setting_key, setting_value as JSONB, setting_type, category).
+/// Boolean toggles are stored as JSON booleans (true/false).
 class AdminEnableDisableScreen extends ConsumerStatefulWidget {
   const AdminEnableDisableScreen({super.key});
 
@@ -26,9 +28,11 @@ class _AdminEnableDisableScreenState extends ConsumerState<AdminEnableDisableScr
     setState(() => _loading = true);
     try {
       final res = await _supabase
-          .from('feature_flags')
+          .from('app_settings')
           .select()
-          .order('feature_key');
+          .eq('setting_type', 'boolean')
+          .order('category')
+          .order('setting_key');
       if (!mounted) return;
       setState(() {
         _flags = List<Map<String, dynamic>>.from(res);
@@ -39,12 +43,17 @@ class _AdminEnableDisableScreenState extends ConsumerState<AdminEnableDisableScr
     }
   }
 
+  bool _asBool(dynamic v) {
+    if (v is bool) return v;
+    if (v is String) return v.toLowerCase() == 'true';
+    return false;
+  }
+
   Future<void> _toggle(Map<String, dynamic> f) async {
-    final newVal = !(f['enabled'] == true);
+    final newVal = !_asBool(f['setting_value']);
     try {
-      await _supabase.from('feature_flags').update({
-        'enabled': newVal,
-        'updated_at': DateTime.now().toIso8601String(),
+      await _supabase.from('app_settings').update({
+        'setting_value': jsonEncode(newVal),
       }).eq('id', f['id']);
       _load();
     } catch (e) {
@@ -58,22 +67,26 @@ class _AdminEnableDisableScreenState extends ConsumerState<AdminEnableDisableScr
       appBar: AppBar(title: const Text('Enable / Disable')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView.separated(
-                itemCount: _flags.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (_, i) {
-                  final f = _flags[i];
-                  return SwitchListTile(
-                    title: Text(f['feature_name']?.toString() ?? f['feature_key']?.toString() ?? '—'),
-                    subtitle: Text(f['description']?.toString() ?? f['feature_key']?.toString() ?? ''),
-                    value: f['enabled'] == true,
-                    onChanged: (_) => _toggle(f),
-                  );
-                },
-              ),
-            ),
+          : _flags.isEmpty
+              ? const Center(child: Text('No boolean settings configured'))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    itemCount: _flags.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (_, i) {
+                      final f = _flags[i];
+                      return SwitchListTile(
+                        title: Text(f['setting_key']?.toString() ?? '—'),
+                        subtitle: Text(
+                          '${f['category'] ?? 'general'} • ${f['description'] ?? ''}',
+                        ),
+                        value: _asBool(f['setting_value']),
+                        onChanged: (_) => _toggle(f),
+                      );
+                    },
+                  ),
+                ),
     );
   }
 }

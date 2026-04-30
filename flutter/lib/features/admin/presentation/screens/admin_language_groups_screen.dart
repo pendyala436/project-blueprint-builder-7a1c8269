@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Admin Language Groups — mirrors React AdminLanguageGroups.tsx
+/// Admin Language Groups — mirrors React AdminLanguageGroups.tsx.
+/// Real columns: name, languages (array), is_active, max_women_users, current_women_count.
 class AdminLanguageGroupsScreen extends ConsumerStatefulWidget {
   const AdminLanguageGroupsScreen({super.key});
 
@@ -27,7 +28,7 @@ class _AdminLanguageGroupsScreenState extends ConsumerState<AdminLanguageGroupsS
       final res = await _supabase
           .from('language_groups')
           .select()
-          .order('language_code');
+          .order('priority', ascending: true);
       if (!mounted) return;
       setState(() {
         _groups = List<Map<String, dynamic>>.from(res);
@@ -61,9 +62,16 @@ class _AdminLanguageGroupsScreenState extends ConsumerState<AdminLanguageGroupsS
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final g = _groups[i];
+                  final langs = (g['languages'] is List)
+                      ? (g['languages'] as List).join(', ')
+                      : '';
                   return SwitchListTile(
-                    title: Text(g['language_name']?.toString() ?? g['language_code']?.toString() ?? '—'),
-                    subtitle: Text('Members: ${g['member_count'] ?? 0}'),
+                    title: Text(g['name']?.toString() ?? '—'),
+                    subtitle: Text(
+                      'Women: ${g['current_women_count'] ?? 0}/${g['max_women_users'] ?? '∞'}'
+                      '${langs.isNotEmpty ? '\n$langs' : ''}',
+                    ),
+                    isThreeLine: langs.isNotEmpty,
                     value: g['is_active'] == true,
                     onChanged: (_) => _toggle(g),
                   );

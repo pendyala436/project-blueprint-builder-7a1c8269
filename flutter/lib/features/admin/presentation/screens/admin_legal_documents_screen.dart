@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Admin Legal Documents — mirrors React AdminLegalDocuments.tsx
+/// Admin Legal Documents — mirrors React AdminLegalDocuments.tsx.
+/// Real columns: name, document_type, version, description, file_path, is_active.
 class AdminLegalDocumentsScreen extends ConsumerStatefulWidget {
   const AdminLegalDocumentsScreen({super.key});
 
@@ -38,34 +39,10 @@ class _AdminLegalDocumentsScreenState extends ConsumerState<AdminLegalDocumentsS
     }
   }
 
-  Future<void> _edit(Map<String, dynamic> doc) async {
-    final ctrl = TextEditingController(text: doc['content']?.toString() ?? '');
-    final saved = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(doc['title']?.toString() ?? 'Edit Document'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: TextField(
-            controller: ctrl,
-            maxLines: null,
-            expands: true,
-            textAlignVertical: TextAlignVertical.top,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('Save')),
-        ],
-      ),
-    );
-    if (saved == null) return;
+  Future<void> _toggleActive(Map<String, dynamic> doc) async {
     try {
       await _supabase.from('legal_documents').update({
-        'content': saved,
-        'updated_at': DateTime.now().toIso8601String(),
+        'is_active': !(doc['is_active'] == true),
       }).eq('id', doc['id']);
       _load();
     } catch (e) {
@@ -86,14 +63,16 @@ class _AdminLegalDocumentsScreenState extends ConsumerState<AdminLegalDocumentsS
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final d = _docs[i];
-                  return ListTile(
-                    leading: const Icon(Icons.description),
-                    title: Text(d['title']?.toString() ?? '—'),
-                    subtitle: Text('Version ${d['version'] ?? '1'}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _edit(d),
+                  return SwitchListTile(
+                    secondary: const Icon(Icons.description),
+                    title: Text(d['name']?.toString() ?? '—'),
+                    subtitle: Text(
+                      '${d['document_type'] ?? '—'} • v${d['version'] ?? '1'}\n'
+                      '${d['description'] ?? ''}',
                     ),
+                    isThreeLine: true,
+                    value: d['is_active'] == true,
+                    onChanged: (_) => _toggleActive(d),
                   );
                 },
               ),

@@ -24,9 +24,9 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
     if (uid == null) return;
     try {
       final data = await _supabase
-          .from('blocked_users')
-          .select('*, blocked:blocked_id(id, full_name, profile_photo_url)')
-          .eq('blocker_id', uid);
+          .from('user_blocks')
+          .select('*, blocked:blocked_user_id(id, full_name, photo_url)')
+          .eq('blocked_by', uid);
       setState(() {
         _blocked = List<Map<String, dynamic>>.from(data);
         _loading = false;
@@ -57,10 +57,10 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                     if (b == null) return const SizedBox.shrink();
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: b['profile_photo_url'] != null
-                            ? NetworkImage(b['profile_photo_url'] as String)
+                        backgroundImage: b['photo_url'] != null
+                            ? NetworkImage(b['photo_url'] as String)
                             : null,
-                        child: b['profile_photo_url'] == null
+                        child: b['photo_url'] == null
                             ? const Icon(Icons.person)
                             : null,
                       ),
