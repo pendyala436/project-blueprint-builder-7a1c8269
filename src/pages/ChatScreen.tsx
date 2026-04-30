@@ -420,9 +420,14 @@ const ChatScreen = () => {
     });
   }, [toast]);
 
+  // BUG-BILL-03 FIX: Only the MAN's client drives billing — bill_session_minute's
+  // auth gate rejects calls from anyone other than the paying man (or admin/service).
+  // Without this gate, the woman's client called the RPC every 60s and silently 404'd
+  // on every tick, leaving the system impossible to debug.
+  const isBillingDriver = !!currentUserId && !!billingManId && currentUserId === billingManId;
   const { minutesBilled, totalCharged } = useMiniChatBilling({
     chatId: activeChatId,
-    isActive: isSessionActive && !!billingSessionId,
+    isActive: isSessionActive && !!billingSessionId && isBillingDriver,
     sessionId: billingSessionId,
     manId: billingManId,
     womanId: billingWomanId,
