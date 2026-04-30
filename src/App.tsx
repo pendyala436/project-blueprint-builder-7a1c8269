@@ -206,6 +206,7 @@ const AppShell = () => {
             <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><AdminAuditLogs /></ProtectedRoute>} />
             <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><AdminMessaging /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+            <Route path="/admin/enable_disable" element={<ProtectedRoute requiredRole="admin"><AdminEnableDisable /></ProtectedRoute>} />
             <Route path="/admin/payout-statements" element={<ProtectedRoute requiredRole="admin"><AdminPayoutStatements /></ProtectedRoute>} />
 
             <Route path="*" element={<RouteSuspense><NotFound /></RouteSuspense>} />
