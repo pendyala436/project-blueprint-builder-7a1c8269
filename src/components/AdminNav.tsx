@@ -20,7 +20,7 @@ import {
   Users, MessageSquare, BarChart3, Settings, Shield, FileText, Clock,
   DollarSign, Activity, Gift, Globe, Database, AlertTriangle, Languages,
   LogOut, Menu, Home, UserCheck, History, Search, ClipboardList, Megaphone,
-  MoreVertical, Bell, RefreshCw,
+  MoreVertical, Bell, RefreshCw, ToggleLeft,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
