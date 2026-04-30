@@ -404,7 +404,10 @@ class WalletService {
     }
   }
 
-  /// Send gift
+  /// Send gift via canonical SoT RPC `bill_gift_or_tip`.
+  /// (Mirrors React `sendGift` in services/billing.service.ts.)
+  /// Looks up gift price from the `gifts` table since the canonical RPC
+  /// expects an amount, not a gift_id.
   Future<TransactionResult> sendGift({
     required String senderId,
     required String receiverId,
@@ -412,17 +415,33 @@ class WalletService {
     String? message,
   }) async {
     try {
-      final response = await _client.rpc('process_gift_transaction', params: {
-        'p_sender_id': senderId,
-        'p_receiver_id': receiverId,
-        'p_gift_id': giftId,
-        'p_message': message,
+      final gift = await _client
+          .from('gifts')
+          .select('price, name, emoji')
+          .eq('id', giftId)
+          .maybeSingle();
+      if (gift == null) {
+        return TransactionResult(success: false, error: 'Gift not found');
+      }
+      final price = (gift['price'] as num?)?.toDouble() ?? 0;
+      final desc = message ??
+          'Gift: ${gift['emoji'] ?? ''} ${gift['name'] ?? ''}'.trim();
+
+      final response = await _client.rpc('bill_gift_or_tip', params: {
+        'p_man_id': senderId,
+        'p_woman_id': receiverId,
+        'p_amount': price,
+        'p_type': 'gift',
+        'p_description': desc,
+        'p_reference_id': giftId,
       });
 
-      final data = response as Map<String, dynamic>;
+      final data = response is Map<String, dynamic>
+          ? response
+          : <String, dynamic>{};
       return TransactionResult(
         success: data['success'] ?? false,
-        transactionId: data['gift_transaction_id'],
+        transactionId: data['transaction_id'] ?? data['gift_transaction_id'],
         previousBalance: (data['previous_balance'] as num?)?.toDouble(),
         newBalance: (data['new_balance'] as num?)?.toDouble(),
         error: data['error'],
@@ -432,7 +451,8 @@ class WalletService {
     }
   }
 
-  /// Request withdrawal
+  /// Request withdrawal via canonical SoT RPC `ledger_withdrawal`.
+  /// Mirrors React billing.service.ts withdrawal flow.
   Future<TransactionResult> requestWithdrawal({
     required String userId,
     required double amount,
@@ -440,17 +460,19 @@ class WalletService {
     Map<String, dynamic>? paymentDetails,
   }) async {
     try {
-      final response = await _client.rpc('process_withdrawal_request', params: {
+      final response = await _client.rpc('ledger_withdrawal', params: {
         'p_user_id': userId,
         'p_amount': amount,
-        'p_payment_method': paymentMethod,
+        'p_payment_method': paymentMethod ?? 'upi',
         'p_payment_details': paymentDetails,
       });
 
-      final data = response as Map<String, dynamic>;
+      final data = response is Map<String, dynamic>
+          ? response
+          : <String, dynamic>{};
       return TransactionResult(
         success: data['success'] ?? false,
-        transactionId: data['withdrawal_id'],
+        transactionId: data['withdrawal_id'] ?? data['transaction_id'],
         previousBalance: (data['previous_balance'] as num?)?.toDouble(),
         newBalance: (data['new_balance'] as num?)?.toDouble(),
         error: data['error'],
@@ -459,8 +481,6 @@ class WalletService {
       return TransactionResult(success: false, error: e.toString());
     }
   }
-
-  /// Subscribe to wallet changes
   RealtimeChannel subscribeToWallet(
     String userId,
     void Function(WalletModel wallet) onUpdate,
