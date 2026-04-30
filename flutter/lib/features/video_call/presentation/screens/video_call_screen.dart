@@ -67,6 +67,19 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
   @override
   void initState() {
     super.initState();
+    if (VideoCallCircuitBreaker.instance.isTripped) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final mins =
+            VideoCallCircuitBreaker.instance.remaining.inMinutes;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Calls are temporarily disabled (high server load). Try again in $mins min.'),
+        ));
+        Navigator.of(context).pop();
+      });
+      return;
+    }
     ref.read(screenshotProtectionProvider).enable();
     _isVideoOff = widget.audioOnly;
     _start();
