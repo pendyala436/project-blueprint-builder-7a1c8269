@@ -440,7 +440,7 @@ const AuthScreen = () => {
                   )}
                 </Button>
                 <Button
-                  variant="auroraOutline"
+                  variant="aurora"
                   size="lg"
                   className="flex-1 min-w-0 px-2 sm:px-4"
                   onClick={() => navigate("/register")}
