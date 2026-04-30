@@ -498,35 +498,48 @@ export function usePrivateGroupCall({
         const session = sessionRef.current;
         if (!session) return;
 
-        // Only the host (woman) drives billing — bills each non-host (man) individually.
-        // Participants run this timer only as a passive heartbeat fallback (no-op here).
-        if (!isOwner) return;
+        // ── Viewer (man) self-bill fallback ──────────────────────────────
+        // The host normally drives billing. If the host's tab is backgrounded,
+        // network-flaked, or the session is short, the viewer bills himself.
+        // bill_session_minute is idempotent on (session_id, man_id, minute_idx),
+        // so a duplicate from host + viewer is a safe no-op.
+        if (!isOwner) {
+          const minuteIdx = Math.max(1, Math.floor((Date.now() - session.startTime) / 60000));
+          const [{ data: manProfile }, { data: womanProfile }] = await Promise.all([
+            supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
+            supabase.from('profiles').select('id').eq('user_id', session.hostId).maybeSingle(),
+          ]);
+          if (!manProfile?.id || !womanProfile?.id) return;
 
-        // Resolve woman (host) profile.id
+          const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, womanProfile.id, minuteIdx);
+          if (!r.success && r.error?.includes('Insufficient balance')) {
+            console.warn('[GROUP] Viewer ejected — insufficient balance');
+            toast.error('Insufficient balance — leaving call');
+            cleanup(true);
+          }
+          return;
+        }
+
+        // ── Host drives billing for every active man ─────────────────────
         const { data: hostProfile } = await supabase
           .from('profiles').select('id').eq('user_id', session.hostId).maybeSingle();
         if (!hostProfile?.id) return;
 
-        // Bill every active man currently in the room
         const activeMen = Array.from(session.participants.values()).filter(p => !p.isOwner);
         if (activeMen.length === 0) {
           console.log('[GROUP] No men in room — billing paused');
           return;
         }
 
-        // Compute deterministic minute_index from session start so it aligns with
-        // the on-join bill (minute_index=0). Heartbeat ticks bill 1, 2, 3, ...
         const minuteIdx = Math.max(1, Math.floor((Date.now() - session.startTime) / 60000));
 
         await Promise.all(activeMen.map(async (man) => {
-          // Resolve man's profile.id from his auth user_id (man.id is auth user_id)
           const { data: manProfile } = await supabase
             .from('profiles').select('id').eq('user_id', man.id).maybeSingle();
           if (!manProfile?.id) return;
 
           const r = await billGroupCallMinute(session.sessionId, 1.0, manProfile.id, hostProfile.id, minuteIdx);
           if (!r.success && r.error?.includes('Insufficient balance')) {
-            // Eject this man — billing failed
             console.warn('[GROUP] Ejecting man for insufficient balance:', man.id);
             onParticipantLeave?.(man.id, 'insufficient_balance');
           }
@@ -537,7 +550,7 @@ export function usePrivateGroupCall({
         billingInProgressRef.current = false;
       }
     }, BILLING_INTERVAL_SECONDS * 1000);
-  }, [isOwner, onParticipantLeave]);
+  }, [isOwner, onParticipantLeave, currentUserId]);
 
   // Start elapsed time tracker (no time limit)
   const startCountdownTimer = useCallback(() => {
