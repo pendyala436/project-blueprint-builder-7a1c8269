@@ -973,6 +973,55 @@ export function usePrivateGroupCall({
       }
 
       await setupSignaling();
+
+      // Viewer-side: fetch host's active stream_id and store as our sessionRef so we can
+      // self-bill (host's billing is best-effort and may miss short sessions).
+      try {
+        const { data: gah } = await supabase
+          .from('group_active_hosts')
+          .select('stream_id, host_id, started_at')
+          .eq('group_id', groupId)
+          .eq('is_active', true)
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (gah?.stream_id && gah?.host_id) {
+          sessionRef.current = {
+            sessionId: gah.stream_id,
+            groupId,
+            hostId: gah.host_id,
+            startTime: gah.started_at ? new Date(gah.started_at).getTime() : Date.now(),
+            participants: new Map(),
+            totalEarnings: 0,
+          };
+
+          // Immediate self-bill for minute 0 so wallet_transactions always has a row,
+          // even if this man leaves before the first per-minute tick fires.
+          (async () => {
+            try {
+              const [{ data: manProfile }, { data: womanProfile }] = await Promise.all([
+                supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
+                supabase.from('profiles').select('id').eq('user_id', gah.host_id).maybeSingle(),
+              ]);
+              if (manProfile?.id && womanProfile?.id) {
+                const r = await billGroupCallMinute(gah.stream_id, 1.0, manProfile.id, womanProfile.id, 0);
+                if (!r.success) {
+                  console.warn('[GROUP] Viewer self-bill on join failed:', r.error);
+                  if (r.error?.includes('Insufficient balance')) {
+                    toast.error('Insufficient balance');
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('[GROUP] Viewer self-bill error:', err);
+            }
+          })();
+        }
+      } catch (err) {
+        console.warn('[GROUP] Could not load host stream for viewer billing:', err);
+      }
+
       startBillingTimer(); // Start billing fallback timer for participant
 
       setState(prev => ({ 
