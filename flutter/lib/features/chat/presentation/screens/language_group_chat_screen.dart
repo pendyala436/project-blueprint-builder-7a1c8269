@@ -92,9 +92,14 @@ class _LanguageGroupChatScreenState extends State<LanguageGroupChatScreen> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      await _supabase.rpc('send_language_group_message', params: {
-        'p_language_code': widget.languageCode,
-        'p_text': text,
+      // Direct insert mirrors React `LanguageGroupChat.tsx`.
+      // No `send_language_group_message` RPC exists.
+      final senderId = _supabase.auth.currentUser?.id;
+      if (senderId == null) throw Exception('Not signed in');
+      await _supabase.from('language_community_messages').insert({
+        'language_code': widget.languageCode,
+        'sender_id': senderId,
+        'message': text,
       });
       _ctrl.clear();
     } catch (e) {

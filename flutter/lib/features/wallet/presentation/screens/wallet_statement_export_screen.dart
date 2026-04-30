@@ -41,9 +41,14 @@ class _WalletStatementExportScreenState
   Future<void> _export() async {
     setState(() => _busy = true);
     try {
-      final rows = await _supabase.rpc('get_wallet_statement', params: {
-        'p_start': _range.start.toIso8601String(),
-        'p_end': _range.end.toIso8601String(),
+      // Canonical statement RPC: returns id, session_id, session_type,
+      // transaction_type, debit, credit, description, reference_id,
+      // counterparty_id, running_balance, created_at, duration_seconds,
+      // rate_per_minute.
+      final rows = await _supabase.rpc('get_ledger_statement', params: {
+        'p_user_id': _supabase.auth.currentUser?.id,
+        'p_from_date': _range.start.toIso8601String().split('T').first,
+        'p_to_date': _range.end.toIso8601String().split('T').first,
       }) as List<dynamic>;
 
       final headers = [
@@ -53,9 +58,25 @@ class _WalletStatementExportScreenState
       final buf = StringBuffer(headers.map(_csvEscape).join(','))..writeln();
       for (final r in rows) {
         final m = r as Map<String, dynamic>;
+        final created = m['created_at']?.toString() ?? '';
+        final dt = DateTime.tryParse(created);
+        final date = dt != null
+            ? '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}'
+            : '';
+        final time = dt != null
+            ? '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}'
+            : '';
         buf.writeln([
-          m['date'], m['time'], m['type'], m['description'], m['reference'],
-          m['debit'], m['credit'], m['balance'], m['status'], m['counterparty'],
+          date,
+          time,
+          m['transaction_type'] ?? '',
+          m['description'] ?? '',
+          m['reference_id'] ?? '',
+          m['debit'] ?? 0,
+          m['credit'] ?? 0,
+          m['running_balance'] ?? 0,
+          'completed',
+          m['counterparty_id'] ?? '',
         ].map(_csvEscape).join(','));
       }
 

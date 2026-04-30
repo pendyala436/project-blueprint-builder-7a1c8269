@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Admin payout management — bi-monthly snapshots, two-decimal precision.
+/// Admin payout management — bi-monthly snapshots with two-decimal precision.
+/// Reads from canonical `women_payout_snapshots` table and updates via the
+/// canonical `admin_update_payout` RPC. Mirrors React AdminPayoutStatements.
 class AdminPayoutScreen extends StatefulWidget {
   const AdminPayoutScreen({super.key});
 
@@ -23,21 +25,28 @@ class _AdminPayoutScreenState extends State<AdminPayoutScreen> {
   Future<void> _load() async {
     try {
       final data = await _supabase
-          .from('admin_payouts_view')
+          .from('women_payout_snapshots')
           .select()
-          .order('snapshot_date', ascending: false)
+          .order('snapshot_ist_date', ascending: false)
           .limit(200);
+      if (!mounted) return;
       setState(() {
         _payouts = List<Map<String, dynamic>>.from(data);
         _loading = false;
       });
     } catch (_) {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
 
   Future<void> _markPaid(String id) async {
-    await _supabase.rpc('mark_payout_paid', params: {'p_payout_id': id});
+    try {
+      await _supabase.rpc('admin_update_payout', params: {
+        'p_statement_id': id,
+        'p_status': 'paid',
+      });
+    } catch (_) {/* surface via toast on next refresh */}
     _load();
   }
 
@@ -57,7 +66,8 @@ class _AdminPayoutScreenState extends State<AdminPayoutScreen> {
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (_, i) {
                   final p = _payouts[i];
-                  final paid = p['status'] == 'paid';
+                  final status = (p['payment_status'] as String?) ?? 'pending';
+                  final paid = status == 'paid';
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: paid ? Colors.green : Colors.orange,
@@ -68,12 +78,12 @@ class _AdminPayoutScreenState extends State<AdminPayoutScreen> {
                     ),
                     title: Text(p['full_name'] as String? ?? 'User'),
                     subtitle: Text(
-                        '${p['snapshot_date']} • ${p['status']}'),
+                        '${p['snapshot_ist_date'] ?? ''} • $status'),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(_money(p['amount']),
+                        Text(_money(p['net_payable'] ?? p['incremental_payable']),
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold)),
                         if (!paid)

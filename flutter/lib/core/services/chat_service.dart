@@ -191,21 +191,19 @@ class ChatService {
     ).subscribe();
   }
 
-  /// Process chat billing (via database function)
+  /// Chat billing is **server-managed** via the canonical heartbeat
+  /// pipeline (`bill_session_minute` / `bill_session_partial_minute`)
+  /// invoked by edge functions and the Chat Billing Activity Gate.
+  /// The client must NOT call any per-minute billing RPC directly.
+  /// This method is kept for API compatibility and is a no-op.
   Future<Map<String, dynamic>> processChatBilling(
     String sessionId,
     double minutes,
   ) async {
-    try {
-      final response = await _client.rpc('process_chat_billing', params: {
-        'p_session_id': sessionId,
-        'p_minutes': minutes,
-      });
-
-      return response as Map<String, dynamic>;
-    } catch (e) {
-      return {'success': false, 'error': e.toString()};
-    }
+    return {
+      'success': true,
+      'note': 'Chat billing is handled server-side via heartbeats.',
+    };
   }
 
   /// End chat session
