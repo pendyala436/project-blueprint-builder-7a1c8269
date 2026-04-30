@@ -420,9 +420,14 @@ const ChatScreen = () => {
     });
   }, [toast]);
 
+  // BUG-BILL-03 FIX: Only the MAN's client drives billing — bill_session_minute's
+  // auth gate rejects calls from anyone other than the paying man (or admin/service).
+  // Without this gate, the woman's client called the RPC every 60s and silently 404'd
+  // on every tick, leaving the system impossible to debug.
+  const isBillingDriver = !!currentUserId && !!billingManId && currentUserId === billingManId;
   const { minutesBilled, totalCharged } = useMiniChatBilling({
     chatId: activeChatId,
-    isActive: isSessionActive && !!billingSessionId,
+    isActive: isSessionActive && !!billingSessionId && isBillingDriver,
     sessionId: billingSessionId,
     manId: billingManId,
     womanId: billingWomanId,
@@ -805,14 +810,26 @@ const ChatScreen = () => {
         },
         (payload: any) => {
           const session = payload.new;
-          
-          // Check if this is our session and it was ended
-          if (session.status === 'ended' && 
+          if (!session) return;
+
+          // BUG-BILL-05 FIX: Wire billing IDs on UPDATE → active/pending too
+          // (recycled sessions transition pending→active without an INSERT event).
+          if ((session.status === 'active' || session.status === 'pending') &&
               (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
-            
+            setBillingSessionId(session.id);
+            setBillingManId(session.man_user_id);
+            setBillingWomanId(session.woman_user_id);
+            setIsSessionActive(true);
+            console.log("[Chat] Billing session detected via UPDATE:", session.id, session.status);
+          }
+
+          // Check if this is our session and it was ended
+          if (session.status === 'ended' &&
+              (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
+
             setIsSessionActive(false);
             setBillingSessionId(null);
-            
+
             // If ended by partner (woman) and current user is man, auto-reconnect
             if (session.end_reason === 'woman_closed' || session.end_reason === 'partner_offline') {
               if (currentUserGender === "male") {
@@ -1014,15 +1031,22 @@ const ChatScreen = () => {
       }
 
       // ============= FETCH ACTIVE SESSION FOR BILLING =============
+      // BUG-BILL-05 FIX: Race-resilient — retry up to 5x (250ms apart) because
+      // start_chat may still be writing the row when initializeChat runs.
       try {
-        const { data: activeSession } = await supabase
-          .from("active_chat_sessions")
-          .select("id, man_user_id, woman_user_id, status")
-          .eq("chat_id", chatId.current)
-          .in("status", ["active", "pending"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let activeSession: { id: string; man_user_id: string; woman_user_id: string; status: string } | null = null;
+        for (let attempt = 0; attempt < 5 && !activeSession; attempt++) {
+          const { data } = await supabase
+            .from("active_chat_sessions")
+            .select("id, man_user_id, woman_user_id, status")
+            .eq("chat_id", chatId.current)
+            .in("status", ["active", "pending"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) { activeSession = data; break; }
+          await new Promise(r => setTimeout(r, 250));
+        }
 
         if (activeSession) {
           setBillingSessionId(activeSession.id);
@@ -1030,7 +1054,7 @@ const ChatScreen = () => {
           setBillingWomanId(activeSession.woman_user_id);
           console.log("[Chat] Billing wired for session:", activeSession.id);
         } else {
-          console.log("[Chat] No active session found for billing - will retry on session change");
+          console.log("[Chat] No active session after retries — realtime UPDATE will wire billing");
         }
       } catch (e) {
         console.warn("[Chat] Failed to fetch billing session:", e);

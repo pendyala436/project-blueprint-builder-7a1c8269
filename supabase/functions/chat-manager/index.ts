@@ -1440,18 +1440,20 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({
-            success: true, 
+            success: true,
             billing_started: true,
-              minutes_elapsed: Number(result.billable_minutes ?? fractionalMinutes),
-              duration_seconds: Number(result.duration_seconds ?? Math.round(fractionalMinutes * 60)),
-              men_charged: menCharged,
+            // Server-side billing has moved to client unified RPC (bill_session_minute).
+            // Heartbeat now only acks; numeric fields reflect this tick window.
+            minutes_elapsed: fractionalMinutes,
+            duration_seconds: Math.round(fractionalMinutes * 60),
+            men_charged: menCharged,
             women_earned: womenEarnings,
-              remaining_balance: newBalance,
-              man_rate_per_minute: Number(result.man_rate_per_minute ?? session.rate_per_minute),
-              woman_rate_per_minute: Number(result.woman_rate_per_minute ?? womenEarningRate),
-              duplicate_skipped: result.duplicate_skipped === true,
-              end_chat: result.session_ended === true,
-              estimated_charge: Number(menChargeEstimate.toFixed(2))
+            remaining_balance: newBalance,
+            man_rate_per_minute: session.rate_per_minute,
+            woman_rate_per_minute: womenEarningRate,
+            duplicate_skipped: false,
+            end_chat: false,
+            estimated_charge: Number(menChargeEstimate.toFixed(2)),
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
