@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet } from 'lucide-react';
+import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet, Archive, ArchiveRestore } from 'lucide-react';
 import { generatePayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
 import { generatePayoutSnapshotNow } from '@/services/billing.service';
 import { format } from 'date-fns';
@@ -166,10 +166,15 @@ const AdminPayoutStatements = () => {
   };
 
   // ─── Archived Exports (Storage) ───
+  // Active = files in `payout-exports` bucket
+  // Archived = files moved to `payout-exports-archive` bucket
   const [archives, setArchives] = useState<{ name: string; path: string; created_at?: string }[]>([]);
+  const [view, setView] = useState<'active' | 'archived'>('active');
+  const bucketName = view === 'active' ? 'payout-exports' : 'payout-exports-archive';
+
   const loadArchives = async () => {
     const { data, error } = await supabase.storage
-      .from('payout-exports')
+      .from(bucketName)
       .list(monthFilter, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
     if (error) { setArchives([]); return; }
     setArchives((data || []).filter(f => f.name.endsWith('.xlsx')).map(f => ({
@@ -178,15 +183,48 @@ const AdminPayoutStatements = () => {
       created_at: (f as any).created_at,
     })));
   };
-  useEffect(() => { loadArchives(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [monthFilter]);
+  useEffect(() => { loadArchives(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [monthFilter, view]);
 
   const downloadArchive = async (path: string, name: string) => {
-    const { data, error } = await supabase.storage.from('payout-exports').download(path);
+    const { data, error } = await supabase.storage.from(bucketName).download(path);
     if (error || !data) { toast({ title: 'Download failed', description: error?.message, variant: 'destructive' }); return; }
     const url = URL.createObjectURL(data);
     const a = document.createElement('a');
     a.href = url; a.download = name; a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // Move file between active ↔ archive bucket (download + upload + delete original)
+  const moveFile = async (path: string, from: string, to: string) => {
+    const { data: file, error: dlErr } = await supabase.storage.from(from).download(path);
+    if (dlErr || !file) throw new Error(dlErr?.message || 'Download failed');
+    const { error: upErr } = await supabase.storage.from(to).upload(path, file, {
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      upsert: true,
+    });
+    if (upErr) throw new Error(upErr.message);
+    const { error: rmErr } = await supabase.storage.from(from).remove([path]);
+    if (rmErr) throw new Error(rmErr.message);
+  };
+
+  const archiveFile = async (path: string, name: string) => {
+    try {
+      await moveFile(path, 'payout-exports', 'payout-exports-archive');
+      toast({ title: 'Archived', description: name });
+      loadArchives();
+    } catch (e: any) {
+      toast({ title: 'Archive failed', description: e?.message, variant: 'destructive' });
+    }
+  };
+
+  const restoreFile = async (path: string, name: string) => {
+    try {
+      await moveFile(path, 'payout-exports-archive', 'payout-exports');
+      toast({ title: 'Restored', description: name });
+      loadArchives();
+    } catch (e: any) {
+      toast({ title: 'Restore failed', description: e?.message, variant: 'destructive' });
+    }
   };
 
   const buildRows = () => records.map((r, i) => ({
