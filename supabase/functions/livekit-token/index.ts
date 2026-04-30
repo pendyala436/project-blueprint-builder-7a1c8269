@@ -12,8 +12,12 @@
 // Endpoint: POST { room, identity, name?, can_publish? }
 // Response: { token, ws_url, room, identity, expires_at }
 
-import { corsHeaders } from "@supabase/supabase-js/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 import { AccessToken } from "https://esm.sh/livekit-server-sdk@2.7.2";
 import { z } from "https://esm.sh/zod@3.23.8";
 
