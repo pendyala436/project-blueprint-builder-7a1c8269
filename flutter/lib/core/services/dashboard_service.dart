@@ -520,15 +520,18 @@ class DashboardService {
     }
   }
 
-  /// Purchase golden badge via RPC
+  /// Purchase golden badge.
+  /// No `purchase_golden_badge` RPC exists yet — delegate to the
+  /// `golden-badge` edge function (matches React parity expectation).
+  /// Returns success=false if the function isn't deployed.
   Future<Map<String, dynamic>> purchaseGoldenBadge(String userId) async {
     try {
-      final response = await _client.rpc('purchase_golden_badge', params: {
-        'p_user_id': userId,
-      });
-      if (response is Map<String, dynamic>) {
-        return response;
-      }
+      final response = await _client.functions.invoke(
+        'golden-badge',
+        body: {'action': 'purchase', 'user_id': userId},
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) return data;
       return {'success': false, 'error': 'Unexpected response'};
     } catch (e) {
       return {'success': false, 'error': e.toString()};
@@ -616,21 +619,24 @@ class DashboardService {
     }
   }
 
-  /// Process recharge (credit wallet) via RPC
+  /// Process recharge via canonical SoT RPC `ledger_recharge`
+  /// (writes a single wallet_transactions row with idempotency_key).
   Future<({bool success, double? newBalance, String? error})> processRecharge({
     required String userId,
     required double amount,
     required String gatewayName,
   }) async {
     try {
-      final response = await _client.rpc('process_recharge', params: {
+      final referenceId =
+          '${gatewayName.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}';
+      final response = await _client.rpc('ledger_recharge', params: {
         'p_user_id': userId,
         'p_amount': amount,
-        'p_description': 'Recharge via $gatewayName',
-        'p_reference_id': '${gatewayName.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}',
+        'p_reference_id': referenceId,
+        'p_gateway': gatewayName,
       });
 
-      if (response is Map<String, dynamic>) {
+      if (response is Map) {
         return (
           success: response['success'] == true,
           newBalance: (response['new_balance'] as num?)?.toDouble(),
