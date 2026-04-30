@@ -106,6 +106,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authService = ref.watch(authServiceProvider);
   
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppRoutes.auth,
     debugLogDiagnostics: true,
     redirect: (context, state) async {
