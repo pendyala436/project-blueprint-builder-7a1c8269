@@ -415,47 +415,40 @@ const AuthScreen = () => {
               </div>
             )}
 
-            {/* Login Button */}
-            <Button
-              variant="aurora"
-              size="xl"
-              className="w-full group"
-              onClick={handleLogin}
-              disabled={isLoading || (!!lockoutUntil && lockoutCountdown > 0)}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  {t('common.loading')}
-                </>
-              ) : lockoutUntil && lockoutCountdown > 0 ? (
-                <>Locked ({lockoutCountdown}s)</>
-              ) : (
-                <>
-                  {t('auth.login')}
-                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                </>
-              )}
-            </Button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                {t('auth.noAccount')}
-              </span>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-            </div>
-
+            {/* Login + Sign Up Buttons (side by side) */}
             <div className="-mx-3 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-card/95 backdrop-blur-xl sm:mx-0 sm:p-0 sm:bg-transparent sm:backdrop-blur-none space-y-2">
-              <Button
-                variant="aurora"
-                size="lg"
-                className="w-full"
-                onClick={() => navigate("/register")}
-              >
-                {t('auth.signup')}
-              </Button>
+              <div className="flex flex-row gap-2 sm:gap-3 w-full">
+                <Button
+                  variant="aurora"
+                  size="lg"
+                  className="flex-1 min-w-0 px-2 sm:px-4 group"
+                  onClick={handleLogin}
+                  disabled={isLoading || (!!lockoutUntil && lockoutCountdown > 0)}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                      <span className="truncate">{t('common.loading')}</span>
+                    </>
+                  ) : lockoutUntil && lockoutCountdown > 0 ? (
+                    <span className="truncate">Locked ({lockoutCountdown}s)</span>
+                  ) : (
+                    <>
+                      <span className="truncate">{t('auth.login')}</span>
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="auroraOutline"
+                  size="lg"
+                  className="flex-1 min-w-0 px-2 sm:px-4"
+                  onClick={() => navigate("/register")}
+                  disabled={isLoading}
+                >
+                  <span className="truncate">{t('auth.signup')}</span>
+                </Button>
+              </div>
               <a
                 href="/PWA_Installation_Guide.docx"
                 download
