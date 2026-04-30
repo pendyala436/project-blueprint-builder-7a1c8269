@@ -4201,6 +4201,7 @@ export type Database = {
       }
       stop_host_session: { Args: { p_group_id: string }; Returns: Json }
       stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
+      sweep_stale_group_hosts: { Args: never; Returns: Json }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
       text_to_uuid: { Args: { p_text: string }; Returns: string }
@@ -4212,6 +4213,7 @@ export type Database = {
         Args: { p_man_id: string; p_seconds: number; p_woman_id: string }
         Returns: Json
       }
+      update_host_heartbeat: { Args: { p_group_id: string }; Returns: Json }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
       verify_recharge_integrity: {
         Args: never
