@@ -1001,6 +1001,24 @@ export function usePrivateGroupCall({
     if (timerRef.current) clearInterval(timerRef.current);
     if (billingRef.current) clearInterval(billingRef.current);
 
+    // Stop heartbeat + remove unload listener (host only)
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    const onBU = (sessionRef.current as any)?._onBeforeUnload;
+    if (onBU) {
+      window.removeEventListener('beforeunload', onBU);
+    }
+
+    // Host: explicitly stop the host session in DB so the room flips offline immediately
+    if (isOwner && groupId) {
+      supabase.rpc('stop_host_session', { p_group_id: groupId })
+        .then(({ error }) => {
+          if (error) console.warn('[GROUP] stop_host_session failed on cleanup:', error.message);
+        });
+    }
+
     // Revoke own group access ONLY on explicit manual leave (not when host ends call)
     if (manualLeave && !isOwner && groupId && currentUserId) {
       supabase
@@ -1042,7 +1060,7 @@ export function usePrivateGroupCall({
       hostStream: null,
       hostStatus: 'live',
     });
-  }, []);
+  }, [isOwner, groupId, currentUserId]);
 
   // End stream (host only) - broadcasts to participants and cleans up WebRTC
   // DB cleanup is handled by the parent component's handleStopLive
