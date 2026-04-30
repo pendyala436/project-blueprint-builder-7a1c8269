@@ -258,15 +258,59 @@ class DashboardService {
     }
   }
 
-  /// Fetch online women for men's dashboard via RPC
+  /// Fetch online women for men's dashboard.
+  /// No `get_online_women_dashboard` RPC exists — falls back to a direct query
+  /// joining user_status (online), profiles (gender=female, AI-verified visibility
+  /// is enforced by RLS), and women_availability for chat-slot info.
   Future<List<OnlineWoman>> getOnlineWomen() async {
     try {
-      final response = await _client.rpc('get_online_women_dashboard');
-      if (response is List) {
-        return response.map((json) => OnlineWoman.fromJson(json as Map<String, dynamic>)).toList();
-      }
-      return [];
-    } catch (e) {
+      final statuses = await _client
+          .from('user_status')
+          .select('user_id, last_seen')
+          .eq('is_online', true)
+          .limit(200);
+
+      final ids = (statuses as List)
+          .map((s) => s['user_id'] as String)
+          .toList();
+      if (ids.isEmpty) return [];
+
+      final profiles = await _client
+          .from('profiles')
+          .select('user_id, full_name, photo_url, country, primary_language, age, gender')
+          .inFilter('user_id', ids)
+          .eq('gender', 'female');
+
+      final availability = await _client
+          .from('women_availability')
+          .select('user_id, is_available, current_chat_count, max_concurrent_chats, is_earning_eligible')
+          .inFilter('user_id', ids);
+
+      final availMap = {
+        for (final a in (availability as List)) a['user_id']: a
+      };
+      final lastSeenMap = {
+        for (final s in statuses) s['user_id']: s['last_seen']
+      };
+
+      return (profiles as List).map((p) {
+        final a = availMap[p['user_id']] as Map<String, dynamic>?;
+        return OnlineWoman.fromJson({
+          'user_id': p['user_id'],
+          'full_name': p['full_name'],
+          'photo_url': p['photo_url'],
+          'country': p['country'],
+          'primary_language': p['primary_language'],
+          'age': p['age'],
+          'mother_tongue': p['primary_language'],
+          'is_earning_eligible': a?['is_earning_eligible'] ?? false,
+          'is_available': a?['is_available'] ?? true,
+          'current_chat_count': a?['current_chat_count'] ?? 0,
+          'max_concurrent_chats': a?['max_concurrent_chats'] ?? 3,
+          'last_seen': lastSeenMap[p['user_id']],
+        });
+      }).toList();
+    } catch (_) {
       return [];
     }
   }
@@ -375,70 +419,49 @@ class DashboardService {
     }
   }
 
-  /// Get today's earnings for a woman
+  /// Get today's earnings for a woman via canonical RPC
+  /// (`get_women_wallet_balance` returns both balance and today_earnings).
   Future<double> getTodayEarnings(String userId) async {
     try {
-      final now = DateTime.now();
-      final todayStart = DateTime(now.year, now.month, now.day).toIso8601String();
-      final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59, 999).toIso8601String();
-
-      final response = await _client
-          .from('women_earnings')
-          .select('amount')
-          .eq('user_id', userId)
-          .gte('created_at', todayStart)
-          .lte('created_at', todayEnd);
-
-      double total = 0;
-      for (final row in (response as List)) {
-        total += (row['amount'] as num?)?.toDouble() ?? 0;
+      final response = await _client.rpc('get_women_wallet_balance', params: {
+        'p_user_id': userId,
+      });
+      if (response is Map) {
+        return (response['today_earnings'] as num?)?.toDouble() ?? 0;
       }
-      return total;
-    } catch (e) {
+      return 0;
+    } catch (_) {
       return 0;
     }
   }
 
-  /// Get women's wallet balance (earnings - withdrawals)
+  /// Get women's wallet balance via canonical RPC.
+  /// Single source of truth: get_women_wallet_balance over wallet_transactions.
   Future<double> getWomenWalletBalance(String userId) async {
     try {
-      final earnings = await _client
-          .from('women_earnings')
-          .select('amount')
-          .eq('user_id', userId);
-
-      double totalEarnings = 0;
-      for (final row in (earnings as List)) {
-        totalEarnings += (row['amount'] as num?)?.toDouble() ?? 0;
+      final response = await _client.rpc('get_women_wallet_balance', params: {
+        'p_user_id': userId,
+      });
+      if (response is Map) {
+        return (response['available_balance'] as num?)?.toDouble() ?? 0;
       }
-
-      final withdrawals = await _client
-          .from('wallet_transactions')
-          .select('amount')
-          .eq('user_id', userId)
-          .eq('type', 'debit');
-
-      double totalWithdrawals = 0;
-      for (final row in (withdrawals as List)) {
-        totalWithdrawals += (row['amount'] as num?)?.toDouble() ?? 0;
-      }
-
-      return totalEarnings - totalWithdrawals;
-    } catch (e) {
+      return 0;
+    } catch (_) {
       return 0;
     }
   }
 
-  /// Get men's wallet balance
+  /// Get men's wallet balance via canonical RPC (mirrors React loadWalletBalance).
   Future<double> getMenWalletBalance(String userId) async {
     try {
-      final response = await _client
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', userId)
-          .maybeSingle();
-      return (response?['balance'] as num?)?.toDouble() ?? 0;
-    } catch (e) {
+      final response = await _client.rpc('get_men_wallet_balance', params: {
+        'p_user_id': userId,
+      });
+      if (response is Map) {
+        return (response['balance'] as num?)?.toDouble() ?? 0;
+      }
+      return 0;
+    } catch (_) {
       return 0;
     }
   }
@@ -452,7 +475,8 @@ class DashboardService {
           .eq('man_user_id', userId);
       final rows = List<Map<String, dynamic>>.from(response);
       final totalSec = rows.fold<num>(0, (s, r) => s + ((r['total_seconds_used'] as num?) ?? 0));
-      return MenFreeMinutes.fromJson({'total_seconds_used': totalSec});
+      final totalMinutesUsed = (totalSec / 60).floor();
+      return MenFreeMinutes.fromJson({'free_minutes_used': totalMinutesUsed});
     } catch (_) {
       return MenFreeMinutes();
     }
@@ -497,15 +521,18 @@ class DashboardService {
     }
   }
 
-  /// Purchase golden badge via RPC
+  /// Purchase golden badge.
+  /// No `purchase_golden_badge` RPC exists yet — delegate to the
+  /// `golden-badge` edge function (matches React parity expectation).
+  /// Returns success=false if the function isn't deployed.
   Future<Map<String, dynamic>> purchaseGoldenBadge(String userId) async {
     try {
-      final response = await _client.rpc('purchase_golden_badge', params: {
-        'p_user_id': userId,
-      });
-      if (response is Map<String, dynamic>) {
-        return response;
-      }
+      final response = await _client.functions.invoke(
+        'golden-badge',
+        body: {'action': 'purchase', 'user_id': userId},
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) return data;
       return {'success': false, 'error': 'Unexpected response'};
     } catch (e) {
       return {'success': false, 'error': e.toString()};
@@ -593,21 +620,24 @@ class DashboardService {
     }
   }
 
-  /// Process recharge (credit wallet) via RPC
+  /// Process recharge via canonical SoT RPC `ledger_recharge`
+  /// (writes a single wallet_transactions row with idempotency_key).
   Future<({bool success, double? newBalance, String? error})> processRecharge({
     required String userId,
     required double amount,
     required String gatewayName,
   }) async {
     try {
-      final response = await _client.rpc('process_recharge', params: {
+      final referenceId =
+          '${gatewayName.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}';
+      final response = await _client.rpc('ledger_recharge', params: {
         'p_user_id': userId,
         'p_amount': amount,
-        'p_description': 'Recharge via $gatewayName',
-        'p_reference_id': '${gatewayName.toUpperCase()}_${DateTime.now().millisecondsSinceEpoch}',
+        'p_reference_id': referenceId,
+        'p_gateway': gatewayName,
       });
 
-      if (response is Map<String, dynamic>) {
+      if (response is Map) {
         return (
           success: response['success'] == true,
           newBalance: (response['new_balance'] as num?)?.toDouble(),
@@ -654,14 +684,24 @@ class DashboardService {
       callback: (_) => onWalletChange(),
     );
 
-    if (!isMale && onEarningsChange != null) {
-      channel = channel.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: 'women_earnings',
-        callback: (_) => onEarningsChange(),
-      );
-    }
+    // Wallet balance changes are driven by wallet_transactions inserts
+    // (canonical SoT). Mirror the React subscription which listens to
+    // wallet_transactions filtered by user_id.
+
+    channel = channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'wallet_transactions',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'user_id',
+        value: userId,
+      ),
+      callback: (_) {
+        onWalletChange();
+        if (!isMale && onEarningsChange != null) onEarningsChange();
+      },
+    );
 
     if (isMale && onAvailabilityChange != null) {
       channel = channel.onPostgresChanges(
