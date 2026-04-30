@@ -179,7 +179,8 @@ export async function billFinalPartialMinute(
   const remainderSec = Math.max(0, elapsedSeconds - fullMinutes * 60);
   if (remainderSec < 1) return null;
   const partialMinutes = Math.round((remainderSec / 60) * 1000) / 1000; // 3-dec precision
-  const nextIndex = fullMinutes; // heartbeat used 0..fullMinutes-1; this slot is free
+  // Heartbeats consume indices 1..fullMinutes; use fullMinutes+1 for the partial.
+  const nextIndex = fullMinutes + 1;
   return billMinute(sessionId, sessionType, partialMinutes, manId, womanId, 1, nextIndex);
 }
 
