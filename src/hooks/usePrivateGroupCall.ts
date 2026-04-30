@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 // useChatPricing removed — billing system removed
 import { toast } from 'sonner';
 import { ICE_SERVERS_SFU } from '@/lib/iceServers';
-import { billGroupCallMinute } from '@/services/billing.service';
+import { billGroupCallMinute, billFinalPartialMinute } from '@/services/billing.service';
 
 export const MAX_PARTICIPANTS = 100;
 // No hard time limit — sessions run until the host ends them or midnight reset.
@@ -1075,6 +1075,53 @@ export function usePrivateGroupCall({
     const onBU = (sessionRef.current as any)?._onBeforeUnload;
     if (onBU) {
       window.removeEventListener('beforeunload', onBU);
+    }
+
+    // ── Final partial-minute settlement (e.g. 1m30s → 0.5 min row) ──
+    // Host bills every active man for leftover seconds; viewer self-bills.
+    const session = sessionRef.current;
+    if (session) {
+      const elapsedSec = Math.floor((Date.now() - session.startTime) / 1000);
+      if (elapsedSec >= 1) {
+        if (isOwner) {
+          const activeMen = Array.from(session.participants.values()).filter(p => !p.isOwner);
+          (async () => {
+            try {
+              const { data: hostProfile } = await supabase
+                .from('profiles').select('id').eq('user_id', session.hostId).maybeSingle();
+              if (!hostProfile?.id) return;
+              await Promise.all(activeMen.map(async (man) => {
+                const { data: manProfile } = await supabase
+                  .from('profiles').select('id').eq('user_id', man.id).maybeSingle();
+                if (!manProfile?.id) return;
+                await billFinalPartialMinute(
+                  session.sessionId, 'private_group_call',
+                  elapsedSec, manProfile.id, hostProfile.id,
+                );
+              }));
+            } catch (err) {
+              console.warn('[GROUP] Final partial-minute billing failed:', err);
+            }
+          })();
+        } else {
+          (async () => {
+            try {
+              const [{ data: manProfile }, { data: hostProfile }] = await Promise.all([
+                supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
+                supabase.from('profiles').select('id').eq('user_id', session.hostId).maybeSingle(),
+              ]);
+              if (manProfile?.id && hostProfile?.id) {
+                await billFinalPartialMinute(
+                  session.sessionId, 'private_group_call',
+                  elapsedSec, manProfile.id, hostProfile.id,
+                );
+              }
+            } catch (err) {
+              console.warn('[GROUP] Viewer final partial-minute billing failed:', err);
+            }
+          })();
+        }
+      }
     }
 
     // Host: explicitly stop the host session in DB only if we actually started one.

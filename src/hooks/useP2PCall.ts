@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ICE_SERVERS } from '@/lib/iceServers';
-import { billMinute } from '@/services/billing.service';
+import { billMinute, billFinalPartialMinute } from '@/services/billing.service';
 
 /**
  * P2P WebRTC Video Call Hook
@@ -893,7 +893,26 @@ export const useP2PCall = ({
     void sendSignal('call-ended', { senderId: currentUserId });
 
     // Use ref for latest duration to avoid stale closure
-    const durationMinutes = callDurationRef.current / 60;
+    const elapsedSec = callDurationRef.current;
+    const durationMinutes = elapsedSec / 60;
+
+    // Final partial-minute settlement (e.g. 1m30s → 0.5 min row).
+    // Only the initiator (man's side) drives billing.
+    if (isInitiator && elapsedSec >= 1) {
+      try {
+        const sessionId = await getSessionId();
+        const [{ data: manProfile }, { data: womanProfile }] = await Promise.all([
+          supabase.from('profiles').select('id').eq('user_id', currentUserId).maybeSingle(),
+          supabase.from('profiles').select('id').eq('user_id', remoteUserId).maybeSingle(),
+        ]);
+        if (sessionId && manProfile?.id && womanProfile?.id) {
+          const sType = audioOnly ? 'audio_call' : 'video_call';
+          await billFinalPartialMinute(sessionId, sType, elapsedSec, manProfile.id, womanProfile.id);
+        }
+      } catch (err) {
+        console.warn('[P2P] Final partial-minute billing failed:', err);
+      }
+    }
 
     // Update database - VID-H-02: WHERE status != 'ended' prevents overwriting ended_at
     const { data: currentSession } = await supabase
@@ -933,7 +952,7 @@ export const useP2PCall = ({
     cleanup();
     setState(prev => ({ ...prev, callStatus: 'ended' }));
     onCallEnded?.();
-  }, [callId, currentUserId, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry]);
+  }, [callId, currentUserId, remoteUserId, ratePerMinute, onCallEnded, syncCallStatus, stopOfferRetry, isInitiator, audioOnly, sendSignal]);
 
   // Toggle video on/off
   const toggleVideo = useCallback(() => {

@@ -4,7 +4,7 @@
  * once per minute while the chat is active.
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { billChatMinute } from '@/services/billing.service';
+import { billChatMinute, billFinalPartialMinute } from '@/services/billing.service';
 
 interface UseMiniChatBillingProps {
   chatId: string | null;
@@ -67,6 +67,12 @@ export function useMiniChatBilling({
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      // Final settlement: bill leftover seconds as a fractional minute
+      // (e.g. 1m30s → 1 full-minute row already billed + 0.5 min row here).
+      const elapsedSec = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      if (elapsedSec >= 1 && sId && manId && womanId) {
+        void billFinalPartialMinute(sId, 'chat', elapsedSec, manId, womanId);
+      }
       setIsBilling(false);
     };
   }, [isActive, chatId, sessionId, manId, womanId, onInsufficientBalance]);
@@ -75,3 +81,4 @@ export function useMiniChatBilling({
 }
 
 export default useMiniChatBilling;
+
