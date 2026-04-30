@@ -25,6 +25,7 @@ export function useMiniChatBilling({
   womanId,
 }: UseMiniChatBillingProps) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
   const [minutesBilled, setMinutesBilled] = useState(0);
   const [totalCharged, setTotalCharged] = useState(0);
   const [isBilling, setIsBilling] = useState(false);
@@ -45,9 +46,14 @@ export function useMiniChatBilling({
       return;
     }
 
+    startTimeRef.current = Date.now();
     setIsBilling(true);
+
+    // Heartbeat every 5s — bill_session_minute is idempotent on minute_index,
+    // so 12 ticks/minute collapse to a single statement row per minute.
     const tick = async () => {
-      const r = await billChatMinute(sId, 1.0, manId, womanId);
+      const minuteIdx = Math.floor((Date.now() - startTimeRef.current) / 60_000);
+      const r = await billChatMinute(sId, 1.0, manId, womanId, minuteIdx);
       if (r.success && !r.duplicate_skipped) {
         setMinutesBilled(m => m + 1);
         setTotalCharged(t => t + (r.charged ?? 0));
@@ -56,7 +62,7 @@ export function useMiniChatBilling({
       }
     };
 
-    timerRef.current = setInterval(tick, 60_000);
+    timerRef.current = setInterval(tick, 5_000);
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
