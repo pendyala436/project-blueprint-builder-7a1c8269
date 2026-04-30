@@ -485,6 +485,7 @@ const AdminDashboard = () => {
           </Card>
         )}
       </div>
+      <ScrollToggleFab />
     </AdminNav>
   );
 };
