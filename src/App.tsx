@@ -140,7 +140,7 @@ const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 const AppShell = () => {
   useAutoAdjustUI();
   const location = useLocation();
-  const hideInstallPrompt = location.pathname === "/" || location.pathname === "/index";
+  const showInstallPrompt = location.pathname === "/" || location.pathname === "/index";
 
   if (!isSupabaseConfigured) {
     return <ConfigError />;
