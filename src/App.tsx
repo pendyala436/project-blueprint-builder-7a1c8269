@@ -133,6 +133,7 @@ const AdminAuditLogs = lazyRetry(() => import("@/pages/AdminAuditLogs"));
 const AdminMessaging = lazyRetry(() => import("@/pages/AdminMessaging"));
 const AdminSettings = lazyRetry(() => import("@/pages/AdminSettings"));
 const AdminPayoutStatements = lazyRetry(() => import("@/pages/AdminPayoutStatements"));
+const AdminEnableDisable = lazyRetry(() => import("@/pages/AdminEnableDisable"));
 const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 
 /** Inner component that lives inside BrowserRouter — safe to use router hooks */
@@ -205,6 +206,7 @@ const AppShell = () => {
             <Route path="/admin/audit-logs" element={<ProtectedRoute requiredRole="admin"><AdminAuditLogs /></ProtectedRoute>} />
             <Route path="/admin/messaging" element={<ProtectedRoute requiredRole="admin"><AdminMessaging /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute requiredRole="admin"><AdminSettings /></ProtectedRoute>} />
+            <Route path="/admin/enable_disable" element={<ProtectedRoute requiredRole="admin"><AdminEnableDisable /></ProtectedRoute>} />
             <Route path="/admin/payout-statements" element={<ProtectedRoute requiredRole="admin"><AdminPayoutStatements /></ProtectedRoute>} />
 
             <Route path="*" element={<RouteSuspense><NotFound /></RouteSuspense>} />

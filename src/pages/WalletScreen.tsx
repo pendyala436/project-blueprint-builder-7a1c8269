@@ -11,12 +11,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Wallet, CreditCard } from 'lucide-react';
 import { StatementTab } from '@/components/StatementTab';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 const WalletScreen = () => {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const userIdRef = useRef('');
+  const { settings } = useAppSettings();
+  const showStatements = !!settings.statementsTabVisible;
 
   const loadBalance = useCallback(async (uid: string) => {
     try {
@@ -92,14 +95,16 @@ const WalletScreen = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="statement" className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mb-2">
-          <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
-        </TabsList>
-        <TabsContent value="statement" className="flex-1">
-          <StatementTab userId={userIdRef.current} gender="male" />
-        </TabsContent>
-      </Tabs>
+      {showStatements && (
+        <Tabs defaultValue="statement" className="flex-1 flex flex-col">
+          <TabsList className="mx-4 mb-2">
+            <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
+          </TabsList>
+          <TabsContent value="statement" className="flex-1">
+            <StatementTab userId={userIdRef.current} gender="male" />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

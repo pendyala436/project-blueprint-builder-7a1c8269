@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Wallet, TrendingUp, IndianRupee } from 'lucide-react';
 import { getWomenBalance } from '@/services/ledger-wallet.service';
 import { StatementTab } from '@/components/StatementTab';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 const WomenWalletScreen = () => {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ const WomenWalletScreen = () => {
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const userIdRef = useRef('');
+  const { settings } = useAppSettings();
+  const showStatements = !!settings.statementsTabVisible;
 
   const loadData = useCallback(async (uid: string) => {
     try {
@@ -107,14 +110,16 @@ const WomenWalletScreen = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="statement" className="flex-1 flex flex-col">
-        <TabsList className="mx-4 mb-2">
-          <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
-        </TabsList>
-        <TabsContent value="statement" className="flex-1">
-          <StatementTab userId={userIdRef.current} gender="female" />
-        </TabsContent>
-      </Tabs>
+      {showStatements && (
+        <Tabs defaultValue="statement" className="flex-1 flex flex-col">
+          <TabsList className="mx-4 mb-2">
+            <TabsTrigger value="statement" className="flex-1">Statement</TabsTrigger>
+          </TabsList>
+          <TabsContent value="statement" className="flex-1">
+            <StatementTab userId={userIdRef.current} gender="female" />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

@@ -45,6 +45,7 @@ interface AppSettings {
   mobileBreakpoint: number;
   sessionTimeoutMinutes: number;
   maxFileUploadMb: number;
+  statementsTabVisible: boolean;
 }
 
 // Default fallback values (only used if database is unavailable)
@@ -74,6 +75,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   mobileBreakpoint: 768,
   sessionTimeoutMinutes: 30,
   maxFileUploadMb: 10,
+  statementsTabVisible: false,
 };
 
 // Setting key to property mapping
@@ -92,6 +94,7 @@ const SETTING_KEY_MAP: Record<string, keyof AppSettings> = {
   mobile_breakpoint: "mobileBreakpoint",
   session_timeout_minutes: "sessionTimeoutMinutes",
   max_file_upload_mb: "maxFileUploadMb",
+  statements_tab_visible: "statementsTabVisible",
 };
 
 // ─── Singleton store ────────────────────────────────────────────────
