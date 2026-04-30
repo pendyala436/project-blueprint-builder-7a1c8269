@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 // useChatPricing removed — billing system removed
 import { toast } from 'sonner';
 import { ICE_SERVERS_SFU } from '@/lib/iceServers';
-import { billGroupCallMinute } from '@/services/billing.service';
+import { billGroupCallMinute, billFinalPartialMinute } from '@/services/billing.service';
 
 export const MAX_PARTICIPANTS = 100;
 // No hard time limit — sessions run until the host ends them or midnight reset.
