@@ -388,31 +388,66 @@ const AdminPayoutStatements = () => {
           </Button>
         </Card>
 
-        {/* Archived Excel snapshots — never overwritten */}
+        {/* Excel snapshots — Active / Archived toggle */}
         <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
-              <h2 className="font-semibold text-foreground">Archived Excel Snapshots</h2>
-              <p className="text-xs text-muted-foreground">Every Generate click and the 1st-of-month auto-run save a new timestamped .xlsx — older files are preserved.</p>
+              <h2 className="font-semibold text-foreground">
+                {view === 'active' ? 'Excel Snapshots' : 'Archived Snapshots'}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {view === 'active'
+                  ? 'Every Generate click and the 1st-of-month auto-run save a new timestamped .xlsx. Use Archive to move old files out of view.'
+                  : 'Old snapshots moved to archive. Use Restore to bring them back to the active list.'}
+              </p>
             </div>
-            <Button variant="outline" size="sm" onClick={loadArchives}>
-              <RefreshCw className="w-4 h-4 mr-1" /> Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant={view === 'active' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setView('active')}
+              >
+                Active
+              </Button>
+              <Button
+                variant={view === 'archived' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setView('archived')}
+              >
+                <Archive className="w-4 h-4 mr-1" /> Archived
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadArchives}>
+                <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+              </Button>
+            </div>
           </div>
           {archives.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2">No archives yet for {monthFilter}.</p>
+            <p className="text-sm text-muted-foreground py-2">
+              No {view === 'active' ? 'snapshots' : 'archived files'} for {monthFilter}.
+            </p>
           ) : (
             <ul className="divide-y">
               {archives.map(a => (
-                <li key={a.path} className="flex items-center justify-between py-2 text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
+                <li key={a.path} className="flex items-center justify-between py-2 text-sm gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <FileSpreadsheet className="w-4 h-4 text-primary shrink-0" />
                     <span className="font-mono truncate">{a.name}</span>
-                    {a.created_at && <span className="text-xs text-muted-foreground ml-2">{format(new Date(a.created_at), 'dd MMM yyyy HH:mm')}</span>}
+                    {a.created_at && <span className="text-xs text-muted-foreground ml-2 shrink-0">{format(new Date(a.created_at), 'dd MMM yyyy HH:mm')}</span>}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => downloadArchive(a.path, a.name)}>
-                    <Download className="w-4 h-4 mr-1" /> Download
-                  </Button>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="sm" onClick={() => downloadArchive(a.path, a.name)}>
+                      <Download className="w-4 h-4 mr-1" /> Download
+                    </Button>
+                    {view === 'active' ? (
+                      <Button variant="ghost" size="sm" onClick={() => archiveFile(a.path, a.name)} title="Move to archive">
+                        <Archive className="w-4 h-4 mr-1" /> Archive
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => restoreFile(a.path, a.name)} title="Restore to active">
+                        <ArchiveRestore className="w-4 h-4 mr-1" /> Restore
+                      </Button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
