@@ -133,6 +133,7 @@ const AdminAuditLogs = lazyRetry(() => import("@/pages/AdminAuditLogs"));
 const AdminMessaging = lazyRetry(() => import("@/pages/AdminMessaging"));
 const AdminSettings = lazyRetry(() => import("@/pages/AdminSettings"));
 const AdminPayoutStatements = lazyRetry(() => import("@/pages/AdminPayoutStatements"));
+const AdminEnableDisable = lazyRetry(() => import("@/pages/AdminEnableDisable"));
 const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 
 /** Inner component that lives inside BrowserRouter — safe to use router hooks */
