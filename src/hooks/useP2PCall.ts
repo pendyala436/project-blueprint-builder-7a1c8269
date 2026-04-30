@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ICE_SERVERS } from '@/lib/iceServers';
-import { billMinute } from '@/services/billing.service';
+import { billMinute, billFinalPartialMinute } from '@/services/billing.service';
 
 /**
  * P2P WebRTC Video Call Hook
