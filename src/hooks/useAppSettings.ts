@@ -75,6 +75,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   mobileBreakpoint: 768,
   sessionTimeoutMinutes: 30,
   maxFileUploadMb: 10,
+  statementsTabVisible: false,
 };
 
 // Setting key to property mapping
