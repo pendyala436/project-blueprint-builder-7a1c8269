@@ -328,32 +328,25 @@ class WalletService {
     }
   }
 
-  /// Process wallet transaction (via database function)
+  /// `process_wallet_transaction` does NOT exist as a public RPC — direct
+  /// wallet writes are blocked by the wallet-balance-protection trigger.
+  /// Use the canonical type-specific paths instead:
+  ///   • Recharge   → `ledger_recharge`         (see DashboardService.processRecharge)
+  ///   • Withdrawal → `ledger_withdrawal`        (see requestWithdrawal below)
+  ///   • Gift / tip → `bill_gift_or_tip`         (see sendGift below)
+  ///   • Sessions   → server-managed heartbeats (chat / video / group)
+  /// Kept for backwards compatibility — always returns failure.
   Future<TransactionResult> processTransaction({
     required String userId,
     required double amount,
     required String type,
     String? description,
   }) async {
-    try {
-      final response = await _client.rpc('process_wallet_transaction', params: {
-        'p_user_id': userId,
-        'p_amount': amount,
-        'p_type': type,
-        'p_description': description,
-      });
-
-      final data = response as Map<String, dynamic>;
-      return TransactionResult(
-        success: data['success'] ?? false,
-        transactionId: data['transaction_id'],
-        previousBalance: (data['previous_balance'] as num?)?.toDouble(),
-        newBalance: (data['new_balance'] as num?)?.toDouble(),
-        error: data['error'],
-      );
-    } catch (e) {
-      return TransactionResult(success: false, error: e.toString());
-    }
+    return TransactionResult(
+      success: false,
+      error: 'Use canonical RPCs (ledger_recharge / ledger_withdrawal / '
+          'bill_gift_or_tip). Direct wallet writes are not permitted.',
+    );
   }
 
   /// Process transfer between users
