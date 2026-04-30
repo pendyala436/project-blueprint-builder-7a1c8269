@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { ICE_SERVERS } from '@/lib/iceServers';
 
 export type CallType = 'audio' | 'video';
@@ -24,6 +25,7 @@ export const useAppCall = (
   walletBalance: number
 ) => {
   const { toast } = useToast();
+  const { settings } = useAppSettings();
   const pricing = { audioRatePerMinute: 6, videoRatePerMinute: 8 };
   const [status, setStatus] = useState<CallStatus>('idle');
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
@@ -179,6 +181,14 @@ export const useAppCall = (
     callType: CallType
   ) => {
     if (!currentUserId || currentUserGender !== 'male') return;
+    if (callType === 'audio' && settings.audioCallEnabled === false) {
+      toast({ title: 'Audio calls temporarily unavailable', description: 'Audio calls are paused due to high system load. Please try again shortly.', variant: 'destructive' });
+      return;
+    }
+    if (callType === 'video' && settings.videoCallEnabled === false) {
+      toast({ title: 'Video calls temporarily unavailable', description: 'Video calls are paused due to high system load. Please try again shortly.', variant: 'destructive' });
+      return;
+    }
     if (statusRef.current !== 'idle') {
       toast({ title: 'Already in a call', variant: 'destructive' });
       return;

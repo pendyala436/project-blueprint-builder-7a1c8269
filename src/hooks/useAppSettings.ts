@@ -46,6 +46,10 @@ interface AppSettings {
   sessionTimeoutMinutes: number;
   maxFileUploadMb: number;
   statementsTabVisible: boolean;
+  chatEnabled: boolean;
+  audioCallEnabled: boolean;
+  videoCallEnabled: boolean;
+  privateGroupsEnabled: boolean;
 }
 
 // Default fallback values (only used if database is unavailable)
@@ -76,6 +80,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   sessionTimeoutMinutes: 30,
   maxFileUploadMb: 10,
   statementsTabVisible: false,
+  chatEnabled: true,
+  audioCallEnabled: true,
+  videoCallEnabled: true,
+  privateGroupsEnabled: true,
 };
 
 // Setting key to property mapping
@@ -95,6 +103,10 @@ const SETTING_KEY_MAP: Record<string, keyof AppSettings> = {
   session_timeout_minutes: "sessionTimeoutMinutes",
   max_file_upload_mb: "maxFileUploadMb",
   statements_tab_visible: "statementsTabVisible",
+  chat_enabled: "chatEnabled",
+  audio_call_enabled: "audioCallEnabled",
+  video_call_enabled: "videoCallEnabled",
+  private_groups_enabled: "privateGroupsEnabled",
 };
 
 // ─── Singleton store ────────────────────────────────────────────────

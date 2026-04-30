@@ -63,15 +63,17 @@ export const getMenTabs = (
   chatBadge?: number,
   matchBadge?: number,
   showStatement: boolean = true,
+  showChat: boolean = true,
+  showGroups: boolean = true,
 ): TabItem[] => {
   const tabs: TabItem[] = [
     { id: "online", label: "Online", icon: <Users className="w-5 h-5" />, badge: onlineBadge },
-    { id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge },
-    { id: "history", label: "History", icon: <Clock className="w-5 h-5" /> },
-    { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
-    { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchBadge },
-    { id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> },
   ];
+  if (showChat) tabs.push({ id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge });
+  tabs.push({ id: "history", label: "History", icon: <Clock className="w-5 h-5" /> });
+  if (showGroups) tabs.push({ id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> });
+  tabs.push({ id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchBadge });
+  tabs.push({ id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> });
   if (showStatement) tabs.push({ id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> });
   tabs.push({ id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> });
   return tabs;
@@ -82,16 +84,18 @@ export const getWomenTabs = (
   chatBadge?: number,
   matchesBadge?: number,
   showStatement: boolean = true,
+  showChat: boolean = true,
+  showGroups: boolean = true,
 ): TabItem[] => {
   const tabs: TabItem[] = [
     { id: "online", label: "Online", icon: <Users className="w-5 h-5" />, badge: onlineBadge },
-    { id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge },
-    { id: "history", label: "History", icon: <Clock className="w-5 h-5" /> },
-    { id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchesBadge },
-    { id: "community", label: "Community", icon: <Users className="w-5 h-5" /> },
-    { id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> },
-    { id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> },
   ];
+  if (showChat) tabs.push({ id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge });
+  tabs.push({ id: "history", label: "History", icon: <Clock className="w-5 h-5" /> });
+  tabs.push({ id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchesBadge });
+  tabs.push({ id: "community", label: "Community", icon: <Users className="w-5 h-5" /> });
+  if (showGroups) tabs.push({ id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> });
+  tabs.push({ id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> });
   if (showStatement) tabs.push({ id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> });
   tabs.push({ id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> });
   return tabs;
