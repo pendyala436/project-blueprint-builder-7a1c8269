@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Wallet, CreditCard } from 'lucide-react';
 import { StatementTab } from '@/components/StatementTab';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 const WalletScreen = () => {
   const navigate = useNavigate();
