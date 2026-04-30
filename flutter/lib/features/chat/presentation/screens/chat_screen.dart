@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/chat_service.dart';
+import '../../../../core/services/content_moderation_service.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../shared/models/chat_model.dart';
 import '../../../../shared/widgets/common_widgets.dart';
