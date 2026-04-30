@@ -49,8 +49,7 @@ export function useMiniChatBilling({
     startTimeRef.current = Date.now();
     setIsBilling(true);
 
-    // Heartbeat every 5s — bill_session_minute is idempotent on minute_index,
-    // so 12 ticks/minute collapse to a single statement row per minute.
+    // Heartbeat every 60s — one billing tick = one statement row per minute.
     const tick = async () => {
       const minuteIdx = Math.floor((Date.now() - startTimeRef.current) / 60_000);
       const r = await billChatMinute(sId, 1.0, manId, womanId, minuteIdx);
@@ -62,7 +61,7 @@ export function useMiniChatBilling({
       }
     };
 
-    timerRef.current = setInterval(tick, 5_000);
+    timerRef.current = setInterval(tick, 60_000);
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
