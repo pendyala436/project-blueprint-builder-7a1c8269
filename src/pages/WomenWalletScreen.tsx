@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ArrowLeft, Wallet, TrendingUp, IndianRupee } from 'lucide-react';
 import { getWomenBalance } from '@/services/ledger-wallet.service';
 import { StatementTab } from '@/components/StatementTab';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 const WomenWalletScreen = () => {
   const navigate = useNavigate();
