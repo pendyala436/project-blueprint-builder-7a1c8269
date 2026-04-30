@@ -19,7 +19,7 @@ import { billGroupCallMinute } from '@/services/billing.service';
 export const MAX_PARTICIPANTS = 100;
 // No hard time limit — sessions run until the host ends them or midnight reset.
 export const MAX_DURATION_MINUTES = Infinity;
-export const BILLING_INTERVAL_SECONDS = 5; // Heartbeat every 5s; bill_session_minute idempotent on minute_index
+export const BILLING_INTERVAL_SECONDS = 60; // Heartbeat every 60s; one billing tick per minute
 
 interface Participant {
   id: string;

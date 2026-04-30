@@ -147,8 +147,7 @@ export const useP2PCall = ({
     return data?.id || null;
   };
 
-  // Process call billing — fires every 5s; bill_session_minute is idempotent on
-  // minute_index, so 12 ticks/minute collapse to one statement row per minute.
+  // Process call billing — fires every 60s; one tick = one statement row per minute.
   const processBilling = async () => {
     // VID-F-003 FIX: Use ref instead of stale state
     if (callStatusRef.current !== 'active' || !isInitiator) return;
@@ -211,12 +210,11 @@ export const useP2PCall = ({
         });
       }, 1000);
 
-      // 5s billing heartbeat — minute 0 is already billed by the DB INSERT trigger
-      // on video_call_sessions, so the early ticks are duplicate_skipped no-ops.
-      // Once minute_index advances (60s mark), the next row is written.
+      // 60s billing heartbeat — minute 0 is already billed by the DB INSERT trigger
+      // on video_call_sessions; subsequent minutes (1, 2, ...) are billed here.
       billingTimerRef.current = setInterval(() => {
         processBilling();
-      }, 5000);
+      }, 60000);
 
       return () => {
         if (callTimerRef.current) clearInterval(callTimerRef.current);
