@@ -449,7 +449,7 @@ const AuthScreen = () => {
                   <span className="truncate">{t('auth.signup')}</span>
                 </Button>
               </div>
-              <
+              <a
                 href="/PWA_Installation_Guide.docx"
                 download
                 className="block text-center text-xs sm:text-sm text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
