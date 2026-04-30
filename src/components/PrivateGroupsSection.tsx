@@ -85,9 +85,22 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     return map;
   }, [activeHosts]);
 
-  const openLanguagePicker = (group: PrivateGroup) => {
-    if (myActiveHostSession) {
+  const openLanguagePicker = async (group: PrivateGroup) => {
+    const { data: freshHost } = await supabase
+      .from('group_active_hosts')
+      .select('group_id,host_id,host_name,host_language,participant_count')
+      .eq('host_id', currentUserId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (freshHost && freshHost.group_id !== group.id) {
       toast.error('You are already hosting another group. Stop that first.');
+      fetchAll();
+      return;
+    }
+    if (freshHost?.group_id === group.id) {
+      setActiveGroup({ ...group, is_live: true, current_host_id: currentUserId, current_host_name: userName, owner_language: freshHost.host_language });
+      fetchAll();
       return;
     }
     if ((hostCountByGroup.get(group.id) || 0) >= MAX_HOSTS_PER_GROUP) {
