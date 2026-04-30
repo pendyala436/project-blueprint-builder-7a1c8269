@@ -7,7 +7,7 @@
  * NOTE: Pricing constants and SessionType have been removed from this module.
  * The single source of truth for pricing is the `chat_pricing` table, accessed
  * via `fetchUnifiedPricing()` / `useUnifiedPricing()` (see billing.service.ts).
- * This eliminates the previous stale `group_woman_rate` (0.50) duplicate.
+ * Group call: men ₹4/min, women earn ₹1/min per active man.
  */
 
 import { supabase } from '@/integrations/supabase/client';
