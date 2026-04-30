@@ -69,12 +69,13 @@ class WalletTransactionModel {
   }
 }
 
-/// Women Earnings Model - Synced with women_earnings table
+/// Women Earnings Model - Derived view over `wallet_transactions`
+/// (legacy `women_earnings` table is removed; SoT is wallet_transactions).
 class WomenEarningsModel {
   final String id;
   final String userId;
   final double amount;
-  final String earningType; // 'chat', 'video_call', 'gift'
+  final String earningType; // 'chat' | 'video_call' | 'gift' | 'group'
   final String? chatSessionId;
   final String? description;
   final DateTime? createdAt;
@@ -91,15 +92,30 @@ class WomenEarningsModel {
     this.partnerName,
   });
 
-  factory WomenEarningsModel.fromJson(Map<String, dynamic> json) {
+  /// Build from a `wallet_transactions` row (credit + earning transaction_type).
+  factory WomenEarningsModel.fromWalletTransaction(Map<String, dynamic> json) {
+    final txType = (json['transaction_type'] as String? ?? '').toLowerCase();
+    final desc = (json['description'] as String? ?? '').toLowerCase();
+    String earningType = 'chat';
+    if (txType.contains('gift')) {
+      earningType = 'gift';
+    } else if (desc.contains('video')) {
+      earningType = 'video_call';
+    } else if (desc.contains('group') || desc.contains('private')) {
+      earningType = 'group';
+    } else if (desc.contains('chat')) {
+      earningType = 'chat';
+    }
     return WomenEarningsModel(
       id: json['id'] as String,
       userId: json['user_id'] as String,
       amount: (json['amount'] as num).toDouble(),
-      earningType: json['earning_type'] as String,
-      chatSessionId: json['chat_session_id'] as String?,
+      earningType: earningType,
+      chatSessionId: json['session_id']?.toString(),
       description: json['description'] as String?,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
     );
   }
 }

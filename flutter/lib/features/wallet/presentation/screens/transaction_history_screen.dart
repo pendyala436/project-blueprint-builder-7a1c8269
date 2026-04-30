@@ -158,9 +158,11 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
     final unified = <UnifiedTransaction>[];
     final seenIds = <String>{};
 
-    // Add wallet transactions
+    // Add wallet transactions.
+    // Women's earnings are sourced from `_womenEarnings` (which is itself a
+    // derived view over wallet_transactions earning rows), so skip credit
+    // entries here for women to avoid double-counting.
     for (final tx in _walletTransactions) {
-      // For women: skip credit entries (earnings come from women_earnings)
       if (!_isMale && tx.type == 'credit') continue;
       if (seenIds.contains(tx.id)) continue;
       seenIds.add(tx.id);
@@ -197,7 +199,7 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
       ));
     }
 
-    // For women: add earnings from women_earnings
+    // For women: add earning rows (derived from wallet_transactions credits)
     if (!_isMale) {
       for (final earning in _womenEarnings) {
         final earningId = 'earning-${earning.id}';

@@ -212,37 +212,44 @@ class WalletService {
     }
   }
 
-  /// Get women's earnings
+  /// Get women's earnings — derived from canonical wallet_transactions
+  /// (credit rows where transaction_type marks an earning).
   Future<List<WomenEarningsModel>> getWomenEarnings(String userId, {int limit = 50}) async {
     try {
       final response = await _client
-          .from('women_earnings')
+          .from('wallet_transactions')
           .select()
           .eq('user_id', userId)
+          .eq('type', 'credit')
+          .inFilter('transaction_type', ['session_earning', 'gift_earning'])
           .order('created_at', ascending: false)
           .limit(limit);
 
       return (response as List)
-          .map((json) => WomenEarningsModel.fromJson(json as Map<String, dynamic>))
+          .map((json) =>
+              WomenEarningsModel.fromWalletTransaction(json as Map<String, dynamic>))
           .toList();
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }
 
-  /// Get ALL women's earnings (no limit)
+  /// Get ALL women's earnings (no limit) — derived from wallet_transactions.
   Future<List<WomenEarningsModel>> getAllWomenEarnings(String userId) async {
     try {
       final response = await _client
-          .from('women_earnings')
+          .from('wallet_transactions')
           .select()
           .eq('user_id', userId)
+          .eq('type', 'credit')
+          .inFilter('transaction_type', ['session_earning', 'gift_earning'])
           .order('created_at', ascending: false);
 
       return (response as List)
-          .map((json) => WomenEarningsModel.fromJson(json as Map<String, dynamic>))
+          .map((json) =>
+              WomenEarningsModel.fromWalletTransaction(json as Map<String, dynamic>))
           .toList();
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }
