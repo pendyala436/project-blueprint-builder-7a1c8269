@@ -75,6 +75,13 @@ dependencies:
   cupertino_icons: ^1.0.6
   lucide_icons: ^0.254.0
 
+  # File export & sharing (wallet statement CSV)
+  share_plus: ^7.2.2
+  path_provider: ^2.1.2
+
+  # Ringtone playback for incoming calls
+  audioplayers: ^5.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
