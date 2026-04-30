@@ -80,6 +80,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   sessionTimeoutMinutes: 30,
   maxFileUploadMb: 10,
   statementsTabVisible: false,
+  chatEnabled: true,
+  audioCallEnabled: true,
+  videoCallEnabled: true,
+  privateGroupsEnabled: true,
 };
 
 // Setting key to property mapping
