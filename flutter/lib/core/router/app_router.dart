@@ -34,6 +34,17 @@ import '../../features/admin/presentation/screens/admin_users_screen.dart';
 import '../../features/admin/presentation/screens/admin_finance_screen.dart';
 import '../../features/admin/presentation/screens/admin_moderation_screen.dart';
 import '../../features/admin/presentation/screens/admin_settings_screen.dart';
+import '../../features/admin/presentation/screens/admin_payout_screen.dart';
+import '../../features/video_call/presentation/screens/incoming_call_screen.dart';
+import '../../features/video_call/presentation/screens/video_call_screen.dart';
+import '../../features/private_groups/presentation/screens/private_groups_list_screen.dart';
+import '../../features/private_groups/presentation/screens/private_group_call_screen.dart';
+import '../../features/profile/presentation/screens/friends_screen.dart';
+import '../../features/profile/presentation/screens/blocked_users_screen.dart';
+import '../../features/wallet/presentation/screens/wallet_statement_export_screen.dart';
+import '../../features/chat/presentation/screens/language_group_chat_screen.dart';
+import '../../features/kyc/presentation/screens/kyc_screen.dart';
+import '../../features/wallet/presentation/screens/recharge_screen.dart';
 import '../../shared/screens/not_found_screen.dart';
 import '../../shared/screens/approval_pending_screen.dart';
 import '../../shared/screens/welcome_tutorial_screen.dart';
@@ -77,6 +88,17 @@ class AppRoutes {
   static const String adminFinance = '/admin/finance';
   static const String adminModeration = '/admin/moderation';
   static const String adminSettings = '/admin/settings';
+  static const String adminPayouts = '/admin/payouts';
+  static const String incomingCall = '/incoming-call';
+  static const String videoCall = '/video-call';
+  static const String privateGroups = '/private-groups';
+  static const String privateGroupCall = '/private-groups/:roomId';
+  static const String friends = '/friends';
+  static const String blockedUsers = '/blocked-users';
+  static const String walletStatementExport = '/wallet/export';
+  static const String languageGroupChat = '/language-group/:code';
+  static const String kyc = '/kyc';
+  static const String recharge = '/wallet/recharge';
 }
 
 /// App Router Provider
@@ -162,6 +184,76 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.adminFinance, builder: (_, __) => const AdminFinanceScreen()),
       GoRoute(path: AppRoutes.adminModeration, builder: (_, __) => const AdminModerationScreen()),
       GoRoute(path: AppRoutes.adminSettings, builder: (_, __) => const AdminSettingsScreen()),
+      GoRoute(path: AppRoutes.adminPayouts, builder: (_, __) => const AdminPayoutScreen()),
+
+      // Calls
+      GoRoute(
+        path: AppRoutes.incomingCall,
+        builder: (_, state) {
+          final e = state.extra as Map<String, dynamic>;
+          return IncomingCallScreen(
+            callId: e['callId'] as String,
+            callerId: e['callerId'] as String,
+            callerName: e['callerName'] as String,
+            callerAvatar: e['callerAvatar'] as String?,
+            isVideo: (e['isVideo'] as bool?) ?? true,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.videoCall,
+        builder: (_, state) {
+          final e = state.extra as Map<String, dynamic>;
+          return VideoCallScreen(
+            callId: e['callId'] as String,
+            peerId: e['peerId'] as String,
+            peerName: e['peerName'] as String,
+            isCaller: (e['isCaller'] as bool?) ?? true,
+          );
+        },
+      ),
+
+      // Private groups
+      GoRoute(
+        path: AppRoutes.privateGroups,
+        builder: (_, state) => PrivateGroupsListScreen(
+          isMale: ((state.extra as Map?)?['isMale'] as bool?) ?? true,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.privateGroupCall,
+        builder: (_, state) {
+          final e = (state.extra as Map?) ?? {};
+          return PrivateGroupCallScreen(
+            roomId: state.pathParameters['roomId']!,
+            roomName: (e['roomName'] as String?) ?? 'Room',
+            isHost: (e['isHost'] as bool?) ?? false,
+          );
+        },
+      ),
+
+      // Profile relationships
+      GoRoute(path: AppRoutes.friends, builder: (_, __) => const FriendsScreen()),
+      GoRoute(path: AppRoutes.blockedUsers, builder: (_, __) => const BlockedUsersScreen()),
+
+      // Wallet extras
+      GoRoute(path: AppRoutes.walletStatementExport, builder: (_, __) => const WalletStatementExportScreen()),
+      GoRoute(path: AppRoutes.recharge, builder: (_, __) => const RechargeScreen()),
+
+      // KYC
+      GoRoute(path: AppRoutes.kyc, builder: (_, __) => const KycScreen()),
+
+      // Language group chat
+      GoRoute(
+        path: AppRoutes.languageGroupChat,
+        builder: (_, state) {
+          final e = (state.extra as Map?) ?? {};
+          return LanguageGroupChatScreen(
+            languageCode: state.pathParameters['code']!,
+            languageName: (e['languageName'] as String?) ?? state.pathParameters['code']!,
+          );
+        },
+      ),
     ],
   );
 });

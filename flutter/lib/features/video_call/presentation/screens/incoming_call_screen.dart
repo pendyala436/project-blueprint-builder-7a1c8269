@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../../core/services/notification_service.dart';
 import 'video_call_screen.dart';
 
 /// Full-screen incoming call ringer.
@@ -32,24 +32,38 @@ class IncomingCallScreen extends StatefulWidget {
 class _IncomingCallScreenState extends State<IncomingCallScreen> {
   Timer? _timeoutTimer;
   final _supabase = Supabase.instance.client;
+  final _player = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
-    NotificationService.instance.playRingtone();
+    _startRingtone();
     _timeoutTimer = Timer(const Duration(seconds: 35), _decline);
+  }
+
+  Future<void> _startRingtone() async {
+    try {
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.play(AssetSource('sounds/tring.mp3'));
+    } catch (_) {}
+  }
+
+  Future<void> _stopRingtone() async {
+    try {
+      await _player.stop();
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _timeoutTimer?.cancel();
-    NotificationService.instance.stopRingtone();
+    _player.dispose();
     super.dispose();
   }
 
   Future<void> _accept() async {
     _timeoutTimer?.cancel();
-    NotificationService.instance.stopRingtone();
+    await _stopRingtone();
     await _supabase.from('video_call_sessions').update({
       'status': 'connected',
       'accepted_at': DateTime.now().toIso8601String(),
@@ -68,7 +82,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
 
   Future<void> _decline() async {
     _timeoutTimer?.cancel();
-    NotificationService.instance.stopRingtone();
+    await _stopRingtone();
     await _supabase.from('video_call_sessions').update({
       'status': 'declined',
       'ended_at': DateTime.now().toIso8601String(),
