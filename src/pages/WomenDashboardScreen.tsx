@@ -1007,6 +1007,10 @@ const WomenDashboardScreen = () => {
 
   // Women can initiate chats freely
   const handleStartChatWithUser = async (userId: string) => {
+    if (appSettings.chatEnabled === false) {
+      toast({ title: "Chat temporarily unavailable", description: "Chat is paused due to high system load. Please try again shortly.", variant: "destructive" });
+      return;
+    }
     // Navigate immediately so the chat window opens on single click
     navigate(`/chat/${userId}`);
 
