@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/supabase_config.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/push_token_service.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/providers/locale_provider.dart';
 import 'shared/providers/theme_provider.dart';
@@ -57,8 +58,24 @@ void main() async {
   );
 }
 
-class MeowMeowApp extends ConsumerWidget {
+class MeowMeowApp extends ConsumerStatefulWidget {
   const MeowMeowApp({super.key});
+
+  @override
+  ConsumerState<MeowMeowApp> createState() => _MeowMeowAppState();
+}
+
+class _MeowMeowAppState extends ConsumerState<MeowMeowApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Register FCM token whenever the user signs in.
+    Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      if (event.event == AuthChangeEvent.signedIn) {
+        ref.read(pushTokenServiceProvider).registerForCurrentUser();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
