@@ -119,6 +119,7 @@ const WomenDashboardScreen = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { pricing } = useChatPricing();
+  const { settings: appSettings } = useAppSettings();
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [userName, setUserName] = useState("");
