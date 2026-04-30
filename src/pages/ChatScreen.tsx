@@ -805,14 +805,26 @@ const ChatScreen = () => {
         },
         (payload: any) => {
           const session = payload.new;
-          
-          // Check if this is our session and it was ended
-          if (session.status === 'ended' && 
+          if (!session) return;
+
+          // BUG-BILL-05 FIX: Wire billing IDs on UPDATE → active/pending too
+          // (recycled sessions transition pending→active without an INSERT event).
+          if ((session.status === 'active' || session.status === 'pending') &&
               (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
-            
+            setBillingSessionId(session.id);
+            setBillingManId(session.man_user_id);
+            setBillingWomanId(session.woman_user_id);
+            setIsSessionActive(true);
+            console.log("[Chat] Billing session detected via UPDATE:", session.id, session.status);
+          }
+
+          // Check if this is our session and it was ended
+          if (session.status === 'ended' &&
+              (session.man_user_id === currentUserId || session.woman_user_id === currentUserId)) {
+
             setIsSessionActive(false);
             setBillingSessionId(null);
-            
+
             // If ended by partner (woman) and current user is man, auto-reconnect
             if (session.end_reason === 'woman_closed' || session.end_reason === 'partner_offline') {
               if (currentUserGender === "male") {
