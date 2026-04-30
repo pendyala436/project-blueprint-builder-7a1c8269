@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/ice_config.dart';
 import '../../../../core/services/screenshot_protection_service.dart';
+import '../../../../core/services/video_call_circuit_breaker.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// 1:1 video / audio call — pure open-source P2P WebRTC.
@@ -67,6 +68,19 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
   @override
   void initState() {
     super.initState();
+    if (VideoCallCircuitBreaker.instance.isTripped) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final mins =
+            VideoCallCircuitBreaker.instance.remaining.inMinutes;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Calls are temporarily disabled (high server load). Try again in $mins min.'),
+        ));
+        Navigator.of(context).pop();
+      });
+      return;
+    }
     ref.read(screenshotProtectionProvider).enable();
     _isVideoOff = widget.audioOnly;
     _start();
@@ -144,8 +158,11 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     };
     _pc!.onConnectionState = (state) {
       debugPrint('[Call] pc state: $state');
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+        VideoCallCircuitBreaker.instance.trip();
+        _endCall();
+      } else if (state ==
+          RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
         _endCall();
       }
     };
