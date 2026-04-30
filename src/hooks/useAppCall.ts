@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { ICE_SERVERS } from '@/lib/iceServers';
 
 export type CallType = 'audio' | 'video';
