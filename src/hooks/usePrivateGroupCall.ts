@@ -54,6 +54,7 @@ interface UsePrivateGroupCallProps {
   currentUserId: string;
   userName: string;
   userPhoto?: string | null;
+  hostLanguage?: string | null;
   isOwner: boolean;
   giftAmountRequired: number;
   preAcquiredStream?: MediaStream | null;
@@ -84,6 +85,7 @@ export function usePrivateGroupCall({
   currentUserId,
   userName,
   userPhoto,
+  hostLanguage,
   isOwner,
   giftAmountRequired,
   preAcquiredStream,
@@ -846,7 +848,7 @@ export function usePrivateGroupCall({
         p_group_id: groupId,
         p_host_name: userName,
         p_host_photo: userPhoto || null,
-        p_host_language: null,
+        p_host_language: hostLanguage || null,
         p_stream_id: sessionId,
       });
 
@@ -944,7 +946,7 @@ export function usePrivateGroupCall({
       }));
       return false;
     }
-  }, [groupId, currentUserId, userName, userPhoto, isOwner, initHostMedia, setupSignaling, startCountdownTimer, startBillingTimer]);
+  }, [groupId, currentUserId, userName, userPhoto, hostLanguage, isOwner, initHostMedia, setupSignaling, startCountdownTimer, startBillingTimer]);
 
   // Join stream (participant only)
   const joinStream = useCallback(async () => {
