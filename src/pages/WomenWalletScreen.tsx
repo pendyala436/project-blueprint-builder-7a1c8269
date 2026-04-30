@@ -22,6 +22,8 @@ const WomenWalletScreen = () => {
   const [todayEarnings, setTodayEarnings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const userIdRef = useRef('');
+  const { settings } = useAppSettings();
+  const showStatements = !!settings.statementsTabVisible;
 
   const loadData = useCallback(async (uid: string) => {
     try {
