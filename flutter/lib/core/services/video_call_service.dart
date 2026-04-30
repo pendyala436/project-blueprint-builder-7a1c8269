@@ -149,16 +149,16 @@ class VideoCallService {
     ).subscribe();
   }
 
-  /// Process video call billing
-  Future<Map<String, dynamic>> processCallBilling(String sessionId, double minutes) async {
-    try {
-      final response = await _client.rpc('process_video_call_billing', params: {
-        'p_session_id': sessionId,
-        'p_minutes': minutes,
-      });
-      return response as Map<String, dynamic>;
-    } catch (e) {
-      return {'success': false, 'error': e.toString()};
-    }
+  /// Video call billing is **server-managed** via the canonical heartbeat
+  /// pipeline (`bill_session_minute` / `bill_session_partial_minute`)
+  /// triggered by edge functions on session events. The client must NOT
+  /// call any per-minute billing RPC directly. Kept for API compatibility.
+  Future<Map<String, dynamic>> processCallBilling(
+    String sessionId, double minutes,
+  ) async {
+    return {
+      'success': true,
+      'note': 'Video call billing is handled server-side via heartbeats.',
+    };
   }
 }
