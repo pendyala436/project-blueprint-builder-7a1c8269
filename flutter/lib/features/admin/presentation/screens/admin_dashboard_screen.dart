@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/common_widgets.dart';
 
@@ -127,10 +130,34 @@ class _StatCard extends StatelessWidget {
 class _AdminDrawer extends StatelessWidget {
   const _AdminDrawer();
 
+  static const _items = <_NavItem>[
+    _NavItem('Dashboard', Icons.dashboard, AppRoutes.admin),
+    _NavItem('User Management', Icons.people, AppRoutes.adminUsers),
+    _NavItem('Analytics', Icons.bar_chart, AppRoutes.adminAnalytics),
+    _NavItem('Chat Monitoring', Icons.chat, AppRoutes.adminChatMonitoring),
+    _NavItem('Language Groups', Icons.language, AppRoutes.adminLanguages),
+    _NavItem('Language Limits', Icons.translate, AppRoutes.adminLanguageLimits),
+    _NavItem('KYC Management', Icons.verified_user, AppRoutes.adminKyc),
+    _NavItem('User Lookup', Icons.search, AppRoutes.adminUserLookup),
+    _NavItem('Moderation', Icons.shield, AppRoutes.adminModeration),
+    _NavItem('Policy Alerts', Icons.warning_amber, AppRoutes.adminPolicyAlerts),
+    _NavItem('Performance', Icons.speed, AppRoutes.adminPerformance),
+    _NavItem('Legal Documents', Icons.description, AppRoutes.adminLegalDocuments),
+    _NavItem('Backups', Icons.backup, AppRoutes.adminBackups),
+    _NavItem('Audit Logs', Icons.assignment, AppRoutes.adminAuditLogs),
+    _NavItem('Messaging', Icons.campaign, AppRoutes.adminMessaging),
+    _NavItem('Finance', Icons.attach_money, AppRoutes.adminFinance),
+    _NavItem('Payout Statements', Icons.receipt_long, AppRoutes.adminPayouts),
+    _NavItem('Enable / Disable', Icons.toggle_on, AppRoutes.adminEnableDisable),
+    _NavItem('Settings', Icons.settings, AppRoutes.adminSettings),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final currentPath = GoRouterState.of(context).uri.path;
     return Drawer(
       child: ListView(
+        padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
             decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
@@ -140,23 +167,42 @@ class _AdminDrawer extends StatelessWidget {
               children: [
                 const CircleAvatar(radius: 30, child: Icon(Icons.admin_panel_settings)),
                 const SizedBox(height: 8),
-                Text('Admin Panel', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
+                Text('Admin Panel',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white)),
               ],
             ),
           ),
-          ListTile(leading: const Icon(Icons.dashboard), title: const Text('Dashboard'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.analytics), title: const Text('Analytics'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.people), title: const Text('Users'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.chat), title: const Text('Chat Monitoring'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.attach_money), title: const Text('Finance'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.card_giftcard), title: const Text('Gifts'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.language), title: const Text('Languages'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.report), title: const Text('Moderation'), onTap: () {}),
+          ..._items.map((item) {
+            final selected = currentPath == item.path;
+            return ListTile(
+              leading: Icon(item.icon),
+              title: Text(item.title),
+              selected: selected,
+              selectedTileColor: AppColors.primary.withOpacity(0.08),
+              onTap: () {
+                Navigator.pop(context);
+                if (!selected) context.go(item.path);
+              },
+            );
+          }),
           const Divider(),
-          ListTile(leading: const Icon(Icons.settings), title: const Text('Settings'), onTap: () {}),
-          ListTile(leading: const Icon(Icons.logout), title: const Text('Logout'), onTap: () {}),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
+            onTap: () async {
+              await Supabase.instance.client.auth.signOut();
+              if (context.mounted) context.go('/auth');
+            },
+          ),
         ],
       ),
     );
   }
+}
+
+class _NavItem {
+  final String title;
+  final IconData icon;
+  final String path;
+  const _NavItem(this.title, this.icon, this.path);
 }
