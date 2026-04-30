@@ -57,8 +57,11 @@ dependencies:
   image_cropper: ^5.0.1
   permission_handler: ^11.2.0
   
-  # Video Calling — open-source WebRTC (Google libwebrtc, MIT/BSD)
+  # 1:1 calls — open-source P2P WebRTC (Google libwebrtc, BSD)
   flutter_webrtc: ^0.10.8
+
+  # Group calls — open-source SFU client (LiveKit, Apache 2.0)
+  livekit_client: ^2.2.4
 
   # Native screenshot protection (Android FLAG_SECURE / iOS captured detection)
   screen_protector: ^1.4.2
