@@ -12,6 +12,7 @@ import 'core/services/push_token_service.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/providers/locale_provider.dart';
 import 'shared/providers/theme_provider.dart';
+import 'shared/widgets/idle_timeout_wrapper.dart';
 import 'core/l10n/app_localizations.dart';
 
 void main() async {
@@ -98,6 +99,8 @@ class _MeowMeowAppState extends ConsumerState<MeowMeowApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
+      builder: (context, child) =>
+          IdleTimeoutWrapper(child: child ?? const SizedBox.shrink()),
     );
   }
 }

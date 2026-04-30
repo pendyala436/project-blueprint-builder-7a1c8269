@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/chat_service.dart';
+import '../../../../core/services/content_moderation_service.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../shared/models/chat_model.dart';
 import '../../../../shared/widgets/common_widgets.dart';
@@ -94,8 +95,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty || _currentUserId == null || _partnerId == null) return;
 
+    // Content moderation gate (matches React content-moderation regex triggers)
+    final moderation =
+        ref.read(contentModerationServiceProvider).checkContent(text);
+    if (!moderation.isAllowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(moderation.reason ?? 'Message blocked'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
     _messageController.clear();
-    
+
     final chatService = ref.read(chatServiceProvider);
     await chatService.sendMessage(
       chatId: widget.chatId,
