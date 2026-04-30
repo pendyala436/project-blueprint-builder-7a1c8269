@@ -1026,15 +1026,22 @@ const ChatScreen = () => {
       }
 
       // ============= FETCH ACTIVE SESSION FOR BILLING =============
+      // BUG-BILL-05 FIX: Race-resilient — retry up to 5x (250ms apart) because
+      // start_chat may still be writing the row when initializeChat runs.
       try {
-        const { data: activeSession } = await supabase
-          .from("active_chat_sessions")
-          .select("id, man_user_id, woman_user_id, status")
-          .eq("chat_id", chatId.current)
-          .in("status", ["active", "pending"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let activeSession: { id: string; man_user_id: string; woman_user_id: string; status: string } | null = null;
+        for (let attempt = 0; attempt < 5 && !activeSession; attempt++) {
+          const { data } = await supabase
+            .from("active_chat_sessions")
+            .select("id, man_user_id, woman_user_id, status")
+            .eq("chat_id", chatId.current)
+            .in("status", ["active", "pending"])
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) { activeSession = data; break; }
+          await new Promise(r => setTimeout(r, 250));
+        }
 
         if (activeSession) {
           setBillingSessionId(activeSession.id);
@@ -1042,7 +1049,7 @@ const ChatScreen = () => {
           setBillingWomanId(activeSession.woman_user_id);
           console.log("[Chat] Billing wired for session:", activeSession.id);
         } else {
-          console.log("[Chat] No active session found for billing - will retry on session change");
+          console.log("[Chat] No active session after retries — realtime UPDATE will wire billing");
         }
       } catch (e) {
         console.warn("[Chat] Failed to fetch billing session:", e);
