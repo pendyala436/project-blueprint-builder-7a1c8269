@@ -246,6 +246,12 @@ const AdminDashboard = () => {
       description: "Platform configuration settings",
       icon: <Settings className="h-6 w-6" />,
       path: "/admin/settings",
+    },
+    {
+      title: "Enable / Disable Features",
+      description: "Toggle Statements tab visibility for all users",
+      icon: <Settings className="h-6 w-6" />,
+      path: "/admin/enable-disable",
     }
   ];
 
