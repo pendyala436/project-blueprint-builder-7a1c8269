@@ -85,10 +85,14 @@ class OptimizedSupabaseService {
     return _cache.getOrFetch(
       CacheKeys.earnings(userId),
       () async {
+        // Earnings come from canonical wallet_transactions credits with
+        // an earning transaction_type (legacy `women_earnings` table removed).
         final response = await _client
-            .from('women_earnings')
-            .select('amount, earning_type, description, created_at')
+            .from('wallet_transactions')
+            .select('id, amount, description, transaction_type, created_at')
             .eq('user_id', userId)
+            .eq('type', 'credit')
+            .inFilter('transaction_type', ['session_earning', 'gift_earning'])
             .order('created_at', ascending: false)
             .limit(50);
         
