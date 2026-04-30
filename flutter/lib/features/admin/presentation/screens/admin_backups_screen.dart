@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-/// Admin Backup Management — mirrors React AdminBackupManagement.tsx
+/// Admin Backup Management — mirrors React AdminBackupManagement.tsx.
+/// Real table: `backup_logs` with size_bytes (not size_mb) and status.
 class AdminBackupsScreen extends ConsumerStatefulWidget {
   const AdminBackupsScreen({super.key});
 
@@ -27,7 +28,7 @@ class _AdminBackupsScreenState extends ConsumerState<AdminBackupsScreen> {
     setState(() => _loading = true);
     try {
       final res = await _supabase
-          .from('backup_history')
+          .from('backup_logs')
           .select()
           .order('created_at', ascending: false)
           .limit(50);
@@ -56,6 +57,14 @@ class _AdminBackupsScreenState extends ConsumerState<AdminBackupsScreen> {
     }
   }
 
+  String _fmtSize(dynamic bytes) {
+    final b = (bytes is num) ? bytes.toDouble() : 0.0;
+    if (b < 1024) return '${b.toStringAsFixed(0)} B';
+    if (b < 1024 * 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
+    if (b < 1024 * 1024 * 1024) return '${(b / 1024 / 1024).toStringAsFixed(1)} MB';
+    return '${(b / 1024 / 1024 / 1024).toStringAsFixed(2)} GB';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,13 +86,14 @@ class _AdminBackupsScreenState extends ConsumerState<AdminBackupsScreen> {
                 itemBuilder: (_, i) {
                   final b = _backups[i];
                   final t = DateTime.tryParse(b['created_at']?.toString() ?? '');
-                  final ok = b['status'] == 'success';
+                  final ok = b['status'] == 'success' || b['status'] == 'completed';
                   return ListTile(
                     leading: Icon(ok ? Icons.check_circle : Icons.error,
                         color: ok ? Colors.green : Colors.red),
                     title: Text(b['backup_type']?.toString() ?? 'Backup'),
                     subtitle: Text(
-                      '${t != null ? DateFormat.yMd().add_Hm().format(t) : '—'} • ${b['size_mb'] ?? 0} MB',
+                      '${t != null ? DateFormat.yMd().add_Hm().format(t) : '—'} • ${_fmtSize(b['size_bytes'])}'
+                      '${b['error_message'] != null ? '\n${b['error_message']}' : ''}',
                     ),
                     trailing: Text(b['status']?.toString() ?? '—'),
                   );

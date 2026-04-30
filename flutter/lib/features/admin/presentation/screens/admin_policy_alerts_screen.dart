@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-/// Admin Policy Alerts — mirrors React AdminPolicyAlerts.tsx
+/// Admin Policy Alerts — mirrors React AdminPolicyAlerts.tsx.
+/// Real table: `policy_violation_alerts` with `status` (pending/reviewed) and `severity`.
 class AdminPolicyAlertsScreen extends ConsumerStatefulWidget {
   const AdminPolicyAlertsScreen({super.key});
 
@@ -26,9 +27,9 @@ class _AdminPolicyAlertsScreenState extends ConsumerState<AdminPolicyAlertsScree
     setState(() => _loading = true);
     try {
       final res = await _supabase
-          .from('policy_alerts')
+          .from('policy_violation_alerts')
           .select()
-          .eq('resolved', false)
+          .eq('status', 'pending')
           .order('created_at', ascending: false)
           .limit(100);
       if (!mounted) return;
@@ -43,9 +44,11 @@ class _AdminPolicyAlertsScreenState extends ConsumerState<AdminPolicyAlertsScree
 
   Future<void> _resolve(String id) async {
     try {
-      await _supabase.from('policy_alerts').update({
-        'resolved': true,
-        'resolved_at': DateTime.now().toIso8601String(),
+      final auth = _supabase.auth.currentUser?.id;
+      await _supabase.from('policy_violation_alerts').update({
+        'status': 'reviewed',
+        'reviewed_at': DateTime.now().toIso8601String(),
+        if (auth != null) 'reviewed_by': auth,
       }).eq('id', id);
       _load();
     } catch (e) {
@@ -69,7 +72,7 @@ class _AdminPolicyAlertsScreenState extends ConsumerState<AdminPolicyAlertsScree
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _alerts.isEmpty
-              ? const Center(child: Text('No active alerts 🎉'))
+              ? const Center(child: Text('No pending alerts 🎉'))
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(
@@ -84,9 +87,9 @@ class _AdminPolicyAlertsScreenState extends ConsumerState<AdminPolicyAlertsScree
                           backgroundColor: _sevColor(sev).withOpacity(0.15),
                           child: Icon(Icons.warning, color: _sevColor(sev)),
                         ),
-                        title: Text(a['alert_type']?.toString() ?? 'Alert'),
+                        title: Text('${a['violation_type'] ?? a['alert_type'] ?? 'Alert'}'),
                         subtitle: Text(
-                          '${a['description'] ?? ''}'
+                          '${a['content'] ?? ''}'
                           '${created != null ? '\n${DateFormat.yMd().add_Hm().format(created)}' : ''}',
                         ),
                         isThreeLine: true,

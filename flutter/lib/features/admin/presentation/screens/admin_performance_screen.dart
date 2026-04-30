@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
-/// Admin Performance Monitoring — mirrors React AdminPerformanceMonitoring.tsx
+/// Admin Performance Monitoring — mirrors React AdminPerformanceMonitoring.tsx.
+/// Reads from `platform_metrics` (no `performance_metrics` table exists).
 class AdminPerformanceScreen extends ConsumerStatefulWidget {
   const AdminPerformanceScreen({super.key});
 
@@ -27,10 +28,10 @@ class _AdminPerformanceScreenState extends ConsumerState<AdminPerformanceScreen>
     setState(() => _loading = true);
     try {
       final res = await _supabase
-          .from('performance_metrics')
+          .from('platform_metrics')
           .select()
-          .order('recorded_at', ascending: false)
-          .limit(20);
+          .order('metric_date', ascending: false)
+          .limit(30);
       final list = List<Map<String, dynamic>>.from(res);
       if (!mounted) return;
       setState(() {
@@ -76,22 +77,26 @@ class _AdminPerformanceScreenState extends ConsumerState<AdminPerformanceScreen>
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.4,
                     children: [
-                      _kpi('CPU', '${_latest?['cpu_usage'] ?? '—'}%', Icons.memory, Colors.blue),
-                      _kpi('Memory', '${_latest?['memory_usage'] ?? '—'}%', Icons.storage, Colors.purple),
-                      _kpi('Active Calls', '${_latest?['active_calls'] ?? 0}', Icons.video_call, Colors.green),
-                      _kpi('Active Chats', '${_latest?['active_chats'] ?? 0}', Icons.chat, Colors.orange),
+                      _kpi('Active Users', '${_latest?['active_users'] ?? 0}', Icons.person, Colors.blue),
+                      _kpi('Active Chats', '${_latest?['active_chats'] ?? 0}', Icons.chat, Colors.purple),
+                      _kpi('Video Calls', '${_latest?['total_video_calls'] ?? 0}', Icons.video_call, Colors.green),
+                      _kpi('Call Minutes', '${_latest?['video_call_minutes'] ?? 0}', Icons.timer, Colors.orange),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Text('Recent Samples', style: Theme.of(context).textTheme.titleMedium),
+                  Text('Daily History', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   ..._history.map((h) {
-                    final t = DateTime.tryParse(h['recorded_at']?.toString() ?? '');
+                    final d = DateTime.tryParse(h['metric_date']?.toString() ?? '');
                     return Card(
                       child: ListTile(
                         dense: true,
-                        title: Text(t != null ? DateFormat.Hms().format(t) : '—'),
-                        subtitle: Text('CPU ${h['cpu_usage'] ?? '—'}% • Mem ${h['memory_usage'] ?? '—'}%'),
+                        title: Text(d != null ? DateFormat.yMMMd().format(d) : '—'),
+                        subtitle: Text(
+                          'Users ${h['active_users'] ?? 0} • '
+                          'Chats ${h['active_chats'] ?? 0} • '
+                          'Calls ${h['total_video_calls'] ?? 0}',
+                        ),
                       ),
                     );
                   }),

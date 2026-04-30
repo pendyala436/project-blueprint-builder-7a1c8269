@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Admin KYC Management — mirrors React AdminKYCManagement.tsx
+/// Admin KYC Management — mirrors React AdminKYCManagement.tsx.
+/// Real table: `women_kyc` with column `verification_status` (pending/approved/rejected).
 class AdminKycManagementScreen extends ConsumerStatefulWidget {
   const AdminKycManagementScreen({super.key});
 
@@ -26,10 +27,10 @@ class _AdminKycManagementScreenState extends ConsumerState<AdminKycManagementScr
     setState(() => _loading = true);
     try {
       final res = await _supabase
-          .from('kyc_submissions')
+          .from('women_kyc')
           .select()
-          .eq('status', _status)
-          .order('submitted_at', ascending: false)
+          .eq('verification_status', _status)
+          .order('created_at', ascending: false)
           .limit(100);
       if (!mounted) return;
       setState(() {
@@ -41,16 +42,35 @@ class _AdminKycManagementScreenState extends ConsumerState<AdminKycManagementScr
     }
   }
 
-  Future<void> _decide(String id, String decision) async {
+  Future<void> _decide(String id, String decision, {String? reason}) async {
     try {
-      await _supabase.from('kyc_submissions').update({
-        'status': decision,
-        'reviewed_at': DateTime.now().toIso8601String(),
+      final auth = _supabase.auth.currentUser?.id;
+      await _supabase.from('women_kyc').update({
+        'verification_status': decision,
+        'verified_at': DateTime.now().toIso8601String(),
+        if (auth != null) 'verified_by': auth,
+        if (decision == 'rejected' && reason != null) 'rejection_reason': reason,
       }).eq('id', id);
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  Future<void> _reject(String id) async {
+    final ctrl = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Reject KYC'),
+        content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'Reason')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, ctrl.text), child: const Text('Reject')),
+        ],
+      ),
+    );
+    if (reason != null && reason.isNotEmpty) await _decide(id, 'rejected', reason: reason);
   }
 
   @override
@@ -91,8 +111,12 @@ class _AdminKycManagementScreenState extends ConsumerState<AdminKycManagementScr
                       final k = _items[i];
                       return ListTile(
                         leading: const CircleAvatar(child: Icon(Icons.verified_user)),
-                        title: Text(k['full_name']?.toString() ?? k['user_id']?.toString() ?? '—'),
-                        subtitle: Text('PAN: ${k['pan_number'] ?? '—'} • Bank: ${k['bank_name'] ?? '—'}'),
+                        title: Text(k['full_name_as_per_bank']?.toString() ?? k['user_id']?.toString() ?? '—'),
+                        subtitle: Text(
+                          'Bank: ${k['bank_name'] ?? '—'} • A/C: ${k['account_number'] ?? '—'}\n'
+                          'IFSC: ${k['ifsc_code'] ?? '—'}',
+                        ),
+                        isThreeLine: true,
                         trailing: _status == 'pending'
                             ? Row(mainAxisSize: MainAxisSize.min, children: [
                                 IconButton(
@@ -101,7 +125,7 @@ class _AdminKycManagementScreenState extends ConsumerState<AdminKycManagementScr
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.close, color: Colors.red),
-                                  onPressed: () => _decide(k['id'], 'rejected'),
+                                  onPressed: () => _reject(k['id']),
                                 ),
                               ])
                             : null,

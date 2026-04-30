@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Admin Language Limits — mirrors React AdminLanguageLimits.tsx
+/// Admin Language Limits — mirrors React AdminLanguageLimits.tsx.
+/// Real columns: language_name, max_chat_women, max_call_women, max_earning_women, etc.
 class AdminLanguageLimitsScreen extends ConsumerStatefulWidget {
   const AdminLanguageLimitsScreen({super.key});
 
@@ -27,7 +28,7 @@ class _AdminLanguageLimitsScreenState extends ConsumerState<AdminLanguageLimitsS
       final res = await _supabase
           .from('language_limits')
           .select()
-          .order('language_code');
+          .order('language_name');
       if (!mounted) return;
       setState(() {
         _limits = List<Map<String, dynamic>>.from(res);
@@ -38,29 +39,35 @@ class _AdminLanguageLimitsScreenState extends ConsumerState<AdminLanguageLimitsS
     }
   }
 
-  Future<void> _editLimit(Map<String, dynamic> row) async {
-    final ctrl = TextEditingController(text: '${row['max_users'] ?? 0}');
-    final newVal = await showDialog<int>(
+  Future<void> _editLimits(Map<String, dynamic> row) async {
+    final chat = TextEditingController(text: '${row['max_chat_women'] ?? 0}');
+    final call = TextEditingController(text: '${row['max_call_women'] ?? 0}');
+    final earn = TextEditingController(text: '${row['max_earning_women'] ?? 0}');
+    final saved = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Limit for ${row['language_code']}'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Max users'),
+        title: Text(row['language_name']?.toString() ?? 'Limits'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: chat, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Max chat women')),
+            TextField(controller: call, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Max call women')),
+            TextField(controller: earn, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Max earning women')),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, int.tryParse(ctrl.text)),
-            child: const Text('Save'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
         ],
       ),
     );
-    if (newVal == null) return;
+    if (saved != true) return;
     try {
-      await _supabase.from('language_limits').update({'max_users': newVal}).eq('id', row['id']);
+      await _supabase.from('language_limits').update({
+        'max_chat_women': int.tryParse(chat.text) ?? 0,
+        'max_call_women': int.tryParse(call.text) ?? 0,
+        'max_earning_women': int.tryParse(earn.text) ?? 0,
+      }).eq('id', row['id']);
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -81,12 +88,13 @@ class _AdminLanguageLimitsScreenState extends ConsumerState<AdminLanguageLimitsS
                 itemBuilder: (_, i) {
                   final l = _limits[i];
                   return ListTile(
-                    title: Text(l['language_code']?.toString() ?? '—'),
-                    subtitle: Text('Current: ${l['current_users'] ?? 0} / ${l['max_users'] ?? 0}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editLimit(l),
+                    title: Text(l['language_name']?.toString() ?? '—'),
+                    subtitle: Text(
+                      'Chat: ${l['current_chat_women'] ?? 0}/${l['max_chat_women'] ?? 0} • '
+                      'Call: ${l['current_call_women'] ?? 0}/${l['max_call_women'] ?? 0} • '
+                      'Earn: ${l['current_earning_women'] ?? 0}/${l['max_earning_women'] ?? 0}',
                     ),
+                    trailing: IconButton(icon: const Icon(Icons.edit), onPressed: () => _editLimits(l)),
                   );
                 },
               ),
