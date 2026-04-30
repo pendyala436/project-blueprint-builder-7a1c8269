@@ -1306,7 +1306,7 @@ const DashboardScreen = () => {
 
   const onlineCount = sameLanguageWomen.length + indianTranslatedWomen.length;
   const totalUnreadCount = activeChats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-  const menTabs = getMenTabs(onlineCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedWomen.length || undefined, !!settings.statementsTabVisible);
+  const menTabs = getMenTabs(onlineCount || undefined, totalUnreadCount || activeChatCount || undefined, matchedWomen.length || undefined, !!settings.statementsTabVisible, settings.chatEnabled !== false, settings.privateGroupsEnabled !== false);
 
   const renderOnlineUsersTab = () => (
     <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
