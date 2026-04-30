@@ -94,6 +94,7 @@ const SETTING_KEY_MAP: Record<string, keyof AppSettings> = {
   mobile_breakpoint: "mobileBreakpoint",
   session_timeout_minutes: "sessionTimeoutMinutes",
   max_file_upload_mb: "maxFileUploadMb",
+  statements_tab_visible: "statementsTabVisible",
 };
 
 // ─── Singleton store ────────────────────────────────────────────────
