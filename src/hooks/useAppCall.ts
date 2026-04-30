@@ -181,6 +181,14 @@ export const useAppCall = (
     callType: CallType
   ) => {
     if (!currentUserId || currentUserGender !== 'male') return;
+    if (callType === 'audio' && settings.audioCallEnabled === false) {
+      toast({ title: 'Audio calls temporarily unavailable', description: 'Audio calls are paused due to high system load. Please try again shortly.', variant: 'destructive' });
+      return;
+    }
+    if (callType === 'video' && settings.videoCallEnabled === false) {
+      toast({ title: 'Video calls temporarily unavailable', description: 'Video calls are paused due to high system load. Please try again shortly.', variant: 'destructive' });
+      return;
+    }
     if (statusRef.current !== 'idle') {
       toast({ title: 'Already in a call', variant: 'destructive' });
       return;
