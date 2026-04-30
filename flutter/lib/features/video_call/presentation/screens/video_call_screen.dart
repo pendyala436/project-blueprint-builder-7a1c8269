@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/ice_config.dart';
 import '../../../../core/services/screenshot_protection_service.dart';
+import '../../../../core/services/video_call_circuit_breaker.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// 1:1 video / audio call — pure open-source P2P WebRTC.
