@@ -118,22 +118,6 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
     }
 
     try {
-      const streamId = `stream_${group.id}_${currentUserId}_${Date.now()}`;
-      const { data, error } = await supabase.rpc('start_host_session', {
-        p_group_id: group.id,
-        p_host_name: userName,
-        p_host_photo: userPhoto,
-        p_host_language: pickedLanguage,
-        p_stream_id: streamId,
-      });
-      if (error) throw error;
-      const result = data as { success: boolean; error?: string };
-      if (!result?.success) {
-        preStream.getTracks().forEach(t => t.stop());
-        toast.error(result?.error || 'Could not go live');
-        setGoingLive(null);
-        return;
-      }
       // Ensure host is a member too
       await supabase.from('group_memberships').upsert({
         group_id: group.id, user_id: currentUserId, has_access: true, gift_amount_paid: 0,
@@ -141,7 +125,7 @@ export function PrivateGroupsSection({ currentUserId, userName, userPhoto }: Pri
       }, { onConflict: 'group_id,user_id' });
 
       setActiveGroupStream(preStream);
-      setActiveGroup({ ...group, is_live: true, current_host_id: currentUserId, current_host_name: userName });
+      setActiveGroup({ ...group, is_live: true, current_host_id: currentUserId, current_host_name: userName, owner_language: pickedLanguage });
       // Fetch host number for display
       const { data: meProf } = await supabase.from('profiles').select('host_number').eq('id', currentUserId).maybeSingle();
       const hostNum = (meProf as any)?.host_number;
