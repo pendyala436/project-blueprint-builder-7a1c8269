@@ -752,6 +752,10 @@ const DashboardScreen = () => {
   // Handle starting chat with a woman - with auto-reconnect if woman is busy (max 2 retries)
   const handleStartChatWithWoman = async (womanUserId: string, womanName: string, _reconnectDepth = 0) => {
     if (isConnecting) return;
+    if (settings.chatEnabled === false) {
+      toast({ title: "Chat temporarily unavailable", description: "Chat is paused due to high system load. Please try again shortly.", variant: "destructive" });
+      return;
+    }
     setIsConnecting(true);
     setConnectingUserId(womanUserId);
 
