@@ -1143,12 +1143,16 @@ export function usePrivateGroupCall({
     }
   }, [isOwner]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount only (not on every cleanup-identity change, which would
+  // wrongly tear down an active live session whenever deps churn).
+  const cleanupRef = useRef(cleanup);
+  cleanupRef.current = cleanup;
   useEffect(() => {
     return () => {
-      cleanup();
+      cleanupRef.current();
     };
-  }, [cleanup]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Host: broadcast 'away' / 'live' on tab visibility changes while live
   useEffect(() => {
