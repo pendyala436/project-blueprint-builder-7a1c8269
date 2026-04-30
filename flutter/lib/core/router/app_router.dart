@@ -49,6 +49,7 @@ import '../../shared/screens/not_found_screen.dart';
 import '../../shared/screens/approval_pending_screen.dart';
 import '../../shared/screens/welcome_tutorial_screen.dart';
 import '../services/auth_service.dart';
+import 'navigation_key.dart';
 
 /// App Route Names - Synced with React constants/index.ts ROUTES
 class AppRoutes {
