@@ -214,7 +214,7 @@ const AppShell = () => {
           </Routes>
           <Toaster />
           <NetworkStatusIndicator />
-          {!hideInstallPrompt && <PWAInstallPrompt />}
+          {showInstallPrompt && <PWAInstallPrompt />}
         </AutoLogoutWrapper>
       </UserActivityProvider>
     </SecurityProvider>
