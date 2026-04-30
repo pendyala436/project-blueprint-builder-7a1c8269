@@ -158,8 +158,11 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     };
     _pc!.onConnectionState = (state) {
       debugPrint('[Call] pc state: $state');
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+        VideoCallCircuitBreaker.instance.trip();
+        _endCall();
+      } else if (state ==
+          RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
         _endCall();
       }
     };

@@ -9,6 +9,7 @@ import 'core/config/supabase_config.dart';
 import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/push_token_service.dart';
+import 'core/services/video_call_circuit_breaker.dart';
 import 'core/theme/app_theme.dart';
 import 'shared/providers/locale_provider.dart';
 import 'shared/providers/theme_provider.dart';
