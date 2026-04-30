@@ -515,7 +515,7 @@ export function usePrivateGroupCall({
           if (!r.success && r.error?.includes('Insufficient balance')) {
             console.warn('[GROUP] Viewer ejected — insufficient balance');
             toast.error('Insufficient balance — leaving call');
-            cleanup(true);
+            onParticipantLeave?.(currentUserId, 'insufficient_balance');
           }
           return;
         }
