@@ -230,36 +230,39 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
           // Remote video (full screen)
           Container(
             color: Colors.grey[900],
-            child: Center(
-              child: _isVideoOff
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundImage: widget.recipientPhoto != null
-                              ? NetworkImage(widget.recipientPhoto!)
-                              : null,
-                          child: widget.recipientPhoto == null
-                              ? Text(widget.recipientName[0].toUpperCase(),
-                                  style: const TextStyle(fontSize: 40))
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(widget.recipientName,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    )
-                  : Container(
-                      color: Colors.grey[800],
-                      child: const Center(
-                        child: Icon(Icons.videocam, color: Colors.white54, size: 80),
-                      ),
+            child: (_engine != null && _remoteUid != null && !_isVideoOff)
+                ? AgoraVideoView(
+                    controller: VideoViewController.remote(
+                      rtcEngine: _engine!,
+                      canvas: VideoCanvas(uid: _remoteUid),
+                      connection: RtcConnection(channelId: widget.callId),
                     ),
-            ),
+                  )
+                : Center(
+                    child: _isVideoOff
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundImage: widget.recipientPhoto != null
+                                    ? NetworkImage(widget.recipientPhoto!)
+                                    : null,
+                                child: widget.recipientPhoto == null
+                                    ? Text(widget.recipientName[0].toUpperCase(),
+                                        style: const TextStyle(fontSize: 40))
+                                    : null,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(widget.recipientName,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          )
+                        : const Icon(Icons.videocam, color: Colors.white54, size: 80),
+                  ),
           ),
 
           // Local video (small preview)
@@ -276,12 +279,16 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: _isVideoOff
-                    ? const Center(child: Icon(Icons.videocam_off, color: Colors.white54, size: 32))
-                    : Container(
-                        color: Colors.grey[600],
-                        child: const Center(child: Icon(Icons.person, color: Colors.white54, size: 40)),
-                      ),
+                child: (_engine != null && !_isVideoOff)
+                    ? AgoraVideoView(
+                        controller: VideoViewController(
+                          rtcEngine: _engine!,
+                          canvas: const VideoCanvas(uid: 0),
+                        ),
+                      )
+                    : const Center(
+                        child: Icon(Icons.videocam_off,
+                            color: Colors.white54, size: 32)),
               ),
             ),
           ),
