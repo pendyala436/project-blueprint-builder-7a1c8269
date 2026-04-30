@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet } from 'lucide-react';
+import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet, Archive, ArchiveRestore } from 'lucide-react';
 import { generatePayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
 import { generatePayoutSnapshotNow } from '@/services/billing.service';
 import { format } from 'date-fns';
