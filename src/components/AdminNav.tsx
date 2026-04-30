@@ -70,6 +70,7 @@ const AdminNav = ({ children }: AdminNavProps) => {
     { title: "Audit Logs",        path: "/admin/audit-logs",     icon: <ClipboardList className="h-4 w-4" /> }, // FIX #15/#31: was Clock
     { title: "Messaging",         path: "/admin/messaging",      icon: <Megaphone className="h-4 w-4" /> },     // FIX #32: was MessageSquare
     { title: "Settings",          path: "/admin/settings",       icon: <Settings className="h-4 w-4" /> },
+    { title: "Enable / Disable",  path: "/admin/enable-disable", icon: <ToggleLeft className="h-4 w-4" /> },
     { title: "Payout Statements", path: "/admin/payout-statements", icon: <DollarSign className="h-4 w-4" /> },
   ];
 
