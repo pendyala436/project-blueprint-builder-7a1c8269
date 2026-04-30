@@ -160,6 +160,29 @@ export const billVideoCallMinute = (s: string, m: number, mid: string, wid: stri
 export const billGroupCallMinute = (s: string, m: number, mid: string, wid: string, idx?: number) =>
   billMinute(s, 'private_group_call', m, mid, wid, 1, idx);
 
+/**
+ * Bill the leftover seconds at session end as a fractional minute
+ * (e.g. 30s → 0.5 min). Uses a unique minute_index = nextIndex so it
+ * never collides with the regular per-minute heartbeat rows.
+ *
+ * elapsedSeconds = total session seconds (e.g. 90 for 1m30s).
+ * Returns null and skips if remainder < 1 second.
+ */
+export async function billFinalPartialMinute(
+  sessionId: string,
+  sessionType: SessionType,
+  elapsedSeconds: number,
+  manId: string,
+  womanId: string,
+): Promise<BillingResult | null> {
+  const fullMinutes = Math.floor(elapsedSeconds / 60);
+  const remainderSec = Math.max(0, elapsedSeconds - fullMinutes * 60);
+  if (remainderSec < 1) return null;
+  const partialMinutes = Math.round((remainderSec / 60) * 1000) / 1000; // 3-dec precision
+  const nextIndex = fullMinutes; // heartbeat used 0..fullMinutes-1; this slot is free
+  return billMinute(sessionId, sessionType, partialMinutes, manId, womanId, 1, nextIndex);
+}
+
 // ─── Gifts & Tips ──────────────────────────────────────────────────────
 
 export async function sendGift(
