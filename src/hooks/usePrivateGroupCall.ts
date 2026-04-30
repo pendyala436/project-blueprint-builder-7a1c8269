@@ -917,7 +917,9 @@ export function usePrivateGroupCall({
         .update({ is_available: false, is_available_for_calls: false })
         .eq('user_id', currentUserId);
 
-      // ── Heartbeat: refresh every 30s so the room stays "live"
+      // ── Heartbeat: refresh every 5s for fast presence + server-side billing
+      // (update_host_heartbeat also bills every active man on each tick;
+      // bill_session_minute is idempotent on minute_index so 12 ticks/min = 1 row).
       // Server sweep marks host inactive after 90s of silence.
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       heartbeatRef.current = setInterval(async () => {
@@ -928,7 +930,7 @@ export function usePrivateGroupCall({
           console.warn('[GROUP] heartbeat lost session, stopping live');
           if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
         }
-      }, 30000);
+      }, 5000);
 
       // Send a stop signal if tab/window closes while live
       const onBeforeUnload = () => {
