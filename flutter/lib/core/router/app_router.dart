@@ -184,6 +184,76 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.adminFinance, builder: (_, __) => const AdminFinanceScreen()),
       GoRoute(path: AppRoutes.adminModeration, builder: (_, __) => const AdminModerationScreen()),
       GoRoute(path: AppRoutes.adminSettings, builder: (_, __) => const AdminSettingsScreen()),
+      GoRoute(path: AppRoutes.adminPayouts, builder: (_, __) => const AdminPayoutScreen()),
+
+      // Calls
+      GoRoute(
+        path: AppRoutes.incomingCall,
+        builder: (_, state) {
+          final e = state.extra as Map<String, dynamic>;
+          return IncomingCallScreen(
+            callId: e['callId'] as String,
+            callerId: e['callerId'] as String,
+            callerName: e['callerName'] as String,
+            callerAvatar: e['callerAvatar'] as String?,
+            isVideo: (e['isVideo'] as bool?) ?? true,
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.videoCall,
+        builder: (_, state) {
+          final e = state.extra as Map<String, dynamic>;
+          return VideoCallScreen(
+            callId: e['callId'] as String,
+            peerId: e['peerId'] as String,
+            peerName: e['peerName'] as String,
+            isCaller: (e['isCaller'] as bool?) ?? true,
+          );
+        },
+      ),
+
+      // Private groups
+      GoRoute(
+        path: AppRoutes.privateGroups,
+        builder: (_, state) => PrivateGroupsListScreen(
+          isMale: ((state.extra as Map?)?['isMale'] as bool?) ?? true,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.privateGroupCall,
+        builder: (_, state) {
+          final e = (state.extra as Map?) ?? {};
+          return PrivateGroupCallScreen(
+            roomId: state.pathParameters['roomId']!,
+            roomName: (e['roomName'] as String?) ?? 'Room',
+            isHost: (e['isHost'] as bool?) ?? false,
+          );
+        },
+      ),
+
+      // Profile relationships
+      GoRoute(path: AppRoutes.friends, builder: (_, __) => const FriendsScreen()),
+      GoRoute(path: AppRoutes.blockedUsers, builder: (_, __) => const BlockedUsersScreen()),
+
+      // Wallet extras
+      GoRoute(path: AppRoutes.walletStatementExport, builder: (_, __) => const WalletStatementExportScreen()),
+      GoRoute(path: AppRoutes.recharge, builder: (_, __) => const RechargeScreen()),
+
+      // KYC
+      GoRoute(path: AppRoutes.kyc, builder: (_, __) => const KycScreen()),
+
+      // Language group chat
+      GoRoute(
+        path: AppRoutes.languageGroupChat,
+        builder: (_, state) {
+          final e = (state.extra as Map?) ?? {};
+          return LanguageGroupChatScreen(
+            languageCode: state.pathParameters['code']!,
+            languageName: (e['languageName'] as String?) ?? state.pathParameters['code']!,
+          );
+        },
+      ),
     ],
   );
 });
