@@ -80,6 +80,7 @@ interface PrivateGroupCallWindowProps {
     access_type: string;
     min_gift_amount: number;
     owner_id: string;
+    owner_language?: string | null;
   };
   currentUserId: string;
   userName: string;
@@ -159,6 +160,7 @@ export function PrivateGroupCallWindow({
     currentUserId,
     userName,
     userPhoto,
+    hostLanguage: group.owner_language || null,
     isOwner,
     giftAmountRequired: group.min_gift_amount,
     preAcquiredStream,
