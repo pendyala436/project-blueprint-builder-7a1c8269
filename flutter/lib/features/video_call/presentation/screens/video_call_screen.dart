@@ -1,8 +1,11 @@
+import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/screenshot_protection_service.dart';
 
 class VideoCallScreen extends ConsumerStatefulWidget {
   final String callId;
@@ -37,22 +40,76 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
   Duration _callDuration = Duration.zero;
   double _totalCost = 0;
 
+  RtcEngine? _engine;
+  int? _remoteUid;
+  static const String _agoraAppId = String.fromEnvironment('AGORA_APP_ID');
+
   @override
   void initState() {
     super.initState();
+    ref.read(screenshotProtectionProvider).enable();
     _initializeCall();
     _listenForCallEnd();
   }
 
   Future<void> _initializeCall() async {
-    // TODO: Initialize WebRTC / Agora RTC Engine
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) {
-      setState(() {
-        _isConnecting = false;
-        _isConnected = true;
-      });
-      _startCallTimer();
+    try {
+      await [Permission.camera, Permission.microphone].request();
+
+      if (_agoraAppId.isEmpty) {
+        debugPrint('[VideoCall] AGORA_APP_ID not set — running in stub mode');
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          setState(() {
+            _isConnecting = false;
+            _isConnected = true;
+          });
+          _startCallTimer();
+        }
+        return;
+      }
+
+      _engine = createAgoraRtcEngine();
+      await _engine!.initialize(RtcEngineContext(appId: _agoraAppId));
+
+      _engine!.registerEventHandler(RtcEngineEventHandler(
+        onJoinChannelSuccess: (conn, elapsed) {
+          if (mounted) setState(() => _isConnecting = false);
+        },
+        onUserJoined: (conn, remoteUid, elapsed) {
+          if (mounted) {
+            setState(() {
+              _remoteUid = remoteUid;
+              _isConnected = true;
+            });
+            _startCallTimer();
+          }
+        },
+        onUserOffline: (conn, remoteUid, reason) {
+          if (mounted) setState(() => _remoteUid = null);
+        },
+      ));
+
+      await _engine!.enableVideo();
+      await _engine!.startPreview();
+      await _engine!.joinChannel(
+        token: '',
+        channelId: widget.callId,
+        uid: 0,
+        options: const ChannelMediaOptions(
+          channelProfile: ChannelProfileType.channelProfileCommunication,
+          clientRoleType: ClientRoleType.clientRoleBroadcaster,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[VideoCall] init failed: $e');
+      if (mounted) {
+        setState(() {
+          _isConnecting = false;
+          _isConnected = true;
+        });
+        _startCallTimer();
+      }
     }
   }
 
@@ -96,9 +153,20 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
     });
   }
 
-  void _toggleMute() => setState(() => _isMuted = !_isMuted);
-  void _toggleVideo() => setState(() => _isVideoOff = !_isVideoOff);
-  void _toggleSpeaker() => setState(() => _isSpeakerOn = !_isSpeakerOn);
+  void _toggleMute() {
+    setState(() => _isMuted = !_isMuted);
+    _engine?.muteLocalAudioStream(_isMuted);
+  }
+
+  void _toggleVideo() {
+    setState(() => _isVideoOff = !_isVideoOff);
+    _engine?.muteLocalVideoStream(_isVideoOff);
+  }
+
+  void _toggleSpeaker() {
+    setState(() => _isSpeakerOn = !_isSpeakerOn);
+    _engine?.setEnableSpeakerphone(_isSpeakerOn);
+  }
 
   Future<void> _endCall() async {
     if (_isEndingCall) return;
@@ -144,9 +212,12 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
 
   @override
   void dispose() {
+    ref.read(screenshotProtectionProvider).disable();
     _supabase.removeChannel(
       _supabase.channel('video-call-${widget.callId}'),
     );
+    _engine?.leaveChannel();
+    _engine?.release();
     super.dispose();
   }
 
@@ -159,36 +230,39 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
           // Remote video (full screen)
           Container(
             color: Colors.grey[900],
-            child: Center(
-              child: _isVideoOff
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundImage: widget.recipientPhoto != null
-                              ? NetworkImage(widget.recipientPhoto!)
-                              : null,
-                          child: widget.recipientPhoto == null
-                              ? Text(widget.recipientName[0].toUpperCase(),
-                                  style: const TextStyle(fontSize: 40))
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(widget.recipientName,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    )
-                  : Container(
-                      color: Colors.grey[800],
-                      child: const Center(
-                        child: Icon(Icons.videocam, color: Colors.white54, size: 80),
-                      ),
+            child: (_engine != null && _remoteUid != null && !_isVideoOff)
+                ? AgoraVideoView(
+                    controller: VideoViewController.remote(
+                      rtcEngine: _engine!,
+                      canvas: VideoCanvas(uid: _remoteUid),
+                      connection: RtcConnection(channelId: widget.callId),
                     ),
-            ),
+                  )
+                : Center(
+                    child: _isVideoOff
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundImage: widget.recipientPhoto != null
+                                    ? NetworkImage(widget.recipientPhoto!)
+                                    : null,
+                                child: widget.recipientPhoto == null
+                                    ? Text(widget.recipientName[0].toUpperCase(),
+                                        style: const TextStyle(fontSize: 40))
+                                    : null,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(widget.recipientName,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          )
+                        : const Icon(Icons.videocam, color: Colors.white54, size: 80),
+                  ),
           ),
 
           // Local video (small preview)
@@ -205,12 +279,16 @@ class _VideoCallScreenState extends ConsumerState<VideoCallScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: _isVideoOff
-                    ? const Center(child: Icon(Icons.videocam_off, color: Colors.white54, size: 32))
-                    : Container(
-                        color: Colors.grey[600],
-                        child: const Center(child: Icon(Icons.person, color: Colors.white54, size: 40)),
-                      ),
+                child: (_engine != null && !_isVideoOff)
+                    ? AgoraVideoView(
+                        controller: VideoViewController(
+                          rtcEngine: _engine!,
+                          canvas: const VideoCanvas(uid: 0),
+                        ),
+                      )
+                    : const Center(
+                        child: Icon(Icons.videocam_off,
+                            color: Colors.white54, size: 32)),
               ),
             ),
           ),

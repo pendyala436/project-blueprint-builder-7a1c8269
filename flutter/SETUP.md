@@ -79,41 +79,56 @@ flutter build ipa --release
 
 | Layer | Status |
 |---|---|
-| Database | ✅ Shared with web — zero changes |
-| Edge functions / RPCs | ✅ Shared with web — zero changes |
+| Database / RPCs / edge functions | ✅ Shared with web — zero changes |
 | Auth, RLS, Storage, Realtime | ✅ Shared |
-| Dart services (18 files) | ✅ Scaffolded |
-| Models (7) | ✅ Scaffolded (Freezed) |
+| Dart services (20+ files) | ✅ Including new payment / push-token / photo-verify / screenshot-protection |
+| Models | ✅ Scaffolded (Freezed) |
 | Router (`go_router`) | ✅ All routes wired |
 | Theme system | ✅ Matches web tokens |
 | Most screens | ✅ Built |
-| Stub tabs (chats / matches / groups) | ✅ Filled (this commit) |
-| Shift screens | ✅ Placeholder added |
+| **Razorpay recharge flow** | ✅ `recharge_screen.dart` + `payment_service.dart` |
+| **KYC 9-section form** | ✅ `kyc_screen.dart` writes to `women_kyc` |
+| **Agora WebRTC video calls** | ✅ Wired in `video_call_screen.dart` |
+| **FCM push registration** | ✅ Auto-registers on sign-in via `push_token_service.dart` |
+| **AI photo verification client** | ✅ `photo_verification_service.dart` calls `verify-photo` |
+| **Screenshot protection (Android FLAG_SECURE / iOS detect)** | ✅ Auto-enabled on chat & call screens |
 
-## What's still TODO (Phase 2)
+## Phase-2 platform setup (still required locally)
 
-These are non-trivial and need a working local Flutter env to test:
+These can't be done from Lovable — they need files only your machine has.
 
-1. **WebRTC video / group calls**
-   - Add `flutter_webrtc` package
-   - Reuse the same signaling RPCs the web uses
-   - Implement `video_call_screen.dart` for real
-2. **Razorpay payment flow** (men's wallet recharge)
-   - Add `razorpay_flutter` package
-   - Wire to existing `razorpay-payment` and `razorpay-webhook` edge functions
-3. **KYC 9-section form** (women's payouts)
-   - Build `kyc_screen.dart`, hits same KYC tables as web
-4. **FCM push notifications**
-   - Add `firebase_messaging`, configure `google-services.json` / `GoogleService-Info.plist`
-   - Token registration → existing `send-push` edge function
-5. **Realtime chat wiring inside `chat_screen.dart`**
-   - Use `supabase.channel().onPostgresChanges(...)` for messages
-6. **Screenshot / copy protection**
-   - Android: `FLAG_SECURE` via platform channel
-   - iOS: detect `UIScreen.capturedDidChangeNotification`
-7. **AI photo verification**
-   - Either: TFLite on-device (heavy)
-   - Or (recommended): call a server-side verification edge function
+1. **Agora App ID**
+   - Sign up at https://agora.io (free dev tier).
+   - Pass at build time:
+     `flutter run --dart-define=AGORA_APP_ID=<your-app-id>`
+   - Production: mint short-lived tokens via an edge function instead of the empty token.
+
+2. **Razorpay**
+   - The `razorpay-payment` and `razorpay-webhook` edge functions already
+     exist server-side and use the existing `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` secrets.
+   - No client config needed — `payment_service.dart` reads `key_id` from the edge response.
+
+3. **Firebase (FCM)**
+   - Create a Firebase project, add Android + iOS apps.
+   - Download `google-services.json` → `android/app/`
+   - Download `GoogleService-Info.plist` → `ios/Runner/`
+   - Add the Firebase plugins via `flutter pub run flutterfire configure` (recommended).
+
+4. **Android permissions** (auto-merged by plugins, but verify in `android/app/src/main/AndroidManifest.xml`):
+   - `INTERNET`, `CAMERA`, `RECORD_AUDIO`, `BLUETOOTH_CONNECT`,
+     `ACCESS_NETWORK_STATE`, `MODIFY_AUDIO_SETTINGS`, `WAKE_LOCK`,
+     `POST_NOTIFICATIONS`.
+
+5. **iOS Info.plist** — add usage descriptions:
+   - `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`,
+     `NSPhotoLibraryUsageDescription`, push notification entitlement.
+
+## What's still TODO (Phase 3 — optional polish)
+
+- Swap empty Agora token for a token-server edge function (security hardening).
+- Realtime chat wiring inside `chat_screen.dart` is in place; verify on a device.
+- Private group calls (50 flower rooms) — share the same Agora engine pattern.
+- Native deep linking for incoming-call notifications.
 
 ---
 
