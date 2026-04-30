@@ -204,15 +204,31 @@ class _WomenWalletScreenState extends ConsumerState<WomenWalletScreen> {
 
               try {
                 final userId = _supabase.auth.currentUser?.id;
-                await _supabase.from('wallet_transactions').insert({
-                  'user_id': userId,
-                  'type': 'withdrawal',
-                  'amount': amount,
-                  'status': 'pending',
-                  'description': 'Withdrawal to ${upiController.text}',
-                });
+                if (userId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Not signed in')),
+                  );
+                  return;
+                }
+                // Canonical SoT: route withdrawals through `ledger_withdrawal`
+                // RPC (mirrors React billing.service.ts). Direct inserts into
+                // `wallet_transactions` are blocked by the wallet-balance
+                // protection trigger and violate the SoT contract.
+                final result = await ref.read(walletServiceProvider).requestWithdrawal(
+                  userId: userId,
+                  amount: amount,
+                  paymentMethod: 'upi',
+                  paymentDetails: {'upi_id': upiController.text.trim()},
+                );
 
-                Navigator.pop(context);
+                if (!result.success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(result.error ?? 'Withdrawal failed')),
+                  );
+                  return;
+                }
+
+                if (mounted) Navigator.pop(context);
                 _loadWalletData();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
