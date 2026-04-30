@@ -683,14 +683,30 @@ class DashboardService {
       callback: (_) => onWalletChange(),
     );
 
-    if (!isMale && onEarningsChange != null) {
-      channel = channel.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: 'women_earnings',
-        callback: (_) => onEarningsChange(),
-      );
-    }
+    // Wallet balance changes are driven by wallet_transactions inserts
+    // (canonical SoT). Mirror the React subscription which listens to
+    // both `wallets` and `wallet_transactions` filtered by user_id.
+    channel = channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'wallets',
+      callback: (_) => onWalletChange(),
+    );
+
+    channel = channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'wallet_transactions',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'user_id',
+        value: userId,
+      ),
+      callback: (_) {
+        onWalletChange();
+        if (!isMale && onEarningsChange != null) onEarningsChange();
+      },
+    );
 
     if (isMale && onAvailabilityChange != null) {
       channel = channel.onPostgresChanges(
