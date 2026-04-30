@@ -147,14 +147,14 @@ export const useP2PCall = ({
     return data?.id || null;
   };
 
-  // Process video call billing per minute
+  // Process call billing — fires every 5s; bill_session_minute is idempotent on
+  // minute_index, so 12 ticks/minute collapse to one statement row per minute.
   const processBilling = async () => {
     // VID-F-003 FIX: Use ref instead of stale state
     if (callStatusRef.current !== 'active' || !isInitiator) return;
-    
+
     // Prevent concurrent billing calls (race condition guard)
     if (billingInProgressRef.current) {
-      console.log('[P2P] Billing already in progress - skipping');
       return;
     }
     billingInProgressRef.current = true;
@@ -177,7 +177,8 @@ export const useP2PCall = ({
         return;
       }
       const sessionType = audioOnly ? 'audio_call' : 'video_call';
-      const result = await billMinute(sessionId, sessionType, 1.0, manProfile.id, womanProfile.id);
+      const minuteIdx = Math.floor(callDurationRef.current / 60);
+      const result = await billMinute(sessionId, sessionType, 1.0, manProfile.id, womanProfile.id, 1, minuteIdx);
       if (!result.success) {
         if (result.error?.includes('Insufficient balance')) {
           toast({ title: 'Insufficient balance', description: 'Call ending — please recharge.', variant: 'destructive' });
@@ -210,21 +211,16 @@ export const useP2PCall = ({
         });
       }, 1000);
 
-      // VID-H-01: Delay first billing tick to ensure media is actually connected
-      // Bill after 60s, then every 60s thereafter
-      const initialBillingDelay = setTimeout(() => {
+      // 5s billing heartbeat — minute 0 is already billed by the DB INSERT trigger
+      // on video_call_sessions, so the early ticks are duplicate_skipped no-ops.
+      // Once minute_index advances (60s mark), the next row is written.
+      billingTimerRef.current = setInterval(() => {
         processBilling();
-        billingTimerRef.current = setInterval(() => {
-          processBilling();
-        }, 60000);
-      }, 60000);
-
-      console.log('[P2P] Call timers started - billing starts after first minute');
+      }, 5000);
 
       return () => {
         if (callTimerRef.current) clearInterval(callTimerRef.current);
         if (billingTimerRef.current) clearInterval(billingTimerRef.current);
-        clearTimeout(initialBillingDelay);
       };
     }
 
