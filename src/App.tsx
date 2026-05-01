@@ -15,6 +15,7 @@ import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { Loader2 } from "lucide-react";
 import { useAutoAdjustUI } from "@/hooks/useAutoAdjustUI";
+import { useLoginSessionTracker } from "@/hooks/useLoginSessionTracker";
 import { isSupabaseConfigured } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
