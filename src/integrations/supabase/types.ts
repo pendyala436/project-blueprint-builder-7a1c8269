@@ -1376,6 +1376,39 @@ export type Database = {
         }
         Relationships: []
       }
+      login_sessions: {
+        Row: {
+          client_info: Json | null
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          started_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_info?: Json | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_info?: Json | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       male_profiles: {
         Row: {
           account_status: string
@@ -3887,6 +3920,7 @@ export type Database = {
       cleanup_old_group_video_sessions: { Args: never; Returns: undefined }
       cleanup_old_transactions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
+      end_login_session: { Args: { _session_id?: string }; Returns: undefined }
       expire_group_video_access: { Args: never; Returns: undefined }
       generate_female_employee_id: { Args: never; Returns: string }
       generate_payout_snapshot_now: { Args: never; Returns: Json }
@@ -3894,6 +3928,10 @@ export type Database = {
       get_analytics_summary: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: Json
+      }
+      get_billing_seconds_for_month: {
+        Args: { _month: string; _user_id: string }
+        Returns: number
       }
       get_browsable_female_profiles: {
         Args: never
@@ -3937,6 +3975,18 @@ export type Database = {
           session_type: string
           transaction_type: string
         }[]
+      }
+      get_login_billing_seconds_bulk: {
+        Args: { _month: string; _user_ids: string[] }
+        Returns: {
+          billing_seconds: number
+          login_seconds: number
+          user_id: string
+        }[]
+      }
+      get_login_seconds_for_month: {
+        Args: { _month: string; _user_id: string }
+        Returns: number
       }
       get_man_active_chats: {
         Args: { p_user_id: string }
@@ -4226,6 +4276,7 @@ export type Database = {
         }
         Returns: Json
       }
+      start_login_session: { Args: { _client_info?: Json }; Returns: string }
       stop_host_session: { Args: { p_group_id: string }; Returns: Json }
       stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
       sweep_stale_group_hosts: { Args: never; Returns: Json }
