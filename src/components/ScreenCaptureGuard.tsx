@@ -123,9 +123,10 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
         </div>
       </div>
 
-      {/* Visibility blanker — covers UI when tab is hidden OR iOS screen
-          recording is active (iOS cannot block recording, only blur). */}
-      {(hidden || iosRecording) && (
+      {/* Visibility blanker — covers UI when tab is hidden OR any platform
+          reports active capture (iOS recording, Android recording, web
+          screen-share). Native platforms also block at the OS layer. */}
+      {(hidden || blurForCapture) && (
         <div
           aria-hidden="true"
           style={{
