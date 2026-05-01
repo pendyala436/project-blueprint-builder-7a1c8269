@@ -48,11 +48,26 @@ npx cap run android
 
 Test by attempting a screenshot — Android will show a "Screenshots aren't allowed by the app or your organization" toast.
 
-## 3. iOS — partial only ⚠️
+## 3. iOS — detection + auto-blur (now active) ⚠️
 
-Apple does **not** allow blocking screenshots (App Store policy). The web watermark from layer 1 is your only defence on iOS.
+Apple does **not** allow blocking screenshots (App Store policy). The next-best protection is now wired up via a custom Capacitor plugin:
 
-If you want recording **detection** (blur the UI when the user starts a screen recording), the existing Flutter service `flutter/lib/core/services/screenshot_protection_service.dart` already does this for the Flutter build. For the Capacitor iOS build, add the `capacitor-privacy-screen` plugin and listen to `UIApplication.userDidTakeScreenshotNotification` — happy to wire that up if you confirm you want it.
+**Files (in repo):**
+- `ios-patches/ScreenCapturePlugin.swift` — listens to `UIApplication.userDidTakeScreenshotNotification` and `UIScreen.capturedDidChangeNotification`
+- `ios-patches/ScreenCapturePlugin.m` — registers the plugin with Capacitor
+- `src/hooks/useIOSCaptureGuard.ts` — JS hook consumed by `ScreenCaptureGuard`
+
+**What it does on iOS:**
+- 📸 **Screenshot taken** → toast "Screenshot detected — logged for security review" + row inserted into `screen_capture_events` (admin-only audit table).
+- 🎥 **Screen recording starts** → entire UI is replaced with a black overlay reading "Screen recording detected. Content hidden for your protection." Cleared automatically when recording stops.
+- All events are written to the `screen_capture_events` Supabase table — admins can review forensic data.
+
+**One-time native install (after `npx cap add ios`):**
+1. Copy both files to `ios/App/App/`
+2. Open `ios/App/App.xcworkspace` in Xcode → drag both files into the `App` target
+3. `npx cap sync ios && npx cap run ios`
+
+The web watermark from layer 1 also applies on iOS as a forensic trace if anyone defeats the blur.
 
 ## 4. TWA Android (`rajeshrajesh/`) — NOT blockable ⚠️
 
@@ -66,7 +81,7 @@ TWAs run inside Chrome. Chrome ignores `FLAG_SECURE` for security/usability reas
 | PWA (installed) | ❌ impossible | ❌ impossible | ✅ |
 | TWA (`rajeshrajesh/`) | ❌ Chrome ignores flag | ❌ | ✅ |
 | **Capacitor Android** | ✅ **after MainActivity patch** | ✅ | ✅ |
-| Capacitor iOS | ❌ Apple policy | ⚠️ detect only | ✅ |
+| Capacitor iOS | ❌ Apple policy | ✅ **auto-blur on recording** + ✅ screenshot detection/audit | ✅ |
 | Flutter Android | ✅ via `screen_protector` | ✅ | n/a |
 | Flutter iOS | ❌ Apple policy | ⚠️ detect only | n/a |
 | **External camera photo** | ❌ impossible anywhere | — | ✅ traceable |
