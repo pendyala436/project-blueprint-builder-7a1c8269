@@ -294,6 +294,8 @@ const AdminPayoutStatements = () => {
     ifsc: r.ifsc_code || '—',
     upi: r.upi_vpa || '—',
     amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+    loginTime: fmtHMS(timeMap[r.user_id]?.login ?? 0),
+    billingTime: fmtHMS(timeMap[r.user_id]?.billing ?? 0),
   }));
 
   const totalAmount = records.reduce((s, r) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
@@ -305,7 +307,7 @@ const AdminPayoutStatements = () => {
     const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const csv = [
       PAYOUT_HEADERS.join(','),
-      ...rows.map(r => [r.sno, escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount].join(',')),
+      ...rows.map(r => [r.sno, escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount, r.loginTime, r.billingTime].join(',')),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -323,7 +325,7 @@ const AdminPayoutStatements = () => {
     doc.setFontSize(10);
     doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ₹${totalAmount.toFixed(2)}`, 14, 23);
 
-    const rows = buildRows().map(r => [String(r.sno), r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]);
+    const rows = buildRows().map(r => [String(r.sno), r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]);
 
     autoTable(doc, {
       startY: 30,
@@ -331,7 +333,7 @@ const AdminPayoutStatements = () => {
       body: rows,
       styles: { fontSize: 7, cellPadding: 1.5 },
       headStyles: { fillColor: [99, 102, 241], fontSize: 7 },
-      columnStyles: { 9: { halign: 'right' } },
+      columnStyles: { 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' } },
     });
 
     doc.save(`payout-${monthFilter}.pdf`);
@@ -346,10 +348,10 @@ const AdminPayoutStatements = () => {
       [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ₹${totalAmount.toFixed(2)}`],
       [],
       PAYOUT_HEADERS,
-      ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]),
+      ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
     XLSX.writeFile(wb, `payout-${monthFilter}.xlsx`);
@@ -360,7 +362,7 @@ const AdminPayoutStatements = () => {
     if (!records.length) return;
     const rows = buildRows();
     const tableRows = rows.map(r =>
-      `<tr><td>${r.sno}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td></tr>`
+      `<tr><td>${r.sno}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td><td style="text-align:right">${r.loginTime}</td><td style="text-align:right">${r.billingTime}</td></tr>`
     ).join('');
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
