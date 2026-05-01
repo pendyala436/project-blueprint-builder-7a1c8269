@@ -42,7 +42,7 @@ interface PayoutRecord {
   created_at: string;
 }
 
-// Spec §7 — 10 columns sourced from Bank KYC
+// Spec §7 — 10 columns sourced from Bank KYC + 2 verification columns
 const PAYOUT_HEADERS = [
   'Beneficiary ID / S.No',
   'Beneficiary Purpose',
@@ -54,7 +54,19 @@ const PAYOUT_HEADERS = [
   'IFSC Code',
   'UPI VPA',
   'Amount (₹)',
+  'Total Login Time',
+  'Total Billing Time',
 ];
+
+// Format seconds as HH:MM:SS
+const fmtHMS = (secs: number): string => {
+  const s = Math.max(0, Math.floor(secs || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}:${pad(r)}`;
+};
 
 const AdminPayoutStatements = () => {
   const { toast } = useToast();
