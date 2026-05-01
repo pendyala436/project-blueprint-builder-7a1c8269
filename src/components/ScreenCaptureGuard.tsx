@@ -25,10 +25,12 @@
 
 import { useEffect, useState, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIOSCaptureGuard } from "@/hooks/useIOSCaptureGuard";
 
 const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) => {
   const [tag, setTag] = useState<string>("MeowMeow • protected");
   const [hidden, setHidden] = useState(false);
+  const { isRecording: iosRecording } = useIOSCaptureGuard();
 
   // Build the watermark text from the current session.
   useEffect(() => {
