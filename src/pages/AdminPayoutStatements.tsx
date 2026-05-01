@@ -74,8 +74,35 @@ const AdminPayoutStatements = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [monthFilter, setMonthFilter] = useState(format(new Date(), 'yyyy-MM'));
+  // user_id -> { login_seconds, billing_seconds } for the active month
+  const [timeMap, setTimeMap] = useState<Record<string, { login: number; billing: number }>>({});
 
   useEffect(() => { loadRecords(); }, [monthFilter]);
+
+  // Fetch login + billing seconds whenever records or month change
+  useEffect(() => {
+    const ids = records.map(r => r.user_id).filter(Boolean);
+    if (ids.length === 0) { setTimeMap({}); return; }
+    (async () => {
+      const { data, error } = await supabase.rpc('get_login_billing_seconds_bulk', {
+        _user_ids: ids,
+        _month: monthFilter,
+      });
+      if (error) {
+        console.warn('[Payouts] time fetch failed:', error.message);
+        setTimeMap({});
+        return;
+      }
+      const map: Record<string, { login: number; billing: number }> = {};
+      (data as Array<{ user_id: string; login_seconds: number; billing_seconds: number }> | null)?.forEach(row => {
+        map[row.user_id] = {
+          login: Number(row.login_seconds || 0),
+          billing: Number(row.billing_seconds || 0),
+        };
+      });
+      setTimeMap(map);
+    })();
+  }, [records, monthFilter]);
 
   // Realtime: refresh when snapshots change
   useEffect(() => {
