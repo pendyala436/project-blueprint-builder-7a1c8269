@@ -107,46 +107,48 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
     <>
       {children}
 
-      {/* Forensic diagonal watermark — pointer-events:none so it never
-          blocks user interaction. Repeated tile so cropping cannot remove
-          the identifier. */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 2147483600, // just below modal-blocking max
-          overflow: "hidden",
-          mixBlendMode: "difference",
-          opacity: 0.08,
-          userSelect: "none",
-        }}
-      >
+      {/* Forensic diagonal watermark — only shown while a screen capture /
+          screen recording / screen share is actively detected. Keeps the
+          normal UI clean when nothing is being recorded. */}
+      {blurForCapture && (
         <div
+          aria-hidden="true"
           style={{
-            position: "absolute",
-            inset: "-50%",
-            transform: "rotate(-30deg)",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "60px 40px",
-            color: "white",
-            fontSize: "14px",
-            fontFamily: "monospace",
-            whiteSpace: "nowrap",
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            zIndex: 2147483600,
+            overflow: "hidden",
+            mixBlendMode: "difference",
+            opacity: 0.08,
+            userSelect: "none",
           }}
         >
-          {Array.from({ length: 120 }).map((_, i) => (
-            <span key={i}>{tag} • {stamp}</span>
-          ))}
+          <div
+            style={{
+              position: "absolute",
+              inset: "-50%",
+              transform: "rotate(-30deg)",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "60px 40px",
+              color: "white",
+              fontSize: "14px",
+              fontFamily: "monospace",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {Array.from({ length: 120 }).map((_, i) => (
+              <span key={i}>{tag} • {stamp}</span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Visibility blanker — covers UI when tab is hidden OR any platform
-          reports active capture (iOS recording, Android recording, web
-          screen-share). Native platforms also block at the OS layer. */}
-      {(hidden || blurForCapture) && (
+      {/* Blanker — covers UI ONLY when a capture is actively detected
+          (iOS recording, Android recording, web screen-share). Tab hide
+          alone no longer blanks/blurs the UI. */}
+      {blurForCapture && (
         <div
           aria-hidden="true"
           style={{
@@ -164,9 +166,7 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
             zIndex: 2147483646,
           }}
         >
-          {blurForCapture
-            ? "Screen capture detected. Content hidden for your protection."
-            : ""}
+          Screen capture detected. Content hidden for your protection.
         </div>
       )}
     </>
