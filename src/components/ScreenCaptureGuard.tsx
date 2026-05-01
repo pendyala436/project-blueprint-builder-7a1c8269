@@ -26,11 +26,16 @@
 import { useEffect, useState, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useIOSCaptureGuard } from "@/hooks/useIOSCaptureGuard";
+import { useAndroidCaptureGuard } from "@/hooks/useAndroidCaptureGuard";
+import { useWebCaptureGuard } from "@/hooks/useWebCaptureGuard";
 
 const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) => {
   const [tag, setTag] = useState<string>("MeowMeow • protected");
   const [hidden, setHidden] = useState(false);
   const { isRecording: iosRecording } = useIOSCaptureGuard();
+  const { isRecording: androidRecording } = useAndroidCaptureGuard();
+  const { isSharing: webSharing } = useWebCaptureGuard();
+  const blurForCapture = iosRecording || androidRecording || webSharing;
 
   // Build the watermark text from the current session.
   useEffect(() => {
@@ -118,9 +123,10 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
         </div>
       </div>
 
-      {/* Visibility blanker — covers UI when tab is hidden OR iOS screen
-          recording is active (iOS cannot block recording, only blur). */}
-      {(hidden || iosRecording) && (
+      {/* Visibility blanker — covers UI when tab is hidden OR any platform
+          reports active capture (iOS recording, Android recording, web
+          screen-share). Native platforms also block at the OS layer. */}
+      {(hidden || blurForCapture) && (
         <div
           aria-hidden="true"
           style={{
@@ -138,8 +144,8 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
             zIndex: 2147483646,
           }}
         >
-          {iosRecording
-            ? "Screen recording detected. Content hidden for your protection."
+          {blurForCapture
+            ? "Screen capture detected. Content hidden for your protection."
             : ""}
         </div>
       )}

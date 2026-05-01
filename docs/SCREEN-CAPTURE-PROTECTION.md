@@ -1,5 +1,7 @@
 # Global Screen-Capture Protection — Setup Guide
 
+> Updated: every platform (web, Android, iOS) now reports capture attempts to the `screen_capture_events` audit table where the platform allows it. The blur overlay activates app-wide whenever any platform signals active capture.
+
 This project now blocks screen capture at every layer where the platform allows it. Here is what is enabled and what you must do once.
 
 ## 1. Web app (every page) — already active ✅
