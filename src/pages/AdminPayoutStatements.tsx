@@ -527,14 +527,16 @@ const AdminPayoutStatements = () => {
                 <TableHead>IFSC Code</TableHead>
                 <TableHead>UPI VPA</TableHead>
                 <TableHead className="text-right">Amount (₹)</TableHead>
+                <TableHead className="text-right">Total Login Time</TableHead>
+                <TableHead className="text-right">Total Billing Time</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : records.length === 0 ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
               ) : (
                 records.map((r, i) => (
                   <TableRow key={r.id}>
@@ -548,6 +550,8 @@ const AdminPayoutStatements = () => {
                     <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.upi_vpa || '—'}</TableCell>
                     <TableCell className="text-right font-semibold text-primary">₹{Number(r.wallet_balance_at_snapshot).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.login ?? 0)}</TableCell>
+                    <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.billing ?? 0)}</TableCell>
                     <TableCell>
                       <Badge variant={r.payment_status === 'paid' ? 'default' : 'secondary'} className="text-xs">
                         {r.payment_status}
