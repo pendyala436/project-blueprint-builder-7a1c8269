@@ -141,6 +141,7 @@ const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 /** Inner component that lives inside BrowserRouter — safe to use router hooks */
 const AppShell = () => {
   useAutoAdjustUI();
+  useLoginSessionTracker();
   const location = useLocation();
   const showInstallPrompt = location.pathname === "/" || location.pathname === "/index";
 
