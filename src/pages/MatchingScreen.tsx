@@ -161,11 +161,12 @@ const MatchingScreen = () => {
       
       setCurrentUserLanguage(motherTongue);
 
-      // Fetch online women
+      // Fetch online women (exclude busy = currently in audio/video/group call)
       const { data: onlineStatus } = await supabase
         .from("user_status")
-        .select("user_id, is_online")
-        .eq("is_online", true);
+        .select("user_id, is_online, status_text")
+        .eq("is_online", true)
+        .neq("status_text", "busy");
 
       const onlineUserIds = onlineStatus?.map(s => s.user_id) || [];
 

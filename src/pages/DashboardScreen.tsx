@@ -736,7 +736,8 @@ const DashboardScreen = () => {
       const { count, error } = await supabase
         .from("user_status")
         .select("*", { count: "exact", head: true })
-        .eq("is_online", true);
+        .eq("is_online", true)
+        .neq("status_text", "busy");
 
       if (error) {
         console.warn('[Dashboard] Error fetching online users count:', error);
@@ -827,11 +828,13 @@ const DashboardScreen = () => {
   const fetchOnlineWomen = async (language: string) => {
     setLoadingOnlineWomen(true);
     try {
-      // Get ONLY online user IDs - strict online check
+      // Get ONLY online & not-busy user IDs
+      // Busy = currently in audio/video/private-group call (mutual exclusion)
       const { data: onlineUsers } = await supabase
         .from("user_status")
-        .select("user_id")
-        .eq("is_online", true);
+        .select("user_id, status_text")
+        .eq("is_online", true)
+        .neq("status_text", "busy");
 
       const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
       
