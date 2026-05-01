@@ -2289,6 +2289,33 @@ export type Database = {
         }
         Relationships: []
       }
+      screen_capture_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          platform: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          platform: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          platform?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_alerts: {
         Row: {
           alert_type: string
