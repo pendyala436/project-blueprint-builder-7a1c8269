@@ -148,6 +148,21 @@ const AdminPayoutStatements = () => {
       setRecords(fresh);
 
       // 3) Build Excel from fresh rows (don't depend on async state)
+      // Fetch login + billing seconds inline so the Excel matches the on-screen data.
+      const ids = fresh.map(r => r.user_id).filter(Boolean);
+      let freshTimes: Record<string, { login: number; billing: number }> = {};
+      if (ids.length > 0) {
+        const { data: tData, error: tErr } = await supabase.rpc('get_login_billing_seconds_bulk', {
+          _user_ids: ids,
+          _month: monthFilter,
+        });
+        if (tErr) console.warn('[Payouts] inline time fetch failed:', tErr.message);
+        (tData as Array<{ user_id: string; login_seconds: number; billing_seconds: number }> | null)?.forEach(t => {
+          freshTimes[t.user_id] = { login: Number(t.login_seconds || 0), billing: Number(t.billing_seconds || 0) };
+        });
+        setTimeMap(freshTimes);
+      }
+
       const rows = fresh.map((r, i) => ({
         sno: r.app_sno ?? i + 1,
         purpose: r.beneficiary_purpose || 'Earnings Payout',
@@ -159,6 +174,8 @@ const AdminPayoutStatements = () => {
         ifsc: r.ifsc_code || '—',
         upi: r.upi_vpa || '—',
         amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+        loginTime: fmtHMS(freshTimes[r.user_id]?.login ?? 0),
+        billingTime: fmtHMS(freshTimes[r.user_id]?.billing ?? 0),
       }));
       const total = fresh.reduce((s, r) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
 
@@ -173,10 +190,10 @@ const AdminPayoutStatements = () => {
         [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ₹${total.toFixed(2)}`, '', `Generated (IST): ${stamp}`],
         [],
         PAYOUT_HEADERS,
-        ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]),
+        ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }];
+      ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
 
