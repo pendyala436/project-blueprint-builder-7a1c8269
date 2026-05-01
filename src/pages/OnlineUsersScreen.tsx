@@ -104,11 +104,12 @@ const OnlineUsersScreen = () => {
       const oppositeGender = userGender.toLowerCase() === "male" ? "female" : 
                             userGender.toLowerCase() === "female" ? "male" : "";
 
-      // Fetch online users of opposite gender
+      // Fetch online users of opposite gender (exclude busy = in active call/group)
       const { data: onlineStatus } = await supabase
         .from("user_status")
-        .select("user_id, is_online, last_seen")
+        .select("user_id, is_online, last_seen, status_text")
         .eq("is_online", true)
+        .neq("status_text", "busy")
         .neq("user_id", user.id);
 
       if (!onlineStatus || onlineStatus.length === 0) {
