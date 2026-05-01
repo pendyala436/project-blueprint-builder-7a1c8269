@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-qu
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import SecurityProvider from "@/components/SecurityProvider";
+import ScreenCaptureGuard from "@/components/ScreenCaptureGuard";
 import { AutoLogoutWrapper } from "@/components/AutoLogoutWrapper";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -148,6 +149,7 @@ const AppShell = () => {
 
   return (
     <SecurityProvider>
+      <ScreenCaptureGuard>
       <UserActivityProvider>
         <AutoLogoutWrapper>
           <Routes>
@@ -217,6 +219,7 @@ const AppShell = () => {
           {showInstallPrompt && <PWAInstallPrompt />}
         </AutoLogoutWrapper>
       </UserActivityProvider>
+      </ScreenCaptureGuard>
     </SecurityProvider>
   );
 };
