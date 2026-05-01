@@ -83,6 +83,26 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
     return () => window.clearInterval(id);
   }, []);
 
+  // Print blocker — @media print in index.css already blanks the page,
+  // this also logs the attempt to the audit table.
+  useEffect(() => {
+    const onPrint = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          await supabase.from("screen_capture_events").insert({
+            user_id: data.user.id,
+            event_type: "screenshot",
+            platform: "web",
+            user_agent: `print:${navigator.userAgent}`,
+          });
+        }
+      } catch { /* best-effort */ }
+    };
+    window.addEventListener("beforeprint", onPrint);
+    return () => window.removeEventListener("beforeprint", onPrint);
+  }, []);
+
   return (
     <>
       {children}
