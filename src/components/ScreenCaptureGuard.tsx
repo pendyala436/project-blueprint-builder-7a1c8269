@@ -55,13 +55,8 @@ const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) =>
     };
   }, []);
 
-  // Blank the UI while the tab is hidden — defeats some recorders that
-  // capture continuously while the user switches to a screenshot tool.
-  useEffect(() => {
-    const onVis = () => setHidden(document.visibilityState === "hidden");
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
+  // (Tab-hide blanker removed — UI no longer blurs/blanks just because the
+  //  tab loses focus. Capture detection still triggers the overlay below.)
 
   // Block long-press save / context menu on images app-wide.
   useEffect(() => {
