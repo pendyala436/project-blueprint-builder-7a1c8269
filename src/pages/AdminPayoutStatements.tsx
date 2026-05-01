@@ -42,7 +42,7 @@ interface PayoutRecord {
   created_at: string;
 }
 
-// Spec §7 — 10 columns sourced from Bank KYC
+// Spec §7 — 10 columns sourced from Bank KYC + 2 verification columns
 const PAYOUT_HEADERS = [
   'Beneficiary ID / S.No',
   'Beneficiary Purpose',
@@ -54,7 +54,19 @@ const PAYOUT_HEADERS = [
   'IFSC Code',
   'UPI VPA',
   'Amount (₹)',
+  'Total Login Time',
+  'Total Billing Time',
 ];
+
+// Format seconds as HH:MM:SS
+const fmtHMS = (secs: number): string => {
+  const s = Math.max(0, Math.floor(secs || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}:${pad(r)}`;
+};
 
 const AdminPayoutStatements = () => {
   const { toast } = useToast();
@@ -62,8 +74,35 @@ const AdminPayoutStatements = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [monthFilter, setMonthFilter] = useState(format(new Date(), 'yyyy-MM'));
+  // user_id -> { login_seconds, billing_seconds } for the active month
+  const [timeMap, setTimeMap] = useState<Record<string, { login: number; billing: number }>>({});
 
   useEffect(() => { loadRecords(); }, [monthFilter]);
+
+  // Fetch login + billing seconds whenever records or month change
+  useEffect(() => {
+    const ids = records.map(r => r.user_id).filter(Boolean);
+    if (ids.length === 0) { setTimeMap({}); return; }
+    (async () => {
+      const { data, error } = await supabase.rpc('get_login_billing_seconds_bulk', {
+        _user_ids: ids,
+        _month: monthFilter,
+      });
+      if (error) {
+        console.warn('[Payouts] time fetch failed:', error.message);
+        setTimeMap({});
+        return;
+      }
+      const map: Record<string, { login: number; billing: number }> = {};
+      (data as Array<{ user_id: string; login_seconds: number; billing_seconds: number }> | null)?.forEach(row => {
+        map[row.user_id] = {
+          login: Number(row.login_seconds || 0),
+          billing: Number(row.billing_seconds || 0),
+        };
+      });
+      setTimeMap(map);
+    })();
+  }, [records, monthFilter]);
 
   // Realtime: refresh when snapshots change
   useEffect(() => {
@@ -109,6 +148,21 @@ const AdminPayoutStatements = () => {
       setRecords(fresh);
 
       // 3) Build Excel from fresh rows (don't depend on async state)
+      // Fetch login + billing seconds inline so the Excel matches the on-screen data.
+      const ids = fresh.map(r => r.user_id).filter(Boolean);
+      let freshTimes: Record<string, { login: number; billing: number }> = {};
+      if (ids.length > 0) {
+        const { data: tData, error: tErr } = await supabase.rpc('get_login_billing_seconds_bulk', {
+          _user_ids: ids,
+          _month: monthFilter,
+        });
+        if (tErr) console.warn('[Payouts] inline time fetch failed:', tErr.message);
+        (tData as Array<{ user_id: string; login_seconds: number; billing_seconds: number }> | null)?.forEach(t => {
+          freshTimes[t.user_id] = { login: Number(t.login_seconds || 0), billing: Number(t.billing_seconds || 0) };
+        });
+        setTimeMap(freshTimes);
+      }
+
       const rows = fresh.map((r, i) => ({
         sno: r.app_sno ?? i + 1,
         purpose: r.beneficiary_purpose || 'Earnings Payout',
@@ -120,6 +174,8 @@ const AdminPayoutStatements = () => {
         ifsc: r.ifsc_code || '—',
         upi: r.upi_vpa || '—',
         amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+        loginTime: fmtHMS(freshTimes[r.user_id]?.login ?? 0),
+        billingTime: fmtHMS(freshTimes[r.user_id]?.billing ?? 0),
       }));
       const total = fresh.reduce((s, r) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
 
@@ -134,10 +190,10 @@ const AdminPayoutStatements = () => {
         [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ₹${total.toFixed(2)}`, '', `Generated (IST): ${stamp}`],
         [],
         PAYOUT_HEADERS,
-        ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]),
+        ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }];
+      ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
 
@@ -238,6 +294,8 @@ const AdminPayoutStatements = () => {
     ifsc: r.ifsc_code || '—',
     upi: r.upi_vpa || '—',
     amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+    loginTime: fmtHMS(timeMap[r.user_id]?.login ?? 0),
+    billingTime: fmtHMS(timeMap[r.user_id]?.billing ?? 0),
   }));
 
   const totalAmount = records.reduce((s, r) => s + Number(r.wallet_balance_at_snapshot || 0), 0);
@@ -249,7 +307,7 @@ const AdminPayoutStatements = () => {
     const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const csv = [
       PAYOUT_HEADERS.join(','),
-      ...rows.map(r => [r.sno, escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount].join(',')),
+      ...rows.map(r => [r.sno, escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount, r.loginTime, r.billingTime].join(',')),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -267,7 +325,7 @@ const AdminPayoutStatements = () => {
     doc.setFontSize(10);
     doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ₹${totalAmount.toFixed(2)}`, 14, 23);
 
-    const rows = buildRows().map(r => [String(r.sno), r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]);
+    const rows = buildRows().map(r => [String(r.sno), r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]);
 
     autoTable(doc, {
       startY: 30,
@@ -275,7 +333,7 @@ const AdminPayoutStatements = () => {
       body: rows,
       styles: { fontSize: 7, cellPadding: 1.5 },
       headStyles: { fillColor: [99, 102, 241], fontSize: 7 },
-      columnStyles: { 9: { halign: 'right' } },
+      columnStyles: { 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' } },
     });
 
     doc.save(`payout-${monthFilter}.pdf`);
@@ -290,10 +348,10 @@ const AdminPayoutStatements = () => {
       [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ₹${totalAmount.toFixed(2)}`],
       [],
       PAYOUT_HEADERS,
-      ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount]),
+      ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
     XLSX.writeFile(wb, `payout-${monthFilter}.xlsx`);
@@ -304,7 +362,7 @@ const AdminPayoutStatements = () => {
     if (!records.length) return;
     const rows = buildRows();
     const tableRows = rows.map(r =>
-      `<tr><td>${r.sno}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td></tr>`
+      `<tr><td>${r.sno}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td><td style="text-align:right">${r.loginTime}</td><td style="text-align:right">${r.billingTime}</td></tr>`
     ).join('');
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
@@ -469,14 +527,16 @@ const AdminPayoutStatements = () => {
                 <TableHead>IFSC Code</TableHead>
                 <TableHead>UPI VPA</TableHead>
                 <TableHead className="text-right">Amount (₹)</TableHead>
+                <TableHead className="text-right">Total Login Time</TableHead>
+                <TableHead className="text-right">Total Billing Time</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : records.length === 0 ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
+                <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
               ) : (
                 records.map((r, i) => (
                   <TableRow key={r.id}>
@@ -490,6 +550,8 @@ const AdminPayoutStatements = () => {
                     <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.upi_vpa || '—'}</TableCell>
                     <TableCell className="text-right font-semibold text-primary">₹{Number(r.wallet_balance_at_snapshot).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.login ?? 0)}</TableCell>
+                    <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.billing ?? 0)}</TableCell>
                     <TableCell>
                       <Badge variant={r.payment_status === 'paid' ? 'default' : 'secondary'} className="text-xs">
                         {r.payment_status}

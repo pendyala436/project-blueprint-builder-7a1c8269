@@ -15,6 +15,7 @@ import { UserActivityProvider } from "@/contexts/UserActivityContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { Loader2 } from "lucide-react";
 import { useAutoAdjustUI } from "@/hooks/useAutoAdjustUI";
+import { useLoginSessionTracker } from "@/hooks/useLoginSessionTracker";
 import { isSupabaseConfigured } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient({
@@ -140,6 +141,7 @@ const NotFound = lazyRetry(() => import("@/pages/NotFound"));
 /** Inner component that lives inside BrowserRouter — safe to use router hooks */
 const AppShell = () => {
   useAutoAdjustUI();
+  useLoginSessionTracker();
   const location = useLocation();
   const showInstallPrompt = location.pathname === "/" || location.pathname === "/index";
 
