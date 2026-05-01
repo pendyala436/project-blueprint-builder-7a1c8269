@@ -31,7 +31,6 @@ import { useWebCaptureGuard } from "@/hooks/useWebCaptureGuard";
 
 const ScreenCaptureGuard = memo(({ children }: { children: React.ReactNode }) => {
   const [tag, setTag] = useState<string>("MeowMeow • protected");
-  const [hidden, setHidden] = useState(false);
   const { isRecording: iosRecording } = useIOSCaptureGuard();
   const { isRecording: androidRecording } = useAndroidCaptureGuard();
   const { isSharing: webSharing } = useWebCaptureGuard();
