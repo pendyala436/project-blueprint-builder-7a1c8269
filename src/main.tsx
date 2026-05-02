@@ -37,11 +37,52 @@ function showFatalError(message: string) {
   `;
 }
 
+// Recover from stale Supabase sessions left over from a previous domain/build.
+// Symptom: 403 "invalid claim: missing sub claim" / bad_jwt on /user calls,
+// which prevents login UX from working until storage is cleared.
+function purgeStaleSupabaseSessionIfBroken() {
+  try {
+    if (typeof localStorage === "undefined") return;
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith("sb-") || k.includes("supabase.auth"))) keys.push(k);
+    }
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const token: string | undefined =
+          parsed?.access_token || parsed?.currentSession?.access_token;
+        if (!token || typeof token !== "string" || token.split(".").length !== 3) {
+          localStorage.removeItem(k);
+          continue;
+        }
+        const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        // Missing `sub` => malformed/legacy token => will 403 forever. Drop it.
+        // Also drop tokens whose issuer doesn't match current Supabase URL.
+        const expectedIss = "https://tvneohngeracipjajzos.supabase.co/auth/v1";
+        if (!payload?.sub || (payload?.iss && payload.iss !== expectedIss)) {
+          localStorage.removeItem(k);
+        }
+      } catch {
+        // Corrupt entry — remove it so Supabase client starts clean.
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    // ignore — never block bootstrap
+  }
+}
+
 async function bootstrap() {
   const rootElement = document.getElementById("root");
   if (!rootElement) {
     throw new Error("Root element not found");
   }
+
+  purgeStaleSupabaseSessionIfBroken();
 
   const root = createRoot(rootElement);
   const { default: App } = await import("./App");
