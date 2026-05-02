@@ -828,6 +828,9 @@ const DashboardScreen = () => {
   const fetchOnlineWomen = async (language: string) => {
     setLoadingOnlineWomen(true);
     try {
+      // Self-heal stuck "busy" flags from prior sessions before reading
+      try { await supabase.rpc('reconcile_user_busy_status' as any, { _user_id: null }); } catch {}
+
       // Get ONLY online & not-busy user IDs
       // Busy = currently in audio/video/private-group call (mutual exclusion)
       const { data: onlineUsers } = await supabase

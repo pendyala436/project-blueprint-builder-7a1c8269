@@ -4233,6 +4233,10 @@ export type Database = {
         }[]
       }
       r2: { Args: { v: number }; Returns: number }
+      reconcile_user_busy_status: {
+        Args: { _user_id?: string }
+        Returns: number
+      }
       reconcile_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       reject_friend_request: { Args: { p_request_id: string }; Returns: Json }
       reset_private_group_counts: { Args: never; Returns: undefined }
