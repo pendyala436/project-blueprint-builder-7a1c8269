@@ -12,7 +12,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="app.lovable.meowmeow.twa"
             android:targetClass="app.lovable.meowmeow.twa.LauncherActivity"
-            android:data="https://meowmeow123.lovable.app/dashboard?tab=chat" />
+            android:data="https://meow-meow.co.in/dashboard?tab=chat" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 
@@ -26,7 +26,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="app.lovable.meowmeow.twa"
             android:targetClass="app.lovable.meowmeow.twa.LauncherActivity"
-            android:data="https://meowmeow123.lovable.app/dashboard?tab=calls" />
+            android:data="https://meow-meow.co.in/dashboard?tab=calls" />
     </shortcut>
 
     <shortcut
@@ -39,7 +39,7 @@
             android:action="android.intent.action.VIEW"
             android:targetPackage="app.lovable.meowmeow.twa"
             android:targetClass="app.lovable.meowmeow.twa.LauncherActivity"
-            android:data="https://meowmeow123.lovable.app/wallet" />
+            android:data="https://meow-meow.co.in/wallet" />
     </shortcut>
 
 </shortcuts>

@@ -16,11 +16,11 @@ android {
 
         // Pass values to AndroidManifest.xml from twa-manifest.json
         manifestPlaceholders = [
-            hostName        : "meowmeow123.lovable.app",
-            defaultUrl      : "https://meowmeow123.lovable.app/",
+            hostName        : "meow-meow.co.in",
+            defaultUrl      : "https://meow-meow.co.in/",
             launcherName    : "MeowMeow",
             assetStatements : '[{ "relation": ["delegate_permission/common.handle_all_urls"], ' +
-                              '"target": {"namespace": "web", "site": "https://meowmeow123.lovable.app"}}]'
+                              '"target": {"namespace": "web", "site": "https://meow-meow.co.in"}}]'
         ]
 
         resValue "color", "colorPrimary",         "#1aa39b"

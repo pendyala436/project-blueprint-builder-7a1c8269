@@ -1,7 +1,7 @@
 # MeowMeow — TWA (Trusted Web Activity) Android Wrapper
 
 This folder contains a **complete Android TWA project** that wraps your existing
-published web app (`https://meowmeow123.lovable.app`) into a native `.aab`/`.apk`
+published web app (`https://meow-meow.co.in`) into a native `.aab`/`.apk`
 ready for the Google Play Store.
 
 > ✅ **Zero changes to your `.ts`, `.tsx`, or database code.**
@@ -17,7 +17,7 @@ a native app. It is Google's officially supported way to publish a PWA to the
 Play Store.
 
 **Requirements your project already meets:**
-- ✅ HTTPS site (`https://meowmeow123.lovable.app`)
+- ✅ HTTPS site (`https://meow-meow.co.in`)
 - ✅ Valid `manifest.json` with `display: standalone`, icons, theme color
 - ✅ 192×192 and 512×512 PNG icons in `/public/icons/`
 - ✅ Service worker / responsive UI (already shipped)
@@ -85,7 +85,7 @@ See `BUILD_INSTRUCTIONS.md` for the complete walkthrough including:
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────────┐
-│  Android device     │  HTTPS  │  meowmeow123.lovable.app     │
+│  Android device     │  HTTPS  │  meow-meow.co.in     │
 │  (TWA installed)    │ ──────► │  (your existing PWA)         │
 │                     │         │                              │
 │  Chrome engine      │         │  • React/Vite bundle         │
@@ -95,7 +95,7 @@ See `BUILD_INSTRUCTIONS.md` for the complete walkthrough including:
 ```
 
 The TWA contains **no business logic**. It is a 2 MB shell that:
-1. Verifies it owns `meowmeow123.lovable.app` via Digital Asset Links.
+1. Verifies it owns `meow-meow.co.in` via Digital Asset Links.
 2. Launches Chrome in trusted mode pointing at your URL.
 3. Hides the address bar because the verification succeeded.
 
