@@ -83,7 +83,7 @@ fingerprint.
 The file MUST be reachable at exactly:
 
 ```
-https://meowmeow123.lovable.app/.well-known/assetlinks.json
+https://meow-meow.co.in/.well-known/assetlinks.json
 ```
 
 For your Lovable-hosted web app:
@@ -99,7 +99,7 @@ touch any `.ts`, `.tsx`, or database code.)
 ### 3.3 Verify
 
 ```bash
-curl https://meowmeow123.lovable.app/.well-known/assetlinks.json
+curl https://meow-meow.co.in/.well-known/assetlinks.json
 ```
 
 Should return the JSON. Also test with Google's official validator:
@@ -127,7 +127,7 @@ Open the app on the phone. **Check carefully:**
 | Symptom | Fix |
 |---------|-----|
 | URL bar visible | assetlinks.json not deployed or wrong SHA-256 |
-| Blank white screen | Check `https://meowmeow123.lovable.app` loads in mobile Chrome |
+| Blank white screen | Check `https://meow-meow.co.in` loads in mobile Chrome |
 | Splash shows then exits | `startUrl` in `twa-manifest.json` returns 404 |
 | Camera/mic denied silently | Make sure permissions are requested in your web code (already done) |
 
@@ -237,7 +237,7 @@ permission prompt on first request just like on desktop Chrome.
              │ HTTPS
              ▼
 ┌──────────────────────────────────────┐
-│  https://meowmeow123.lovable.app     │
+│  https://meow-meow.co.in     │
 │                                      │
 │  • All your React/.tsx components    │
 │  • Supabase client                   │
@@ -259,8 +259,8 @@ permission prompt on first request just like on desktop Chrome.
 | Build fails with SDK error | Open Android Studio → SDK Manager → install API 34 + Build-Tools 34 |
 | Play Console: "use Android App Bundle" | Upload `.aab` not `.apk` for Production |
 | Play Console: "target API 34 required" | Already set — re-run `build.sh` to regenerate |
-| URL bar still shows after install | Check `curl https://meowmeow123.lovable.app/.well-known/assetlinks.json` returns 200 with correct SHA-256 |
-| App opens then closes | `startUrl` is wrong; verify `https://meowmeow123.lovable.app/` loads in mobile Chrome |
+| URL bar still shows after install | Check `curl https://meow-meow.co.in/.well-known/assetlinks.json` returns 200 with correct SHA-256 |
+| App opens then closes | `startUrl` is wrong; verify `https://meow-meow.co.in/` loads in mobile Chrome |
 
 ---
 

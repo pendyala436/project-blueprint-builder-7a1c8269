@@ -12,7 +12,7 @@ import com.google.androidbrowserhelper.trusted.LauncherActivityMetadata;
  *  - Showing the splash screen during cold start
  *
  * No business logic lives here. All UI is rendered by the existing
- * React app at https://meowmeow123.lovable.app.
+ * React app at https://meow-meow.co.in.
  */
 public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {

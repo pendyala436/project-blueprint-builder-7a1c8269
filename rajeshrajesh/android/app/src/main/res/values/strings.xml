@@ -5,13 +5,13 @@
 
     <!-- Digital Asset Links statement embedded in the APK.
          The matching JSON file MUST also be hosted at
-         https://meowmeow123.lovable.app/.well-known/assetlinks.json -->
+         https://meow-meow.co.in/.well-known/assetlinks.json -->
     <string name="assetStatements">
         [{
             \"relation\": [\"delegate_permission/common.handle_all_urls\"],
             \"target\": {
                 \"namespace\": \"web\",
-                \"site\": \"https://meowmeow123.lovable.app\"
+                \"site\": \"https://meow-meow.co.in\"
             }
         }]
     </string>

@@ -3,7 +3,7 @@
 # Generate /.well-known/assetlinks.json for Digital Asset Links
 # ============================================================
 # Without this file hosted at:
-#    https://meowmeow123.lovable.app/.well-known/assetlinks.json
+#    https://meow-meow.co.in/.well-known/assetlinks.json
 # ...the TWA will show a Chrome address bar at the top instead of
 # running fullscreen. This file proves the app and the website
 # belong to the same owner.
@@ -45,13 +45,13 @@ EOF
 echo "✅ Generated assetlinks.json"
 echo ""
 echo "📤 Deploy this file to your web origin so it is reachable at:"
-echo "   https://meowmeow123.lovable.app/.well-known/assetlinks.json"
+echo "   https://meow-meow.co.in/.well-known/assetlinks.json"
 echo ""
 echo "   For a Lovable-hosted project: place it at"
 echo "   public/.well-known/assetlinks.json   (then redeploy)"
 echo ""
 echo "🔍 After deploying, verify with:"
-echo "   curl https://meowmeow123.lovable.app/.well-known/assetlinks.json"
+echo "   curl https://meow-meow.co.in/.well-known/assetlinks.json"
 echo ""
 echo "📋 Or use Google's verifier:"
 echo "   https://developers.google.com/digital-asset-links/tools/generator"

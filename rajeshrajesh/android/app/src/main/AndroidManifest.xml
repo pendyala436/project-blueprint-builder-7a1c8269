@@ -76,7 +76,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link verification: clicking https://meowmeow123.lovable.app/* opens the app -->
+            <!-- Deep link verification: clicking https://meow-meow.co.in/* opens the app -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
