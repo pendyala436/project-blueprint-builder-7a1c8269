@@ -1318,15 +1318,9 @@ const WomenDashboardScreen = () => {
           <MessageCircle className="h-4 w-4 text-primary" />
           Active Chats ({womenActiveChats.length})
         </span>
-        <button
-          onClick={() => fetchWomenActiveChats()}
-          disabled={loadingWomenChats}
-          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-50 px-2 py-1 rounded hover:bg-muted/50 transition-colors"
-          aria-label="Refresh chats"
-        >
+        <Button variant="ghost" size="sm" onClick={() => fetchWomenActiveChats()} disabled={loadingWomenChats} className="h-7 w-7 p-0" aria-label="Refresh chats">
           <RefreshCw className={cn("w-3.5 h-3.5", loadingWomenChats && "animate-spin")} />
-          Refresh
-        </button>
+        </Button>
       </div>
       <div className="px-3 py-2 border-b border-border/30">
         <div className="relative">
