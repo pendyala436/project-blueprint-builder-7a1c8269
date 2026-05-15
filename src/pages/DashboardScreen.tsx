@@ -208,6 +208,11 @@ const DashboardScreen = () => {
     partnerActiveChatCount: number;
   }>>([]);
   const [loadingChats, setLoadingChats] = useState(false);
+  // GESS ID search across Online / Chats / Matches tabs
+  const [userCodeMap, setUserCodeMap] = useState<Record<string, string>>({});
+  const [searchOnline, setSearchOnline] = useState("");
+  const [searchChats, setSearchChats] = useState("");
+  const [searchMatches, setSearchMatches] = useState("");
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
