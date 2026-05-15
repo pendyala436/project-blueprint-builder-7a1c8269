@@ -182,8 +182,18 @@ export const ScrollingAnnouncementsManager = () => {
       </Card>
 
       <Card>
-        <CardHeader className="pb-3 flex-row items-center justify-between">
+        <CardHeader className="pb-3 flex-row items-center justify-between gap-2 flex-wrap">
           <CardTitle className="text-base">All Scrolling Announcements ({items.length})</CardTitle>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={removeInactive} disabled={items.filter(i => !i.is_active).length === 0}>
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              Clear Disabled
+            </Button>
+            <Button size="sm" variant="destructive" onClick={removeAll} disabled={items.length === 0}>
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              Delete All
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
