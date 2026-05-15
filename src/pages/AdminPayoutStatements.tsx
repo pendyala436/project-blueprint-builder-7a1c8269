@@ -673,21 +673,23 @@ const AdminPayoutStatements = () => {
                 <TableRow><TableCell colSpan={15} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : (() => {
                   const q = searchQuery.trim().toLowerCase();
+                  const matchRow = (r: PayoutRecord) => {
+                    const code = (codeMap[r.user_id] || '').toLowerCase();
+                    return (
+                      code.includes(q) ||
+                      r.user_id?.toLowerCase().includes(q) ||
+                      (r.full_name || '').toLowerCase().includes(q) ||
+                      (r.account_holder_name || '').toLowerCase().includes(q) ||
+                      (r.mobile_number || '').includes(q) ||
+                      (r.email_address || '').toLowerCase().includes(q)
+                    );
+                  };
+                  const snapshotMatches = q ? records.filter(matchRow) : records;
                   const filtered = q
-                    ? records.filter(r => {
-                        const code = (codeMap[r.user_id] || '').toLowerCase();
-                        return (
-                          code.includes(q) ||
-                          r.user_id?.toLowerCase().includes(q) ||
-                          (r.full_name || '').toLowerCase().includes(q) ||
-                          (r.account_holder_name || '').toLowerCase().includes(q) ||
-                          (r.mobile_number || '').includes(q) ||
-                          (r.email_address || '').toLowerCase().includes(q)
-                        );
-                      })
+                    ? [...snapshotMatches, ...lookupRows]
                     : records;
                   if (filtered.length === 0) {
-                    return <TableRow><TableCell colSpan={15} className="text-center py-8 text-muted-foreground">No payout records match</TableCell></TableRow>;
+                    return <TableRow><TableCell colSpan={15} className="text-center py-8 text-muted-foreground">{isLookingUp ? 'Searching…' : 'No payout records match'}</TableCell></TableRow>;
                   }
                   return filtered.map((r, i) => (
                   <TableRow key={r.id}>
