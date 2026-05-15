@@ -49,8 +49,10 @@ import {
   Mail,
   Phone,
   User,
-  Loader2
+  Loader2,
+  Search
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -206,6 +208,11 @@ const DashboardScreen = () => {
     partnerActiveChatCount: number;
   }>>([]);
   const [loadingChats, setLoadingChats] = useState(false);
+  // GESS ID search across Online / Chats / Matches tabs
+  const [userCodeMap, setUserCodeMap] = useState<Record<string, string>>({});
+  const [searchOnline, setSearchOnline] = useState("");
+  const [searchChats, setSearchChats] = useState("");
+  const [searchMatches, setSearchMatches] = useState("");
   // App settings (currency rates, payment gateways, recharge amounts - all from database)
   const { settings } = useAppSettings();
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
@@ -247,6 +254,36 @@ const DashboardScreen = () => {
   } = useAutoReconnect(currentUserId, userLanguage);
 
   const { unreadMessages: unreadAdminMessages, unreadChat: unreadAdminChat } = useAdminUnreadCounts(currentUserId || null);
+
+  // Fetch GESS user_code map for any visible user (women lists / matches / chats)
+  useEffect(() => {
+    const ids = new Set<string>();
+    sameLanguageWomen.forEach(w => w.user_id && ids.add(w.user_id));
+    indianTranslatedWomen.forEach(w => w.user_id && ids.add(w.user_id));
+    matchedWomen.forEach(m => m.userId && ids.add(m.userId));
+    activeChats.forEach(c => c.partnerId && ids.add(c.partnerId));
+    const missing = Array.from(ids).filter(id => !(id in userCodeMap));
+    if (missing.length === 0) return;
+    (async () => {
+      const { data } = await supabase.from('profiles').select('user_id, user_code').in('user_id', missing);
+      if (!data) return;
+      setUserCodeMap(prev => {
+        const next = { ...prev };
+        (data as Array<{ user_id: string; user_code: string | null }>).forEach(p => {
+          if (p.user_code) next[p.user_id] = p.user_code;
+        });
+        return next;
+      });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sameLanguageWomen, indianTranslatedWomen, matchedWomen, activeChats]);
+
+  const matchesUserSearch = (q: string, userId: string, name?: string | null) => {
+    const s = q.trim().toLowerCase();
+    if (!s) return true;
+    const code = (userCodeMap[userId] || '').toLowerCase();
+    return code.includes(s) || (userId || '').toLowerCase().includes(s) || (name || '').toLowerCase().includes(s);
+  };
 
   // Men's free chat minutes removed - feature deprecated
 
@@ -1332,6 +1369,19 @@ const DashboardScreen = () => {
         </div>
       </div>
 
+      {/* Search by GESS ID, User ID, or name */}
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={searchOnline}
+            onChange={(e) => setSearchOnline(e.target.value)}
+            placeholder="Search GESS ID, User ID, or name…"
+            className="h-8 pl-8 text-xs"
+          />
+        </div>
+      </div>
+
 
       {/* Notifications */}
       {notifications.length > 0 && (
@@ -1376,83 +1426,89 @@ const DashboardScreen = () => {
         </div>
       ) : (
         <>
-          {sameLanguageWomen.length > 0 && (
-            <>
-              <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
-                <span className="text-xs font-semibold text-primary">{userLanguage}</span>
-                <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageWomen.length})</span>
-              </div>
-              {sameLanguageWomen.map((woman) => (
-                <UserContactCard
-                  key={woman.id}
-                  name={woman.full_name || "Anonymous"}
-                  photoUrl={woman.photo_url}
-                  age={woman.age}
-                  language={woman.primary_language}
-                  country={woman.country}
-                  activeChatCount={woman.active_chat_count}
-                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                  actions={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
-                      {/* Audio Call - same language only */}
-                      {settings.audioCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
-                          <Phone className="w-3.5 h-3.5 text-primary" />
-                        </Button>
-                      )}
-                      {/* Video Call - same language only */}
-                      {settings.videoCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
-                          <Video className="w-3.5 h-3.5 text-primary" />
-                        </Button>
-                      )}
+          {(() => {
+            const filteredSame = sameLanguageWomen.filter(w => matchesUserSearch(searchOnline, w.user_id, w.full_name));
+            const filteredOther = indianTranslatedWomen.filter(w => matchesUserSearch(searchOnline, w.user_id, w.full_name));
+            return (
+              <>
+                {filteredSame.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
+                      <span className="text-xs font-semibold text-primary">{userLanguage}</span>
+                      <span className="text-[10px] text-muted-foreground ml-1">({filteredSame.length})</span>
                     </div>
-                  }
-                />
-              ))}
-            </>
-          )}
+                    {filteredSame.map((woman) => (
+                      <UserContactCard
+                        key={woman.id}
+                        name={woman.full_name || "Anonymous"}
+                        subtitle={userCodeMap[woman.user_id] || undefined}
+                        photoUrl={woman.photo_url}
+                        age={woman.age}
+                        language={woman.primary_language}
+                        country={woman.country}
+                        activeChatCount={woman.active_chat_count}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        actions={
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
+                              <Eye className="w-3.5 h-3.5 text-primary" />
+                            </Button>
+                            {settings.audioCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
+                                <Phone className="w-3.5 h-3.5 text-primary" />
+                              </Button>
+                            )}
+                            {settings.videoCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
+                                <Video className="w-3.5 h-3.5 text-primary" />
+                              </Button>
+                            )}
+                          </div>
+                        }
+                      />
+                    ))}
+                  </>
+                )}
 
-          {/* Other Languages Section */}
-          {indianTranslatedWomen.length > 0 && (
-            <>
-              <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
-                <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
-                <span className="text-[10px] text-muted-foreground ml-1">({indianTranslatedWomen.length})</span>
-              </div>
-              {indianTranslatedWomen.map((woman) => (
-                <UserContactCard
-                  key={woman.id}
-                  name={woman.full_name || "Anonymous"}
-                  photoUrl={woman.photo_url}
-                  age={woman.age}
-                  language={woman.primary_language}
-                  country={woman.country}
-                  activeChatCount={woman.active_chat_count}
-                  subtitle={`${woman.primary_language} → ${userLanguage}`}
-                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                  actions={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
+                {filteredOther.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+                      <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
+                      <span className="text-[10px] text-muted-foreground ml-1">({filteredOther.length})</span>
                     </div>
-                  }
-                />
-              ))}
-            </>
-          )}
+                    {filteredOther.map((woman) => (
+                      <UserContactCard
+                        key={woman.id}
+                        name={woman.full_name || "Anonymous"}
+                        photoUrl={woman.photo_url}
+                        age={woman.age}
+                        language={woman.primary_language}
+                        country={woman.country}
+                        activeChatCount={woman.active_chat_count}
+                        subtitle={userCodeMap[woman.user_id] ? `${userCodeMap[woman.user_id]} • ${woman.primary_language} → ${userLanguage}` : `${woman.primary_language} → ${userLanguage}`}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        actions={
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
+                              <Eye className="w-3.5 h-3.5 text-primary" />
+                            </Button>
+                          </div>
+                        }
+                      />
+                    ))}
+                  </>
+                )}
 
-          {sameLanguageWomen.length === 0 && indianTranslatedWomen.length === 0 && notifications.length === 0 && (
-            <div className="text-center py-16">
-              <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-muted-foreground text-sm">No women online right now</p>
-              <p className="text-muted-foreground/60 text-xs mt-1">Check back later</p>
-            </div>
-          )}
+                {filteredSame.length === 0 && filteredOther.length === 0 && notifications.length === 0 && (
+                  <div className="text-center py-16">
+                    <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-sm">{searchOnline ? 'No matches found' : 'No women online right now'}</p>
+                    <p className="text-muted-foreground/60 text-xs mt-1">{searchOnline ? 'Try a different search' : 'Check back later'}</p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
     </div>
@@ -1465,13 +1521,32 @@ const DashboardScreen = () => {
           <MessageCircle className="h-4 w-4 text-primary" />
           Active Chats ({activeChats.length})
         </span>
+        <Button variant="ghost" size="sm" onClick={fetchActiveChats} disabled={loadingChats} className="h-7 w-7 p-0">
+          <RefreshCw className={cn("w-3.5 h-3.5", loadingChats && "animate-spin")} />
+        </Button>
+      </div>
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input value={searchChats} onChange={(e) => setSearchChats(e.target.value)} placeholder="Search GESS ID, User ID, or name…" className="h-8 pl-8 text-xs" />
+        </div>
       </div>
       {loadingChats ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : activeChats.length > 0 ? (
-        activeChats.map((chat) => (
+      ) : (() => {
+        const filteredChats = activeChats.filter(c => matchesUserSearch(searchChats, c.partnerId, c.partnerName));
+        if (filteredChats.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">{searchChats ? 'No matches found' : 'No active chats'}</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">{searchChats ? 'Try a different search' : 'Start a chat from the Online tab'}</p>
+            </div>
+          );
+        }
+        return filteredChats.map((chat) => (
           <div
             key={chat.chatId}
             className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
@@ -1497,6 +1572,9 @@ const DashboardScreen = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={cn("text-sm truncate", chat.unreadCount > 0 ? "font-bold text-foreground" : "font-semibold text-foreground")}>{chat.partnerName}</span>
+                  {userCodeMap[chat.partnerId] && (
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-mono flex-shrink-0">{userCodeMap[chat.partnerId]}</span>
+                  )}
                   {(() => {
                     const ageMs = Date.now() - new Date(chat.lastMessageAt).getTime();
                     if (chat.partnerIsOnline && ageMs < 60000) {
@@ -1535,14 +1613,8 @@ const DashboardScreen = () => {
               </div>
             </div>
           </div>
-        ))
-      ) : (
-        <div className="text-center py-16">
-          <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No active chats</p>
-          <p className="text-muted-foreground/60 text-xs mt-1">Start a chat from the Online tab</p>
-        </div>
-      )}
+        ));
+      })()}
     </div>
   );
 
@@ -1583,15 +1655,36 @@ const DashboardScreen = () => {
           <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
         </Button>
       </div>
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input value={searchMatches} onChange={(e) => setSearchMatches(e.target.value)} placeholder="Search GESS ID, User ID, or name…" className="h-8 pl-8 text-xs" />
+        </div>
+      </div>
       {loadingMatches ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : matchedWomen.length > 0 ? (
-        matchedWomen.map((woman) => (
+      ) : (() => {
+        const filteredMatches = matchedWomen.filter(w => matchesUserSearch(searchMatches, w.userId, w.fullName));
+        if (filteredMatches.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">{searchMatches ? 'No matches found' : 'No matches yet'}</p>
+              {!searchMatches && (
+                <Button variant="aurora" size="sm" className="mt-3 gap-1" onClick={() => navigate("/match-discovery")}>
+                  <Compass className="w-4 h-4" /> Discover
+                </Button>
+              )}
+            </div>
+          );
+        }
+        return filteredMatches.map((woman) => (
           <UserContactCard
             key={woman.matchId}
             name={woman.fullName || "User"}
+            subtitle={userCodeMap[woman.userId] || undefined}
             photoUrl={woman.photoUrl}
             age={woman.age}
             language={woman.primaryLanguage}
@@ -1606,16 +1699,8 @@ const DashboardScreen = () => {
               </div>
             }
           />
-        ))
-      ) : (
-        <div className="text-center py-16">
-          <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No matches yet</p>
-          <Button variant="aurora" size="sm" className="mt-3 gap-1" onClick={() => navigate("/match-discovery")}>
-            <Compass className="w-4 h-4" /> Discover
-          </Button>
-        </div>
-      )}
+        ));
+      })()}
     </div>
   );
 
