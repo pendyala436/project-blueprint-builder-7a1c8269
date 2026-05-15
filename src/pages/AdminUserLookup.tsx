@@ -18,6 +18,7 @@ import { toast } from "sonner";
 interface UserProfile {
   id: string;
   user_id: string;
+  user_code: string | null;
   full_name: string | null;
   email: string | null;
   phone: string | null;
@@ -142,7 +143,9 @@ const AdminUserLookup = () => {
       users = users.filter(u =>
         (u.full_name?.toLowerCase().includes(q)) ||
         (u.email?.toLowerCase().includes(q)) ||
-        (u.phone?.includes(q))
+        (u.phone?.includes(q)) ||
+        (u.user_code?.toLowerCase().includes(q)) ||
+        (u.user_id?.toLowerCase().includes(q))
       );
     }
     setFilteredUsers(users);
@@ -268,7 +271,7 @@ const AdminUserLookup = () => {
             <Card>
               <CardContent className="pt-4 space-y-3">
                 <Input
-                  placeholder="Search by name, email, or phone..."
+                  placeholder="Search by name, email, phone, GESS ID, or user UUID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full"
@@ -315,8 +318,8 @@ const AdminUserLookup = () => {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{u.full_name || "Unnamed"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {u.gender?.charAt(0).toUpperCase()}{u.gender?.slice(1)} · {u.age || "?"} yrs
+                            <p className="text-xs text-muted-foreground truncate">
+                              {u.user_code || '—'} · {u.gender?.charAt(0).toUpperCase()}{u.gender?.slice(1)} · {u.age || "?"} yrs
                             </p>
                           </div>
                           {u.is_indian && u.gender?.toLowerCase() === "female" && (
