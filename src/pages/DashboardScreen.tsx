@@ -1842,6 +1842,8 @@ const DashboardScreen = () => {
         }}
       />
 
+      <ScrollingAnnouncementsBar gender="men" />
+
       {/* Tab Content */}
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "online" && renderOnlineUsersTab()}
