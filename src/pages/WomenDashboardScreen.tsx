@@ -1670,6 +1670,8 @@ const WomenDashboardScreen = () => {
         onKYC={() => setShowKYCForm(true)}
       />
 
+      <ScrollingAnnouncementsBar gender="women" />
+
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "online" && renderOnlineUsersTab()}
         {activeTab === "chats" && renderChatsTab()}
