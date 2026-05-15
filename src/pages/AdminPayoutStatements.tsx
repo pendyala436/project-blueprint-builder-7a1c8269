@@ -558,12 +558,14 @@ const AdminPayoutStatements = () => {
           )}
         </Card>
 
-        {/* Table — Spec §7: 10 columns from Bank KYC */}
+        {/* Table — Spec §7: 10 columns from Bank KYC + GESS ID + User ID */}
         <Card className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Beneficiary ID / S.No</TableHead>
+                <TableHead>GESS ID</TableHead>
+                <TableHead>User ID</TableHead>
                 <TableHead>Beneficiary Purpose</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Phone Number</TableHead>
@@ -580,13 +582,30 @@ const AdminPayoutStatements = () => {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={13} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
-              ) : records.length === 0 ? (
-                <TableRow><TableCell colSpan={13} className="text-center py-8 text-muted-foreground">No payout records for this period</TableCell></TableRow>
-              ) : (
-                records.map((r, i) => (
+                <TableRow><TableCell colSpan={15} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
+              ) : (() => {
+                  const q = searchQuery.trim().toLowerCase();
+                  const filtered = q
+                    ? records.filter(r => {
+                        const code = (codeMap[r.user_id] || '').toLowerCase();
+                        return (
+                          code.includes(q) ||
+                          r.user_id?.toLowerCase().includes(q) ||
+                          (r.full_name || '').toLowerCase().includes(q) ||
+                          (r.account_holder_name || '').toLowerCase().includes(q) ||
+                          (r.mobile_number || '').includes(q) ||
+                          (r.email_address || '').toLowerCase().includes(q)
+                        );
+                      })
+                    : records;
+                  if (filtered.length === 0) {
+                    return <TableRow><TableCell colSpan={15} className="text-center py-8 text-muted-foreground">No payout records match</TableCell></TableRow>;
+                  }
+                  return filtered.map((r, i) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs">{r.app_sno ?? i + 1}</TableCell>
+                    <TableCell className="font-mono text-xs">{codeMap[r.user_id] || '—'}</TableCell>
+                    <TableCell className="font-mono text-[10px] text-muted-foreground" title={r.user_id}>{r.user_id?.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{r.beneficiary_purpose || 'Earnings Payout'}</TableCell>
                     <TableCell className="font-medium">{r.account_holder_name || r.full_name || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.mobile_number || '—'}</TableCell>
