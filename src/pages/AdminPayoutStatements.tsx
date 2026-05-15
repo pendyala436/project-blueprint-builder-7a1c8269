@@ -420,7 +420,7 @@ const AdminPayoutStatements = () => {
     if (!records.length) return;
     const rows = buildRows();
     const tableRows = rows.map(r =>
-      `<tr><td>${r.sno}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td><td style="text-align:right">${r.loginTime}</td><td style="text-align:right">${r.billingTime}</td></tr>`
+      `<tr><td>${r.sno}</td><td>${r.gessId}</td><td style="font-family:monospace;font-size:8pt">${r.userId}</td><td>${r.purpose}</td><td>${r.name}</td><td>${r.phone}</td><td>${r.email}</td><td>${r.address}</td><td>${r.account}</td><td>${r.ifsc}</td><td>${r.upi}</td><td style="text-align:right">${r.amount}</td><td style="text-align:right">${r.loginTime}</td><td style="text-align:right">${r.billingTime}</td></tr>`
     ).join('');
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
