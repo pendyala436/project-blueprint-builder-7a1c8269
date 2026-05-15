@@ -49,8 +49,10 @@ import {
   Mail,
   Phone,
   User,
-  Loader2
+  Loader2,
+  Search
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
