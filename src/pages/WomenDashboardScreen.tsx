@@ -1194,113 +1194,119 @@ const WomenDashboardScreen = () => {
       )}
 
       {/* Recharged sub-tab content */}
-      {onlineSubTab === "recharged" && (
-        <>
-          {sameLanguageMen.length > 0 && (
-            <>
-              <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
-                <span className="text-xs font-semibold text-primary">{currentWomanLanguage}</span>
-                <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageMen.length})</span>
-              </div>
-              {sameLanguageMen.map((user) => (
-                <UserContactCard
-                  key={user.userId}
-                  name={user.fullName}
-                  photoUrl={user.photoUrl}
-                  age={user.age}
-                  language={user.motherTongue}
-                  country={user.country}
-                  state={user.state}
-                  isPremium={user.hasRecharged}
-                  walletBalance={user.walletBalance}
-                  activeChatCount={user.activeChatCount}
-                  onClick={() => handleStartChatWithUser(user.userId)}
-                  actions={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
-                    </div>
-                  }
-                />
-              ))}
-            </>
-          )}
+      {onlineSubTab === "recharged" && (() => {
+        const filteredSame = sameLanguageMen.filter(u => matchesUserSearch(searchOnline, u.userId, u.fullName));
+        const filteredOther = otherLanguageMen.filter(u => matchesUserSearch(searchOnline, u.userId, u.fullName));
+        return (
+          <>
+            {filteredSame.length > 0 && (
+              <>
+                <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
+                  <span className="text-xs font-semibold text-primary">{currentWomanLanguage}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">({filteredSame.length})</span>
+                </div>
+                {filteredSame.map((user) => (
+                  <UserContactCard
+                    key={user.userId}
+                    name={user.fullName}
+                    subtitle={userCodeMap[user.userId] || undefined}
+                    photoUrl={user.photoUrl}
+                    age={user.age}
+                    language={user.motherTongue}
+                    country={user.country}
+                    state={user.state}
+                    isPremium={user.hasRecharged}
+                    walletBalance={user.walletBalance}
+                    activeChatCount={user.activeChatCount}
+                    onClick={() => handleStartChatWithUser(user.userId)}
+                    actions={
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
+                          <Eye className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      </div>
+                    }
+                  />
+                ))}
+              </>
+            )}
 
-          {otherLanguageMen.length > 0 && (
-            <>
-              <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
-                <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
-                <span className="text-[10px] text-muted-foreground ml-1">({otherLanguageMen.length})</span>
-              </div>
-              {otherLanguageMen.map((user) => (
-                <UserContactCard
-                  key={user.userId}
-                  name={user.fullName}
-                  photoUrl={user.photoUrl}
-                  age={user.age}
-                  language={user.motherTongue}
-                  country={user.country}
-                  state={user.state}
-                  isPremium={user.hasRecharged}
-                  walletBalance={user.walletBalance}
-                  activeChatCount={user.activeChatCount}
-                  subtitle={`${user.motherTongue} → ${currentWomanLanguage}`}
-                  onClick={() => handleStartChatWithUser(user.userId)}
-                  actions={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
-                    </div>
-                  }
-                />
-              ))}
-            </>
-          )}
+            {filteredOther.length > 0 && (
+              <>
+                <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+                  <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">({filteredOther.length})</span>
+                </div>
+                {filteredOther.map((user) => (
+                  <UserContactCard
+                    key={user.userId}
+                    name={user.fullName}
+                    photoUrl={user.photoUrl}
+                    age={user.age}
+                    language={user.motherTongue}
+                    country={user.country}
+                    state={user.state}
+                    isPremium={user.hasRecharged}
+                    walletBalance={user.walletBalance}
+                    activeChatCount={user.activeChatCount}
+                    subtitle={userCodeMap[user.userId] ? `${userCodeMap[user.userId]} • ${user.motherTongue} → ${currentWomanLanguage}` : `${user.motherTongue} → ${currentWomanLanguage}`}
+                    onClick={() => handleStartChatWithUser(user.userId)}
+                    actions={
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
+                          <Eye className="w-3.5 h-3.5 text-primary" />
+                        </Button>
+                      </div>
+                    }
+                  />
+                ))}
+              </>
+            )}
 
-          {sameLanguageMen.length === 0 && otherLanguageMen.length === 0 && (
-            <div className="text-center py-16">
-              <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-muted-foreground text-sm">No recharged men online</p>
-              <p className="text-muted-foreground/60 text-xs mt-1">Only men with wallet balance are shown here</p>
-            </div>
-          )}
-        </>
-      )}
+            {filteredSame.length === 0 && filteredOther.length === 0 && (
+              <div className="text-center py-16">
+                <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">{searchOnline ? 'No matches found' : 'No recharged men online'}</p>
+                <p className="text-muted-foreground/60 text-xs mt-1">{searchOnline ? 'Try a different search' : 'Only men with wallet balance are shown here'}</p>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* No Balance sub-tab content */}
-      {onlineSubTab === "nobalance" && (
-        <>
-          {nonRechargedMen.length > 0 ? (
-            nonRechargedMen.map((user) => (
-              <UserContactCard
-                key={user.userId}
-                name={user.fullName}
-                photoUrl={user.photoUrl}
-                age={user.age}
-                language={user.motherTongue}
-                country={user.country}
-                state={user.state}
-                walletBalance={user.walletBalance}
-                activeChatCount={user.activeChatCount}
-                actions={
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
-                      <Eye className="w-3.5 h-3.5 text-primary" />
-                    </Button>
-                  </div>
-                }
-              />
-            ))
-          ) : (
+      {onlineSubTab === "nobalance" && (() => {
+        const filteredFree = nonRechargedMen.filter(u => matchesUserSearch(searchOnline, u.userId, u.fullName));
+        if (filteredFree.length === 0) {
+          return (
             <div className="text-center py-16">
               <Users className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-muted-foreground text-sm">No men without balance online</p>
+              <p className="text-muted-foreground text-sm">{searchOnline ? 'No matches found' : 'No men without balance online'}</p>
             </div>
-          )}
-        </>
-      )}
+          );
+        }
+        return filteredFree.map((user) => (
+          <UserContactCard
+            key={user.userId}
+            name={user.fullName}
+            subtitle={userCodeMap[user.userId] || undefined}
+            photoUrl={user.photoUrl}
+            age={user.age}
+            language={user.motherTongue}
+            country={user.country}
+            state={user.state}
+            walletBalance={user.walletBalance}
+            activeChatCount={user.activeChatCount}
+            actions={
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${user.userId}`); }}>
+                  <Eye className="w-3.5 h-3.5 text-primary" />
+                </Button>
+              </div>
+            }
+          />
+        ));
+      })()}
 
     </div>
   );
