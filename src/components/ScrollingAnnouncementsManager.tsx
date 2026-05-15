@@ -11,7 +11,7 @@ import { Megaphone, Trash2, Plus, Loader2, Power, PowerOff } from 'lucide-react'
 import { cn } from '@/lib/utils';
 import { ScrollingAnnouncementsBar } from './ScrollingAnnouncementsBar';
 
-type Target = 'all' | 'men' | 'women';
+type Target = 'all' | 'all_men' | 'all_women' | 'indian_men' | 'indian_women';
 
 interface Announcement {
   id: string;
@@ -23,8 +23,10 @@ interface Announcement {
 
 const TARGETS: { key: Target; label: string }[] = [
   { key: 'all', label: 'All Users' },
-  { key: 'men', label: 'All Men' },
-  { key: 'women', label: 'All Women' },
+  { key: 'all_men', label: 'All Men' },
+  { key: 'all_women', label: 'All Women' },
+  { key: 'indian_men', label: 'Indian Men' },
+  { key: 'indian_women', label: 'Indian Women' },
 ];
 
 export const ScrollingAnnouncementsManager = () => {
