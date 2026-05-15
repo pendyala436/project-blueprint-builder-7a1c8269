@@ -13,9 +13,10 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
   Send, Users, MessageSquare, Globe, Search, RefreshCw, Trash2,
-  UserCheck, Crown, Loader2, Mail, Inbox, Shield
+  UserCheck, Crown, Loader2, Mail, Inbox, Shield, Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollingAnnouncementsManager } from '@/components/ScrollingAnnouncementsManager';
 
 type TargetGroup = 'all' | 'indian_women' | 'world_women' | 'indian_men' | 'world_men';
 
