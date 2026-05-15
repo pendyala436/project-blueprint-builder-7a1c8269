@@ -153,8 +153,16 @@ const AdminPayoutStatements = () => {
         return;
       }
 
-      // 2) Re-fetch the freshly generated snapshot rows for THIS month
-      const fresh = (await getPayoutSnapshots(monthFilter)) as PayoutRecord[];
+      // 2) Re-fetch the freshly generated snapshot rows for THIS month, then
+      //    dedupe to keep only the latest snapshot per user (incremental balance).
+      const allFresh = (await getPayoutSnapshots(monthFilter)) as PayoutRecord[];
+      const _seen = new Set<string>();
+      const fresh: PayoutRecord[] = [];
+      for (const r of allFresh) {
+        if (!r.user_id || _seen.has(r.user_id)) continue;
+        _seen.add(r.user_id);
+        fresh.push(r);
+      }
       setRecords(fresh);
 
       // 3) Build Excel from fresh rows (don't depend on async state)
