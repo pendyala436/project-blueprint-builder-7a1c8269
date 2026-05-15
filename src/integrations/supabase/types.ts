@@ -2136,6 +2136,7 @@ export type Database = {
           total_chats_count: number | null
           travel_frequency: string | null
           updated_at: string
+          user_code: string | null
           user_id: string
           verification_status: boolean | null
           zodiac_sign: string | null
@@ -2199,6 +2200,7 @@ export type Database = {
           total_chats_count?: number | null
           travel_frequency?: string | null
           updated_at?: string
+          user_code?: string | null
           user_id: string
           verification_status?: boolean | null
           zodiac_sign?: string | null
@@ -2262,6 +2264,7 @@ export type Database = {
           total_chats_count?: number | null
           travel_frequency?: string | null
           updated_at?: string
+          user_code?: string | null
           user_id?: string
           verification_status?: boolean | null
           zodiac_sign?: string | null

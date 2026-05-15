@@ -44,6 +44,7 @@ interface UserPhoto {
 
 interface ProfileData {
   userId: string;
+  userCode: string | null;
   fullName: string;
   avatar: string;
   age: number | null;
@@ -207,6 +208,7 @@ const ProfileDetailScreen = () => {
 
         setProfile({
           userId: targetUserId,
+          userCode: (profileData as any).user_code ?? null,
           fullName: profileData.full_name || "Anonymous",
           avatar: profileData.photo_url || "",
           age,
@@ -226,6 +228,7 @@ const ProfileDetailScreen = () => {
       } else {
         setProfile({
           userId: targetUserId,
+          userCode: (profileData as any).user_code ?? null,
           fullName: profileData.full_name || "Anonymous",
           avatar: profileData.photo_url || "",
           age,
@@ -534,6 +537,11 @@ const ProfileDetailScreen = () => {
                   {profile.age && <span className="text-muted-foreground font-normal">, {profile.age}</span>}
                 </h1>
                 <p className="text-muted-foreground">{profile.gender}</p>
+                {profile.userCode && (
+                  <p className="text-xs font-mono text-muted-foreground/80 mt-1 tracking-wider">
+                    {profile.userCode}
+                  </p>
+                )}
               </div>
             </div>
 
