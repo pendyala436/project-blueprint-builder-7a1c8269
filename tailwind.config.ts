@@ -346,6 +346,7 @@ export default {
         "float-up": "float-up 3s ease-out forwards",
         "gift-entrance": "gift-entrance 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
         "gift-pulse": "gift-pulse 2s ease-in-out infinite",
+        marquee: "marquee 40s linear infinite",
       },
       boxShadow: {
         soft: "var(--shadow-soft)",
