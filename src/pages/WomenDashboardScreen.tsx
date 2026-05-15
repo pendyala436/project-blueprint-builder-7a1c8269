@@ -22,8 +22,10 @@ import {
   Mail,
   Shield,
   RefreshCw,
-  Phone
+  Phone,
+  Search
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FriendsBlockedPanel } from "@/components/FriendsBlockedPanel";
 import ProfileEditDialog from "@/components/ProfileEditDialog";
