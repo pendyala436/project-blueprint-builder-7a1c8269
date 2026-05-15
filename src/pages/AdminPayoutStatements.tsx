@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, RefreshCw, Loader2, IndianRupee, Users, Calendar, FileText, FileSpreadsheet, Archive, ArchiveRestore } from 'lucide-react';
 import { generatePayoutSnapshot, getPayoutSnapshots } from '@/services/ledger-wallet.service';
 import { generatePayoutSnapshotNow } from '@/services/billing.service';
+import { useDebounce } from '@/hooks/useDebounce';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -81,8 +82,76 @@ const AdminPayoutStatements = () => {
   // user_id -> GESS ID (e.g. GESS_F_001)
   const [codeMap, setCodeMap] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 400);
+  // Global lookup matches (women not in current snapshot) — synthesized PayoutRecords.
+  const [lookupRows, setLookupRows] = useState<PayoutRecord[]>([]);
+  const [isLookingUp, setIsLookingUp] = useState(false);
 
   useEffect(() => { loadRecords(); }, [monthFilter]);
+
+  // Global lookup across ALL women profiles when a search term is entered.
+  // Returns women not present in current snapshot, hydrated with KYC + wallet info.
+  useEffect(() => {
+    const q = debouncedSearch.trim();
+    if (q.length < 2) { setLookupRows([]); return; }
+    let cancelled = false;
+    (async () => {
+      setIsLookingUp(true);
+      try {
+        const like = `%${q}%`;
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('user_id, user_code, full_name, app_sno, gender')
+          .eq('gender', 'female')
+          .or(`user_code.ilike.${like},full_name.ilike.${like},user_id.eq.${/^[0-9a-f-]{36}$/i.test(q) ? q : '00000000-0000-0000-0000-000000000000'}`)
+          .limit(50);
+        if (cancelled || !profs?.length) { setLookupRows([]); return; }
+        const ids = profs.map(p => p.user_id);
+        const [kycRes, walletRes, codeRes] = await Promise.all([
+          supabase.from('women_kyc').select('user_id, account_holder_name, full_name_as_per_bank, mobile_number, email_address, current_address, bank_account_number, ifsc_code, upi_vpa, beneficiary_purpose, verification_status').in('user_id', ids),
+          supabase.from('wallets').select('user_id, balance').in('user_id', ids),
+          supabase.from('profiles').select('user_id, user_code').in('user_id', ids),
+        ]);
+        const kMap = new Map((kycRes.data || []).map((k: any) => [k.user_id, k]));
+        const wMap = new Map((walletRes.data || []).map((w: any) => [w.user_id, Number(w.balance || 0)]));
+        const existing = new Set(records.map(r => r.user_id));
+        const synth: PayoutRecord[] = profs
+          .filter(p => !existing.has(p.user_id))
+          .map(p => {
+            const k: any = kMap.get(p.user_id) || {};
+            return {
+              id: `lookup-${p.user_id}`,
+              user_id: p.user_id,
+              app_sno: p.app_sno ?? null,
+              beneficiary_purpose: k.beneficiary_purpose || null,
+              account_holder_name: k.account_holder_name || null,
+              full_name: k.full_name_as_per_bank || p.full_name || '—',
+              mobile_number: k.mobile_number || null,
+              email_address: k.email_address || null,
+              address: k.current_address || null,
+              bank_account_number: k.bank_account_number || null,
+              ifsc_code: k.ifsc_code || null,
+              upi_vpa: k.upi_vpa || null,
+              wallet_balance_at_snapshot: wMap.get(p.user_id) || 0,
+              payment_status: k.verification_status === 'approved' ? 'lookup' : 'kyc_pending',
+              snapshot_type: 'lookup',
+              ist_month: monthFilter,
+              ist_year: new Date().getFullYear(),
+              snapshot_ist_date: '',
+              created_at: '',
+            };
+          });
+        setLookupRows(synth);
+        // Hydrate codeMap with these IDs too so the GESS column renders.
+        const newCodes: Record<string, string> = {};
+        (codeRes.data || []).forEach((p: any) => { if (p.user_code) newCodes[p.user_id] = p.user_code; });
+        if (Object.keys(newCodes).length) setCodeMap(prev => ({ ...prev, ...newCodes }));
+      } finally {
+        if (!cancelled) setIsLookingUp(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [debouncedSearch, records, monthFilter]);
 
   // Fetch login + billing seconds whenever records or month change
   useEffect(() => {
@@ -604,21 +673,23 @@ const AdminPayoutStatements = () => {
                 <TableRow><TableCell colSpan={15} className="text-center py-8"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></TableCell></TableRow>
               ) : (() => {
                   const q = searchQuery.trim().toLowerCase();
+                  const matchRow = (r: PayoutRecord) => {
+                    const code = (codeMap[r.user_id] || '').toLowerCase();
+                    return (
+                      code.includes(q) ||
+                      r.user_id?.toLowerCase().includes(q) ||
+                      (r.full_name || '').toLowerCase().includes(q) ||
+                      (r.account_holder_name || '').toLowerCase().includes(q) ||
+                      (r.mobile_number || '').includes(q) ||
+                      (r.email_address || '').toLowerCase().includes(q)
+                    );
+                  };
+                  const snapshotMatches = q ? records.filter(matchRow) : records;
                   const filtered = q
-                    ? records.filter(r => {
-                        const code = (codeMap[r.user_id] || '').toLowerCase();
-                        return (
-                          code.includes(q) ||
-                          r.user_id?.toLowerCase().includes(q) ||
-                          (r.full_name || '').toLowerCase().includes(q) ||
-                          (r.account_holder_name || '').toLowerCase().includes(q) ||
-                          (r.mobile_number || '').includes(q) ||
-                          (r.email_address || '').toLowerCase().includes(q)
-                        );
-                      })
+                    ? [...snapshotMatches, ...lookupRows]
                     : records;
                   if (filtered.length === 0) {
-                    return <TableRow><TableCell colSpan={15} className="text-center py-8 text-muted-foreground">No payout records match</TableCell></TableRow>;
+                    return <TableRow><TableCell colSpan={15} className="text-center py-8 text-muted-foreground">{isLookingUp ? 'Searching…' : 'No payout records match'}</TableCell></TableRow>;
                   }
                   return filtered.map((r, i) => (
                   <TableRow key={r.id}>
