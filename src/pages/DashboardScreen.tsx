@@ -1369,6 +1369,19 @@ const DashboardScreen = () => {
         </div>
       </div>
 
+      {/* Search by GESS ID, User ID, or name */}
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            value={searchOnline}
+            onChange={(e) => setSearchOnline(e.target.value)}
+            placeholder="Search GESS ID, User ID, or name…"
+            className="h-8 pl-8 text-xs"
+          />
+        </div>
+      </div>
+
 
       {/* Notifications */}
       {notifications.length > 0 && (
