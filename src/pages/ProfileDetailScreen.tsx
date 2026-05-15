@@ -228,6 +228,7 @@ const ProfileDetailScreen = () => {
       } else {
         setProfile({
           userId: targetUserId,
+          userCode: (profileData as any).user_code ?? null,
           fullName: profileData.full_name || "Anonymous",
           avatar: profileData.photo_url || "",
           age,
