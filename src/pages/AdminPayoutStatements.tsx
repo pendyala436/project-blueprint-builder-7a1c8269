@@ -341,6 +341,8 @@ const AdminPayoutStatements = () => {
 
   const buildRows = () => records.map((r, i) => ({
     sno: r.app_sno ?? i + 1,
+    gessId: codeMap[r.user_id] || '—',
+    userId: r.user_id || '—',
     purpose: r.beneficiary_purpose || 'Earnings Payout',
     name: r.account_holder_name || r.full_name || '—',
     phone: r.mobile_number || '—',
