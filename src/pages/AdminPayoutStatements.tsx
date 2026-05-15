@@ -45,6 +45,8 @@ interface PayoutRecord {
 // Spec §7 — 10 columns sourced from Bank KYC + 2 verification columns
 const PAYOUT_HEADERS = [
   'Beneficiary ID / S.No',
+  'GESS ID',
+  'User ID',
   'Beneficiary Purpose',
   'Name',
   'Phone Number',
