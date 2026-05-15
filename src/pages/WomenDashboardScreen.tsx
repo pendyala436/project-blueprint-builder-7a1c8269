@@ -215,6 +215,36 @@ const WomenDashboardScreen = () => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
   };
 
+  // Fetch GESS user_code map for visible men (online / matches / chats)
+  useEffect(() => {
+    const ids = new Set<string>();
+    rechargedMen.forEach(m => m.userId && ids.add(m.userId));
+    nonRechargedMen.forEach(m => m.userId && ids.add(m.userId));
+    matchedMen.forEach(m => m.userId && ids.add(m.userId));
+    womenActiveChats.forEach(c => c.partnerId && ids.add(c.partnerId));
+    const missing = Array.from(ids).filter(id => !(id in userCodeMap));
+    if (missing.length === 0) return;
+    (async () => {
+      const { data } = await supabase.from('profiles').select('user_id, user_code').in('user_id', missing);
+      if (!data) return;
+      setUserCodeMap(prev => {
+        const next = { ...prev };
+        (data as Array<{ user_id: string; user_code: string | null }>).forEach(p => {
+          if (p.user_code) next[p.user_id] = p.user_code;
+        });
+        return next;
+      });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rechargedMen, nonRechargedMen, matchedMen, womenActiveChats]);
+
+  const matchesUserSearch = (q: string, userId: string, name?: string | null) => {
+    const s = q.trim().toLowerCase();
+    if (!s) return true;
+    const code = (userCodeMap[userId] || '').toLowerCase();
+    return code.includes(s) || (userId || '').toLowerCase().includes(s) || (name || '').toLowerCase().includes(s);
+  };
+
   useEffect(() => {
     let mounted = true;
     let loadingTimeoutId: NodeJS.Timeout;
