@@ -105,6 +105,73 @@ function matchesLanguageGroup(userLanguage: string | null, groupLanguages: strin
   );
 }
 
+interface JwtClaims {
+  sub?: unknown;
+  exp?: unknown;
+  nbf?: unknown;
+  aud?: unknown;
+  role?: unknown;
+  [key: string]: unknown;
+}
+
+function decodeBase64Url(input: string): Uint8Array {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function decodeJwtPart<T>(part: string): T {
+  return JSON.parse(new TextDecoder().decode(decodeBase64Url(part))) as T;
+}
+
+async function verifyHs256Jwt(token: string): Promise<JwtClaims | null> {
+  const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET");
+  if (!jwtSecret) return null;
+
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const header = decodeJwtPart<{ alg?: string }>(encodedHeader);
+  if (header.alg !== "HS256") return null;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(jwtSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const isValid = await crypto.subtle.verify(
+    "HMAC",
+    key,
+    decodeBase64Url(encodedSignature),
+    new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
+  );
+  if (!isValid) return null;
+
+  const claims = decodeJwtPart<JwtClaims>(encodedPayload);
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof claims.exp === "number" && claims.exp <= now) return null;
+  if (typeof claims.nbf === "number" && claims.nbf > now) return null;
+  return claims;
+}
+
+async function getVerifiedClaims(authClient: any, token: string): Promise<{ claims: JwtClaims | null; error?: string }> {
+  const { data, error } = await authClient.auth.getClaims(token);
+  if (!error && data?.claims?.sub) {
+    return { claims: data.claims as JwtClaims };
+  }
+
+  const fallbackClaims = await verifyHs256Jwt(token).catch(() => null);
+  if (fallbackClaims?.sub) {
+    return { claims: fallbackClaims };
+  }
+
+  return { claims: null, error: error?.message || "Unable to verify JWT claims" };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -129,14 +196,14 @@ serve(async (req) => {
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claimsData, error: authError } = await authClient.auth.getClaims(token);
-    if (authError || !claimsData?.claims?.sub) {
-      console.error("[ai-women-approval] auth failed:", authError?.message);
+    const { claims, error: authError } = await getVerifiedClaims(authClient, token);
+    if (authError || typeof claims?.sub !== "string") {
+      console.error("[ai-women-approval] auth failed:", authError);
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const caller = { id: claimsData.claims.sub as string };
+    const caller = { id: claims.sub };
 
     // Parse request body for action type
     let action = "auto_approve"; // default action
