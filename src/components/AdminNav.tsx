@@ -193,8 +193,8 @@ const AdminNav = ({ children }: AdminNavProps) => {
 
   return (
     <div className="min-h-screen bg-[#ECE5DD] wa-admin">
-      {/* ── Mobile Header (WhatsApp style) ─────────────────────── */}
-      <header className="lg:hidden sticky top-0 z-50 bg-[#075E54] pt-[env(safe-area-inset-top)] shadow-md">
+      {/* ── Header (WhatsApp style — visible on all devices) ─────── */}
+      <header className="sticky top-0 z-50 bg-[#075E54] pt-[env(safe-area-inset-top)] shadow-md">
         <div className="flex items-center justify-between px-3 py-2.5">
           {/* Left: Hamburger */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
