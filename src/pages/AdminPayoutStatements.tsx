@@ -204,8 +204,23 @@ const AdminPayoutStatements = () => {
         setTimeMap(freshTimes);
       }
 
+      // Fetch GESS codes inline so the Excel matches on-screen data
+      let freshCodes: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: pData } = await supabase
+          .from('profiles')
+          .select('user_id, user_code')
+          .in('user_id', ids);
+        (pData || []).forEach((p: { user_id: string; user_code: string | null }) => {
+          if (p.user_code) freshCodes[p.user_id] = p.user_code;
+        });
+        setCodeMap(freshCodes);
+      }
+
       const rows = fresh.map((r, i) => ({
         sno: r.app_sno ?? i + 1,
+        gessId: freshCodes[r.user_id] || '—',
+        userId: r.user_id || '—',
         purpose: r.beneficiary_purpose || 'Earnings Payout',
         name: r.account_holder_name || r.full_name || '—',
         phone: r.mobile_number || '—',
@@ -231,10 +246,10 @@ const AdminPayoutStatements = () => {
         [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ₹${total.toFixed(2)}`, '', `Generated (IST): ${stamp}`],
         [],
         PAYOUT_HEADERS,
-        ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
+        ...rows.map(r => [r.sno, r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
       ];
       const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
+      ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
 
