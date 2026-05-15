@@ -211,8 +211,18 @@ const AdminPolicyAlerts = () => {
   const handleScanMessages = async () => {
     setScanning(true);
     try {
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      const accessToken = refreshData.session?.access_token;
+      if (refreshError || !accessToken) {
+        toast.error("Your admin session expired. Please sign in again.");
+        await supabase.auth.signOut();
+        navigate("/login");
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('content-moderation', {
         body: { action: "scan_recent_messages" },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (error) throw error;
