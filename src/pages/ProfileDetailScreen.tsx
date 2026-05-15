@@ -537,6 +537,11 @@ const ProfileDetailScreen = () => {
                   {profile.age && <span className="text-muted-foreground font-normal">, {profile.age}</span>}
                 </h1>
                 <p className="text-muted-foreground">{profile.gender}</p>
+                {profile.userCode && (
+                  <p className="text-xs font-mono text-muted-foreground/80 mt-1 tracking-wider">
+                    {profile.userCode}
+                  </p>
+                )}
               </div>
             </div>
 
