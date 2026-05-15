@@ -3131,3 +3131,7 @@ html {
     color: black;
   }
 }
+
+/* Hide scrollbar utility (used by admin bottom tab bar) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
