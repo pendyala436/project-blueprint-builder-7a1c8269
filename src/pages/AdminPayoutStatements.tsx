@@ -623,8 +623,8 @@ const AdminPayoutStatements = () => {
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ));
+                })()}
             </TableBody>
           </Table>
         </Card>
