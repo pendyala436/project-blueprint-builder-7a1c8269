@@ -119,8 +119,18 @@ const AdminPayoutStatements = () => {
   const loadRecords = async () => {
     setIsLoading(true);
     try {
-      const data = await getPayoutSnapshots(monthFilter);
-      setRecords(data as PayoutRecord[]);
+      const data = (await getPayoutSnapshots(monthFilter)) as PayoutRecord[];
+      // Dedupe: keep only the LATEST snapshot per user for the period.
+      // Each Generate run zeroes the wallet, so the newest row already holds
+      // only the new (incremental) balance — no old amounts carried over.
+      const seen = new Set<string>();
+      const latestPerUser: PayoutRecord[] = [];
+      for (const r of data) {
+        if (!r.user_id || seen.has(r.user_id)) continue;
+        seen.add(r.user_id);
+        latestPerUser.push(r);
+      }
+      setRecords(latestPerUser);
     } catch (err: any) {
       console.error('[Payouts] load failed:', err);
       toast({ title: 'Failed to load payouts', description: err?.message || 'Please retry', variant: 'destructive' });
@@ -143,8 +153,16 @@ const AdminPayoutStatements = () => {
         return;
       }
 
-      // 2) Re-fetch the freshly generated snapshot rows for THIS month
-      const fresh = (await getPayoutSnapshots(monthFilter)) as PayoutRecord[];
+      // 2) Re-fetch the freshly generated snapshot rows for THIS month, then
+      //    dedupe to keep only the latest snapshot per user (incremental balance).
+      const allFresh = (await getPayoutSnapshots(monthFilter)) as PayoutRecord[];
+      const _seen = new Set<string>();
+      const fresh: PayoutRecord[] = [];
+      for (const r of allFresh) {
+        if (!r.user_id || _seen.has(r.user_id)) continue;
+        _seen.add(r.user_id);
+        fresh.push(r);
+      }
       setRecords(fresh);
 
       // 3) Build Excel from fresh rows (don't depend on async state)
