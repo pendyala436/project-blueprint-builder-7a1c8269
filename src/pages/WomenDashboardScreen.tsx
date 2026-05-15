@@ -1421,6 +1421,7 @@ const WomenDashboardScreen = () => {
     </div>
   );
 
+  const [groupsRefreshKey, setGroupsRefreshKey] = useState(0);
   const renderGroupsTab = () => (
     <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">
@@ -1428,10 +1429,13 @@ const WomenDashboardScreen = () => {
           <Video className="h-4 w-4 text-primary" />
           Private Groups
         </span>
+        <Button variant="ghost" size="sm" onClick={() => setGroupsRefreshKey(k => k + 1)} className="h-7 w-7 p-0" aria-label="Refresh groups">
+          <RefreshCw className="w-3.5 h-3.5" />
+        </Button>
       </div>
       {currentUserId ? (
         <div className="px-4 py-3">
-          <PrivateGroupsSection currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
+          <PrivateGroupsSection key={groupsRefreshKey} currentUserId={currentUserId} userName={userName || 'User'} userPhoto={userPhoto} />
         </div>
       ) : (
         <div className="text-center py-10">
@@ -1453,15 +1457,32 @@ const WomenDashboardScreen = () => {
           <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
         </Button>
       </div>
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input value={searchMatches} onChange={(e) => setSearchMatches(e.target.value)} placeholder="Search GESS ID, User ID, or name…" className="h-8 pl-8 text-xs" />
+        </div>
+      </div>
       {loadingMatches ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : matchedMen.length > 0 ? (
-        matchedMen.map((man) => (
+      ) : (() => {
+        const filteredMatches = matchedMen.filter(m => matchesUserSearch(searchMatches, m.userId, m.fullName));
+        if (filteredMatches.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">{searchMatches ? 'No matches found' : 'No matches yet'}</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">{searchMatches ? 'Try a different search' : 'Matches will appear here when men connect with you'}</p>
+            </div>
+          );
+        }
+        return filteredMatches.map((man) => (
           <UserContactCard
             key={man.matchId}
             name={man.fullName || "User"}
+            subtitle={userCodeMap[man.userId] || undefined}
             photoUrl={man.photoUrl}
             age={man.age}
             language={man.primaryLanguage}
@@ -1476,14 +1497,8 @@ const WomenDashboardScreen = () => {
               </div>
             }
           />
-        ))
-      ) : (
-        <div className="text-center py-16">
-          <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No matches yet</p>
-          <p className="text-muted-foreground/60 text-xs mt-1">Matches will appear here when men connect with you</p>
-        </div>
-      )}
+        ));
+      })()}
     </div>
   );
 
