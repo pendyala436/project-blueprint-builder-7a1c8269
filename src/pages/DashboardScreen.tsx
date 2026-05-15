@@ -1521,13 +1521,32 @@ const DashboardScreen = () => {
           <MessageCircle className="h-4 w-4 text-primary" />
           Active Chats ({activeChats.length})
         </span>
+        <Button variant="ghost" size="sm" onClick={fetchActiveChats} disabled={loadingChats} className="h-7 w-7 p-0">
+          <RefreshCw className={cn("w-3.5 h-3.5", loadingChats && "animate-spin")} />
+        </Button>
+      </div>
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input value={searchChats} onChange={(e) => setSearchChats(e.target.value)} placeholder="Search GESS ID, User ID, or name…" className="h-8 pl-8 text-xs" />
+        </div>
       </div>
       {loadingChats ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : activeChats.length > 0 ? (
-        activeChats.map((chat) => (
+      ) : (() => {
+        const filteredChats = activeChats.filter(c => matchesUserSearch(searchChats, c.partnerId, c.partnerName));
+        if (filteredChats.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">{searchChats ? 'No matches found' : 'No active chats'}</p>
+              <p className="text-muted-foreground/60 text-xs mt-1">{searchChats ? 'Try a different search' : 'Start a chat from the Online tab'}</p>
+            </div>
+          );
+        }
+        return filteredChats.map((chat) => (
           <div
             key={chat.chatId}
             className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 active:bg-muted/70 transition-colors cursor-pointer border-b border-border/30"
@@ -1553,6 +1572,9 @@ const DashboardScreen = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={cn("text-sm truncate", chat.unreadCount > 0 ? "font-bold text-foreground" : "font-semibold text-foreground")}>{chat.partnerName}</span>
+                  {userCodeMap[chat.partnerId] && (
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-mono flex-shrink-0">{userCodeMap[chat.partnerId]}</span>
+                  )}
                   {(() => {
                     const ageMs = Date.now() - new Date(chat.lastMessageAt).getTime();
                     if (chat.partnerIsOnline && ageMs < 60000) {
@@ -1591,14 +1613,8 @@ const DashboardScreen = () => {
               </div>
             </div>
           </div>
-        ))
-      ) : (
-        <div className="text-center py-16">
-          <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No active chats</p>
-          <p className="text-muted-foreground/60 text-xs mt-1">Start a chat from the Online tab</p>
-        </div>
-      )}
+        ));
+      })()}
     </div>
   );
 
