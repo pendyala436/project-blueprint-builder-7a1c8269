@@ -143,7 +143,9 @@ const AdminUserLookup = () => {
       users = users.filter(u =>
         (u.full_name?.toLowerCase().includes(q)) ||
         (u.email?.toLowerCase().includes(q)) ||
-        (u.phone?.includes(q))
+        (u.phone?.includes(q)) ||
+        (u.user_code?.toLowerCase().includes(q)) ||
+        (u.user_id?.toLowerCase().includes(q))
       );
     }
     setFilteredUsers(users);
