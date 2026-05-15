@@ -365,7 +365,7 @@ const AdminPayoutStatements = () => {
     const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const csv = [
       PAYOUT_HEADERS.join(','),
-      ...rows.map(r => [r.sno, escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount, r.loginTime, r.billingTime].join(',')),
+      ...rows.map(r => [r.sno, escape(r.gessId), escape(r.userId), escape(r.purpose), escape(r.name), escape(r.phone), escape(r.email), escape(r.address), escape(r.account), r.ifsc, escape(r.upi), r.amount, r.loginTime, r.billingTime].join(',')),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
