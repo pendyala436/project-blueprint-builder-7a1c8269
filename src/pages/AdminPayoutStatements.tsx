@@ -422,7 +422,14 @@ const AdminPayoutStatements = () => {
             <h1 className="text-2xl font-bold text-foreground">Payout Statements</h1>
             <p className="text-sm text-muted-foreground">Monthly payout snapshots — sourced from Bank KYC</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            <Input
+              type="search"
+              placeholder="Search GESS ID, user UUID, name, phone…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-64"
+            />
             <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-40" />
             <Button variant="outline" size="sm" onClick={loadRecords} disabled={isLoading}>
               <RefreshCw className={`w-4 h-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
