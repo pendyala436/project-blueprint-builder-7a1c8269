@@ -318,8 +318,8 @@ const AdminUserLookup = () => {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{u.full_name || "Unnamed"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {u.gender?.charAt(0).toUpperCase()}{u.gender?.slice(1)} · {u.age || "?"} yrs
+                            <p className="text-xs text-muted-foreground truncate">
+                              {u.user_code || '—'} · {u.gender?.charAt(0).toUpperCase()}{u.gender?.slice(1)} · {u.age || "?"} yrs
                             </p>
                           </div>
                           {u.is_indian && u.gender?.toLowerCase() === "female" && (
