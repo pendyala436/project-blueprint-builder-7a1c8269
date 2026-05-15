@@ -1655,15 +1655,36 @@ const DashboardScreen = () => {
           <RefreshCw className={cn("w-3.5 h-3.5", loadingMatches && "animate-spin")} />
         </Button>
       </div>
+      <div className="px-3 py-2 border-b border-border/30">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input value={searchMatches} onChange={(e) => setSearchMatches(e.target.value)} placeholder="Search GESS ID, User ID, or name…" className="h-8 pl-8 text-xs" />
+        </div>
+      </div>
       {loadingMatches ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : matchedWomen.length > 0 ? (
-        matchedWomen.map((woman) => (
+      ) : (() => {
+        const filteredMatches = matchedWomen.filter(w => matchesUserSearch(searchMatches, w.userId, w.fullName));
+        if (filteredMatches.length === 0) {
+          return (
+            <div className="text-center py-16">
+              <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">{searchMatches ? 'No matches found' : 'No matches yet'}</p>
+              {!searchMatches && (
+                <Button variant="aurora" size="sm" className="mt-3 gap-1" onClick={() => navigate("/match-discovery")}>
+                  <Compass className="w-4 h-4" /> Discover
+                </Button>
+              )}
+            </div>
+          );
+        }
+        return filteredMatches.map((woman) => (
           <UserContactCard
             key={woman.matchId}
             name={woman.fullName || "User"}
+            subtitle={userCodeMap[woman.userId] || undefined}
             photoUrl={woman.photoUrl}
             age={woman.age}
             language={woman.primaryLanguage}
@@ -1678,16 +1699,8 @@ const DashboardScreen = () => {
               </div>
             }
           />
-        ))
-      ) : (
-        <div className="text-center py-16">
-          <Heart className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">No matches yet</p>
-          <Button variant="aurora" size="sm" className="mt-3 gap-1" onClick={() => navigate("/match-discovery")}>
-            <Compass className="w-4 h-4" /> Discover
-          </Button>
-        </div>
-      )}
+        ));
+      })()}
     </div>
   );
 
