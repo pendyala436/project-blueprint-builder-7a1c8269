@@ -172,6 +172,12 @@ const WomenDashboardScreen = () => {
     partnerActiveChatCount: number;
   }>>([]);
   const [loadingWomenChats, setLoadingWomenChats] = useState(false);
+
+  // GESS ID search across Online / Chats / Matches
+  const [userCodeMap, setUserCodeMap] = useState<Record<string, string>>({});
+  const [searchOnline, setSearchOnline] = useState("");
+  const [searchChats, setSearchChats] = useState("");
+  const [searchMatches, setSearchMatches] = useState("");
   
   // All women are in paid mode by default - no mode switching needed
   const [matchFilters, setMatchFilters] = useState<MatchFilters>({
