@@ -1426,83 +1426,89 @@ const DashboardScreen = () => {
         </div>
       ) : (
         <>
-          {sameLanguageWomen.length > 0 && (
-            <>
-              <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
-                <span className="text-xs font-semibold text-primary">{userLanguage}</span>
-                <span className="text-[10px] text-muted-foreground ml-1">({sameLanguageWomen.length})</span>
-              </div>
-              {sameLanguageWomen.map((woman) => (
-                <UserContactCard
-                  key={woman.id}
-                  name={woman.full_name || "Anonymous"}
-                  photoUrl={woman.photo_url}
-                  age={woman.age}
-                  language={woman.primary_language}
-                  country={woman.country}
-                  activeChatCount={woman.active_chat_count}
-                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                  actions={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
-                      {/* Audio Call - same language only */}
-                      {settings.audioCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
-                          <Phone className="w-3.5 h-3.5 text-primary" />
-                        </Button>
-                      )}
-                      {/* Video Call - same language only */}
-                      {settings.videoCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
-                          <Video className="w-3.5 h-3.5 text-primary" />
-                        </Button>
-                      )}
+          {(() => {
+            const filteredSame = sameLanguageWomen.filter(w => matchesUserSearch(searchOnline, w.user_id, w.full_name));
+            const filteredOther = indianTranslatedWomen.filter(w => matchesUserSearch(searchOnline, w.user_id, w.full_name));
+            return (
+              <>
+                {filteredSame.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 bg-primary/5 border-b border-border/30">
+                      <span className="text-xs font-semibold text-primary">{userLanguage}</span>
+                      <span className="text-[10px] text-muted-foreground ml-1">({filteredSame.length})</span>
                     </div>
-                  }
-                />
-              ))}
-            </>
-          )}
+                    {filteredSame.map((woman) => (
+                      <UserContactCard
+                        key={woman.id}
+                        name={woman.full_name || "Anonymous"}
+                        subtitle={userCodeMap[woman.user_id] || undefined}
+                        photoUrl={woman.photo_url}
+                        age={woman.age}
+                        language={woman.primary_language}
+                        country={woman.country}
+                        activeChatCount={woman.active_chat_count}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        actions={
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
+                              <Eye className="w-3.5 h-3.5 text-primary" />
+                            </Button>
+                            {settings.audioCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'audio'); }}>
+                                <Phone className="w-3.5 h-3.5 text-primary" />
+                              </Button>
+                            )}
+                            {settings.videoCallEnabled !== false && userCountry === "IN" && (woman.country === 'IN' || woman.country?.toLowerCase().includes('india')) && woman.primary_language === userLanguage && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); initiateCall(woman.user_id, woman.full_name || "User", woman.photo_url, 'video'); }}>
+                                <Video className="w-3.5 h-3.5 text-primary" />
+                              </Button>
+                            )}
+                          </div>
+                        }
+                      />
+                    ))}
+                  </>
+                )}
 
-          {/* Other Languages Section */}
-          {indianTranslatedWomen.length > 0 && (
-            <>
-              <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
-                <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
-                <span className="text-[10px] text-muted-foreground ml-1">({indianTranslatedWomen.length})</span>
-              </div>
-              {indianTranslatedWomen.map((woman) => (
-                <UserContactCard
-                  key={woman.id}
-                  name={woman.full_name || "Anonymous"}
-                  photoUrl={woman.photo_url}
-                  age={woman.age}
-                  language={woman.primary_language}
-                  country={woman.country}
-                  activeChatCount={woman.active_chat_count}
-                  subtitle={`${woman.primary_language} → ${userLanguage}`}
-                  onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
-                  actions={
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
-                        <Eye className="w-3.5 h-3.5 text-primary" />
-                      </Button>
+                {filteredOther.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 bg-muted/30 border-b border-border/30">
+                      <span className="text-xs font-semibold text-muted-foreground">Other Languages</span>
+                      <span className="text-[10px] text-muted-foreground ml-1">({filteredOther.length})</span>
                     </div>
-                  }
-                />
-              ))}
-            </>
-          )}
+                    {filteredOther.map((woman) => (
+                      <UserContactCard
+                        key={woman.id}
+                        name={woman.full_name || "Anonymous"}
+                        photoUrl={woman.photo_url}
+                        age={woman.age}
+                        language={woman.primary_language}
+                        country={woman.country}
+                        activeChatCount={woman.active_chat_count}
+                        subtitle={userCodeMap[woman.user_id] ? `${userCodeMap[woman.user_id]} • ${woman.primary_language} → ${userLanguage}` : `${woman.primary_language} → ${userLanguage}`}
+                        onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
+                        actions={
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${woman.user_id}`); }}>
+                              <Eye className="w-3.5 h-3.5 text-primary" />
+                            </Button>
+                          </div>
+                        }
+                      />
+                    ))}
+                  </>
+                )}
 
-          {sameLanguageWomen.length === 0 && indianTranslatedWomen.length === 0 && notifications.length === 0 && (
-            <div className="text-center py-16">
-              <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-muted-foreground text-sm">No women online right now</p>
-              <p className="text-muted-foreground/60 text-xs mt-1">Check back later</p>
-            </div>
-          )}
+                {filteredSame.length === 0 && filteredOther.length === 0 && notifications.length === 0 && (
+                  <div className="text-center py-16">
+                    <MessageCircle className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                    <p className="text-muted-foreground text-sm">{searchOnline ? 'No matches found' : 'No women online right now'}</p>
+                    <p className="text-muted-foreground/60 text-xs mt-1">{searchOnline ? 'Try a different search' : 'Check back later'}</p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </>
       )}
     </div>
