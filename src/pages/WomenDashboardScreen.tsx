@@ -61,6 +61,7 @@ import { WomenKYCForm } from "@/components/WomenKYCForm";
 import { CallHistoryTab } from "@/components/CallHistoryTab";
 import { useChatPricing } from '@/hooks/useChatPricing';
 import { StatementTab } from '@/components/StatementTab';
+import { ScrollingAnnouncementsBar } from '@/components/ScrollingAnnouncementsBar';
 
 interface Notification {
   id: string;
