@@ -44,6 +44,7 @@ interface UserPhoto {
 
 interface ProfileData {
   userId: string;
+  userCode: string | null;
   fullName: string;
   avatar: string;
   age: number | null;
