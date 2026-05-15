@@ -107,6 +107,24 @@ const AdminPayoutStatements = () => {
     })();
   }, [records, monthFilter]);
 
+  // Fetch GESS user codes for visible records
+  useEffect(() => {
+    const ids = records.map(r => r.user_id).filter(Boolean);
+    if (ids.length === 0) { setCodeMap({}); return; }
+    (async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, user_code')
+        .in('user_id', ids);
+      if (error) { setCodeMap({}); return; }
+      const map: Record<string, string> = {};
+      (data || []).forEach((p: { user_id: string; user_code: string | null }) => {
+        if (p.user_code) map[p.user_id] = p.user_code;
+      });
+      setCodeMap(map);
+    })();
+  }, [records]);
+
   // Realtime: refresh when snapshots change
   useEffect(() => {
     const channel = supabase
