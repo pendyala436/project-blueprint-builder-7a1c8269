@@ -158,48 +158,9 @@ async function verifyHs256Jwt(token: string): Promise<JwtClaims | null> {
   return claims;
 }
 
-function isUsableJwtClaims(claims: JwtClaims | null): claims is JwtClaims & { sub: string } {
-  if (!claims || typeof claims.sub !== "string") return false;
-  const now = Math.floor(Date.now() / 1000);
-  if (typeof claims.exp === "number" && claims.exp <= now) return false;
-  if (typeof claims.nbf === "number" && claims.nbf > now) return false;
-  return true;
-}
-
-async function verifyJwtByPostgrest(
-  token: string,
-  authHeader: string,
-  supabaseUrl: string,
-  supabaseAnonKey: string,
-): Promise<JwtClaims | null> {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-
-  const decodedClaims = decodeJwtPart<JwtClaims>(parts[1]);
-  if (!isUsableJwtClaims(decodedClaims)) return null;
-
-  // PostgREST validates the JWT signature/expiry before running the query. This
-  // fallback handles Supabase Auth tokens whose auth sessions are already absent,
-  // while still rejecting forged or expired tokens before using service-role data.
-  const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { error } = await callerClient
-    .from("user_roles")
-    .select("role", { head: true, count: "exact" })
-    .eq("user_id", decodedClaims.sub)
-    .limit(1);
-
-  if (error) return null;
-  return decodedClaims;
-}
-
 async function getVerifiedClaims(
   authClient: any,
   token: string,
-  authHeader: string,
-  supabaseUrl: string,
-  supabaseAnonKey: string,
 ): Promise<{ claims: JwtClaims | null; error?: string }> {
   const { data, error } = await authClient.auth.getClaims(token);
   if (!error && data?.claims?.sub) {
@@ -209,11 +170,6 @@ async function getVerifiedClaims(
   const fallbackClaims = await verifyHs256Jwt(token).catch(() => null);
   if (fallbackClaims?.sub) {
     return { claims: fallbackClaims };
-  }
-
-  const postgrestVerifiedClaims = await verifyJwtByPostgrest(token, authHeader, supabaseUrl, supabaseAnonKey).catch(() => null);
-  if (postgrestVerifiedClaims?.sub) {
-    return { claims: postgrestVerifiedClaims };
   }
 
   return { claims: null, error: error?.message || "Unable to verify JWT claims" };
@@ -243,7 +199,7 @@ serve(async (req) => {
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { claims, error: authError } = await getVerifiedClaims(authClient, token, authHeader, supabaseUrl, supabaseAnonKey);
+    const { claims, error: authError } = await getVerifiedClaims(authClient, token);
     if (authError || typeof claims?.sub !== "string") {
       console.error("[ai-women-approval] auth failed:", authError);
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
