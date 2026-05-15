@@ -85,6 +85,7 @@ import { AppBottomTabs, getMenTabs } from "@/components/AppBottomTabs";
 import { UserContactCard } from "@/components/UserContactCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
+import { ScrollingAnnouncementsBar } from "@/components/ScrollingAnnouncementsBar";
 // TransactionStatementTab removed — billing system removed
 interface Notification {
   id: string;
@@ -1840,6 +1841,8 @@ const DashboardScreen = () => {
           setTimeout(() => document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' }), 100);
         }}
       />
+
+      <ScrollingAnnouncementsBar gender="men" />
 
       {/* Tab Content */}
       <div className="min-h-0 flex-1 overflow-hidden">

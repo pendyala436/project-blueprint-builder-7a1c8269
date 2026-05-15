@@ -2352,6 +2352,36 @@ export type Database = {
         }
         Relationships: []
       }
+      scrolling_announcements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          message: string
+          target_group: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          target_group?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          target_group?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_alerts: {
         Row: {
           alert_type: string

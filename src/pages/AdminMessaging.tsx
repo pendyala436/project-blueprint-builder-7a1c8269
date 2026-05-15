@@ -13,9 +13,10 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
   Send, Users, MessageSquare, Globe, Search, RefreshCw, Trash2,
-  UserCheck, Crown, Loader2, Mail, Inbox, Shield
+  UserCheck, Crown, Loader2, Mail, Inbox, Shield, Megaphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollingAnnouncementsManager } from '@/components/ScrollingAnnouncementsManager';
 
 type TargetGroup = 'all' | 'indian_women' | 'world_women' | 'indian_men' | 'world_men';
 
@@ -59,7 +60,7 @@ const GROUP_CONFIG: { key: TargetGroup; label: string; icon: React.ReactNode; co
 
 const AdminMessaging = () => {
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
-  const [activeTab, setActiveTab] = useState<'inbox' | 'broadcast' | 'chat'>('inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'broadcast' | 'chat' | 'scrolling'>('inbox');
   const [selectedGroup, setSelectedGroup] = useState<TargetGroup>('all');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -378,8 +379,8 @@ const AdminMessaging = () => {
           </Badge>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'inbox' | 'broadcast' | 'chat')}>
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'inbox' | 'broadcast' | 'chat' | 'scrolling')}>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-2xl h-auto">
             <TabsTrigger value="inbox" className="gap-2">
               <Inbox className="h-4 w-4" />
               Inbox
@@ -394,6 +395,10 @@ const AdminMessaging = () => {
             <TabsTrigger value="chat" className="gap-2">
               <MessageSquare className="h-4 w-4" />
               Direct Chat
+            </TabsTrigger>
+            <TabsTrigger value="scrolling" className="gap-2">
+              <Megaphone className="h-4 w-4" />
+              Scrolling
             </TabsTrigger>
           </TabsList>
 
@@ -752,6 +757,9 @@ const AdminMessaging = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+          <TabsContent value="scrolling" className="mt-4">
+            <ScrollingAnnouncementsManager />
           </TabsContent>
         </Tabs>
       </div>
