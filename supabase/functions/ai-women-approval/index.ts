@@ -158,14 +158,6 @@ async function verifyHs256Jwt(token: string): Promise<JwtClaims | null> {
   return claims;
 }
 
-function isUsableJwtClaims(claims: JwtClaims | null): claims is JwtClaims & { sub: string } {
-  if (!claims || typeof claims.sub !== "string") return false;
-  const now = Math.floor(Date.now() / 1000);
-  if (typeof claims.exp === "number" && claims.exp <= now) return false;
-  if (typeof claims.nbf === "number" && claims.nbf > now) return false;
-  return true;
-}
-
 async function getVerifiedClaims(
   authClient: any,
   token: string,
