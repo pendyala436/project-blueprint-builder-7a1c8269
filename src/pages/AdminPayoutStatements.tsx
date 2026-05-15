@@ -406,10 +406,10 @@ const AdminPayoutStatements = () => {
       [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ₹${totalAmount.toFixed(2)}`],
       [],
       PAYOUT_HEADERS,
-      ...rows.map(r => [r.sno, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
+      ...rows.map(r => [r.sno, r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 38 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 24 }, { wch: 30 }, { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Payouts');
     XLSX.writeFile(wb, `payout-${monthFilter}.xlsx`);
