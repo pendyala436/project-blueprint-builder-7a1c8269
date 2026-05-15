@@ -256,19 +256,66 @@ const AdminNav = ({ children }: AdminNavProps) => {
         </div>
       </header>
 
-      <div className="flex">
-        {/* ── Desktop Sidebar (WhatsApp dark) ────────────────────── */}
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-[#1E2126] shadow-xl">
-          <NavContent />
-        </aside>
+      {/* ── Main Content (full width, scrolls in both axes) ───────── */}
+      <main className="overflow-x-auto overflow-y-auto pb-[calc(72px+env(safe-area-inset-bottom))]">
+        <div className="max-w-7xl mx-auto p-3 sm:p-4 md:p-6 min-w-max">
+          {children}
+        </div>
+      </main>
 
-        {/* ── Main Content (scrolls both vertically and horizontally) ── */}
-        <main className="flex-1 lg:pl-64 overflow-x-auto overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-3 sm:p-4 md:p-6 min-w-max">
-            {children}
-          </div>
-        </main>
-      </div>
+      {/* ── WhatsApp-style Bottom Tab Bar (horizontally scrollable) ── */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 bg-[#1E2126] border-t border-white/10 shadow-[0_-2px_8px_rgba(0,0,0,0.3)] pb-[env(safe-area-inset-bottom)]"
+        aria-label="Admin sections"
+      >
+        <div className="flex overflow-x-auto overflow-y-hidden no-scrollbar">
+          {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                ref={(el) => {
+                  if (el && active) {
+                    el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                  }
+                }}
+                className={cn(
+                  "relative flex flex-col items-center justify-center gap-0.5 shrink-0 min-w-[68px] px-2 py-2 transition-colors",
+                  active
+                    ? "text-[#25D366]"
+                    : "text-white/60 hover:text-white"
+                )}
+                aria-current={active ? "page" : undefined}
+              >
+                <div className="relative">
+                  {item.icon}
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-[#25D366] text-white text-[9px] font-bold flex items-center justify-center">
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-medium leading-tight whitespace-nowrap">
+                  {item.title}
+                </span>
+                {active && (
+                  <span className="absolute top-0 left-2 right-2 h-0.5 bg-[#25D366] rounded-full" />
+                )}
+              </button>
+            );
+          })}
+          {/* Logout pinned at the end */}
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center justify-center gap-0.5 shrink-0 min-w-[68px] px-2 py-2 text-white/60 hover:text-red-400 transition-colors border-l border-white/10"
+            aria-label="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="text-[10px] font-medium leading-tight">Logout</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 };
