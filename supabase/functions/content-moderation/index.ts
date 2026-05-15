@@ -114,8 +114,59 @@ function moderateContent(content: string): ModerationResult {
   };
 }
 
+interface JwtClaims {
+  sub?: unknown;
+  exp?: unknown;
+  nbf?: unknown;
+  [key: string]: unknown;
+}
+
+function decodeBase64Url(input: string): Uint8Array {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function decodeJwtPart<T>(part: string): T {
+  return JSON.parse(new TextDecoder().decode(decodeBase64Url(part))) as T;
+}
+
+async function verifyHs256Jwt(token: string): Promise<JwtClaims | null> {
+  const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET");
+  if (!jwtSecret) return null;
+
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  const [encodedHeader, encodedPayload, encodedSignature] = parts;
+  const header = decodeJwtPart<{ alg?: string }>(encodedHeader);
+  if (header.alg !== "HS256") return null;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(jwtSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  const isValid = await crypto.subtle.verify(
+    "HMAC",
+    key,
+    decodeBase64Url(encodedSignature),
+    new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
+  );
+  if (!isValid) return null;
+
+  const claims = decodeJwtPart<JwtClaims>(encodedPayload);
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof claims.exp === "number" && claims.exp <= now) return null;
+  if (typeof claims.nbf === "number" && claims.nbf > now) return null;
+  return claims;
+}
+
 // Helper to verify authenticated user
-async function verifyAuth(req: Request, supabase: any): Promise<{ isValid: boolean; error?: string; userId?: string; isAdmin?: boolean }> {
+async function verifyAuth(req: Request, supabase: any, authClient: any): Promise<{ isValid: boolean; error?: string; userId?: string; isAdmin?: boolean }> {
   const authHeader = req.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { isValid: false, error: 'Missing or invalid Authorization header' };
@@ -123,8 +174,9 @@ async function verifyAuth(req: Request, supabase: any): Promise<{ isValid: boole
 
   const token = authHeader.replace('Bearer ', '');
   
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
+  const { data: claimsData, error } = await authClient.auth.getClaims(token);
+  const claims = !error && claimsData?.claims?.sub ? claimsData.claims : await verifyHs256Jwt(token).catch(() => null);
+  if (typeof claims?.sub !== 'string') {
     return { isValid: false, error: 'Invalid or expired token' };
   }
 
@@ -132,11 +184,11 @@ async function verifyAuth(req: Request, supabase: any): Promise<{ isValid: boole
   const { data: roleData } = await supabase
     .from('user_roles')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('user_id', claims.sub)
     .eq('role', 'admin')
     .maybeSingle();
 
-  return { isValid: true, userId: user.id, isAdmin: !!roleData };
+  return { isValid: true, userId: claims.sub, isAdmin: !!roleData };
 }
 
 serve(async (req) => {
@@ -147,10 +199,15 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get('authorization') || '';
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     // SECURITY: Verify caller is authenticated
-    const authResult = await verifyAuth(req, supabase);
+    const authResult = await verifyAuth(req, supabase, authClient);
     if (!authResult.isValid) {
       console.log(`[SECURITY] Unauthorized access to content-moderation: ${authResult.error}`);
       return new Response(
