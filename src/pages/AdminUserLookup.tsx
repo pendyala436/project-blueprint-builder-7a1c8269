@@ -271,7 +271,7 @@ const AdminUserLookup = () => {
             <Card>
               <CardContent className="pt-4 space-y-3">
                 <Input
-                  placeholder="Search by name, email, or phone..."
+                  placeholder="Search by name, email, phone, GESS ID, or user UUID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full"
