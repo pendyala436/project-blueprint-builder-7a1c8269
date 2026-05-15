@@ -6,12 +6,14 @@ import { cn } from '@/lib/utils';
 interface Announcement {
   id: string;
   message: string;
-  target_group: 'all' | 'men' | 'women';
+  target_group: 'all' | 'all_men' | 'all_women' | 'indian_men' | 'indian_women';
 }
 
 interface Props {
   /** 'men' | 'women' — used to filter target_group */
   gender?: string;
+  /** Whether the viewing user is Indian. Defaults to true (India-only market). */
+  isIndian?: boolean;
   className?: string;
 }
 
@@ -19,14 +21,24 @@ interface Props {
  * Marquee-style ticker showing active scrolling announcements.
  * New announcements append to the end of the scroll automatically.
  */
-export const ScrollingAnnouncementsBar = ({ gender, className }: Props) => {
+export const ScrollingAnnouncementsBar = ({ gender, isIndian = true, className }: Props) => {
   const [items, setItems] = useState<Announcement[]>([]);
 
   const load = async () => {
     const g = (gender || '').toLowerCase();
-    const targets = g === 'female' || g === 'women' ? ['all', 'women']
-      : g === 'male' || g === 'men' ? ['all', 'men']
-      : ['all', 'men', 'women'];
+    const isMale = g === 'male' || g === 'men' || g === 'm';
+    const isFemale = g === 'female' || g === 'women' || g === 'w' || g === 'f';
+
+    const targets: string[] = ['all'];
+    if (isMale) {
+      targets.push('all_men');
+      if (isIndian) targets.push('indian_men');
+    } else if (isFemale) {
+      targets.push('all_women');
+      if (isIndian) targets.push('indian_women');
+    } else {
+      targets.push('all_men', 'all_women', 'indian_men', 'indian_women');
+    }
 
     const { data } = await supabase
       .from('scrolling_announcements')
