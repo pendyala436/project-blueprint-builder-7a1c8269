@@ -76,6 +76,9 @@ const AdminPayoutStatements = () => {
   const [monthFilter, setMonthFilter] = useState(format(new Date(), 'yyyy-MM'));
   // user_id -> { login_seconds, billing_seconds } for the active month
   const [timeMap, setTimeMap] = useState<Record<string, { login: number; billing: number }>>({});
+  // user_id -> GESS ID (e.g. GESS_F_001)
+  const [codeMap, setCodeMap] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => { loadRecords(); }, [monthFilter]);
 
