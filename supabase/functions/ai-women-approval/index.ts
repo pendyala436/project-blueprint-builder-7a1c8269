@@ -125,16 +125,18 @@ serve(async (req) => {
     }
     const token = authHeader.replace("Bearer ", "");
 
-    // Use anon-key auth client for proper JWT verification (not service role)
+    // Verify JWT via getClaims (compatible with Supabase signing-keys system)
     const authClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
-    if (authError || !caller) {
+    const { data: claimsData, error: authError } = await authClient.auth.getClaims(token);
+    if (authError || !claimsData?.claims?.sub) {
+      console.error("[ai-women-approval] auth failed:", authError?.message);
       return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const caller = { id: claimsData.claims.sub as string };
 
     // Parse request body for action type
     let action = "auto_approve"; // default action
