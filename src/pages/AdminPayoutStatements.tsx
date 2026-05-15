@@ -383,15 +383,15 @@ const AdminPayoutStatements = () => {
     doc.setFontSize(10);
     doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ₹${totalAmount.toFixed(2)}`, 14, 23);
 
-    const rows = buildRows().map(r => [String(r.sno), r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]);
+    const rows = buildRows().map(r => [String(r.sno), r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]);
 
     autoTable(doc, {
       startY: 30,
       head: [PAYOUT_HEADERS],
       body: rows,
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [99, 102, 241], fontSize: 7 },
-      columnStyles: { 9: { halign: 'right' }, 10: { halign: 'right' }, 11: { halign: 'right' } },
+      styles: { fontSize: 6, cellPadding: 1.2 },
+      headStyles: { fillColor: [99, 102, 241], fontSize: 6 },
+      columnStyles: { 11: { halign: 'right' }, 12: { halign: 'right' }, 13: { halign: 'right' } },
     });
 
     doc.save(`payout-${monthFilter}.pdf`);
