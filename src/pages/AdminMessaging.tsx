@@ -60,7 +60,7 @@ const GROUP_CONFIG: { key: TargetGroup; label: string; icon: React.ReactNode; co
 
 const AdminMessaging = () => {
   const { isAdmin, isLoading: adminLoading } = useAdminAccess();
-  const [activeTab, setActiveTab] = useState<'inbox' | 'broadcast' | 'chat'>('inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'broadcast' | 'chat' | 'scrolling'>('inbox');
   const [selectedGroup, setSelectedGroup] = useState<TargetGroup>('all');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
