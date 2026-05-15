@@ -379,8 +379,8 @@ const AdminMessaging = () => {
           </Badge>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'inbox' | 'broadcast' | 'chat')}>
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'inbox' | 'broadcast' | 'chat' | 'scrolling')}>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-2xl h-auto">
             <TabsTrigger value="inbox" className="gap-2">
               <Inbox className="h-4 w-4" />
               Inbox
@@ -395,6 +395,10 @@ const AdminMessaging = () => {
             <TabsTrigger value="chat" className="gap-2">
               <MessageSquare className="h-4 w-4" />
               Direct Chat
+            </TabsTrigger>
+            <TabsTrigger value="scrolling" className="gap-2">
+              <Megaphone className="h-4 w-4" />
+              Scrolling
             </TabsTrigger>
           </TabsList>
 
