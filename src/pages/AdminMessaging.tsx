@@ -758,6 +758,9 @@ const AdminMessaging = () => {
               </Card>
             </div>
           </TabsContent>
+          <TabsContent value="scrolling" className="mt-4">
+            <ScrollingAnnouncementsManager />
+          </TabsContent>
         </Tabs>
       </div>
     </AdminNav>
