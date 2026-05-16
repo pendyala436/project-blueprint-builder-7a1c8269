@@ -10,6 +10,16 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { supabase } from '@/integrations/supabase/client';
 
+const isIframeOrPreviewHost = () => {
+  if (typeof window === 'undefined') return true;
+  const inIframe = (() => {
+    try { return window.self !== window.top; }
+    catch { return true; }
+  })();
+  const host = window.location.hostname;
+  return inIframe || host.includes('id-preview--') || host.includes('lovableproject.com');
+};
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -70,6 +80,7 @@ interface PWAState {
 
 export function usePWA() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const disableServiceWorker = isIframeOrPreviewHost();
   const [state, setState] = useState<PWAState>({
     isInstallable: false,
     isInstalled: false,
@@ -113,7 +124,12 @@ export function usePWA() {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
+    immediate: !disableServiceWorker,
     onRegistered(registration) {
+      if (disableServiceWorker) {
+        registration?.unregister().catch(() => undefined);
+        return;
+      }
       console.log('Service Worker registered:', registration);
       checkPushPermission();
       checkStorageInfo();
