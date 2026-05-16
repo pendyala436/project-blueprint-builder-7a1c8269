@@ -121,6 +121,56 @@ export function usePWA() {
     isPersistentStorageGranted: false,
   });
 
+  const checkPushPermission = useCallback(async () => {
+    if ('Notification' in window) {
+      const permission = Notification.permission;
+      setState(prev => ({ 
+        ...prev, 
+        isPushEnabled: permission === 'granted',
+        pushPermission: permission,
+      }));
+    }
+  }, []);
+
+  const checkStorageInfo = useCallback(async () => {
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const isPersisted = await navigator.storage.persisted?.() || false;
+        setState(prev => ({
+          ...prev,
+          storageQuota: estimate.quota || 0,
+          storageUsed: estimate.usage || 0,
+          isPersistentStorageGranted: isPersisted,
+        }));
+      } catch (error) {
+        console.error('Failed to get storage estimate:', error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (disableServiceWorker) {
+      navigator.serviceWorker?.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      }).catch(() => undefined);
+      return;
+    }
+
+    updateServiceWorkerRef.current = registerSW({
+      immediate: true,
+      onNeedRefresh: () => setNeedRefresh(true),
+      onRegistered(registration) {
+        console.log('Service Worker registered:', registration);
+        checkPushPermission();
+        checkStorageInfo();
+      },
+      onRegisterError(error) {
+        console.error('Service Worker registration error:', error);
+      },
+    });
+  }, [disableServiceWorker, checkPushPermission, checkStorageInfo]);
+
   // Comprehensive platform and browser detection
   useEffect(() => {
     if (typeof navigator === 'undefined') return;
