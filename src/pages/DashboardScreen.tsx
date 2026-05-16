@@ -698,7 +698,7 @@ const DashboardScreen = () => {
 
       // Redirect women to their dashboard (case-insensitive check)
       if (mainProfile?.gender?.toLowerCase() === "female") {
-        navigate("/women-dashboard");
+        redirectToWomenDashboard();
         return;
       }
 
