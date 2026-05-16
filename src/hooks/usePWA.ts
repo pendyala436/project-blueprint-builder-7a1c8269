@@ -341,37 +341,6 @@ export function usePWA() {
     setState(prev => ({ ...prev, needsUpdate: needRefresh }));
   }, [needRefresh]);
 
-  // Check push notification permission
-  const checkPushPermission = useCallback(async () => {
-    if ('Notification' in window) {
-      const permission = Notification.permission;
-      setState(prev => ({ 
-        ...prev, 
-        isPushEnabled: permission === 'granted',
-        pushPermission: permission,
-      }));
-    }
-  }, []);
-
-  // Check storage info
-  const checkStorageInfo = useCallback(async () => {
-    if ('storage' in navigator && 'estimate' in navigator.storage) {
-      try {
-        const estimate = await navigator.storage.estimate();
-        const isPersisted = await navigator.storage.persisted?.() || false;
-        setState(prev => ({
-          ...prev,
-          storageQuota: estimate.quota || 0,
-          storageUsed: estimate.usage || 0,
-          isPersistentStorageGranted: isPersisted,
-        }));
-      } catch (error) {
-        console.error('Failed to get storage estimate:', error);
-      // Non-critical PWA diagnostic
-      }
-    }
-  }, []);
-
   // Install PWA (for browsers that support install prompt)
   const install = useCallback(async (): Promise<boolean> => {
     // Detect environments where the native install prompt cannot fire
@@ -506,9 +475,9 @@ export function usePWA() {
 
   // Update service worker
   const update = useCallback(async () => {
-    await updateServiceWorker(true);
+    await updateServiceWorkerRef.current(true);
     setNeedRefresh(false);
-  }, [updateServiceWorker, setNeedRefresh]);
+  }, [setNeedRefresh]);
 
   // Request push notification permission
   const requestPushPermission = useCallback(async (): Promise<boolean> => {
