@@ -186,7 +186,7 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth guard: require authenticated user
+    // Auth guard: require authenticated user OR internal system caller (pg_cron).
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
@@ -195,18 +195,26 @@ serve(async (req) => {
     }
     const token = authHeader.replace("Bearer ", "");
 
-    // Verify JWT via getClaims (compatible with Supabase signing-keys system)
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { claims, error: authError } = await getVerifiedClaims(authClient, token);
-    if (authError || typeof claims?.sub !== "string") {
-      console.error("[ai-women-approval] auth failed:", authError);
-      return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // W2 fix: pg_cron invokes this fn with the SERVICE_ROLE key (no `sub` claim).
+    // Treat that bearer as the system caller — only `auto_approve` is permitted
+    // via this path; per-user actions still require a real JWT below.
+    const isSystemCaller = token === supabaseServiceKey;
+    let caller: { id: string } = { id: "" };
+
+    if (!isSystemCaller) {
+      // Verify JWT via getClaims (compatible with Supabase signing-keys system)
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { claims, error: authError } = await getVerifiedClaims(authClient, token);
+      if (authError || typeof claims?.sub !== "string") {
+        console.error("[ai-women-approval] auth failed:", authError);
+        return new Response(JSON.stringify({ success: false, error: "Invalid token" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      caller = { id: claims.sub };
     }
-    const caller = { id: claims.sub };
 
     // Parse request body for action type
     let action = "auto_approve"; // default action
@@ -220,17 +228,25 @@ serve(async (req) => {
       // No body or invalid JSON, use defaults
     }
 
-    // auto_approve is admin-only; request_reapproval can be done by the user themselves
+    // auto_approve is admin-only OR system-caller (pg_cron via service role).
+    // request_reapproval can be done by the user themselves.
     if (action === "auto_approve") {
-      const { data: roleData } = await supabase
-        .from("user_roles").select("role")
-        .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
-      if (!roleData) {
-        return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+      if (!isSystemCaller) {
+        const { data: roleData } = await supabase
+          .from("user_roles").select("role")
+          .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+        if (!roleData) {
+          return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    } else if (action === "request_reapproval") {
+      if (isSystemCaller) {
+        return new Response(JSON.stringify({ success: false, error: "request_reapproval requires a user JWT" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-    } else if (action === "request_reapproval") {
       // Users can only reapply for themselves
       if (userId && userId !== caller.id) {
         const { data: roleData } = await supabase
