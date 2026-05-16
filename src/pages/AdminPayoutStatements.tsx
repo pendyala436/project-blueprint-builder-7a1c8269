@@ -21,6 +21,20 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
+// A6: single source of truth for INR currency formatting (admin payouts).
+// Two-decimal precision required by financial spec; uses Indian grouping.
+const inrCurrency = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const fmtINR = (n: number | string | null | undefined) =>
+  inrCurrency.format(Number(n ?? 0) || 0);
+// Plain numeric string with 2dp grouping — used inside ₹-prefixed export labels.
+const fmtINRNumber = (n: number | string | null | undefined) =>
+  new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n ?? 0) || 0);
+
 interface PayoutRecord {
   id: string;
   user_id: string;
