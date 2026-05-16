@@ -37,6 +37,36 @@ function showFatalError(message: string) {
   `;
 }
 
+async function cleanupPreviewServiceWorkers() {
+  try {
+    const host = window.location.hostname;
+    const isPreviewHost = host.includes("id-preview--") || host.includes("lovableproject.com");
+    const isInIframe = (() => {
+      try { return window.self !== window.top; }
+      catch { return true; }
+    })();
+    if (!isPreviewHost && !isInIframe) return true;
+
+    const registrations = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistrations() : [];
+    if (registrations.length) {
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+      if (!new URLSearchParams(window.location.search).has("sw-cleanup")) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("sw-cleanup", Date.now().toString());
+        window.location.replace(url.toString());
+        return false;
+      }
+    }
+  } catch {
+    // Best-effort only; never block app boot.
+  }
+  return true;
+}
+
 // Recover from stale Supabase sessions left over from a previous domain/build.
 // Symptom: 403 "invalid claim: missing sub claim" / bad_jwt on /user calls,
 // which prevents login UX from working until storage is cleared.
@@ -81,6 +111,9 @@ async function bootstrap() {
   if (!rootElement) {
     throw new Error("Root element not found");
   }
+
+  const canContinue = await cleanupPreviewServiceWorkers();
+  if (!canContinue) return;
 
   purgeStaleSupabaseSessionIfBroken();
 
