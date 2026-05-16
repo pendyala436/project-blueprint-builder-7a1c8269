@@ -464,7 +464,7 @@ const AdminPayoutStatements = () => {
     doc.setFontSize(18);
     doc.text('Payout Statement', 14, 16);
     doc.setFontSize(10);
-    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ₹${totalAmount.toFixed(2)}`, 14, 23);
+    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ${fmtINR(totalAmount)}`, 14, 23);
 
     const rows = buildRows().map(r => [String(r.sno), r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]);
 
