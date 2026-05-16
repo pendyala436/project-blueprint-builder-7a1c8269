@@ -228,17 +228,25 @@ serve(async (req) => {
       // No body or invalid JSON, use defaults
     }
 
-    // auto_approve is admin-only; request_reapproval can be done by the user themselves
+    // auto_approve is admin-only OR system-caller (pg_cron via service role).
+    // request_reapproval can be done by the user themselves.
     if (action === "auto_approve") {
-      const { data: roleData } = await supabase
-        .from("user_roles").select("role")
-        .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
-      if (!roleData) {
-        return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+      if (!isSystemCaller) {
+        const { data: roleData } = await supabase
+          .from("user_roles").select("role")
+          .eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+        if (!roleData) {
+          return new Response(JSON.stringify({ success: false, error: "Admin access required" }), {
+            status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    } else if (action === "request_reapproval") {
+      if (isSystemCaller) {
+        return new Response(JSON.stringify({ success: false, error: "request_reapproval requires a user JWT" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-    } else if (action === "request_reapproval") {
       // Users can only reapply for themselves
       if (userId && userId !== caller.id) {
         const { data: roleData } = await supabase
