@@ -312,7 +312,7 @@ const AdminPayoutStatements = () => {
         account: r.bank_account_number || '—',
         ifsc: r.ifsc_code || '—',
         upi: r.upi_vpa || '—',
-        amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+        amount: fmtINRNumber(r.wallet_balance_at_snapshot),
         loginTime: fmtHMS(freshTimes[r.user_id]?.login ?? 0),
         billingTime: fmtHMS(freshTimes[r.user_id]?.billing ?? 0),
       }));
@@ -326,7 +326,7 @@ const AdminPayoutStatements = () => {
 
       const wsData = [
         ['Payout Statement'],
-        [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ₹${total.toFixed(2)}`, '', `Generated (IST): ${stamp}`],
+        [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ${fmtINR(total)}`, '', `Generated (IST): ${stamp}`],
         [],
         PAYOUT_HEADERS,
         ...rows.map(r => [r.sno, r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
@@ -434,7 +434,7 @@ const AdminPayoutStatements = () => {
     account: r.bank_account_number || '—',
     ifsc: r.ifsc_code || '—',
     upi: r.upi_vpa || '—',
-    amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+    amount: fmtINRNumber(r.wallet_balance_at_snapshot),
     loginTime: fmtHMS(timeMap[r.user_id]?.login ?? 0),
     billingTime: fmtHMS(timeMap[r.user_id]?.billing ?? 0),
   }));
@@ -486,7 +486,7 @@ const AdminPayoutStatements = () => {
     const rows = buildRows();
     const wsData = [
       ['Payout Statement'],
-      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ₹${totalAmount.toFixed(2)}`],
+      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ${fmtINR(totalAmount)}`],
       [],
       PAYOUT_HEADERS,
       ...rows.map(r => [r.sno, r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
@@ -575,7 +575,7 @@ const AdminPayoutStatements = () => {
             <div className="flex items-center gap-3">
               <IndianRupee className="w-8 h-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</p>
+                <p className="text-2xl font-bold">{fmtINR(totalAmount)}</p>
                 <p className="text-xs text-muted-foreground">Total Payout Amount</p>
               </div>
             </div>
@@ -718,7 +718,7 @@ const AdminPayoutStatements = () => {
                     <TableCell className="text-xs font-mono">{r.bank_account_number ? '****' + r.bank_account_number.slice(-4) : '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.upi_vpa || '—'}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">₹{Number(r.wallet_balance_at_snapshot).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtINR(r.wallet_balance_at_snapshot)}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.login ?? 0)}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.billing ?? 0)}</TableCell>
                     <TableCell>
