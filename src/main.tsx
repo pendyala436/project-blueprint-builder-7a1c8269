@@ -5,15 +5,53 @@ import "./index.css";
 
 const APP_MOUNTED_ATTR = "data-app-mounted";
 
+// Self-heal for stale cached bundles (wrong MIME / ChunkLoadError after deploy).
+// One-shot: set a session flag so we never reload-loop.
+const STALE_BUNDLE_FLAG = "__stale_bundle_recovered";
+function isStaleBundleError(message: string): boolean {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return (
+    m.includes("chunkloaderror") ||
+    m.includes("failed to fetch dynamically imported module") ||
+    m.includes("error loading dynamically imported module") ||
+    m.includes("expected a javascript") ||
+    m.includes("application/octet-stream") ||
+    m.includes("'text/html' is not a valid javascript")
+  );
+}
+async function recoverFromStaleBundle() {
+  try {
+    if (sessionStorage.getItem(STALE_BUNDLE_FLAG)) return false;
+    sessionStorage.setItem(STALE_BUNDLE_FLAG, "1");
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    location.reload();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Global error handler — catches anything that slips through React ErrorBoundary
 window.addEventListener("error", (event) => {
+  const msg = event.error?.message || event.message || "";
+  if (isStaleBundleError(msg)) { void recoverFromStaleBundle(); return; }
   console.error("[FATAL] Uncaught error:", event.error);
-  showFatalError(event.error?.message || "Unknown error");
+  showFatalError(msg || "Unknown error");
 });
 
 window.addEventListener("unhandledrejection", (event) => {
+  const msg = event.reason instanceof Error ? event.reason.message : String(event.reason || "");
+  if (isStaleBundleError(msg)) { void recoverFromStaleBundle(); return; }
   console.error("[FATAL] Unhandled rejection:", event.reason);
-  showFatalError(event.reason instanceof Error ? event.reason.message : "Startup failed");
+  showFatalError(msg || "Startup failed");
 });
 
 function markAppMounted() {
