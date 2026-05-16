@@ -507,7 +507,7 @@ const AdminPayoutStatements = () => {
     ).join('');
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
-<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total: ₹${totalAmount.toFixed(2)}</p>
+<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total: ${fmtINR(totalAmount)}</p>
 <table><thead><tr>${PAYOUT_HEADERS.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
