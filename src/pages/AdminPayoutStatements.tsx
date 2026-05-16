@@ -21,6 +21,20 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
+// A6: single source of truth for INR currency formatting (admin payouts).
+// Two-decimal precision required by financial spec; uses Indian grouping.
+const inrCurrency = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const fmtINR = (n: number | string | null | undefined) =>
+  inrCurrency.format(Number(n ?? 0) || 0);
+// Plain numeric string with 2dp grouping — used inside ₹-prefixed export labels.
+const fmtINRNumber = (n: number | string | null | undefined) =>
+  new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n ?? 0) || 0);
+
 interface PayoutRecord {
   id: string;
   user_id: string;
@@ -298,7 +312,7 @@ const AdminPayoutStatements = () => {
         account: r.bank_account_number || '—',
         ifsc: r.ifsc_code || '—',
         upi: r.upi_vpa || '—',
-        amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+        amount: fmtINRNumber(r.wallet_balance_at_snapshot),
         loginTime: fmtHMS(freshTimes[r.user_id]?.login ?? 0),
         billingTime: fmtHMS(freshTimes[r.user_id]?.billing ?? 0),
       }));
@@ -312,7 +326,7 @@ const AdminPayoutStatements = () => {
 
       const wsData = [
         ['Payout Statement'],
-        [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ₹${total.toFixed(2)}`, '', `Generated (IST): ${stamp}`],
+        [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${fresh.length}`, '', `Total: ${fmtINR(total)}`, '', `Generated (IST): ${stamp}`],
         [],
         PAYOUT_HEADERS,
         ...rows.map(r => [r.sno, r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
@@ -420,7 +434,7 @@ const AdminPayoutStatements = () => {
     account: r.bank_account_number || '—',
     ifsc: r.ifsc_code || '—',
     upi: r.upi_vpa || '—',
-    amount: Number(r.wallet_balance_at_snapshot).toFixed(2),
+    amount: fmtINRNumber(r.wallet_balance_at_snapshot),
     loginTime: fmtHMS(timeMap[r.user_id]?.login ?? 0),
     billingTime: fmtHMS(timeMap[r.user_id]?.billing ?? 0),
   }));
@@ -450,7 +464,7 @@ const AdminPayoutStatements = () => {
     doc.setFontSize(18);
     doc.text('Payout Statement', 14, 16);
     doc.setFontSize(10);
-    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ₹${totalAmount.toFixed(2)}`, 14, 23);
+    doc.text(`Period: ${monthFilter}  •  Currency: INR  •  Women: ${records.length}  •  Total: ${fmtINR(totalAmount)}`, 14, 23);
 
     const rows = buildRows().map(r => [String(r.sno), r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]);
 
@@ -472,7 +486,7 @@ const AdminPayoutStatements = () => {
     const rows = buildRows();
     const wsData = [
       ['Payout Statement'],
-      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ₹${totalAmount.toFixed(2)}`],
+      [`Period: ${monthFilter}`, '', 'Currency: INR', '', `Women: ${records.length}`, '', `Total: ${fmtINR(totalAmount)}`],
       [],
       PAYOUT_HEADERS,
       ...rows.map(r => [r.sno, r.gessId, r.userId, r.purpose, r.name, r.phone, r.email, r.address, r.account, r.ifsc, r.upi, r.amount, r.loginTime, r.billingTime]),
@@ -493,7 +507,7 @@ const AdminPayoutStatements = () => {
     ).join('');
     const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
 <head><meta charset="utf-8"><style>body{font-family:Arial;font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;font-size:9pt}th{background:#6366F1;color:#fff}h1{font-size:18pt}</style></head><body>
-<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total: ₹${totalAmount.toFixed(2)}</p>
+<h1>Payout Statement</h1><p>Period: ${monthFilter} • Currency: INR • Women: ${records.length} • Total: ${fmtINR(totalAmount)}</p>
 <table><thead><tr>${PAYOUT_HEADERS.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
@@ -561,7 +575,7 @@ const AdminPayoutStatements = () => {
             <div className="flex items-center gap-3">
               <IndianRupee className="w-8 h-8 text-primary" />
               <div>
-                <p className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</p>
+                <p className="text-2xl font-bold">{fmtINR(totalAmount)}</p>
                 <p className="text-xs text-muted-foreground">Total Payout Amount</p>
               </div>
             </div>
@@ -704,7 +718,7 @@ const AdminPayoutStatements = () => {
                     <TableCell className="text-xs font-mono">{r.bank_account_number ? '****' + r.bank_account_number.slice(-4) : '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.ifsc_code || '—'}</TableCell>
                     <TableCell className="text-xs font-mono">{r.upi_vpa || '—'}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">₹{Number(r.wallet_balance_at_snapshot).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{fmtINR(r.wallet_balance_at_snapshot)}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.login ?? 0)}</TableCell>
                     <TableCell className="text-right text-xs font-mono">{fmtHMS(timeMap[r.user_id]?.billing ?? 0)}</TableCell>
                     <TableCell>
