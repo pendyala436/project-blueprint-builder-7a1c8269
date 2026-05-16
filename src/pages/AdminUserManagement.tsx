@@ -359,14 +359,35 @@ const AdminUserManagement = () => {
   useEffect(() => {
     loadStats();
   }, []);
+
+  // Debounce search input → searchQuery (avoids fetch per keystroke)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   useEffect(() => {
     fetchUsers(); loadLanguageGroups();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
+  // Debounced realtime refresh — coalesce bursts of profile/role updates
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRealtimeRefresh = useCallback(() => {
+    if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+    realtimeDebounceRef.current = setTimeout(() => {
+      fetchUsers(); loadLanguageGroups(); loadStats();
+    }, 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => () => { if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current); }, []);
+
   useMultipleRealtimeSubscriptions(
     ["profiles", "user_roles", "language_groups"],
-    () => { fetchUsers(); loadLanguageGroups(); loadStats(); },
+    debouncedRealtimeRefresh,
     true
   );
 
