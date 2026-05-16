@@ -788,7 +788,7 @@ const AdminUserManagement = () => {
     setSelectedLanguageGroup(group); setMaxWomenInput(group.max_women_users.toString()); setLanguageGroupDialogOpen(true);
   };
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = useMemo(() => Math.ceil(totalCount / pageSize), [totalCount, pageSize]);
 
   const getAccountStatusBadge = (status: string) => {
     switch (status) {
