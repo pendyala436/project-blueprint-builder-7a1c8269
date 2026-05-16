@@ -1,6 +1,6 @@
 import AdminNav from "@/components/AdminNav";
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -116,6 +116,7 @@ const AdminUserManagement = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -358,14 +359,35 @@ const AdminUserManagement = () => {
   useEffect(() => {
     loadStats();
   }, []);
+
+  // Debounce search input → searchQuery (avoids fetch per keystroke)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   useEffect(() => {
     fetchUsers(); loadLanguageGroups();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, searchQuery, genderFilter, statusFilter, accountStatusFilter, approvalFilter]);
 
+  // Debounced realtime refresh — coalesce bursts of profile/role updates
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedRealtimeRefresh = useCallback(() => {
+    if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+    realtimeDebounceRef.current = setTimeout(() => {
+      fetchUsers(); loadLanguageGroups(); loadStats();
+    }, 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => () => { if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current); }, []);
+
   useMultipleRealtimeSubscriptions(
     ["profiles", "user_roles", "language_groups"],
-    () => { fetchUsers(); loadLanguageGroups(); loadStats(); },
+    debouncedRealtimeRefresh,
     true
   );
 
@@ -766,7 +788,7 @@ const AdminUserManagement = () => {
     setSelectedLanguageGroup(group); setMaxWomenInput(group.max_women_users.toString()); setLanguageGroupDialogOpen(true);
   };
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = useMemo(() => Math.ceil(totalCount / pageSize), [totalCount, pageSize]);
 
   const getAccountStatusBadge = (status: string) => {
     switch (status) {
@@ -907,8 +929,8 @@ const AdminUserManagement = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search by name, email, phone, country, or state..."
-                      value={searchQuery}
-                      onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
                       className="pl-10"
                     />
                   </div>
