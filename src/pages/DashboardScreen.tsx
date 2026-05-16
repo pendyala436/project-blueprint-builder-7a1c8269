@@ -718,7 +718,7 @@ const DashboardScreen = () => {
       ]);
 
       if (femaleCheckResult.data) {
-        navigate("/women-dashboard");
+        redirectToWomenDashboard();
         return;
       }
 
