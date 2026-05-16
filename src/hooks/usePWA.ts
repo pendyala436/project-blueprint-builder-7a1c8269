@@ -6,8 +6,8 @@ import { toast } from "sonner";
  * Supports: iOS Safari, Android Chrome, Windows Edge, macOS Safari, Linux Firefox, Samsung Internet, etc.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 import { supabase } from '@/integrations/supabase/client';
 
 const isIframeOrPreviewHost = () => {
@@ -81,6 +81,8 @@ interface PWAState {
 export function usePWA() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const disableServiceWorker = isIframeOrPreviewHost();
+  const [needRefresh, setNeedRefresh] = useState(false);
+  const updateServiceWorkerRef = useRef<(reloadPage?: boolean) => Promise<void>>(async () => undefined);
   const [state, setState] = useState<PWAState>({
     isInstallable: false,
     isInstalled: false,
@@ -117,26 +119,6 @@ export function usePWA() {
     storageQuota: 0,
     storageUsed: 0,
     isPersistentStorageGranted: false,
-  });
-
-  // Register service worker with auto-update
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    immediate: !disableServiceWorker,
-    onRegistered(registration) {
-      if (disableServiceWorker) {
-        registration?.unregister().catch(() => undefined);
-        return;
-      }
-      console.log('Service Worker registered:', registration);
-      checkPushPermission();
-      checkStorageInfo();
-    },
-    onRegisterError(error) {
-      console.error('Service Worker registration error:', error);
-    },
   });
 
   // Comprehensive platform and browser detection
