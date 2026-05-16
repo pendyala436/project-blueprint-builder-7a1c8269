@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       devOptions: {
-        enabled: mode === "development",
+        enabled: false,
         type: "module",
         navigateFallback: "index.html",
       },

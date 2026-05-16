@@ -6,9 +6,19 @@ import { toast } from "sonner";
  * Supports: iOS Safari, Android Chrome, Windows Edge, macOS Safari, Linux Firefox, Samsung Internet, etc.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 import { supabase } from '@/integrations/supabase/client';
+
+const isIframeOrPreviewHost = () => {
+  if (typeof window === 'undefined') return true;
+  const inIframe = (() => {
+    try { return window.self !== window.top; }
+    catch { return true; }
+  })();
+  const host = window.location.hostname;
+  return inIframe || host.includes('id-preview--') || host.includes('lovableproject.com');
+};
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -70,6 +80,9 @@ interface PWAState {
 
 export function usePWA() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const disableServiceWorker = isIframeOrPreviewHost();
+  const [needRefresh, setNeedRefresh] = useState(false);
+  const updateServiceWorkerRef = useRef<(reloadPage?: boolean) => Promise<void>>(async () => undefined);
   const [state, setState] = useState<PWAState>({
     isInstallable: false,
     isInstalled: false,
@@ -108,20 +121,55 @@ export function usePWA() {
     isPersistentStorageGranted: false,
   });
 
-  // Register service worker with auto-update
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(registration) {
-      console.log('Service Worker registered:', registration);
-      checkPushPermission();
-      checkStorageInfo();
-    },
-    onRegisterError(error) {
-      console.error('Service Worker registration error:', error);
-    },
-  });
+  const checkPushPermission = useCallback(async () => {
+    if ('Notification' in window) {
+      const permission = Notification.permission;
+      setState(prev => ({ 
+        ...prev, 
+        isPushEnabled: permission === 'granted',
+        pushPermission: permission,
+      }));
+    }
+  }, []);
+
+  const checkStorageInfo = useCallback(async () => {
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const isPersisted = await navigator.storage.persisted?.() || false;
+        setState(prev => ({
+          ...prev,
+          storageQuota: estimate.quota || 0,
+          storageUsed: estimate.usage || 0,
+          isPersistentStorageGranted: isPersisted,
+        }));
+      } catch (error) {
+        console.error('Failed to get storage estimate:', error);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (disableServiceWorker) {
+      navigator.serviceWorker?.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+      }).catch(() => undefined);
+      return;
+    }
+
+    updateServiceWorkerRef.current = registerSW({
+      immediate: true,
+      onNeedRefresh: () => setNeedRefresh(true),
+      onRegistered(registration) {
+        console.log('Service Worker registered:', registration);
+        checkPushPermission();
+        checkStorageInfo();
+      },
+      onRegisterError(error) {
+        console.error('Service Worker registration error:', error);
+      },
+    });
+  }, [disableServiceWorker, checkPushPermission, checkStorageInfo]);
 
   // Comprehensive platform and browser detection
   useEffect(() => {
@@ -293,37 +341,6 @@ export function usePWA() {
     setState(prev => ({ ...prev, needsUpdate: needRefresh }));
   }, [needRefresh]);
 
-  // Check push notification permission
-  const checkPushPermission = useCallback(async () => {
-    if ('Notification' in window) {
-      const permission = Notification.permission;
-      setState(prev => ({ 
-        ...prev, 
-        isPushEnabled: permission === 'granted',
-        pushPermission: permission,
-      }));
-    }
-  }, []);
-
-  // Check storage info
-  const checkStorageInfo = useCallback(async () => {
-    if ('storage' in navigator && 'estimate' in navigator.storage) {
-      try {
-        const estimate = await navigator.storage.estimate();
-        const isPersisted = await navigator.storage.persisted?.() || false;
-        setState(prev => ({
-          ...prev,
-          storageQuota: estimate.quota || 0,
-          storageUsed: estimate.usage || 0,
-          isPersistentStorageGranted: isPersisted,
-        }));
-      } catch (error) {
-        console.error('Failed to get storage estimate:', error);
-      // Non-critical PWA diagnostic
-      }
-    }
-  }, []);
-
   // Install PWA (for browsers that support install prompt)
   const install = useCallback(async (): Promise<boolean> => {
     // Detect environments where the native install prompt cannot fire
@@ -458,9 +475,9 @@ export function usePWA() {
 
   // Update service worker
   const update = useCallback(async () => {
-    await updateServiceWorker(true);
+    await updateServiceWorkerRef.current(true);
     setNeedRefresh(false);
-  }, [updateServiceWorker, setNeedRefresh]);
+  }, [setNeedRefresh]);
 
   // Request push notification permission
   const requestPushPermission = useCallback(async (): Promise<boolean> => {

@@ -173,6 +173,7 @@ const WomenDashboardScreen = () => {
     partnerActiveChatCount: number;
   }>>([]);
   const [loadingWomenChats, setLoadingWomenChats] = useState(false);
+  const [groupsRefreshKey, setGroupsRefreshKey] = useState(0);
 
   // GESS ID search across Online / Chats / Matches
   const [userCodeMap, setUserCodeMap] = useState<Record<string, string>>({});
@@ -1416,7 +1417,6 @@ const WomenDashboardScreen = () => {
     </div>
   );
 
-  const [groupsRefreshKey, setGroupsRefreshKey] = useState(0);
   const renderGroupsTab = () => (
     <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth">
       <div className="px-4 py-2 bg-muted/30 border-b border-border/30 flex items-center justify-between">

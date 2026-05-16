@@ -16,6 +16,27 @@ declare let self: ServiceWorkerGlobalScope;
 const APP_VERSION = '1.3.0';
 const CACHE_PREFIX = 'meowmeow-pwa-v3';
 
+// Lovable previews run inside an iframe/proxy. A production PWA worker there can
+// keep serving stale chunks with wrong MIME types, so immediately self-destruct.
+const isLovablePreviewWorker = (() => {
+  try {
+    const host = self.location.hostname;
+    return host.includes('id-preview--') || host.includes('lovableproject.com');
+  } catch {
+    return false;
+  }
+})();
+
+if (isLovablePreviewWorker) {
+  self.addEventListener('install', (event) => event.waitUntil(self.skipWaiting()));
+  self.addEventListener('activate', (event) => event.waitUntil((async () => {
+    await self.clients.claim();
+    const names = await caches.keys();
+    await Promise.all(names.map((name) => caches.delete(name)));
+    await self.registration.unregister();
+  })()));
+} else {
+
 // Clean up old caches
 cleanupOutdatedCaches();
 
@@ -426,3 +447,4 @@ async function getCacheSize(): Promise<number> {
 // NOTE: Navigation fallback is handled by workbox precacheAndRoute + NavigationRoute
 // Do NOT add a manual fetch handler for navigation here — it conflicts with workbox
 // and can cause blank pages by calling respondWith twice.
+}
