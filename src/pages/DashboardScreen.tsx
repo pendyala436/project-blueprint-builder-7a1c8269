@@ -342,6 +342,17 @@ const DashboardScreen = () => {
   };
 
   const wentOnlineRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+  // Redirect women to their dashboard, guarded against unmount + duplicate nav
+  const redirectToWomenDashboard = useCallback(() => {
+    if (!mountedRef.current) return;
+    if (window.location.pathname === "/women-dashboard") return;
+    navigate("/women-dashboard", { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     let mounted = true;
