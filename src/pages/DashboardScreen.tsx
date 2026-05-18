@@ -585,7 +585,7 @@ const DashboardScreen = () => {
     }
   }, [activeTab, currentUserId]);
 
-  const loadWalletBalance = async () => {
+  async function loadWalletBalance() {
     if (!currentUserId) return;
     const { data } = await supabase.rpc('get_men_wallet_balance', {
       p_user_id: currentUserId
@@ -596,7 +596,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const loadActiveChatCount = async () => {
+  async function loadActiveChatCount() {
     if (!currentUserId) return;
     
     const { count } = await supabase
@@ -613,7 +613,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchActiveChats = async () => {
+  async function fetchActiveChats() {
     if (!currentUserId) return;
     setLoadingChats(true);
     try {
@@ -660,7 +660,7 @@ const DashboardScreen = () => {
 
   // getStatusDotColor removed — use getStatusColor directly
 
-  const loadDashboardData = async (userOrNull?: import('@supabase/supabase-js').User) => {
+  async function loadDashboardData(userOrNull?: import('@supabase/supabase-js').User) {
     try {
       let user = userOrNull;
       if (!user) {
@@ -780,7 +780,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchOnlineUsersCount = async () => {
+  async function fetchOnlineUsersCount() {
     try {
       const { count, error } = await supabase
         .from("user_status")
@@ -800,7 +800,7 @@ const DashboardScreen = () => {
   };
 
   // Handle starting chat with a woman - with auto-reconnect if woman is busy (max 2 retries)
-  const handleStartChatWithWoman = async (womanUserId: string, womanName: string, _reconnectDepth = 0) => {
+  async function handleStartChatWithWoman(womanUserId: string, womanName: string, _reconnectDepth = 0) {
     if (isConnecting) return;
     if (settings.chatEnabled === false) {
       toast({ title: "Chat temporarily unavailable", description: "Chat is paused due to high system load. Please try again shortly.", variant: "destructive" });
@@ -874,7 +874,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchOnlineWomen = async (language: string) => {
+  async function fetchOnlineWomen(language: string) {
     setLoadingOnlineWomen(true);
     try {
       // Self-heal stuck "busy" flags from prior sessions before reading
@@ -1015,7 +1015,7 @@ const DashboardScreen = () => {
   };
 
   // Quick connect: Automatically find and connect to the best available woman
-  const handleQuickConnect = async () => {
+  async function handleQuickConnect() {
     if (isConnecting || isReconnecting) return;
     
     // Note: Photo validation not needed at runtime - photos are mandatory during registration
@@ -1052,7 +1052,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchMatchCount = async (userId: string) => {
+  async function fetchMatchCount(userId: string) {
     const { count } = await supabase
       .from("matches")
       .select("*", { count: "exact", head: true })
@@ -1063,7 +1063,7 @@ const DashboardScreen = () => {
     // Matches profiles loaded lazily when Matches tab is opened
   };
 
-  const fetchMatchedWomen = async (userId: string) => {
+  async function fetchMatchedWomen(userId: string) {
     setLoadingMatches(true);
     try {
       // Fetch all matches (both pending and accepted) where this man is involved
@@ -1129,7 +1129,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const fetchNotifications = async (userId: string) => {
+  async function fetchNotifications(userId: string) {
     try {
       const { data, count } = await supabase
         .from("notifications")
@@ -1166,7 +1166,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const updateUserOnlineStatus = async (online: boolean) => {
+  async function updateUserOnlineStatus(online: boolean) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
@@ -1194,7 +1194,7 @@ const DashboardScreen = () => {
     }
   };
 
-  const handleLogout = async () => {
+  async function handleLogout() {
     try {
       // Use currentUserId or fall back to the Supabase auth session uid
       const { data: { session } } = await supabase.auth.getSession();
@@ -1244,7 +1244,7 @@ const DashboardScreen = () => {
     }
   }, []);
 
-  const handleRecharge = async (amountINR: number) => {
+  async function handleRecharge(amountINR: number) {
     if (processingPayment || amountINR < 1) return;
     setSelectedAmount(amountINR);
     setProcessingPayment(true);
