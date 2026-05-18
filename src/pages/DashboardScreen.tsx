@@ -1,6 +1,6 @@
 import { classifyError, ERROR_MESSAGES, logError } from "@/lib/errors";
 import { countries } from "@/data/countries";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -347,12 +347,12 @@ const DashboardScreen = () => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
-  // Redirect women to their dashboard, guarded against unmount + duplicate nav
-  const redirectToWomenDashboard = useCallback(() => {
+  // Hoisted function declaration prevents production minifier TDZ regressions.
+  function redirectToWomenDashboard() {
     if (!mountedRef.current) return;
     if (window.location.pathname === "/women-dashboard") return;
     navigate("/women-dashboard", { replace: true });
-  }, [navigate]);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -419,7 +419,7 @@ const DashboardScreen = () => {
     userLanguageRef.current = userLanguage;
   }, [userLanguage]);
 
-  const throttledFetchOnlineWomen = useCallback(() => {
+  function throttledFetchOnlineWomen() {
     const now = Date.now();
     const lang = userLanguageRef.current;
     if (now - lastFetchWomenRef.current < 5000) {
@@ -434,7 +434,7 @@ const DashboardScreen = () => {
     lastFetchWomenRef.current = now;
     fetchOnlineUsersCount();
     if (lang) fetchOnlineWomen(lang);
-  }, []); // stable — reads from ref, no stale closure
+  }
 
   useEffect(() => {
     if (!currentUserId) return;
