@@ -354,6 +354,470 @@ const DashboardScreen = () => {
     navigate("/women-dashboard", { replace: true });
   }
 
+  // TDZ-safe dashboard helpers: declared before effects and before callers.
+  async function fetchOnlineUsersCount() {
+    try {
+      const { count, error } = await supabase
+        .from("user_status")
+        .select("*", { count: "exact", head: true })
+        .eq("is_online", true)
+        .neq("status_text", "busy");
+
+      if (error) {
+        console.warn('[Dashboard] Error fetching online users count:', error);
+        return;
+      }
+
+      setStats(prev => ({ ...prev, onlineUsersCount: count || 0 }));
+    } catch (error) {
+      console.warn('[Dashboard] Failed to fetch online users count:', error);
+    }
+  };
+
+  async function fetchMatchCount(userId: string) {
+    const { count } = await supabase
+      .from("matches")
+      .select("*", { count: "exact", head: true })
+      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
+      .eq("status", "accepted");
+
+    setStats(prev => ({ ...prev, matchCount: count || 0 }));
+    // Matches profiles loaded lazily when Matches tab is opened
+  };
+
+  async function fetchNotifications(userId: string) {
+    try {
+      const { data, count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact" })
+        .eq("user_id", userId)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      // Display notifications as-is (no translation)
+      setNotifications(data || []);
+      setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
+    } catch (error) {
+      console.error('[Dashboard] fetchNotifications error:', error);
+    }
+  };
+
+  async function fetchOnlineWomen(language: string) {
+    setLoadingOnlineWomen(true);
+    try {
+      // Self-heal stuck "busy" flags from prior sessions before reading
+      try { await supabase.rpc('reconcile_user_busy_status' as any, { _user_id: null }); } catch {}
+
+      // Get ONLY online & not-busy user IDs
+      // Busy = currently in audio/video/private-group call (mutual exclusion)
+      const { data: onlineUsers } = await supabase
+        .from("user_status")
+        .select("user_id, status_text")
+        .eq("is_online", true)
+        .neq("status_text", "busy");
+
+      const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
+      
+      // If no users online, show empty lists
+      if (onlineUserIds.length === 0) {
+        setSameLanguageWomen([]);
+        setIndianTranslatedWomen([]);
+        setLoadingOnlineWomen(false);
+        return;
+      }
+
+      // Fetch ONLY online women from safe public view (excludes sensitive bank/PAN/phone/DOB fields)
+      const { data: femaleProfiles } = await supabase
+        .from("public_female_profiles" as any)
+        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
+        .in("user_id", onlineUserIds)
+        .limit(50);
+
+      const onlineWomenList: OnlineWoman[] = femaleProfiles || [];
+
+      if (onlineWomenList.length === 0) {
+        setSameLanguageWomen([]);
+        setIndianTranslatedWomen([]);
+        setLoadingOnlineWomen(false);
+        return;
+      }
+
+      // Fetch chat counts, availability, and languages in PARALLEL
+      const womenUserIds = onlineWomenList.map(w => w.user_id);
+      const [chatCountsRes, availabilityRes, userLanguagesRes, walletsRes] = await Promise.all([
+        supabase
+          .from("active_chat_sessions")
+          .select("woman_user_id, status")
+          .in("woman_user_id", womenUserIds)
+          .in("status", ["active", "pending"]),
+        supabase
+          .from("women_availability")
+          .select("user_id, is_available, current_chat_count, max_concurrent_chats")
+          .in("user_id", womenUserIds),
+        supabase
+          .from("user_languages")
+          .select("user_id, language_name")
+          .in("user_id", womenUserIds),
+        supabase
+          .from("wallets")
+          .select("user_id, balance")
+          .in("user_id", womenUserIds),
+      ]);
+
+      const chatCountMap = new Map<string, number>();
+      chatCountsRes.data?.forEach(chat => {
+        const count = chatCountMap.get(chat.woman_user_id) || 0;
+        chatCountMap.set(chat.woman_user_id, count + 1);
+      });
+
+      const availabilityMap = new Map(
+        (availabilityRes.data as any[] || []).map(a => [a.user_id, a])
+      );
+
+      const languageMap = new Map((userLanguagesRes.data as any[] || []).map(l => [l.user_id, l.language_name as string]));
+
+      const walletMap = new Map<string, number>(
+        (walletsRes.data as any[] || []).map((w: any) => [w.user_id, Number(w.balance) || 0])
+      );
+
+      const womenWithChatCount = onlineWomenList.map(w => {
+        const avail = availabilityMap.get(w.user_id);
+        const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
+        const womanLanguage = languageMap.get(w.user_id) || w.primary_language || "Unknown";
+        return {
+          ...w,
+          primary_language: womanLanguage,
+          active_chat_count: chatCount,
+          is_available: avail?.is_available !== false,
+          max_chats: avail?.max_concurrent_chats || 3,
+          is_earning_eligible: w.is_earning_eligible || false,
+          walletBalance: walletMap.get(w.user_id) || 0,
+        };
+      });
+
+      // Sort: Badged (earning eligible) women first, then by availability and load
+      const sortByBadgeAndLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
+        if (a.is_earning_eligible !== b.is_earning_eligible) {
+          return a.is_earning_eligible ? -1 : 1;
+        }
+        if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
+        const aAtMax = a.active_chat_count >= a.max_chats;
+        const bAtMax = b.active_chat_count >= b.max_chats;
+        if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
+        return a.active_chat_count - b.active_chat_count;
+      };
+
+      // Apply match filters client-side
+      const filteredWomen = womenWithChatCount.filter(w => {
+        if (matchFilters.ageRange && w.age != null) {
+          if (w.age < matchFilters.ageRange[0] || w.age > matchFilters.ageRange[1]) return false;
+        }
+        if (matchFilters.country && matchFilters.country !== "all" && w.country) {
+          if (w.country.toLowerCase() !== matchFilters.country.toLowerCase()) return false;
+        }
+        if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
+          if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
+        }
+        if (matchFilters.verifiedOnly) return true;
+        return true;
+      });
+
+      // Split: same language first, others second
+      const sameLanguage = filteredWomen
+        .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
+        .sort(sortByBadgeAndLoad);
+
+      const otherWomen = filteredWomen
+        .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
+        .sort(sortByBadgeAndLoad);
+
+      setSameLanguageWomen(sameLanguage.slice(0, 10));
+      setIndianTranslatedWomen(otherWomen.slice(0, 15));
+    } catch (error) {
+      console.error("Error fetching online women:", error);
+      setSameLanguageWomen([]);
+      setIndianTranslatedWomen([]);
+    } finally {
+      setLoadingOnlineWomen(false);
+    }
+  };
+
+  async function fetchActiveChats() {
+    if (!currentUserId) return;
+    setLoadingChats(true);
+    try {
+      // Single batch RPC eliminates N+1 query pattern (audit O-004).
+      // Returns one row per chat with partner profile, last message,
+      // unread count, and partner online status.
+      const { data, error } = await supabase.rpc('get_man_active_chats', {
+        p_user_id: currentUserId,
+      });
+      if (error) throw error;
+
+      const chats = ((data as any[]) || []).map(r => ({
+        chatId: r.chat_id as string,
+        partnerId: r.partner_id as string,
+        partnerName: r.partner_name as string,
+        partnerPhoto: (r.partner_photo as string) || null,
+        lastMessage: (r.last_message as string) || '',
+        lastMessageAt: r.last_message_at as string,
+        lastMessageSenderId: (r.last_message_sender_id as string) || '',
+        unreadCount: Number(r.unread_count) || 0,
+        partnerIsOnline: Boolean(r.partner_is_online),
+        partnerStatus: (r.partner_status as string) || 'offline',
+        partnerActiveChatCount: Number(r.partner_active_chat_count) || 0,
+      }));
+      setActiveChats(chats);
+    } catch (error) {
+      console.error('[Dashboard] Error fetching active chats:', error);
+    } finally {
+      setLoadingChats(false);
+    }
+  };
+
+  async function loadActiveChatCount() {
+    if (!currentUserId) return;
+    
+    const { count } = await supabase
+      .from("active_chat_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("man_user_id", currentUserId)
+      .in("status", ["active", "pending"]);
+    
+    setActiveChatCount(count || 0);
+    
+    // Only fetch chat details if chats tab has been opened
+    if (chatsFetchedRef.current) {
+      fetchActiveChats();
+    }
+  };
+
+  async function loadWalletBalance() {
+    if (!currentUserId) return;
+    const { data } = await supabase.rpc('get_men_wallet_balance', {
+      p_user_id: currentUserId
+    });
+    if (data) {
+      const bd = data as Record<string, number>;
+      setWalletBalance(Number(bd.balance) || 0);
+    }
+  };
+
+  async function fetchMatchedWomen(userId: string) {
+    setLoadingMatches(true);
+    try {
+      // Fetch all matches (both pending and accepted) where this man is involved
+      const { data: matches } = await supabase
+        .from("matches")
+        .select("id, matched_user_id, user_id, matched_at, status")
+        .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
+        .order("matched_at", { ascending: false })
+        .limit(50);
+
+      if (!matches || matches.length === 0) {
+        setMatchedWomen([]);
+        setLoadingMatches(false);
+        return;
+      }
+
+      // Get unique other user IDs from each match (deduplicate)
+      const otherUserIds = [...new Set(matches.map(m => 
+        m.user_id === userId ? m.matched_user_id : m.user_id
+      ))] as string[];
+
+      // Fetch profiles for matched users via secure RPC
+      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
+      const profiles = await fetchPublicProfiles(otherUserIds);
+
+      // Fetch online status
+      const { data: statuses } = await supabase
+        .from("user_status")
+        .select("user_id, is_online")
+        .in("user_id", otherUserIds);
+
+      const statusMap = new Map((statuses as any[] || []).map(s => [s.user_id, s.is_online]));
+      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
+
+      const seenUserIds = new Set<string>();
+      const matched: MatchedWoman[] = matches
+        .map(m => {
+          const otherId = m.user_id === userId ? m.matched_user_id : m.user_id;
+          if (seenUserIds.has(otherId)) return null;
+          seenUserIds.add(otherId);
+          const profile = profileMap.get(otherId);
+          if (!profile || profile.gender?.toLowerCase() !== 'female') return null;
+          return {
+            matchId: m.id,
+            userId: otherId,
+            fullName: profile.full_name || 'Anonymous',
+            photoUrl: profile.photo_url,
+            age: profile.age,
+            country: profile.country,
+            primaryLanguage: profile.primary_language,
+            isOnline: statusMap.get(otherId) || false,
+            matchedAt: m.matched_at,
+          };
+        })
+        .filter(Boolean) as MatchedWoman[];
+
+      setMatchedWomen(matched);
+    } catch (error) {
+      console.error("Error fetching matched women:", error);
+      // Non-critical - matches list, will retry
+    } finally {
+      setLoadingMatches(false);
+    }
+  };
+
+  async function updateUserOnlineStatus(online: boolean) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const user = session.user;
+
+      // Use upsert so that new users get a row inserted and existing users get updated.
+      // update() returns no error when 0 rows are matched, so insert would never fire.
+      const { error } = await supabase
+        .from("user_status")
+        .upsert(
+          {
+            user_id: user.id,
+            is_online: online,
+            last_seen: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (error) {
+        console.error("Error upserting user status:", error);
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      // Non-critical background status update
+    }
+  };
+
+  async function loadDashboardData(userOrNull?: import('@supabase/supabase-js').User) {
+    try {
+      let user = userOrNull;
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          setIsLoading(false);
+          return;
+        }
+        user = session.user;
+      }
+
+      setCurrentUserId(user.id);
+
+      // Wrap profile fetch in timeout to prevent hang
+      const profilePromise = supabase
+        .from("profiles")
+        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, app_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      const profileTimeout = new Promise<{ data: null, error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
+      );
+      
+      let mainProfile: { gender?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; app_id?: string | null } | null = null;
+      try {
+        const result = await Promise.race([profilePromise, profileTimeout]);
+        mainProfile = result.data;
+      } catch {
+        console.warn('[Dashboard] Profile fetch timed out or failed');
+      }
+      
+      // Store user's photo for chat validation
+      setUserPhoto(mainProfile?.photo_url || null);
+
+      // Redirect women to their dashboard (case-insensitive check)
+      if (mainProfile?.gender?.toLowerCase() === "female") {
+        redirectToWomenDashboard();
+        return;
+      }
+
+      // Fetch user languages and female_profiles check in parallel
+      const [userLangsResult, femaleCheckResult] = await Promise.all([
+        supabase
+          .from("user_languages")
+          .select("language_name, language_code")
+          .eq("user_id", user.id)
+          .limit(1),
+        // Check female_profiles in case user registered as female but no main profile
+        supabase
+          .from("female_profiles")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
+
+      if (femaleCheckResult.data) {
+        redirectToWomenDashboard();
+        return;
+      }
+
+      const userLanguages = userLangsResult.data;
+
+      // Use main profiles table (single source of truth)
+      const motherTongue = userLanguages?.[0]?.language_name || 
+                          mainProfile?.primary_language ||
+                          mainProfile?.preferred_language ||
+                          "English";
+      const languageCode = userLanguages?.[0]?.language_code || "eng_Latn";
+      setUserLanguage(motherTongue);
+      setUserLanguageCode(languageCode);
+
+      // Use name from main profiles table
+      const fullName = mainProfile?.full_name;
+      if (fullName) {
+        setUserName(fullName.split(" ")[0]);
+      }
+      // App ID (GESS-M-<n>) from profiles — single source of truth
+      if (mainProfile?.app_id) setAppId(mainProfile.app_id);
+      
+      // Use country from main profiles table
+      const userCountryValue = mainProfile?.country;
+      if (userCountryValue) {
+        setUserCountryName(userCountryValue);
+        // Look up country code from the full countries dataset
+        const match = countries.find(c => c.name.toLowerCase() === userCountryValue.toLowerCase());
+        setUserCountry(match?.code || "IN");
+      }
+
+      // Fetch wallet balance via server-side RPC (with timeout)
+      try {
+        const { data: walletRpc } = await supabase.rpc('get_men_wallet_balance', {
+          p_user_id: user.id
+        });
+
+        if (walletRpc) {
+          const wd = walletRpc as Record<string, number>;
+          setWalletBalance(Number(wd.balance) || 0);
+        }
+      } catch {
+        console.warn('[Dashboard] Wallet balance fetch failed');
+      }
+
+      // Fetch stats in parallel - each with individual error handling
+      await Promise.allSettled([
+        fetchOnlineUsersCount(),
+        fetchMatchCount(user.id),
+        fetchNotifications(user.id),
+        fetchOnlineWomen(motherTongue),
+      ]);
+
+    } catch (error) {
+      console.error("Error loading dashboard:", error);
+      toast({ title: "Dashboard unavailable", description: "Unable to load dashboard data. Please refresh.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     let loadingTimeoutId: NodeJS.Timeout;
@@ -585,67 +1049,6 @@ const DashboardScreen = () => {
     }
   }, [activeTab, currentUserId]);
 
-  async function loadWalletBalance() {
-    if (!currentUserId) return;
-    const { data } = await supabase.rpc('get_men_wallet_balance', {
-      p_user_id: currentUserId
-    });
-    if (data) {
-      const bd = data as Record<string, number>;
-      setWalletBalance(Number(bd.balance) || 0);
-    }
-  };
-
-  async function loadActiveChatCount() {
-    if (!currentUserId) return;
-    
-    const { count } = await supabase
-      .from("active_chat_sessions")
-      .select("*", { count: "exact", head: true })
-      .eq("man_user_id", currentUserId)
-      .in("status", ["active", "pending"]);
-    
-    setActiveChatCount(count || 0);
-    
-    // Only fetch chat details if chats tab has been opened
-    if (chatsFetchedRef.current) {
-      fetchActiveChats();
-    }
-  };
-
-  async function fetchActiveChats() {
-    if (!currentUserId) return;
-    setLoadingChats(true);
-    try {
-      // Single batch RPC eliminates N+1 query pattern (audit O-004).
-      // Returns one row per chat with partner profile, last message,
-      // unread count, and partner online status.
-      const { data, error } = await supabase.rpc('get_man_active_chats', {
-        p_user_id: currentUserId,
-      });
-      if (error) throw error;
-
-      const chats = ((data as any[]) || []).map(r => ({
-        chatId: r.chat_id as string,
-        partnerId: r.partner_id as string,
-        partnerName: r.partner_name as string,
-        partnerPhoto: (r.partner_photo as string) || null,
-        lastMessage: (r.last_message as string) || '',
-        lastMessageAt: r.last_message_at as string,
-        lastMessageSenderId: (r.last_message_sender_id as string) || '',
-        unreadCount: Number(r.unread_count) || 0,
-        partnerIsOnline: Boolean(r.partner_is_online),
-        partnerStatus: (r.partner_status as string) || 'offline',
-        partnerActiveChatCount: Number(r.partner_active_chat_count) || 0,
-      }));
-      setActiveChats(chats);
-    } catch (error) {
-      console.error('[Dashboard] Error fetching active chats:', error);
-    } finally {
-      setLoadingChats(false);
-    }
-  };
-
   const getStatusText = () => {
     if (isManuallyOffline) return 'Offline';
     if (!isOnline) return 'Away';
@@ -659,145 +1062,6 @@ const DashboardScreen = () => {
   };
 
   // getStatusDotColor removed — use getStatusColor directly
-
-  async function loadDashboardData(userOrNull?: import('@supabase/supabase-js').User) {
-    try {
-      let user = userOrNull;
-      if (!user) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          setIsLoading(false);
-          return;
-        }
-        user = session.user;
-      }
-
-      setCurrentUserId(user.id);
-
-      // Wrap profile fetch in timeout to prevent hang
-      const profilePromise = supabase
-        .from("profiles")
-        .select("gender, full_name, date_of_birth, primary_language, preferred_language, country, photo_url, app_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      
-      const profileTimeout = new Promise<{ data: null, error: Error }>((resolve) =>
-        setTimeout(() => resolve({ data: null, error: new Error('Profile fetch timeout') }), 5000)
-      );
-      
-      let mainProfile: { gender?: string | null; full_name?: string | null; date_of_birth?: string | null; primary_language?: string | null; preferred_language?: string | null; country?: string | null; photo_url?: string | null; app_id?: string | null } | null = null;
-      try {
-        const result = await Promise.race([profilePromise, profileTimeout]);
-        mainProfile = result.data;
-      } catch {
-        console.warn('[Dashboard] Profile fetch timed out or failed');
-      }
-      
-      // Store user's photo for chat validation
-      setUserPhoto(mainProfile?.photo_url || null);
-
-      // Redirect women to their dashboard (case-insensitive check)
-      if (mainProfile?.gender?.toLowerCase() === "female") {
-        redirectToWomenDashboard();
-        return;
-      }
-
-      // Fetch user languages and female_profiles check in parallel
-      const [userLangsResult, femaleCheckResult] = await Promise.all([
-        supabase
-          .from("user_languages")
-          .select("language_name, language_code")
-          .eq("user_id", user.id)
-          .limit(1),
-        // Check female_profiles in case user registered as female but no main profile
-        supabase
-          .from("female_profiles")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-      ]);
-
-      if (femaleCheckResult.data) {
-        redirectToWomenDashboard();
-        return;
-      }
-
-      const userLanguages = userLangsResult.data;
-
-      // Use main profiles table (single source of truth)
-      const motherTongue = userLanguages?.[0]?.language_name || 
-                          mainProfile?.primary_language ||
-                          mainProfile?.preferred_language ||
-                          "English";
-      const languageCode = userLanguages?.[0]?.language_code || "eng_Latn";
-      setUserLanguage(motherTongue);
-      setUserLanguageCode(languageCode);
-
-      // Use name from main profiles table
-      const fullName = mainProfile?.full_name;
-      if (fullName) {
-        setUserName(fullName.split(" ")[0]);
-      }
-      // App ID (GESS-M-<n>) from profiles — single source of truth
-      if (mainProfile?.app_id) setAppId(mainProfile.app_id);
-      
-      // Use country from main profiles table
-      const userCountryValue = mainProfile?.country;
-      if (userCountryValue) {
-        setUserCountryName(userCountryValue);
-        // Look up country code from the full countries dataset
-        const match = countries.find(c => c.name.toLowerCase() === userCountryValue.toLowerCase());
-        setUserCountry(match?.code || "IN");
-      }
-
-      // Fetch wallet balance via server-side RPC (with timeout)
-      try {
-        const { data: walletRpc } = await supabase.rpc('get_men_wallet_balance', {
-          p_user_id: user.id
-        });
-
-        if (walletRpc) {
-          const wd = walletRpc as Record<string, number>;
-          setWalletBalance(Number(wd.balance) || 0);
-        }
-      } catch {
-        console.warn('[Dashboard] Wallet balance fetch failed');
-      }
-
-      // Fetch stats in parallel - each with individual error handling
-      await Promise.allSettled([
-        fetchOnlineUsersCount(),
-        fetchMatchCount(user.id),
-        fetchNotifications(user.id),
-        fetchOnlineWomen(motherTongue),
-      ]);
-
-    } catch (error) {
-      console.error("Error loading dashboard:", error);
-      toast({ title: "Dashboard unavailable", description: "Unable to load dashboard data. Please refresh.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  async function fetchOnlineUsersCount() {
-    try {
-      const { count, error } = await supabase
-        .from("user_status")
-        .select("*", { count: "exact", head: true })
-        .eq("is_online", true)
-        .neq("status_text", "busy");
-
-      if (error) {
-        console.warn('[Dashboard] Error fetching online users count:', error);
-        return;
-      }
-
-      setStats(prev => ({ ...prev, onlineUsersCount: count || 0 }));
-    } catch (error) {
-      console.warn('[Dashboard] Failed to fetch online users count:', error);
-    }
-  };
 
   // Handle starting chat with a woman - with auto-reconnect if woman is busy (max 2 retries)
   async function handleStartChatWithWoman(womanUserId: string, womanName: string, _reconnectDepth = 0) {
@@ -874,146 +1138,6 @@ const DashboardScreen = () => {
     }
   };
 
-  async function fetchOnlineWomen(language: string) {
-    setLoadingOnlineWomen(true);
-    try {
-      // Self-heal stuck "busy" flags from prior sessions before reading
-      try { await supabase.rpc('reconcile_user_busy_status' as any, { _user_id: null }); } catch {}
-
-      // Get ONLY online & not-busy user IDs
-      // Busy = currently in audio/video/private-group call (mutual exclusion)
-      const { data: onlineUsers } = await supabase
-        .from("user_status")
-        .select("user_id, status_text")
-        .eq("is_online", true)
-        .neq("status_text", "busy");
-
-      const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
-      
-      // If no users online, show empty lists
-      if (onlineUserIds.length === 0) {
-        setSameLanguageWomen([]);
-        setIndianTranslatedWomen([]);
-        setLoadingOnlineWomen(false);
-        return;
-      }
-
-      // Fetch ONLY online women from safe public view (excludes sensitive bank/PAN/phone/DOB fields)
-      const { data: femaleProfiles } = await supabase
-        .from("public_female_profiles" as any)
-        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
-        .in("user_id", onlineUserIds)
-        .limit(50);
-
-      const onlineWomenList: OnlineWoman[] = femaleProfiles || [];
-
-      if (onlineWomenList.length === 0) {
-        setSameLanguageWomen([]);
-        setIndianTranslatedWomen([]);
-        setLoadingOnlineWomen(false);
-        return;
-      }
-
-      // Fetch chat counts, availability, and languages in PARALLEL
-      const womenUserIds = onlineWomenList.map(w => w.user_id);
-      const [chatCountsRes, availabilityRes, userLanguagesRes, walletsRes] = await Promise.all([
-        supabase
-          .from("active_chat_sessions")
-          .select("woman_user_id, status")
-          .in("woman_user_id", womenUserIds)
-          .in("status", ["active", "pending"]),
-        supabase
-          .from("women_availability")
-          .select("user_id, is_available, current_chat_count, max_concurrent_chats")
-          .in("user_id", womenUserIds),
-        supabase
-          .from("user_languages")
-          .select("user_id, language_name")
-          .in("user_id", womenUserIds),
-        supabase
-          .from("wallets")
-          .select("user_id, balance")
-          .in("user_id", womenUserIds),
-      ]);
-
-      const chatCountMap = new Map<string, number>();
-      chatCountsRes.data?.forEach(chat => {
-        const count = chatCountMap.get(chat.woman_user_id) || 0;
-        chatCountMap.set(chat.woman_user_id, count + 1);
-      });
-
-      const availabilityMap = new Map(
-        (availabilityRes.data as any[] || []).map(a => [a.user_id, a])
-      );
-
-      const languageMap = new Map((userLanguagesRes.data as any[] || []).map(l => [l.user_id, l.language_name as string]));
-
-      const walletMap = new Map<string, number>(
-        (walletsRes.data as any[] || []).map((w: any) => [w.user_id, Number(w.balance) || 0])
-      );
-
-      const womenWithChatCount = onlineWomenList.map(w => {
-        const avail = availabilityMap.get(w.user_id);
-        const chatCount = avail?.current_chat_count || chatCountMap.get(w.user_id) || 0;
-        const womanLanguage = languageMap.get(w.user_id) || w.primary_language || "Unknown";
-        return {
-          ...w,
-          primary_language: womanLanguage,
-          active_chat_count: chatCount,
-          is_available: avail?.is_available !== false,
-          max_chats: avail?.max_concurrent_chats || 3,
-          is_earning_eligible: w.is_earning_eligible || false,
-          walletBalance: walletMap.get(w.user_id) || 0,
-        };
-      });
-
-      // Sort: Badged (earning eligible) women first, then by availability and load
-      const sortByBadgeAndLoad = (a: typeof womenWithChatCount[0], b: typeof womenWithChatCount[0]) => {
-        if (a.is_earning_eligible !== b.is_earning_eligible) {
-          return a.is_earning_eligible ? -1 : 1;
-        }
-        if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
-        const aAtMax = a.active_chat_count >= a.max_chats;
-        const bAtMax = b.active_chat_count >= b.max_chats;
-        if (aAtMax !== bAtMax) return aAtMax ? 1 : -1;
-        return a.active_chat_count - b.active_chat_count;
-      };
-
-      // Apply match filters client-side
-      const filteredWomen = womenWithChatCount.filter(w => {
-        if (matchFilters.ageRange && w.age != null) {
-          if (w.age < matchFilters.ageRange[0] || w.age > matchFilters.ageRange[1]) return false;
-        }
-        if (matchFilters.country && matchFilters.country !== "all" && w.country) {
-          if (w.country.toLowerCase() !== matchFilters.country.toLowerCase()) return false;
-        }
-        if (matchFilters.language && matchFilters.language !== "all" && w.primary_language) {
-          if (w.primary_language.toLowerCase() !== matchFilters.language.toLowerCase()) return false;
-        }
-        if (matchFilters.verifiedOnly) return true;
-        return true;
-      });
-
-      // Split: same language first, others second
-      const sameLanguage = filteredWomen
-        .filter(w => w.primary_language?.toLowerCase() === language.toLowerCase())
-        .sort(sortByBadgeAndLoad);
-
-      const otherWomen = filteredWomen
-        .filter(w => w.primary_language?.toLowerCase() !== language.toLowerCase())
-        .sort(sortByBadgeAndLoad);
-
-      setSameLanguageWomen(sameLanguage.slice(0, 10));
-      setIndianTranslatedWomen(otherWomen.slice(0, 15));
-    } catch (error) {
-      console.error("Error fetching online women:", error);
-      setSameLanguageWomen([]);
-      setIndianTranslatedWomen([]);
-    } finally {
-      setLoadingOnlineWomen(false);
-    }
-  };
-
   // Quick connect: Automatically find and connect to the best available woman
   async function handleQuickConnect() {
     if (isConnecting || isReconnecting) return;
@@ -1052,101 +1176,6 @@ const DashboardScreen = () => {
     }
   };
 
-  async function fetchMatchCount(userId: string) {
-    const { count } = await supabase
-      .from("matches")
-      .select("*", { count: "exact", head: true })
-      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
-      .eq("status", "accepted");
-
-    setStats(prev => ({ ...prev, matchCount: count || 0 }));
-    // Matches profiles loaded lazily when Matches tab is opened
-  };
-
-  async function fetchMatchedWomen(userId: string) {
-    setLoadingMatches(true);
-    try {
-      // Fetch all matches (both pending and accepted) where this man is involved
-      const { data: matches } = await supabase
-        .from("matches")
-        .select("id, matched_user_id, user_id, matched_at, status")
-        .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
-        .order("matched_at", { ascending: false })
-        .limit(50);
-
-      if (!matches || matches.length === 0) {
-        setMatchedWomen([]);
-        setLoadingMatches(false);
-        return;
-      }
-
-      // Get unique other user IDs from each match (deduplicate)
-      const otherUserIds = [...new Set(matches.map(m => 
-        m.user_id === userId ? m.matched_user_id : m.user_id
-      ))] as string[];
-
-      // Fetch profiles for matched users via secure RPC
-      const { fetchPublicProfiles } = await import("@/lib/profile-queries");
-      const profiles = await fetchPublicProfiles(otherUserIds);
-
-      // Fetch online status
-      const { data: statuses } = await supabase
-        .from("user_status")
-        .select("user_id, is_online")
-        .in("user_id", otherUserIds);
-
-      const statusMap = new Map((statuses as any[] || []).map(s => [s.user_id, s.is_online]));
-      const profileMap = new Map((profiles as any[] || []).map(p => [p.user_id, p]));
-
-      const seenUserIds = new Set<string>();
-      const matched: MatchedWoman[] = matches
-        .map(m => {
-          const otherId = m.user_id === userId ? m.matched_user_id : m.user_id;
-          if (seenUserIds.has(otherId)) return null;
-          seenUserIds.add(otherId);
-          const profile = profileMap.get(otherId);
-          if (!profile || profile.gender?.toLowerCase() !== 'female') return null;
-          return {
-            matchId: m.id,
-            userId: otherId,
-            fullName: profile.full_name || 'Anonymous',
-            photoUrl: profile.photo_url,
-            age: profile.age,
-            country: profile.country,
-            primaryLanguage: profile.primary_language,
-            isOnline: statusMap.get(otherId) || false,
-            matchedAt: m.matched_at,
-          };
-        })
-        .filter(Boolean) as MatchedWoman[];
-
-      setMatchedWomen(matched);
-    } catch (error) {
-      console.error("Error fetching matched women:", error);
-      // Non-critical - matches list, will retry
-    } finally {
-      setLoadingMatches(false);
-    }
-  };
-
-  async function fetchNotifications(userId: string) {
-    try {
-      const { data, count } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact" })
-        .eq("user_id", userId)
-        .eq("is_read", false)
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      // Display notifications as-is (no translation)
-      setNotifications(data || []);
-      setStats(prev => ({ ...prev, unreadNotifications: count || 0 }));
-    } catch (error) {
-      console.error('[Dashboard] fetchNotifications error:', error);
-    }
-  };
-
   const markNotificationRead = async (notificationId: string) => {
     try {
       await supabase
@@ -1163,34 +1192,6 @@ const DashboardScreen = () => {
       }));
     } catch (err) {
       console.warn('[Dashboard] Failed to mark notification read:', err);
-    }
-  };
-
-  async function updateUserOnlineStatus(online: boolean) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      const user = session.user;
-
-      // Use upsert so that new users get a row inserted and existing users get updated.
-      // update() returns no error when 0 rows are matched, so insert would never fire.
-      const { error } = await supabase
-        .from("user_status")
-        .upsert(
-          {
-            user_id: user.id,
-            is_online: online,
-            last_seen: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        );
-
-      if (error) {
-        console.error("Error upserting user status:", error);
-      }
-    } catch (error) {
-      console.error("Error updating status:", error);
-      // Non-critical background status update
     }
   };
 
