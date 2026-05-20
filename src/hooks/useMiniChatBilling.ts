@@ -176,7 +176,7 @@ export function useMiniChatBilling({
       }
       void stopBillingTimers();
     };
-  }, [isActive, activitySignal, startBillingTimers, stopBillingTimers]);
+  }, [isActive, startBillingTimers, stopBillingTimers]);
 
   return { minutesBilled, totalCharged, isBilling, elapsedSeconds, reset, stopBillingTimers };
 }
