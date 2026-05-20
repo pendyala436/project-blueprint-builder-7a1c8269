@@ -1802,7 +1802,7 @@ const DashboardScreen = () => {
           <p className="text-[10px] text-muted-foreground">Online</p>
         </div>
         <div className="text-center py-4 border-r border-border/30">
-          <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+          <p className="text-xl font-bold text-foreground">{matchedWomen.length}</p>
           <p className="text-[10px] text-muted-foreground">Matches</p>
         </div>
         <div className="text-center py-4">
