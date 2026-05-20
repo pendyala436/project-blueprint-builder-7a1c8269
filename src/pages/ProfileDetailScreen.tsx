@@ -315,15 +315,10 @@ const ProfileDetailScreen = () => {
       const userEmail = (await supabase.auth.getSession()).data.session?.user?.email || '';
       const isSuperUser = /^(female|male|admin)([1-9]|1[0-5])@meow-meow\.com$/i.test(userEmail);
 
-      // Men must have sufficient wallet balance to start chat
+      // Men must have some wallet balance to start chat (women earn, no balance needed)
       if (isMale && !isSuperUser) {
-        const minBalance = pricing.ratePerMinute * 2;
         if (walletBalance <= 0) {
           setRechargeMessage("Your wallet balance is ₹0. Recharge is mandatory to start chatting.");
-          setShowRechargeDialog(true);
-          return;
-        } else if (walletBalance < minBalance) {
-          setRechargeMessage(`Insufficient balance (₹${walletBalance}). Minimum ₹${minBalance} required to start a chat.`);
           setShowRechargeDialog(true);
           return;
         }
