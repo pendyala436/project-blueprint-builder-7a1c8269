@@ -375,14 +375,14 @@ const DashboardScreen = () => {
   };
 
   async function fetchMatchCount(userId: string) {
-    // Count ALL matches (pending + accepted) to stay consistent with the Matches tab list
+    // Kept for backward compat; UI now uses matchedWomen.length (deduped, gender-filtered)
     const { count } = await supabase
       .from("matches")
       .select("*", { count: "exact", head: true })
-      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`);
+      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
+      .eq("status", "accepted");
 
     setStats(prev => ({ ...prev, matchCount: count || 0 }));
-    // Matches profiles loaded lazily when Matches tab is opened
   };
 
   async function fetchNotifications(userId: string) {
