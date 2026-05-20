@@ -431,6 +431,7 @@ const ChatScreen = () => {
     sessionId: billingSessionId,
     manId: billingManId,
     womanId: billingWomanId,
+    activitySignal: messages.length ? `${messages.length}:${messages[messages.length - 1]?.createdAt}` : messages.length,
     onInsufficientBalance: handleInsufficientBalance,
   });
 
@@ -1040,7 +1041,7 @@ const ChatScreen = () => {
             .from("active_chat_sessions")
             .select("id, man_user_id, woman_user_id, status")
             .eq("chat_id", chatId.current)
-            .in("status", ["active", "pending"])
+            .in("status", ["active", "pending", "billing_paused"])
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -1048,10 +1049,28 @@ const ChatScreen = () => {
           await new Promise(r => setTimeout(r, 250));
         }
 
+        if (!activeSession) {
+          const manUserId = userGender === "male" ? user.id : partnerId;
+          const womanUserId = userGender === "female" ? user.id : partnerId;
+          const { data: started, error: startError } = await supabase.functions.invoke("chat-manager", {
+            body: {
+              action: "start_chat",
+              man_user_id: manUserId,
+              woman_user_id: womanUserId,
+            },
+          });
+          if (startError || !(started as any)?.success) {
+            console.warn("[Chat] Failed to create billing session:", startError || (started as any)?.message);
+          } else if ((started as any)?.session) {
+            activeSession = (started as any).session;
+          }
+        }
+
         if (activeSession) {
           setBillingSessionId(activeSession.id);
           setBillingManId(activeSession.man_user_id);
           setBillingWomanId(activeSession.woman_user_id);
+          setIsSessionActive(true);
           console.log("[Chat] Billing wired for session:", activeSession.id);
         } else {
           console.log("[Chat] No active session after retries — realtime UPDATE will wire billing");
