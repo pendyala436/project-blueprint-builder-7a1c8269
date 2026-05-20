@@ -155,7 +155,7 @@ const PasswordResetScreen = () => {
             <p className="text-muted-foreground text-sm">Enter your new password below</p>
           </CardHeader>
 
-          <CardContent className="space-y-6 p-0">
+          <CardContent className="space-y-3 p-0">
             <div className="space-y-2">
               <Label htmlFor="password" className="flex items-center gap-2 text-sm font-semibold">
                 <Lock className="w-4 h-4 text-primary" /> New Password
