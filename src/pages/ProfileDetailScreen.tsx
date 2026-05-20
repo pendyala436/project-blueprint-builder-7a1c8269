@@ -160,14 +160,23 @@ const ProfileDetailScreen = () => {
           .select("id")
           .eq("user_id", user.id)
           .eq("matched_user_id", targetUserId).maybeSingle(),
-        supabase.from("wallets")
-          .select("balance")
-          .eq("user_id", user.id).maybeSingle(),
+        // Placeholder — actual balance loaded gender-aware below via canonical RPC
+        Promise.resolve({ data: null, error: null }),
       ]);
 
       const currentUserProfile = currentUserResult.data;
       const profileData = profileResult.data;
-      setWalletBalance(walletResult.data?.balance || 0);
+      // Load balance via canonical SoT RPC based on current user's gender
+      const myGender = currentUserProfile?.gender?.toLowerCase() || "";
+      try {
+        if (myGender === "female") {
+          const { data: wRpc } = await supabase.rpc("get_women_wallet_balance", { p_user_id: user.id });
+          setWalletBalance(Number((wRpc as Record<string, number> | null)?.available_balance) || 0);
+        } else {
+          const { data: mRpc } = await supabase.rpc("get_men_wallet_balance", { p_user_id: user.id });
+          setWalletBalance(Number((mRpc as Record<string, number> | null)?.balance) || 0);
+        }
+      } catch { setWalletBalance(0); }
 
       const gender = currentUserProfile?.gender?.toLowerCase() || "";
       setCurrentUserGender(gender);
