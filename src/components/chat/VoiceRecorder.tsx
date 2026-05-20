@@ -98,9 +98,9 @@ export const VoiceRecorder = ({
         return;
       }
 
-      const fileName = `voice_${currentUserId}_${Date.now()}.webm`;
-      // BUG-VM-01 FIX: path is relative to bucket, don't include bucket name
-      const filePath = `${chatId}/${fileName}`;
+      const fileName = `voice_${Date.now()}.webm`;
+      // RLS requires first folder = auth user_id
+      const filePath = `${currentUserId}/${chatId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
