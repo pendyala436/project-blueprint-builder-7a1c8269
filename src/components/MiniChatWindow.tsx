@@ -31,8 +31,9 @@ import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { billChatMinute, billFinalPartialMinute } from "@/services/billing.service";
 
-const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
+const IDLE_PAUSE_MS = 2 * 60 * 1000; // 2 minutes mutual idle → pause billing (chat stays open)
 const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
+const MUTUAL_REPLY_WINDOW_MS = 2 * 60 * 1000; // both must reply within 2 min for billing to be active
 
 interface Message {
   id: string;
@@ -115,6 +116,10 @@ const MiniChatWindow = ({
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
+
+  // Derive canonical man/woman IDs for billing RPC (used by idle effect + startBilling)
+  const manId = userGender === "male" ? currentUserId : partnerId;
+  const womanId = userGender === "female" ? currentUserId : partnerId;
   
   // Free chat tracking for women chatting with no-balance men
   const [isFreeChatMode, setIsFreeChatMode] = useState(false);
@@ -345,62 +350,60 @@ const MiniChatWindow = ({
     }
   }, [messages, currentUserId]);
 
-  // Inactivity warning and auto-close after 2 minutes idle
+  // Mutual-idle billing PAUSE: if BOTH sides have not sent a message for 2 min, stop billing.
+  // Chat session stays open. Billing auto-resumes the moment both sides have replied within 2 min.
   useEffect(() => {
-    if (!billingStarted) return;
+    if (!billingStartedRef.current) return;
 
-    const warningInterval = setInterval(() => {
-      const timeSinceActivity = Date.now() - lastActivityTime;
-      
-      if (timeSinceActivity >= IDLE_WARNING_MS && timeSinceActivity < IDLE_CLOSE_TIMEOUT_MS) {
-        const remainingMins = Math.ceil((IDLE_CLOSE_TIMEOUT_MS - timeSinceActivity) / 60000);
-        setInactiveWarning(`Chat closes in ${remainingMins} min - send a message!`);
+    const tick = setInterval(async () => {
+      const now = Date.now();
+      const userIdleMs = now - lastUserMessageTime;
+      const partnerIdleMs = now - lastPartnerMessageTime;
+      const bothIdleMs = Math.min(userIdleMs, partnerIdleMs);
+      const replyGapMs = Math.abs(lastUserMessageTime - lastPartnerMessageTime);
+      const mutualReplyActive = replyGapMs <= MUTUAL_REPLY_WINDOW_MS;
+
+      // Warning band
+      if (bothIdleMs >= IDLE_WARNING_MS && bothIdleMs < IDLE_PAUSE_MS) {
+        const remainingSec = Math.ceil((IDLE_PAUSE_MS - bothIdleMs) / 1000);
+        setInactiveWarning(`Billing pauses in ${remainingSec}s — reply to keep it active`);
       } else {
         setInactiveWarning(null);
       }
+
+      // PAUSE: both idle ≥ 2 min and billing currently running
+      if (bothIdleMs >= IDLE_PAUSE_MS && heartbeatRef.current) {
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+
+        // Settle any partial minute accumulated since last full-minute tick
+        if (billingStartTimeRef.current > 0) {
+          const elapsedSec = Math.floor((Date.now() - billingStartTimeRef.current) / 1000);
+          const leftoverSec = elapsedSec - (billedMinutesRef.current * 60);
+          if (leftoverSec >= 1) {
+            try {
+              await billFinalPartialMinute(sessionId || chatId, "chat", leftoverSec, manId, womanId);
+            } catch (e) { console.error("Pause partial billing error:", e); }
+          }
+        }
+        billingStartTimeRef.current = 0;
+        setIsBillingPaused(true);
+        toast({
+          title: "Billing paused",
+          description: "Both of you went quiet for 2 min. Send a message to resume billing.",
+        });
+      }
+
+      // RESUME: mutual reply within 2 min, both recently active, and billing currently paused
+      if (mutualReplyActive && bothIdleMs < IDLE_PAUSE_MS && !heartbeatRef.current) {
+        setIsBillingPaused(false);
+        startBilling();
+      }
     }, 1000);
 
-    if (billingPauseTimeoutRef.current) {
-      clearTimeout(billingPauseTimeoutRef.current);
-    }
+    return () => clearInterval(tick);
+  }, [lastUserMessageTime, lastPartnerMessageTime, billingStarted, sessionId, chatId, manId, womanId]);
 
-    // Auto-close session after 2 minutes idle
-    billingPauseTimeoutRef.current = setTimeout(async () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-      
-      toast({
-        title: "Session Ended",
-        description: "No activity for 2 minutes. Chat session closed automatically.",
-      });
-      
-      try {
-        await supabase
-          .from("active_chat_sessions")
-          .update({
-            status: "ended",
-            ended_at: new Date().toISOString(),
-            end_reason: "inactivity_timeout"
-          })
-          .eq("id", sessionId);
-      } catch (error) {
-        console.error("Error during inactivity close:", error);
-      }
-      
-      onClose();
-    }, IDLE_CLOSE_TIMEOUT_MS);
-
-    return () => {
-      clearInterval(warningInterval);
-      if (billingPauseTimeoutRef.current) clearTimeout(billingPauseTimeoutRef.current);
-    };
-  }, [lastActivityTime, billingStarted, sessionId, onClose]);
 
   // Free chat timer: 5-min countdown for women chatting with no-balance men
   useEffect(() => {
@@ -606,9 +609,8 @@ const MiniChatWindow = ({
   const billingStartTimeRef = useRef<number>(0);
   const billedMinutesRef = useRef<number>(0);
 
-  // Derive canonical man/woman IDs for billing RPC
-  const manId = userGender === "male" ? currentUserId : partnerId;
-  const womanId = userGender === "female" ? currentUserId : partnerId;
+  // (manId/womanId moved above near top of component)
+
 
   const startBilling = () => {
     // Clear any existing intervals to prevent orphaned timers on resume
