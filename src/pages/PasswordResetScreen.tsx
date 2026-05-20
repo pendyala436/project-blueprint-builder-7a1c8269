@@ -132,7 +132,7 @@ const PasswordResetScreen = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-y-auto">
+    <div className="h-screen flex flex-col relative overflow-hidden">
       <AuroraBackground />
       <header className="px-6 pt-8 pb-4 relative z-10">
         <div className="flex items-center gap-4">
