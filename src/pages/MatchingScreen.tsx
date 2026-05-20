@@ -364,14 +364,11 @@ const MatchingScreen = () => {
     setSelectedWoman(woman);
 
     try {
-      // Check wallet balance first
-      const { data: wallet } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", currentUserId)
-        .maybeSingle();
+      // Check wallet balance first (canonical SoT RPC)
+      const { data: walletRpc } = await supabase.rpc("get_men_wallet_balance", { p_user_id: currentUserId });
+      const balance = Number((walletRpc as Record<string, number> | null)?.balance) || 0;
 
-      if (!wallet || wallet.balance <= 0) {
+      if (balance <= 0) {
         toast({
           title: "Insufficient Balance",
           description: "Please recharge your wallet to start chatting",
