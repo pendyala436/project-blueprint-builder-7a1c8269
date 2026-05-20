@@ -678,12 +678,24 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
     return match ? match[1] : null;
   };
 
-  const fileUrl = isVoice
+  const rawUrl = isVoice
     ? msg.message.replace("[VOICE:", "").replace("]", "")
     : isImage ? extractUrl(msg.message, "IMAGE")
     : isVideo ? extractUrl(msg.message, "VIDEO")
     : isDocument ? extractUrl(msg.message, "DOCUMENT")
     : null;
+
+  // Resolve chat-attachment:// to signed URL for private bucket
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!rawUrl) { setFileUrl(null); return; }
+    if (!rawUrl.startsWith("chat-attachment://")) { setFileUrl(rawUrl); return; }
+    const path = rawUrl.replace("chat-attachment://", "");
+    supabase.storage.from("chat-attachments").createSignedUrl(path, 3600)
+      .then(({ data }) => { if (!cancelled) setFileUrl(data?.signedUrl || null); });
+    return () => { cancelled = true; };
+  }, [rawUrl]);
 
   // Display text: translated version if available, else original
   const displayText = msg.translatedMessage || msg.message;
