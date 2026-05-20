@@ -28,6 +28,7 @@ import { useMiniChatMessages } from "@/hooks/useMiniChatMessages";
 import { usePartnerMonitor } from "@/hooks/usePartnerMonitor";
 import { useChatPresence } from "@/hooks/useChatPresence";
 import { PartnerStatusLine } from "@/components/chat/PartnerStatusLine";
+import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 
 interface DraggableMiniChatWindowProps {
   chatId: string;
@@ -621,9 +622,19 @@ const DraggableMiniChatWindow = ({
                 <div className="flex-1">
                   <Input placeholder="Type a message..." value={newMessage} onChange={(e) => { setNewMessage(e.target.value); sendTyping(e.target.value.trim().length > 0); }} onKeyDown={handleKeyPress} onBlur={() => sendTyping(false)} dir="auto" spellCheck={true} autoComplete="off" autoCorrect="on" inputMode="text" enterKeyHint="send" className="h-8 text-xs w-full unicode-text" disabled={isUploading} />
                 </div>
-                <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
+                {newMessage.trim() ? (
+                  <Button size="icon" className="h-8 w-8 shrink-0 bg-primary hover:bg-primary/90" onClick={sendMessage} disabled={!newMessage.trim()}>
+                    <Send className="h-3.5 w-3.5" />
+                  </Button>
+                ) : (
+                  <VoiceRecorder
+                    chatId={chatId}
+                    currentUserId={currentUserId}
+                    receiverId={partnerId}
+                    disabled={isUploading}
+                    onError={(m) => toast({ title: "Voice failed", description: m, variant: "destructive" })}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -667,12 +678,24 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
     return match ? match[1] : null;
   };
 
-  const fileUrl = isVoice
+  const rawUrl = isVoice
     ? msg.message.replace("[VOICE:", "").replace("]", "")
     : isImage ? extractUrl(msg.message, "IMAGE")
     : isVideo ? extractUrl(msg.message, "VIDEO")
     : isDocument ? extractUrl(msg.message, "DOCUMENT")
     : null;
+
+  // Resolve chat-attachment:// to signed URL for private bucket
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!rawUrl) { setFileUrl(null); return; }
+    if (!rawUrl.startsWith("chat-attachment://")) { setFileUrl(rawUrl); return; }
+    const path = rawUrl.replace("chat-attachment://", "");
+    supabase.storage.from("chat-attachments").createSignedUrl(path, 3600)
+      .then(({ data }) => { if (!cancelled) setFileUrl(data?.signedUrl || null); });
+    return () => { cancelled = true; };
+  }, [rawUrl]);
 
   // Display text: translated version if available, else original
   const displayText = msg.translatedMessage || msg.message;

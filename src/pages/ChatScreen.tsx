@@ -2628,24 +2628,114 @@ const ChatScreen = () => {
             </div>
           )}
           
-          {/* WhatsApp-style Chat Input — text only, no attachments */}
-          <ChatMessageInput
-            onSendMessage={async (msg) => {
-              await handleSendMessage(msg);
-              setTypingText("");
-              setPreviewNative("");
-              setPreviewEnglish("");
-              sendTyping(false);
-            }}
-            onInputChange={(t) => {
-              setTypingText(t);
-              sendTyping(t.trim().length > 0);
-            }}
-            onTyping={sendTyping}
-            disabled={isSending || isBlocked || isBlockedByPartner}
-            userLanguage={currentUserLanguage || "english"}
-          />
+          {/* Selected-file preview banner */}
+          {selectedFile && (
+            <div className="mx-3 mb-2 flex items-center gap-3 rounded-lg border bg-card p-2 shadow-sm">
+              {previewUrl ? (
+                <img src={previewUrl} alt="preview" className="h-14 w-14 rounded object-cover" />
+              ) : selectedFile.type.startsWith("video/") ? (
+                <div className="flex h-14 w-14 items-center justify-center rounded bg-muted"><Video className="h-6 w-6 text-muted-foreground" /></div>
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded bg-muted"><FileText className="h-6 w-6 text-muted-foreground" /></div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-medium">{selectedFile.name}</p>
+                <p className="text-[11px] text-muted-foreground">{(selectedFile.size / 1024).toFixed(0)} KB</p>
+              </div>
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={cancelSelectedFile} disabled={isSending}>
+                <X className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90"
+                onClick={handleSendWithAttachment}
+                disabled={isSending}
+              >
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+          )}
+
+          {/* Hidden file inputs */}
+          <input ref={imageInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleImageSelect} />
+          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv" className="hidden" onChange={handleFileSelect} />
+
+          {/* WhatsApp-style Chat Input with attachments + voice */}
+          <div className="flex items-end gap-1 px-2 pb-2">
+            <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 rounded-full text-muted-foreground"
+                  disabled={isSending || isBlocked || isBlockedByPartner}
+                  aria-label="Attach"
+                >
+                  <Paperclip className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="start" className="w-48 p-1 z-[100]">
+                <div className="flex flex-col gap-0.5">
+                  <Button variant="ghost" size="sm" className="justify-start" onClick={() => { setIsAttachmentOpen(false); imageInputRef.current?.click(); }}>
+                    <Image className="mr-2 h-4 w-4 text-blue-500" /> Photo / Video
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start" onClick={openCamera}>
+                    <Camera className="mr-2 h-4 w-4 text-rose-500" /> Camera
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start" onClick={() => { setIsAttachmentOpen(false); fileInputRef.current?.click(); }}>
+                    <FileText className="mr-2 h-4 w-4 text-orange-500" /> Document
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <div className="flex-1">
+              <ChatMessageInput
+                onSendMessage={async (msg) => {
+                  await handleSendMessage(msg);
+                  setTypingText("");
+                  setPreviewNative("");
+                  setPreviewEnglish("");
+                  sendTyping(false);
+                }}
+                onInputChange={(t) => {
+                  setTypingText(t);
+                  sendTyping(t.trim().length > 0);
+                }}
+                onTyping={sendTyping}
+                disabled={isSending || isBlocked || isBlockedByPartner}
+                userLanguage={currentUserLanguage || "english"}
+                className="border-t-0"
+              />
+            </div>
+
+            {!typingText.trim() && !selectedFile && currentUserId && chatPartner && (
+              <div className="pb-3">
+                <VoiceRecorder
+                  chatId={chatId.current}
+                  currentUserId={currentUserId}
+                  receiverId={chatPartner.userId}
+                  disabled={isSending || isBlocked || isBlockedByPartner}
+                  onError={(m) => toast({ title: "Voice failed", description: m, variant: "destructive" })}
+                />
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Camera modal for selfie capture */}
+        {isCameraOpen && (
+          <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90">
+            <video ref={videoRef} autoPlay playsInline muted className="max-h-[70vh] w-full max-w-md rounded-lg object-cover" />
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="mt-4 flex gap-3">
+              <Button variant="secondary" onClick={closeCamera}>Cancel</Button>
+              <Button onClick={captureSelfie} className="bg-primary"><Camera className="mr-2 h-4 w-4" /> Capture</Button>
+            </div>
+          </div>
+        )}
       </footer>
     </div>
   );

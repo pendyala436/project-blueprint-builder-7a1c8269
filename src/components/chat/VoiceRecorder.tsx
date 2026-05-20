@@ -98,9 +98,9 @@ export const VoiceRecorder = ({
         return;
       }
 
-      const fileName = `voice_${currentUserId}_${Date.now()}.webm`;
-      // BUG-VM-01 FIX: path is relative to bucket, don't include bucket name
-      const filePath = `${chatId}/${fileName}`;
+      const fileName = `voice_${Date.now()}.webm`;
+      // RLS requires first folder = auth user_id
+      const filePath = `${currentUserId}/${chatId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('chat-attachments')
@@ -114,8 +114,8 @@ export const VoiceRecorder = ({
         return;
       }
 
-      // Send as a message with voice URL marker
-      const voiceMarker = `🎤voice:${filePath}`;
+      // Use [VOICE:chat-attachment://path] format — parsed by both ChatScreen and MiniChatWindow renderers
+      const voiceMarker = `[VOICE:chat-attachment://${filePath}]`;
       await supabase.from('chat_messages').insert({
         chat_id: chatId,
         sender_id: currentUserId,
