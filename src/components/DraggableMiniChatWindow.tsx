@@ -229,12 +229,10 @@ const DraggableMiniChatWindow = ({
     (async () => {
       try {
         if (userGender === "male") {
-          const { data: wallet } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("user_id", currentUserId)
-            .maybeSingle();
-          if (wallet) billing.setWalletBalance(wallet.balance);
+          // Canonical SoT RPC instead of stale wallets.balance
+          const { data: walletRpc } = await supabase.rpc("get_men_wallet_balance", { p_user_id: currentUserId });
+          const balance = Number((walletRpc as Record<string, number> | null)?.balance) || 0;
+          billing.setWalletBalance(balance);
         } else if (isEarningEligible) {
           const today = new Date().toISOString().split("T")[0];
           // Earnings come from wallet_transactions (canonical) — credits are positive amounts
