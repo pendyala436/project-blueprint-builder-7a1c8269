@@ -82,6 +82,7 @@ function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>
 
 // Auth & Registration
 const AuthScreen = lazyRetry(() => import("@/pages/AuthScreen"));
+const CaptchaScreen = lazyRetry(() => import("@/pages/CaptchaScreen"));
 const ForgotPasswordScreen = lazyRetry(() => import("@/pages/ForgotPasswordScreen"));
 const PasswordResetScreen = lazyRetry(() => import("@/pages/PasswordResetScreen"));
 const PasswordResetSuccessScreen = lazyRetry(() => import("@/pages/PasswordResetSuccessScreen"));
@@ -157,6 +158,7 @@ const AppShell = () => {
           <Routes>
             {/* Auth */}
             <Route path="/" element={<RouteSuspense><AuthScreen /></RouteSuspense>} />
+            <Route path="/captcha" element={<RouteSuspense><CaptchaScreen /></RouteSuspense>} />
             <Route path="/forgot-password" element={<RouteSuspense><ForgotPasswordScreen /></RouteSuspense>} />
             <Route path="/reset-password" element={<RouteSuspense><PasswordResetScreen /></RouteSuspense>} />
             <Route path="/password-reset-success" element={<RouteSuspense><PasswordResetSuccessScreen /></RouteSuspense>} />
