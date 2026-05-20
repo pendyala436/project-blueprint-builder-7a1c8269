@@ -29,6 +29,7 @@ import {
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { billChatMinute, billFinalPartialMinute } from "@/services/billing.service";
 
 const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
 const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
@@ -602,22 +603,53 @@ const MiniChatWindow = ({
     };
   };
 
+  const billingStartTimeRef = useRef<number>(0);
+  const billedMinutesRef = useRef<number>(0);
+
+  // Derive canonical man/woman IDs for billing RPC
+  const manId = userGender === "male" ? currentUserId : partnerId;
+  const womanId = userGender === "female" ? currentUserId : partnerId;
+
   const startBilling = () => {
     // Clear any existing intervals to prevent orphaned timers on resume
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
 
+    billingStartTimeRef.current = Date.now();
+    billedMinutesRef.current = 0;
+
     timerRef.current = setInterval(() => {
       setElapsedSeconds(prev => prev + 1);
     }, 1000);
 
+    // Per-minute heartbeat: keeps server activity AND bills 1 minute via canonical RPC
     heartbeatRef.current = setInterval(async () => {
       try {
-        await supabase.functions.invoke("chat-manager", {
+        // Server activity ping (keeps session alive, partner online tracking)
+        supabase.functions.invoke("chat-manager", {
           body: { action: "heartbeat", chat_id: chatId }
-        });
+        }).catch((e) => console.error("Heartbeat error:", e));
+
+        // Canonical billing — 1 full minute per tick, idempotent on minute_idx
+        const minuteIdx = billedMinutesRef.current;
+        const r = await billChatMinute(sessionId || chatId, 1.0, manId, womanId, minuteIdx);
+        if (r.success && !r.duplicate_skipped) {
+          billedMinutesRef.current = minuteIdx + 1;
+          if (userGender === "female") {
+            setTotalEarned(prev => prev + (r.earned ?? 0));
+          } else {
+            setWalletBalance(prev => Math.max(0, prev - (r.charged ?? 0)));
+          }
+        } else if (r.error?.includes("Insufficient balance")) {
+          toast({
+            title: "Chat ended",
+            description: "Insufficient balance to continue.",
+            variant: "destructive",
+          });
+          onClose();
+        }
       } catch (error) {
-        console.error("Heartbeat error:", error);
+        console.error("Billing tick error:", error);
       }
     }, 60000);
   };
@@ -768,6 +800,20 @@ const MiniChatWindow = ({
     // Stop billing timers immediately
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+
+    // Final settlement: bill leftover seconds after last full minute as fractional minute
+    if (billingStartedRef.current && billingStartTimeRef.current > 0) {
+      const elapsedSec = Math.floor((Date.now() - billingStartTimeRef.current) / 1000);
+      const leftoverSec = elapsedSec - (billedMinutesRef.current * 60);
+      if (leftoverSec >= 1) {
+        try {
+          await billFinalPartialMinute(sessionId || chatId, "chat", leftoverSec, manId, womanId);
+        } catch (e) {
+          console.error("Final partial billing error:", e);
+        }
+      }
+    }
+
     
     try {
       // Call chat-manager end_chat for proper final billing and cleanup
