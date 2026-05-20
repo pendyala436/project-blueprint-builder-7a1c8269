@@ -3934,16 +3934,14 @@ export type Database = {
         }
         Returns: boolean
       }
-      check_session_balance:
-        | { Args: { p_session_id: string; p_user_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_session_id?: string
-              p_session_type?: string
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      check_session_balance: {
+        Args: {
+          p_session_id?: string
+          p_session_type?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       check_signup_availability: {
         Args: { p_email?: string; p_phone?: string }
         Returns: Json
@@ -4043,9 +4041,10 @@ export type Database = {
         }[]
       }
       get_man_balance: { Args: { p_user_id: string }; Returns: Json }
-      get_men_transaction_history:
-        | { Args: { p_user_id: string }; Returns: Json }
-        | { Args: { p_limit?: number; p_user_id: string }; Returns: Json }
+      get_men_transaction_history: {
+        Args: { p_limit?: number; p_user_id: string }
+        Returns: Json
+      }
       get_men_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
       get_men_wallet_balances_bulk: {
         Args: { p_user_ids: string[] }
@@ -4328,6 +4327,7 @@ export type Database = {
       stop_host_session: { Args: { p_group_id: string }; Returns: Json }
       stop_live_safe: { Args: { p_group_id: string }; Returns: Json }
       sweep_stale_group_hosts: { Args: never; Returns: Json }
+      sweep_stale_login_sessions: { Args: never; Returns: number }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
       text_to_uuid: { Args: { p_text: string }; Returns: string }
@@ -4341,6 +4341,14 @@ export type Database = {
       }
       update_host_heartbeat: { Args: { p_group_id: string }; Returns: Json }
       use_men_free_minute: { Args: { p_user_id: string }; Returns: Json }
+      validate_financial_sot: {
+        Args: never
+        Returns: {
+          check_name: string
+          details: string
+          status: string
+        }[]
+      }
       verify_recharge_integrity: {
         Args: never
         Returns: {
