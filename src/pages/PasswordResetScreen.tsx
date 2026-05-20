@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ArrowLeft, Lock, Eye, EyeOff, Check, X, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Lock, Eye, EyeOff, Check, X, Loader2, AlertCircle, ChevronUp, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { classifyError } from "@/lib/errors";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ const PasswordResetScreen = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const scrollRef = useRef<HTMLElement | null>(null);
   
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -91,6 +92,10 @@ const PasswordResetScreen = () => {
     }
   };
 
+  const scrollForm = (direction: "up" | "down") => {
+    scrollRef.current?.scrollBy({ top: direction === "down" ? 180 : -180, behavior: "smooth" });
+  };
+
   const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
     <div className="flex items-center gap-2 text-sm">
       {met ? <Check className="w-4 h-4 text-accent" /> : <X className="w-4 h-4 text-muted-foreground" />}
@@ -134,7 +139,7 @@ const PasswordResetScreen = () => {
   return (
     <div className="h-screen flex flex-col relative overflow-hidden">
       <AuroraBackground />
-      <header className="px-6 pt-8 pb-4 relative z-10">
+      <header className="px-6 pt-5 pb-2 relative z-10">
         <div className="flex items-center gap-4">
           <Button variant="auroraGhost" size="icon" onClick={() => navigate("/forgot-password")} className="shrink-0">
             <ArrowLeft className="w-5 h-5" />
@@ -145,13 +150,13 @@ const PasswordResetScreen = () => {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col items-center justify-start px-6 pb-8 relative z-10">
-        <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
-          <CardHeader className="space-y-2 text-center p-0 pb-6">
-            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-              <Lock className="w-8 h-8 text-primary" />
+      <main ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain flex flex-col items-center justify-start px-4 pb-20 relative z-10 scrollbar-thin scrollbar-thumb-primary/50 scrollbar-track-transparent">
+        <Card className="w-full max-w-md p-4 sm:p-5 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(var(--primary)/0.1)] animate-slide-up">
+          <CardHeader className="space-y-1 text-center p-0 pb-3">
+            <div className="w-12 h-12 mx-auto bg-primary/10 rounded-xl flex items-center justify-center mb-2">
+              <Lock className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground font-display">Create New Password</h1>
+            <h1 className="text-xl font-bold text-foreground font-display">Create New Password</h1>
             <p className="text-muted-foreground text-sm">Enter your new password below</p>
           </CardHeader>
 
@@ -207,6 +212,14 @@ const PasswordResetScreen = () => {
           </CardContent>
         </Card>
       </main>
+      <div className="absolute right-3 bottom-4 z-20 flex flex-col gap-2">
+        <Button type="button" variant="auroraGhost" size="icon" aria-label="Scroll up" onClick={() => scrollForm("up")} className="h-9 w-9 rounded-full bg-card/80 backdrop-blur-md shadow-lg">
+          <ChevronUp className="h-4 w-4" />
+        </Button>
+        <Button type="button" variant="auroraGhost" size="icon" aria-label="Scroll down" onClick={() => scrollForm("down")} className="h-9 w-9 rounded-full bg-card/80 backdrop-blur-md shadow-lg">
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 };
