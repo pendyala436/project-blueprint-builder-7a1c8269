@@ -76,7 +76,7 @@ const BasicInfoScreen = () => {
     return undefined;
   };
 
-  // Check email uniqueness against auth
+  // Check email uniqueness in profiles
   const checkEmailUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
     const formatError = validateEmail(value);
     if (formatError) return formatError;
@@ -87,27 +87,30 @@ const BasicInfoScreen = () => {
         .select("user_id")
         .eq("email", value.trim().toLowerCase())
         .maybeSingle();
-      if (data) return "This email is already registered. Please log in instead.";
+      if (data) return "Email already exists. Please try a different email.";
       return undefined;
     } catch {
-      return undefined; // Don't block registration on network errors
+      return undefined;
     } finally {
       setCheckingEmail(false);
     }
   }, []);
 
-  // Check phone uniqueness
+  // Check phone uniqueness across profiles, male_profiles, female_profiles
   const checkPhoneUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
     const formatError = validatePhone(value);
     if (formatError) return formatError;
     setCheckingPhone(true);
     try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("phone", value.trim())
-        .maybeSingle();
-      if (data) return "This phone number is already registered.";
+      const normalized = value.trim();
+      const [p, m, f] = await Promise.all([
+        supabase.from("profiles").select("user_id").eq("phone", normalized).maybeSingle(),
+        supabase.from("male_profiles").select("user_id").eq("phone", normalized).maybeSingle(),
+        supabase.from("female_profiles").select("user_id").eq("phone", normalized).maybeSingle(),
+      ]);
+      if (p.data || m.data || f.data) {
+        return "Mobile number already exists. Please try a different mobile number.";
+      }
       return undefined;
     } catch {
       return undefined;
@@ -225,15 +228,22 @@ const BasicInfoScreen = () => {
       ]);
 
       if (emailError || phoneError) {
+        const bothExist =
+          emailError === "Email already exists. Please try a different email." &&
+          phoneError === "Mobile number already exists. Please try a different mobile number.";
+        const combinedMessage = bothExist
+          ? "Email and mobile number already exist. Please try different ones."
+          : emailError || phoneError || "Duplicate found";
+
         setErrors((prev) => ({
           ...prev,
           email: emailError,
           phone: phoneError,
         }));
         if (emailError) triggerShake("email");
-        else if (phoneError) triggerShake("phone");
+        if (phoneError) triggerShake("phone");
         toast({
-          title: emailError || phoneError || "Duplicate found",
+          title: combinedMessage,
           variant: "destructive",
         });
         return;
