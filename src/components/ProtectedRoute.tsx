@@ -42,6 +42,10 @@ function clearRoleCache() {
 supabase.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_OUT') {
     clearRoleCache();
+    try {
+      sessionStorage.removeItem('captchaVerifiedAt');
+      sessionStorage.removeItem('postCaptchaRedirect');
+    } catch {}
   }
 });
 
@@ -129,6 +133,20 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       navigate('/', { replace: true });
       return;
     }
+
+    // CAPTCHA gate — block dashboards until math CAPTCHA has been solved this session
+    const captchaOk = !!sessionStorage.getItem('captchaVerifiedAt');
+    if (!captchaOk) {
+      const target =
+        requiredRole === 'admin' ? '/admin' :
+        requiredRole === 'female' ? '/women-dashboard' :
+        requiredRole === 'male' ? '/dashboard' :
+        window.location.pathname + window.location.search;
+      sessionStorage.setItem('postCaptchaRedirect', target);
+      navigate('/captcha', { replace: true });
+      return;
+    }
+
 
     if (checkedForUser.current === user.id) return;
 
