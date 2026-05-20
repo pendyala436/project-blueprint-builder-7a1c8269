@@ -76,48 +76,64 @@ const BasicInfoScreen = () => {
     return undefined;
   };
 
-  // Check email uniqueness in profiles
-  const checkEmailUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
-    const formatError = validateEmail(value);
-    if (formatError) return formatError;
-    setCheckingEmail(true);
-    try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("email", value.trim().toLowerCase())
-        .maybeSingle();
-      if (data) return "Email already exists. Please try a different email.";
-      return undefined;
-    } catch {
-      return undefined;
-    } finally {
-      setCheckingEmail(false);
-    }
-  }, []);
-
-  // Check phone uniqueness across profiles, male_profiles, female_profiles
-  const checkPhoneUniqueness = useCallback(async (value: string): Promise<string | undefined> => {
-    const formatError = validatePhone(value);
-    if (formatError) return formatError;
-    setCheckingPhone(true);
-    try {
-      const normalized = value.trim();
-      const [p, m, f] = await Promise.all([
-        supabase.from("profiles").select("user_id").eq("phone", normalized).maybeSingle(),
-        supabase.from("male_profiles").select("user_id").eq("phone", normalized).maybeSingle(),
-        supabase.from("female_profiles").select("user_id").eq("phone", normalized).maybeSingle(),
-      ]);
-      if (p.data || m.data || f.data) {
-        return "Mobile number already exists. Please try a different mobile number.";
+  // Backend availability check via SECURITY DEFINER RPC (bypasses RLS for anon signup)
+  const checkAvailability = useCallback(
+    async (
+      checkEmail: string | null,
+      checkPhone: string | null
+    ): Promise<{ emailExists: boolean; phoneExists: boolean }> => {
+      try {
+        const { data, error } = await supabase.rpc("check_signup_availability", {
+          p_email: checkEmail,
+          p_phone: checkPhone,
+        });
+        if (error) throw error;
+        const r = (data ?? {}) as { email_exists?: boolean; phone_exists?: boolean };
+        return {
+          emailExists: !!r.email_exists,
+          phoneExists: !!r.phone_exists,
+        };
+      } catch (e) {
+        console.warn("[BasicInfo] availability check failed:", e);
+        return { emailExists: false, phoneExists: false };
       }
-      return undefined;
-    } catch {
-      return undefined;
-    } finally {
-      setCheckingPhone(false);
-    }
-  }, []);
+    },
+    []
+  );
+
+  // Check email uniqueness (format + backend)
+  const checkEmailUniqueness = useCallback(
+    async (value: string): Promise<string | undefined> => {
+      const formatError = validateEmail(value);
+      if (formatError) return formatError;
+      setCheckingEmail(true);
+      try {
+        const { emailExists } = await checkAvailability(value.trim().toLowerCase(), null);
+        if (emailExists) return "Email already exists. Please try a different email.";
+        return undefined;
+      } finally {
+        setCheckingEmail(false);
+      }
+    },
+    [checkAvailability]
+  );
+
+  // Check phone uniqueness (format + backend across all profile tables)
+  const checkPhoneUniqueness = useCallback(
+    async (value: string): Promise<string | undefined> => {
+      const formatError = validatePhone(value);
+      if (formatError) return formatError;
+      setCheckingPhone(true);
+      try {
+        const { phoneExists } = await checkAvailability(null, value.trim());
+        if (phoneExists) return "Mobile number already exists. Please try a different mobile number.";
+        return undefined;
+      } finally {
+        setCheckingPhone(false);
+      }
+    },
+    [checkAvailability]
+  );
 
   // Debounced live (AJAX-style) email uniqueness check while typing
   const emailReqIdRef = useRef(0);
