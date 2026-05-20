@@ -475,8 +475,13 @@ export function moderateAttachment(fileName: string, fileType?: string): Moderat
  */
 export function moderateImageText(extractedText: string): ModerationResult {
   if (!extractedText) return { isBlocked: false };
-  // Run full message moderation on any text extracted from images
-  return moderateMessage(extractedText);
+  const result = moderateMessage(extractedText);
+  // Phone/contact-info detection is disabled for attachments — only block
+  // sexual/harmful/hate content found in extracted image text.
+  if (result.isBlocked && (result.detectedType === 'phone' || result.detectedType === 'number_words' || result.detectedType === 'contact_intent' || result.detectedType === 'email' || result.detectedType === 'social_media')) {
+    return { isBlocked: false };
+  }
+  return result;
 }
 
 // ========================================
