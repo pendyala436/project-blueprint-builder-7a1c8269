@@ -375,11 +375,11 @@ const DashboardScreen = () => {
   };
 
   async function fetchMatchCount(userId: string) {
+    // Count ALL matches (pending + accepted) to stay consistent with the Matches tab list
     const { count } = await supabase
       .from("matches")
       .select("*", { count: "exact", head: true })
-      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`)
-      .eq("status", "accepted");
+      .or(`user_id.eq.${userId},matched_user_id.eq.${userId}`);
 
     setStats(prev => ({ ...prev, matchCount: count || 0 }));
     // Matches profiles loaded lazily when Matches tab is opened
