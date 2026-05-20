@@ -71,7 +71,7 @@ Meow MEOW FRND APP is an opposite-sex social and communication platform offering
 • 1:1 audio and video calls — initiated by men, accepted by women, billed per second.
 • Private flower-themed group video & audio calls (up to 50 rooms, multi-participant).
 • Language-specific community group chat for women.
-All communication channels — chat, audio calls, video calls, and group calls — are expressly permitted within the App and governed by the same prohibitions, moderation, and safety rules. Chat is text-only (no media attachments). The service is online-only and depends on network, third-party infrastructure, and user availability.
+All communication channels — chat (text, images, videos, documents and voice messages), audio calls, video calls, and group calls — are expressly permitted within the App and governed by the same prohibitions, moderation, and safety rules. Media attachments are auto-deleted after 15 minutes. The service is online-only and depends on network, third-party infrastructure, and user availability.
 
 4. ACCOUNT REGISTRATION & VERIFICATION
 • Email, phone, gender, age, country (India), state, languages and a live selfie are required.
