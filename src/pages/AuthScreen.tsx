@@ -334,10 +334,20 @@ const AuthScreen = () => {
     }
   }, [email, password, navigate, validateEmail, t]);
 
+  // Debounced live email-format validation (AJAX-style UX)
+  const emailDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleEmailChange = useCallback((value: string) => {
     setEmail(value);
     setErrors(prev => ({ ...prev, email: undefined }));
-  }, []);
+    if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+    emailDebounceRef.current = setTimeout(() => {
+      const v = value.trim();
+      if (!v) return;
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      if (!ok) setErrors(prev => ({ ...prev, email: t('auth.invalidCredentials') }));
+    }, 500);
+  }, [t]);
+
 
   const handlePasswordChange = useCallback((value: string) => {
     setPassword(value);
