@@ -114,8 +114,8 @@ export const VoiceRecorder = ({
         return;
       }
 
-      // Send as a message with voice URL marker
-      const voiceMarker = `🎤voice:${filePath}`;
+      // Use [VOICE:chat-attachment://path] format — parsed by both ChatScreen and MiniChatWindow renderers
+      const voiceMarker = `[VOICE:chat-attachment://${filePath}]`;
       await supabase.from('chat_messages').insert({
         chat_id: chatId,
         sender_id: currentUserId,
