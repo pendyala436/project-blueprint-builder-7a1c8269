@@ -376,13 +376,12 @@ const MiniChatWindow = ({
         if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
         if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
 
-        // Settle any partial minute accumulated since last full-minute tick
+        // Settle: round UP any leftover seconds to a full chargeable minute.
         if (billingStartTimeRef.current > 0) {
           const elapsedSec = Math.floor((Date.now() - billingStartTimeRef.current) / 1000);
-          const leftoverSec = elapsedSec - (billedMinutesRef.current * 60);
-          if (leftoverSec >= 1) {
+          if (elapsedSec >= 1) {
             try {
-              await billFinalPartialMinute(sessionId || chatId, "chat", leftoverSec, manId, womanId);
+              await billFinalPartialMinute(sessionId || chatId, "chat", elapsedSec, manId, womanId);
             } catch (e) { console.error("Pause partial billing error:", e); }
           }
         }
@@ -803,13 +802,13 @@ const MiniChatWindow = ({
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
 
-    // Final settlement: bill leftover seconds after last full minute as fractional minute
+    // Final settlement: round UP any leftover seconds to a full chargeable minute.
+    // Ensures sub-1-minute chats and partial-minute closes (e.g. 1m12s) are billed.
     if (billingStartedRef.current && billingStartTimeRef.current > 0) {
       const elapsedSec = Math.floor((Date.now() - billingStartTimeRef.current) / 1000);
-      const leftoverSec = elapsedSec - (billedMinutesRef.current * 60);
-      if (leftoverSec >= 1) {
+      if (elapsedSec >= 1) {
         try {
-          await billFinalPartialMinute(sessionId || chatId, "chat", leftoverSec, manId, womanId);
+          await billFinalPartialMinute(sessionId || chatId, "chat", elapsedSec, manId, womanId);
         } catch (e) {
           console.error("Final partial billing error:", e);
         }
