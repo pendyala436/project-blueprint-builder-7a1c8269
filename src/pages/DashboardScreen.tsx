@@ -375,6 +375,7 @@ const DashboardScreen = () => {
   };
 
   async function fetchMatchCount(userId: string) {
+    // Kept for backward compat; UI now uses matchedWomen.length (deduped, gender-filtered)
     const { count } = await supabase
       .from("matches")
       .select("*", { count: "exact", head: true })
@@ -382,7 +383,6 @@ const DashboardScreen = () => {
       .eq("status", "accepted");
 
     setStats(prev => ({ ...prev, matchCount: count || 0 }));
-    // Matches profiles loaded lazily when Matches tab is opened
   };
 
   async function fetchNotifications(userId: string) {
@@ -1753,7 +1753,7 @@ const DashboardScreen = () => {
           <p className="text-[10px] text-muted-foreground">Online</p>
         </div>
         <div className="text-center py-4 border-r border-border/30">
-          <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+          <p className="text-xl font-bold text-foreground">{matchedWomen.length}</p>
           <p className="text-[10px] text-muted-foreground">Matches</p>
         </div>
         <div className="text-center py-4">
@@ -1802,7 +1802,7 @@ const DashboardScreen = () => {
           <p className="text-[10px] text-muted-foreground">Online</p>
         </div>
         <div className="text-center py-4 border-r border-border/30">
-          <p className="text-xl font-bold text-foreground">{stats.matchCount}</p>
+          <p className="text-xl font-bold text-foreground">{matchedWomen.length}</p>
           <p className="text-[10px] text-muted-foreground">Matches</p>
         </div>
         <div className="text-center py-4">

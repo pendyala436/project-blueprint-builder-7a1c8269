@@ -53,7 +53,7 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
       .channel('available-groups-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_active_hosts' }, () => fetchRows())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'private_groups' }, () => fetchRows())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${currentUserId}` }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${currentUserId}` }, () => {
         fetchWalletBalance();
       })
       .subscribe();
@@ -117,8 +117,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchWalletBalance = async () => {
     try {
-      const { data } = await supabase.from('wallets').select('balance').eq('user_id', currentUserId).single();
-      if (data) setWalletBalance(data.balance);
+      // Use canonical SoT RPC (wallet_transactions), not legacy wallets.balance column
+      const { data } = await supabase.rpc('get_men_wallet_balance', { p_user_id: currentUserId });
+      if (data) {
+        const bd = data as Record<string, number>;
+        setWalletBalance(Number(bd.balance) || 0);
+      }
     } catch (err) { console.error('[AvailableGroups] fetchWalletBalance error:', err); }
   };
 
