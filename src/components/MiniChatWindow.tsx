@@ -196,15 +196,10 @@ const MiniChatWindow = ({
         }
 
         if (userGender === "male") {
-          const { data: wallet } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("user_id", currentUserId)
-            .maybeSingle();
-          
-          if (wallet) {
-            setWalletBalance(wallet.balance);
-          }
+          // Canonical SoT RPC instead of stale wallets.balance
+          const { data: walletRpc } = await supabase.rpc("get_men_wallet_balance", { p_user_id: currentUserId });
+          const balance = Number((walletRpc as Record<string, number> | null)?.balance) || 0;
+          setWalletBalance(balance);
         } else {
           const today = new Date().toISOString().split("T")[0];
           // Earnings come from wallet_transactions (canonical) — credits are positive amounts
@@ -221,13 +216,9 @@ const MiniChatWindow = ({
 
         // Check if this is a free chat (woman chatting with no-balance man)
         if (userGender === "female") {
-          const { data: partnerWallet } = await supabase
-            .from("wallets")
-            .select("balance")
-            .eq("user_id", partnerId)
-            .maybeSingle();
-          
-          const partnerBalance = partnerWallet?.balance ?? 0;
+          // Canonical SoT RPC for partner (male) balance
+          const { data: partnerWalletRpc } = await supabase.rpc("get_men_wallet_balance", { p_user_id: partnerId });
+          const partnerBalance = Number((partnerWalletRpc as Record<string, number> | null)?.balance) || 0;
           if (partnerBalance <= 0) {
             // Check free chat status
             const { data: freeChatStatus } = await supabase.rpc("check_free_chat_status", {
