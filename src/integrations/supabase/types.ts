@@ -3916,6 +3916,7 @@ export type Database = {
         Returns: boolean
       }
       cancel_friend_request: { Args: { p_request_id: string }; Returns: Json }
+      canonical_wallet_balance: { Args: { p_user_id: string }; Returns: number }
       capture_payout_snapshot: {
         Args: { p_snapshot_type: string }
         Returns: Json
@@ -3956,6 +3957,10 @@ export type Database = {
       cleanup_old_transactions: { Args: never; Returns: undefined }
       cleanup_video_sessions: { Args: never; Returns: undefined }
       end_login_session: { Args: { _session_id?: string }; Returns: undefined }
+      ensure_canonical_wallet: {
+        Args: { p_gender?: string; p_user_id: string }
+        Returns: string
+      }
       expire_group_video_access: { Args: never; Returns: undefined }
       generate_female_employee_id: { Args: never; Returns: string }
       generate_payout_snapshot_now: { Args: never; Returns: Json }
@@ -4330,6 +4335,10 @@ export type Database = {
       sweep_stale_login_sessions: { Args: never; Returns: number }
       sweep_stale_statuses: { Args: never; Returns: number }
       sweep_stale_user_status: { Args: never; Returns: undefined }
+      sync_wallet_balance_from_ledger: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       text_to_uuid: { Args: { p_text: string }; Returns: string }
       today_ist: { Args: never; Returns: string }
       unblock_user: { Args: { p_target_user_id: string }; Returns: Json }
