@@ -228,15 +228,22 @@ const BasicInfoScreen = () => {
       ]);
 
       if (emailError || phoneError) {
+        const bothExist =
+          emailError === "Email already exists. Please try a different email." &&
+          phoneError === "Mobile number already exists. Please try a different mobile number.";
+        const combinedMessage = bothExist
+          ? "Email and mobile number already exist. Please try different ones."
+          : emailError || phoneError || "Duplicate found";
+
         setErrors((prev) => ({
           ...prev,
           email: emailError,
           phone: phoneError,
         }));
         if (emailError) triggerShake("email");
-        else if (phoneError) triggerShake("phone");
+        if (phoneError) triggerShake("phone");
         toast({
-          title: emailError || phoneError || "Duplicate found",
+          title: combinedMessage,
           variant: "destructive",
         });
         return;
