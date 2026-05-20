@@ -29,6 +29,7 @@ import {
 import { ChatRelationshipActions } from "@/components/ChatRelationshipActions";
 import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
+import { billChatMinute, billFinalPartialMinute } from "@/services/billing.service";
 
 const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
 const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
