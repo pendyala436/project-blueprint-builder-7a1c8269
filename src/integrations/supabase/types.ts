@@ -3944,6 +3944,10 @@ export type Database = {
             }
             Returns: Json
           }
+      check_signup_availability: {
+        Args: { p_email?: string; p_phone?: string }
+        Returns: Json
+      }
       cleanup_chat_media: { Args: never; Returns: undefined }
       cleanup_expired_data: { Args: never; Returns: undefined }
       cleanup_idle_sessions: { Args: never; Returns: undefined }
