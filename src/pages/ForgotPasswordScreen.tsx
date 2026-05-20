@@ -37,6 +37,20 @@ const ForgotPasswordScreen = () => {
     return undefined;
   };
 
+  // Debounced live (AJAX-style) format validation while typing
+  useEffect(() => {
+    if (!email) { setEmailError(undefined); return; }
+    const h = setTimeout(() => setEmailError(validateEmail(email)), 500);
+    return () => clearTimeout(h);
+  }, [email]);
+
+  useEffect(() => {
+    if (!phone) { setPhoneError(undefined); return; }
+    const h = setTimeout(() => setPhoneError(validatePhone(phone)), 500);
+    return () => clearTimeout(h);
+  }, [phone]);
+
+
   const handleVerifyAccount = async () => {
     const emailErr = validateEmail(email);
     const phoneErr = validatePhone(phone);
