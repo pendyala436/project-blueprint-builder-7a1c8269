@@ -800,6 +800,20 @@ const MiniChatWindow = ({
     // Stop billing timers immediately
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+
+    // Final settlement: bill leftover seconds after last full minute as fractional minute
+    if (billingStartedRef.current && billingStartTimeRef.current > 0) {
+      const elapsedSec = Math.floor((Date.now() - billingStartTimeRef.current) / 1000);
+      const leftoverSec = elapsedSec - (billedMinutesRef.current * 60);
+      if (leftoverSec >= 1) {
+        try {
+          await billFinalPartialMinute(sessionId || chatId, "chat", leftoverSec, manId, womanId);
+        } catch (e) {
+          console.error("Final partial billing error:", e);
+        }
+      }
+    }
+
     
     try {
       // Call chat-manager end_chat for proper final billing and cleanup
