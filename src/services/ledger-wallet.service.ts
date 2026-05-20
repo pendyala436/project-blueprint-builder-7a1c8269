@@ -7,7 +7,7 @@
  * NOTE: Pricing constants and SessionType have been removed from this module.
  * The single source of truth for pricing is the `chat_pricing` table, accessed
  * via `fetchUnifiedPricing()` / `useUnifiedPricing()` (see billing.service.ts).
- * Group call: men ₹4/min each, women earn ₹2/min per active man (no men = no earning).
+ * Group call: men ₹4/min each, women earn ₹1/min per active man (no men = no earning).
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -169,7 +169,7 @@ export async function fetchChatPricing(): Promise<ChatPricingData> {
       ratePerMinute: 4, womenEarningRate: 2,
       audioRatePerMinute: 6, audioWomenEarningRate: 3,
       videoRatePerMinute: 8, videoWomenEarningRate: 4,
-      groupCallRatePerMinute: 4, groupCallWomenEarningRate: 2,
+      groupCallRatePerMinute: 4, groupCallWomenEarningRate: 1,
       giftWomenPercent: 50, withdrawalFeePercent: 5, minWithdrawalBalance: 5000,
     };
   }
@@ -182,7 +182,7 @@ export async function fetchChatPricing(): Promise<ChatPricingData> {
     videoRatePerMinute: Number(data.video_rate_per_minute) || 8,
     videoWomenEarningRate: Number(data.video_women_earning_rate) || 4,
     groupCallRatePerMinute: Number(data.group_call_rate_per_minute) || 4,
-    groupCallWomenEarningRate: Number(data.group_call_women_earning_rate) || 2,
+    groupCallWomenEarningRate: Number(data.group_call_women_earning_rate) || 1,
     giftWomenPercent: Number(data.gift_women_percent) || 50,
     withdrawalFeePercent: Number(data.withdrawal_fee_percent) || 5,
     minWithdrawalBalance: Number(data.min_withdrawal_balance) || 5000,
