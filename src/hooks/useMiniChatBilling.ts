@@ -28,7 +28,6 @@ export function useMiniChatBilling({
   sessionId,
   manId,
   womanId,
-  activitySignal,
 }: UseMiniChatBillingProps) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gateRef = useRef<ReturnType<typeof setInterval> | null>(null);
