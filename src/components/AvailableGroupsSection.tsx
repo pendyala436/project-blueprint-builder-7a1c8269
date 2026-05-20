@@ -117,8 +117,12 @@ export function AvailableGroupsSection({ currentUserId, userName, userPhoto }: A
 
   const fetchWalletBalance = async () => {
     try {
-      const { data } = await supabase.from('wallets').select('balance').eq('user_id', currentUserId).single();
-      if (data) setWalletBalance(data.balance);
+      // Use canonical SoT RPC (wallet_transactions), not legacy wallets.balance column
+      const { data } = await supabase.rpc('get_men_wallet_balance', { p_user_id: currentUserId });
+      if (data) {
+        const bd = data as Record<string, number>;
+        setWalletBalance(Number(bd.balance) || 0);
+      }
     } catch (err) { console.error('[AvailableGroups] fetchWalletBalance error:', err); }
   };
 
