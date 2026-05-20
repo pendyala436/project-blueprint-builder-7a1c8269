@@ -309,7 +309,8 @@ const AuthScreen = () => {
         context = await Promise.race([contextPromise, timeoutPromise]);
       } catch (ctxErr) {
         console.warn('[Auth] Context fetch failed/timeout, using fallback navigation:', ctxErr);
-        navigate("/dashboard");
+        sessionStorage.setItem("postCaptchaRedirect", "/dashboard");
+        navigate("/captcha");
         return;
       }
 
