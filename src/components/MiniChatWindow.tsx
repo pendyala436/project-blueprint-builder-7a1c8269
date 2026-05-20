@@ -116,6 +116,10 @@ const MiniChatWindow = ({
   const [isBillingPaused, setIsBillingPaused] = useState(false);
   const [lastUserMessageTime, setLastUserMessageTime] = useState<number>(Date.now());
   const [lastPartnerMessageTime, setLastPartnerMessageTime] = useState<number>(Date.now());
+
+  // Derive canonical man/woman IDs for billing RPC (used by idle effect + startBilling)
+  const manId = userGender === "male" ? currentUserId : partnerId;
+  const womanId = userGender === "female" ? currentUserId : partnerId;
   
   // Free chat tracking for women chatting with no-balance men
   const [isFreeChatMode, setIsFreeChatMode] = useState(false);
@@ -605,9 +609,8 @@ const MiniChatWindow = ({
   const billingStartTimeRef = useRef<number>(0);
   const billedMinutesRef = useRef<number>(0);
 
-  // Derive canonical man/woman IDs for billing RPC
-  const manId = userGender === "male" ? currentUserId : partnerId;
-  const womanId = userGender === "female" ? currentUserId : partnerId;
+  // (manId/womanId moved above near top of component)
+
 
   const startBilling = () => {
     // Clear any existing intervals to prevent orphaned timers on resume
