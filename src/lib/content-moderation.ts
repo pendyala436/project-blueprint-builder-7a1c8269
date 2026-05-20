@@ -464,16 +464,7 @@ export function moderateAttachment(fileName: string, fileType?: string): Moderat
     };
   }
 
-  // Block filenames that explicitly suggest contact sharing
-  for (const pattern of CONTACT_FILENAME_PATTERNS) {
-    if (pattern.test(lowerName)) {
-      return {
-        isBlocked: true,
-        reason: 'This file appears to contain contact information and is blocked.',
-        detectedType: 'blocked_attachment',
-      };
-    }
-  }
+  // Phone-number / contact-filename checks intentionally disabled for attachments.
 
   return { isBlocked: false };
 }
