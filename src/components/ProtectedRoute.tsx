@@ -130,6 +130,20 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       return;
     }
 
+    // CAPTCHA gate — block dashboards until math CAPTCHA has been solved this session
+    const captchaOk = !!sessionStorage.getItem('captchaVerifiedAt');
+    if (!captchaOk) {
+      const target =
+        requiredRole === 'admin' ? '/admin' :
+        requiredRole === 'female' ? '/women-dashboard' :
+        requiredRole === 'male' ? '/dashboard' :
+        window.location.pathname + window.location.search;
+      sessionStorage.setItem('postCaptchaRedirect', target);
+      navigate('/captcha', { replace: true });
+      return;
+    }
+
+
     if (checkedForUser.current === user.id) return;
 
     if (requiredRole === 'authenticated') {
