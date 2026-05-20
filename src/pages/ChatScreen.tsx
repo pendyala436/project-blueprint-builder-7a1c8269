@@ -2716,7 +2716,7 @@ const ChatScreen = () => {
                 <VoiceRecorder
                   chatId={chatId.current}
                   currentUserId={currentUserId}
-                  receiverId={chatPartner.id}
+                  receiverId={chatPartner.userId}
                   disabled={isSending || isBlocked || isBlockedByPartner}
                   onError={(m) => toast({ title: "Voice failed", description: m, variant: "destructive" })}
                 />
