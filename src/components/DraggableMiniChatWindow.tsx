@@ -28,6 +28,7 @@ import { useMiniChatMessages } from "@/hooks/useMiniChatMessages";
 import { usePartnerMonitor } from "@/hooks/usePartnerMonitor";
 import { useChatPresence } from "@/hooks/useChatPresence";
 import { PartnerStatusLine } from "@/components/chat/PartnerStatusLine";
+import { VoiceRecorder } from "@/components/chat/VoiceRecorder";
 
 interface DraggableMiniChatWindowProps {
   chatId: string;
