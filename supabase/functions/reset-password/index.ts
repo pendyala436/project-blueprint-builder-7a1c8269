@@ -41,7 +41,9 @@ function validatePassword(password: string): boolean {
 }
 
 function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-()]/g, '');
+  // Strip all non-digits, then keep last 10 digits (Indian mobile core)
+  const digits = (phone || '').replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
 }
 
 function generateSecureToken(): string {
