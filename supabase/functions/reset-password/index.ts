@@ -168,10 +168,7 @@ serve(async (req) => {
       if (!userId) return jsonResponse({ verified: false, error: "No account found with this email" });
       if (!storedPhone) return jsonResponse({ verified: false, error: "No phone number on file for this account" });
 
-      const normalizedInputPhone = normalizePhone(phone);
-      const normalizedStoredPhone = normalizePhone(storedPhone);
-
-      if (normalizedInputPhone !== normalizedStoredPhone) {
+      if (!phonesMatch(phone, storedPhone)) {
         return jsonResponse({ verified: false, error: "Email and phone number do not match" });
       }
 
