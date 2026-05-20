@@ -161,12 +161,17 @@ export const billGroupCallMinute = (s: string, m: number, mid: string, wid: stri
   billMinute(s, 'private_group_call', m, mid, wid, 1, idx);
 
 /**
- * Bill the leftover seconds at session end as a fractional minute
- * (e.g. 30s → 0.5 min). Uses a unique minute_index = nextIndex so it
- * never collides with the regular per-minute heartbeat rows.
+ * Final settlement at session end (or pause).
  *
- * elapsedSeconds = total session seconds (e.g. 90 for 1m30s).
- * Returns null and skips if remainder < 1 second.
+ * Policy: ANY leftover seconds after the last full-minute heartbeat are
+ * ROUNDED UP to a full chargeable minute. So a 1m12s session bills 2 min,
+ * a 0m30s session bills 1 min, an exactly 1m00s session bills 1 min.
+ *
+ * Applies uniformly to chat, audio_call, video_call, private_group_call.
+ *
+ * Pass the TOTAL elapsed seconds since billing started (not the leftover).
+ * Returns null only when elapsed lands exactly on a minute boundary
+ * (leftover < 1s) so nothing extra needs charging.
  */
 export async function billFinalPartialMinute(
   sessionId: string,
@@ -174,14 +179,20 @@ export async function billFinalPartialMinute(
   elapsedSeconds: number,
   manId: string,
   womanId: string,
+  manCount = 1,
 ): Promise<BillingResult | null> {
-  const fullMinutes = Math.floor(elapsedSeconds / 60);
-  const remainderSec = Math.max(0, elapsedSeconds - fullMinutes * 60);
-  if (remainderSec < 1) return null;
-  const partialMinutes = Math.round((remainderSec / 60) * 1000) / 1000; // 3-dec precision
-  // Heartbeats consume indices 1..fullMinutes; use fullMinutes+1 for the partial.
-  const nextIndex = fullMinutes + 1;
-  return billMinute(sessionId, sessionType, partialMinutes, manId, womanId, 1, nextIndex);
+  if (elapsedSeconds < 1) return null;
+  const fullMinutesAlreadyBilled = Math.floor(elapsedSeconds / 60);
+  const leftoverSec = elapsedSeconds - fullMinutesAlreadyBilled * 60;
+  // If we're exactly on a minute boundary AND at least one heartbeat ran, nothing to add.
+  if (leftoverSec < 1 && fullMinutesAlreadyBilled >= 1) return null;
+  // Round UP: any leftover (or sub-1-minute session) becomes one full minute.
+  // Use minute_index = fullMinutesAlreadyBilled so it doesn't collide with heartbeat rows
+  // (heartbeats use indices 0..fullMinutesAlreadyBilled-1).
+  return billMinute(
+    sessionId, sessionType, 1.0,
+    manId, womanId, manCount, fullMinutesAlreadyBilled,
+  );
 }
 
 // ─── Gifts & Tips ──────────────────────────────────────────────────────
