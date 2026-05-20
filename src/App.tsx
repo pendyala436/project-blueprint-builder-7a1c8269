@@ -82,6 +82,7 @@ function lazyRetry(factory: () => Promise<{ default: React.ComponentType<any> }>
 
 // Auth & Registration
 const AuthScreen = lazyRetry(() => import("@/pages/AuthScreen"));
+const CaptchaScreen = lazyRetry(() => import("@/pages/CaptchaScreen"));
 const ForgotPasswordScreen = lazyRetry(() => import("@/pages/ForgotPasswordScreen"));
 const PasswordResetScreen = lazyRetry(() => import("@/pages/PasswordResetScreen"));
 const PasswordResetSuccessScreen = lazyRetry(() => import("@/pages/PasswordResetSuccessScreen"));
