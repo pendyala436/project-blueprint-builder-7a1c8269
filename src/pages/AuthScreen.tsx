@@ -313,19 +313,18 @@ const AuthScreen = () => {
         return;
       }
 
-      // Navigate based on context
+      // Determine destination based on context
+      let destination = "/dashboard";
       if (context.isAdmin) {
-        navigate("/admin");
+        destination = "/admin";
       } else if (context.isFemale) {
         const approvalStatus = context.femaleProfile?.approval_status || context.profile?.approval_status;
-        if (approvalStatus === 'pending') {
-          navigate("/approval-pending");
-        } else {
-          navigate("/women-dashboard");
-        }
-      } else {
-        navigate("/dashboard");
+        destination = approvalStatus === 'pending' ? "/approval-pending" : "/women-dashboard";
       }
+
+      // Bot protection: route through math CAPTCHA before any dashboard
+      sessionStorage.setItem("postCaptchaRedirect", destination);
+      navigate("/captcha");
     } catch (error: any) {
       const { toast } = await import("@/hooks/use-toast");
       toast({ title: classifyError(error).title, description: classifyError(error).message, variant: "destructive" });
