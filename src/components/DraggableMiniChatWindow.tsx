@@ -23,7 +23,7 @@ import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { useDraggablePosition } from "@/hooks/useDraggablePosition";
 import { useResizableWindow } from "@/hooks/useResizableWindow";
-// useMiniChatBilling removed — billing system removed
+import { useMiniChatBilling } from "@/hooks/useMiniChatBilling";
 import { useMiniChatMessages } from "@/hooks/useMiniChatMessages";
 import { usePartnerMonitor } from "@/hooks/usePartnerMonitor";
 import { useChatPresence } from "@/hooks/useChatPresence";
@@ -113,18 +113,29 @@ const DraggableMiniChatWindow = ({
   const { messages, setMessages, unreadCount, setUnreadCount, messagesEndRef, hasOlderMessages, isLoadingOlder, loadOlderMessages, addSeenId } =
     useMiniChatMessages({ chatId, currentUserId, isMinimized, currentUserLanguage, partnerLanguage: partnerLanguage });
 
-  // Billing removed — stub object for compatibility
+  const manId = userGender === "male" ? currentUserId : partnerId;
+  const womanId = userGender === "female" ? currentUserId : partnerId;
+  const isBillingDriver = userGender === "male" && currentUserId === manId;
+  const billingHook = useMiniChatBilling({
+    chatId,
+    sessionId,
+    manId,
+    womanId,
+    isActive: !!sessionId && isBillingDriver,
+    activitySignal: messages.length ? `${messages.length}:${messages[messages.length - 1]?.createdAt}` : messages.length,
+    onInsufficientBalance: () => {
+      toast({ title: "Chat ended", description: "Insufficient balance to continue.", variant: "destructive" });
+      onClose();
+    },
+  });
+
   const billing = {
-    elapsedSeconds: 0,
-    billingStarted: false,
-    walletBalance: 0,
-    todayEarnings: 0,
-    totalEarned: 0,
-    inactiveWarning: null as string | null,
+    elapsedSeconds: billingHook.elapsedSeconds,
+    billingStarted: billingHook.isBilling,
     setWalletBalance: (_v: number) => {},
     setTodayEarnings: (_v: number) => {},
     setLastActivityTime: (_v: number) => {},
-    stopBillingTimers: () => {},
+    stopBillingTimers: billingHook.stopBillingTimers,
   };
 
   usePartnerMonitor({

@@ -230,6 +230,24 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
     return "text-foreground";
   };
 
+  const openChat = async (partnerId: string) => {
+    const manUserId = userGender === "male" ? currentUserId : partnerId;
+    const womanUserId = userGender === "female" ? currentUserId : partnerId;
+    try {
+      await supabase.functions.invoke("chat-manager", {
+        body: {
+          action: "start_chat",
+          man_user_id: manUserId,
+          woman_user_id: womanUserId,
+        },
+      });
+    } catch (error) {
+      console.warn("[History] Failed to pre-start chat session:", error);
+    } finally {
+      navigate(`/chat/${partnerId}`);
+    }
+  };
+
   const filterButtons: { id: HistoryType; label: string; icon: React.ReactNode }[] = [
     { id: "all", label: "All", icon: <Clock className="w-3.5 h-3.5" /> },
     { id: "chat", label: "Chats", icon: <MessageCircle className="w-3.5 h-3.5" /> },
@@ -290,7 +308,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
             <button
               key={`${item.type}-${item.id}`}
               onClick={() => {
-                if (item.type === "chat") navigate(`/chat/${item.partnerId}`);
+                if (item.type === "chat") void openChat(item.partnerId);
                 else navigate(`/profile/${item.partnerId}`);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"

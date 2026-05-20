@@ -1492,24 +1492,32 @@ serve(async (req) => {
         }
 
         if (session && (session.status === "active" || session.status === "billing_paused")) {
-          // FINAL BILLING: Bill remaining time since last heartbeat (whole minutes only, drop partial)
           const now = new Date();
-          const lastActivity = new Date(session.last_activity_at);
-          const secondsRemaining = (now.getTime() - lastActivity.getTime()) / 1000;
-          const fractionalMinutesRemaining = secondsRemaining / 60;
+          const elapsedSeconds = Math.floor((now.getTime() - new Date(session.started_at).getTime()) / 1000);
+          const fullMinutes = Math.floor(elapsedSeconds / 60);
+          const leftoverSeconds = elapsedSeconds - fullMinutes * 60;
 
-          // Only bill if there's billable time and session was actively billing
-          if (fractionalMinutesRemaining > 0 && session.status === "active") {
-            // Check both parties messaged (billing prerequisite)
+          // Server-side final settlement fallback: if both parties replied and any
+          // minute was started, bill the final rounded-up minute idempotently. This
+          // covers abrupt closes/offline endings where the browser cleanup misses.
+          if (elapsedSeconds >= 1 && (leftoverSeconds >= 1 || fullMinutes === 0)) {
             const [{ data: manMsgs }, { data: womanMsgs }] = await Promise.all([
               supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.man_user_id).limit(1),
               supabase.from("chat_messages").select("id").eq("chat_id", chat_id).eq("sender_id", session.woman_user_id).limit(1)
             ]);
 
             if (manMsgs?.length && womanMsgs?.length) {
-              // Final billing also handled client-side by unified billing service.
-              // Edge function no longer charges the final fractional minute.
-              console.log(`[END_CHAT] Skipping server-side final billing — handled by client unified RPC for ${fractionalMinutesRemaining.toFixed(1)} min`);
+              const { data: finalBill, error: finalBillError } = await supabase.rpc("bill_session_minute", {
+                p_session_id: session.id,
+                p_session_type: "chat",
+                p_minutes: 1.0,
+                p_man_id: session.man_user_id,
+                p_woman_id: session.woman_user_id,
+                p_man_count: 1,
+                p_minute_index: fullMinutes,
+              });
+              if (finalBillError) console.error("[END_CHAT] Final chat billing failed:", finalBillError);
+              else console.log("[END_CHAT] Final chat billing result:", finalBill);
             }
           }
 
