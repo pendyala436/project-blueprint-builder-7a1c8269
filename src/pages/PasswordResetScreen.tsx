@@ -168,7 +168,7 @@ const PasswordResetScreen = () => {
               </div>
             </div>
 
-            <div className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/50">
+            <div className="space-y-1 p-3 rounded-xl bg-muted/30 border border-border/50">
               <p className="text-sm font-medium text-muted-foreground mb-3">Password Requirements:</p>
               <PasswordRequirement met={hasMinLength} text="At least 8 characters" />
               <PasswordRequirement met={hasUppercase} text="One uppercase letter" />
