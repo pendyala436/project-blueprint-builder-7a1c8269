@@ -41,9 +41,46 @@ function validatePassword(password: string): boolean {
 }
 
 function normalizePhone(phone: string): string {
-  // Strip all non-digits, then keep last 10 digits (Indian mobile core)
   const digits = (phone || '').replace(/\D/g, '');
-  return digits.length > 10 ? digits.slice(-10) : digits;
+  let national = digits.startsWith('91') && digits.length > 10 ? digits.slice(2) : digits;
+  if (national.length === 11 && national.startsWith('0')) national = national.slice(1);
+  return national.length > 10 ? national.slice(-10) : national;
+}
+
+function phoneCandidates(phone: string): Set<string> {
+  const digits = (phone || '').replace(/\D/g, '');
+  const candidates = new Set<string>();
+  const add = (value: string) => {
+    if (!value) return;
+    candidates.add(value);
+    if (value.length > 10) candidates.add(value.slice(-10));
+    if (value.startsWith('0') && value.length > 1) candidates.add(value.slice(1));
+  };
+
+  add(digits);
+  if (digits.startsWith('91') && digits.length > 10) add(digits.slice(2));
+  add(normalizePhone(phone));
+
+  return new Set([...candidates].filter(value => value.length >= 8));
+}
+
+function phonesMatch(inputPhone: string, storedPhone: string): boolean {
+  const inputCandidates = phoneCandidates(inputPhone);
+  const storedCandidates = phoneCandidates(storedPhone);
+
+  for (const value of inputCandidates) {
+    if (storedCandidates.has(value)) return true;
+  }
+
+  // Legacy recovery: older India registrations could save +91 + leading 0 + first 9 digits.
+  for (const stored of storedCandidates) {
+    for (const input of inputCandidates) {
+      if (stored.length === 9 && input.length === 10 && input.startsWith(stored)) return true;
+      if (input.length === 9 && stored.length === 10 && stored.startsWith(input)) return true;
+    }
+  }
+
+  return false;
 }
 
 function generateSecureToken(): string {
