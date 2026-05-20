@@ -145,7 +145,7 @@ const PasswordResetScreen = () => {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-start px-6 pb-8 relative z-10 overflow-y-auto">
         <Card className="w-full max-w-md p-6 bg-card/70 backdrop-blur-xl border border-primary/20 shadow-[0_0_40px_hsl(174_72%_50%/0.1)] animate-slide-up">
           <CardHeader className="space-y-2 text-center p-0 pb-6">
             <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
