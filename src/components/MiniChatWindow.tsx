@@ -31,8 +31,9 @@ import { SendGiftButton } from "@/components/SendGiftButton";
 import { useBlockCheck } from "@/hooks/useBlockCheck";
 import { billChatMinute, billFinalPartialMinute } from "@/services/billing.service";
 
-const IDLE_CLOSE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes idle → auto-close session
+const IDLE_PAUSE_MS = 2 * 60 * 1000; // 2 minutes mutual idle → pause billing (chat stays open)
 const IDLE_WARNING_MS = 1 * 60 * 1000; // 1 minute → show warning
+const MUTUAL_REPLY_WINDOW_MS = 2 * 60 * 1000; // both must reply within 2 min for billing to be active
 
 interface Message {
   id: string;
