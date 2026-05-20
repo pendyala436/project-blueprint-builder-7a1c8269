@@ -451,13 +451,9 @@ export function usePrivateGroupCall({
     const costPerMinute = pricing.groupCallRatePerMinute; // Use group call rate
     const minBalance = costPerMinute * 5; // Need at least 5 minutes worth
 
-    const { data: wallet } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', currentUserId)
-      .maybeSingle();
-
-    const balance = wallet?.balance ?? 0;
+    // Read canonical balance via SoT RPC (wallet_transactions), not legacy wallets.balance
+    const { data: walletData } = await supabase.rpc('get_men_wallet_balance', { p_user_id: currentUserId });
+    const balance = Number((walletData as Record<string, number> | null)?.balance) || 0;
     
     if (balance < minBalance) {
       return { canJoin: false, balance };
