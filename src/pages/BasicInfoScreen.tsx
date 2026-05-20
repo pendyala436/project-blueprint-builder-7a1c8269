@@ -119,6 +119,51 @@ const BasicInfoScreen = () => {
     }
   }, []);
 
+  // Debounced live (AJAX-style) email uniqueness check while typing
+  const emailReqIdRef = useRef(0);
+  useEffect(() => {
+    if (!email.trim()) {
+      setErrors((prev) => ({ ...prev, email: undefined }));
+      return;
+    }
+    const formatError = validateEmail(email);
+    if (formatError) {
+      setErrors((prev) => ({ ...prev, email: touched.email ? formatError : undefined }));
+      return;
+    }
+    const reqId = ++emailReqIdRef.current;
+    const handle = setTimeout(async () => {
+      const err = await checkEmailUniqueness(email);
+      if (reqId !== emailReqIdRef.current) return; // stale
+      setErrors((prev) => ({ ...prev, email: err }));
+      setTouched((prev) => ({ ...prev, email: true }));
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [email, checkEmailUniqueness, touched.email]);
+
+  // Debounced live (AJAX-style) phone uniqueness check while typing
+  const phoneReqIdRef = useRef(0);
+  useEffect(() => {
+    if (!phone.trim()) {
+      setErrors((prev) => ({ ...prev, phone: undefined }));
+      return;
+    }
+    const formatError = validatePhone(phone);
+    if (formatError) {
+      setErrors((prev) => ({ ...prev, phone: touched.phone ? formatError : undefined }));
+      return;
+    }
+    const reqId = ++phoneReqIdRef.current;
+    const handle = setTimeout(async () => {
+      const err = await checkPhoneUniqueness(phone);
+      if (reqId !== phoneReqIdRef.current) return;
+      setErrors((prev) => ({ ...prev, phone: err }));
+      setTouched((prev) => ({ ...prev, phone: true }));
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [phone, checkPhoneUniqueness, touched.phone]);
+
+
   // Validate full name
   const validateFullName = (value: string) => {
     if (!value.trim()) return "Full name is required";
