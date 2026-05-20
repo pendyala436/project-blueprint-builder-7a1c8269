@@ -42,6 +42,10 @@ function clearRoleCache() {
 supabase.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_OUT') {
     clearRoleCache();
+    try {
+      sessionStorage.removeItem('captchaVerifiedAt');
+      sessionStorage.removeItem('postCaptchaRedirect');
+    } catch {}
   }
 });
 
