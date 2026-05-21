@@ -908,8 +908,8 @@ export const BulkChatTab = ({
               }}
               placeholder={
                 activeManId
-                  ? `Message ${queue.find((m) => m.userId === activeManId)?.fullName.split(" ")[0] ?? ""}…`
-                  : "Select a man above…"
+                  ? `${translatedPlaceholder} (${queue.find((m) => m.userId === activeManId)?.fullName.split(" ")[0] ?? ""})`
+                  : translatedPlaceholder
               }
               disabled={!activeManId || isSending}
               className="flex-1 h-9 text-xs"
