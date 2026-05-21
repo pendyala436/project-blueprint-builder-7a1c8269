@@ -148,6 +148,9 @@ export const BulkChatTab = ({
   const [loadingMen, setLoadingMen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [maxSlots, setMaxSlots] = useState(3); // woman's preference, 1-5
+  const [viewerLanguage, setViewerLanguage] = useState<string>("English");
+  const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const elapsedTimerRef = useRef<NodeJS.Timeout | null>(null);
