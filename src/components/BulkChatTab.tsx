@@ -266,7 +266,7 @@ export const BulkChatTab = ({
 
   // ── Subscribe to incoming messages for a chatId ──
   const subscribeToChat = useCallback(
-    (userId: string, chatId: string) => {
+    (userId: string, chatId: string, partnerLang: string) => {
       if (realtimeChannelsRef.current.has(userId)) return;
 
       const ch = supabase
@@ -279,9 +279,9 @@ export const BulkChatTab = ({
             table: "chat_messages",
             filter: `chat_id=eq.${chatId}`,
           },
-          (payload) => {
+          async (payload) => {
             const row = payload.new as any;
-            const msg: ChatMessage = {
+            const baseMsg: ChatMessage = {
               id: row.id,
               senderId: row.sender_id,
               message: row.message || "",
@@ -290,7 +290,15 @@ export const BulkChatTab = ({
             };
             setMessages((prev) => ({
               ...prev,
-              [userId]: [...(prev[userId] ?? []), msg],
+              [userId]: [...(prev[userId] ?? []), baseMsg],
+            }));
+            // Translate in background and patch
+            const t = await translateOne(baseMsg.message, baseMsg.senderId, partnerLang);
+            setMessages((prev) => ({
+              ...prev,
+              [userId]: (prev[userId] ?? []).map((m) =>
+                m.id === baseMsg.id ? { ...m, ...t } : m
+              ),
             }));
           }
         )
@@ -298,27 +306,49 @@ export const BulkChatTab = ({
 
       realtimeChannelsRef.current.set(userId, ch);
     },
-    []
+    [translateOne]
   );
 
   // ── Load existing messages for a chatId ─────
-  const loadMessages = useCallback(async (userId: string, chatId: string) => {
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("id, sender_id, message, created_at, is_read")
-      .eq("chat_id", chatId)
-      .order("created_at", { ascending: true })
-      .limit(100);
-    if (!data) return;
-    const msgs: ChatMessage[] = (data as any[]).map((r) => ({
-      id: r.id,
-      senderId: r.sender_id,
-      message: r.message || "",
-      createdAt: r.created_at,
-      isRead: Boolean(r.is_read),
-    }));
-    setMessages((prev) => ({ ...prev, [userId]: msgs }));
-  }, []);
+  const loadMessages = useCallback(
+    async (userId: string, chatId: string, partnerLang: string) => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("id, sender_id, message, created_at, is_read")
+        .eq("chat_id", chatId)
+        .order("created_at", { ascending: true })
+        .limit(100);
+      if (!data) return;
+      const msgs: ChatMessage[] = (data as any[]).map((r) => ({
+        id: r.id,
+        senderId: r.sender_id,
+        message: r.message || "",
+        createdAt: r.created_at,
+        isRead: Boolean(r.is_read),
+      }));
+      setMessages((prev) => ({ ...prev, [userId]: msgs }));
+      // Translate history in background
+      const translated = await Promise.all(
+        msgs.map(async (m) => ({
+          id: m.id,
+          ...(await translateOne(m.message, m.senderId, partnerLang)),
+        }))
+      );
+      setMessages((prev) => {
+        const list = prev[userId] ?? [];
+        const tMap = new Map(translated.map((t) => [t.id, t]));
+        return {
+          ...prev,
+          [userId]: list.map((m) => {
+            const t = tMap.get(m.id);
+            return t ? { ...m, translatedMessage: t.translatedMessage, englishText: t.englishText } : m;
+          }),
+        };
+      });
+    },
+    [translateOne]
+  );
+
 
   // ── Add man to queue ────────────────────────
   const handleAddMan = async (man: OnlineMan) => {
