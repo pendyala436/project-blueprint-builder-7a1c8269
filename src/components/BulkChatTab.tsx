@@ -162,6 +162,51 @@ export const BulkChatTab = ({
   const totalEarned = queue.reduce((s, m) => s + m.earnedSoFar, 0);
   const activeCount = queue.filter((m) => m.billingActive).length;
 
+  // ── Load viewer (woman) language once ──────
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("female_profiles")
+        .select("mother_tongue, primary_language")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+      if (cancelled) return;
+      const lang =
+        (data as any)?.mother_tongue ||
+        (data as any)?.primary_language ||
+        "English";
+      setViewerLanguage(lang);
+    })();
+    return () => { cancelled = true; };
+  }, [currentUserId]);
+
+  // ── Translate input placeholder ────────────
+  useEffect(() => {
+    const lang = (viewerLanguage || "English").toLowerCase().trim();
+    if (lang === "english") { setTranslatedPlaceholder("Type a message..."); return; }
+    let cancelled = false;
+    translateText("Type a message...", "English", viewerLanguage)
+      .then((r) => { if (!cancelled && r) setTranslatedPlaceholder(r); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [viewerLanguage]);
+
+  // ── Translate one message for the viewer ───
+  const translateOne = useCallback(
+    async (text: string, senderId: string, partnerLang: string) => {
+      const senderLang = senderId === currentUserId ? viewerLanguage : partnerLang;
+      try {
+        const r = await translateForViewer(text, viewerLanguage, senderLang);
+        return { translatedMessage: r.nativeText, englishText: r.englishText };
+      } catch {
+        return { translatedMessage: text, englishText: text };
+      }
+    },
+    [currentUserId, viewerLanguage]
+  );
+
+
   // ── Scroll to bottom when messages arrive ──
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
