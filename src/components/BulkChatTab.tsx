@@ -328,6 +328,7 @@ export const BulkChatTab = ({
         billingActive: true,
         elapsedSeconds: 0,
         earnedSoFar: 0,
+        senderLanguage: man.motherTongue || "English",
       };
 
       setQueue((prev) => [...prev, queued]);
