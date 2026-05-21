@@ -854,7 +854,21 @@ export const BulkChatTab = ({
                         : "bg-muted text-foreground rounded-bl-sm"
                     )}
                   >
-                    <p>{msg.message}</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      {msg.translatedMessage || msg.message}
+                    </p>
+                    {msg.englishText &&
+                      msg.englishText.toLowerCase() !==
+                        (msg.translatedMessage || msg.message).toLowerCase() && (
+                        <p
+                          className={cn(
+                            "text-[10px] italic mt-0.5 opacity-70",
+                            isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+                          )}
+                        >
+                          {msg.englishText}
+                        </p>
+                      )}
                     <div
                       className={cn(
                         "flex items-center gap-1 mt-0.5",
