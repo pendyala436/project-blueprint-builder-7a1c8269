@@ -91,6 +91,8 @@ interface QueuedMan {
   elapsedSeconds: number;
   /** woman's total earning from this man in this session */
   earnedSoFar: number;
+  /** man's preferred language (for translation) */
+  senderLanguage: string;
 }
 
 interface ChatMessage {
@@ -99,6 +101,8 @@ interface ChatMessage {
   message: string;
   createdAt: string;
   isRead: boolean;
+  translatedMessage?: string;
+  englishText?: string;
 }
 
 interface BulkChatTabProps {
