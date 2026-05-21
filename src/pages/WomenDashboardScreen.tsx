@@ -62,6 +62,7 @@ import { CallHistoryTab } from "@/components/CallHistoryTab";
 import { useChatPricing } from '@/hooks/useChatPricing';
 import { StatementTab } from '@/components/StatementTab';
 import { ScrollingAnnouncementsBar } from '@/components/ScrollingAnnouncementsBar';
+import { BulkChatTab } from '@/components/BulkChatTab';
 
 interface Notification {
   id: string;
@@ -1677,6 +1678,16 @@ const WomenDashboardScreen = () => {
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "online" && renderOnlineUsersTab()}
         {activeTab === "chats" && renderChatsTab()}
+        {activeTab === "bulk" && (
+          <div className="min-h-0 h-full overflow-hidden">
+            <BulkChatTab
+              currentUserId={currentUserId}
+              userName={userName}
+              userPhoto={userPhoto}
+              walletBalance={myWalletBalance}
+            />
+          </div>
+        )}
         {activeTab === "history" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><CallHistoryTab currentUserId={currentUserId} userGender="female" /></div>}
         {activeTab === "matches" && renderMatchesTab()}
         {activeTab === "community" && renderCommunityTab()}
