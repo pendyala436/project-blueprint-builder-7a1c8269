@@ -413,9 +413,11 @@ export const BulkChatTab = ({
       if (!activeManId) setActiveManId(man.userId);
 
       if (chatId) {
-        await loadMessages(man.userId, chatId);
-        subscribeToChat(man.userId, chatId);
+        const partnerLang = man.motherTongue || "English";
+        await loadMessages(man.userId, chatId, partnerLang);
+        subscribeToChat(man.userId, chatId, partnerLang);
       }
+
 
       toast({ title: `${man.fullName} added to Bulk Chat` });
     } catch {
