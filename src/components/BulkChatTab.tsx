@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { translateForViewer, translateText } from "@/lib/translation-service";
 import {
   Users,
   Search,
@@ -90,6 +91,8 @@ interface QueuedMan {
   elapsedSeconds: number;
   /** woman's total earning from this man in this session */
   earnedSoFar: number;
+  /** man's preferred language (for translation) */
+  senderLanguage: string;
 }
 
 interface ChatMessage {
@@ -98,6 +101,8 @@ interface ChatMessage {
   message: string;
   createdAt: string;
   isRead: boolean;
+  translatedMessage?: string;
+  englishText?: string;
 }
 
 interface BulkChatTabProps {
@@ -143,6 +148,9 @@ export const BulkChatTab = ({
   const [loadingMen, setLoadingMen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [maxSlots, setMaxSlots] = useState(3); // woman's preference, 1-5
+  const [viewerLanguage, setViewerLanguage] = useState<string>("English");
+  const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const elapsedTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -153,6 +161,51 @@ export const BulkChatTab = ({
   const activeMessages = activeManId ? (messages[activeManId] ?? []) : [];
   const totalEarned = queue.reduce((s, m) => s + m.earnedSoFar, 0);
   const activeCount = queue.filter((m) => m.billingActive).length;
+
+  // ── Load viewer (woman) language once ──────
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("female_profiles")
+        .select("mother_tongue, primary_language")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+      if (cancelled) return;
+      const lang =
+        (data as any)?.mother_tongue ||
+        (data as any)?.primary_language ||
+        "English";
+      setViewerLanguage(lang);
+    })();
+    return () => { cancelled = true; };
+  }, [currentUserId]);
+
+  // ── Translate input placeholder ────────────
+  useEffect(() => {
+    const lang = (viewerLanguage || "English").toLowerCase().trim();
+    if (lang === "english") { setTranslatedPlaceholder("Type a message..."); return; }
+    let cancelled = false;
+    translateText("Type a message...", "English", viewerLanguage)
+      .then((r) => { if (!cancelled && r) setTranslatedPlaceholder(r); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [viewerLanguage]);
+
+  // ── Translate one message for the viewer ───
+  const translateOne = useCallback(
+    async (text: string, senderId: string, partnerLang: string) => {
+      const senderLang = senderId === currentUserId ? viewerLanguage : partnerLang;
+      try {
+        const r = await translateForViewer(text, viewerLanguage, senderLang);
+        return { translatedMessage: r.nativeText, englishText: r.englishText };
+      } catch {
+        return { translatedMessage: text, englishText: text };
+      }
+    },
+    [currentUserId, viewerLanguage]
+  );
+
 
   // ── Scroll to bottom when messages arrive ──
   useEffect(() => {
@@ -213,7 +266,7 @@ export const BulkChatTab = ({
 
   // ── Subscribe to incoming messages for a chatId ──
   const subscribeToChat = useCallback(
-    (userId: string, chatId: string) => {
+    (userId: string, chatId: string, partnerLang: string) => {
       if (realtimeChannelsRef.current.has(userId)) return;
 
       const ch = supabase
@@ -226,9 +279,9 @@ export const BulkChatTab = ({
             table: "chat_messages",
             filter: `chat_id=eq.${chatId}`,
           },
-          (payload) => {
+          async (payload) => {
             const row = payload.new as any;
-            const msg: ChatMessage = {
+            const baseMsg: ChatMessage = {
               id: row.id,
               senderId: row.sender_id,
               message: row.message || "",
@@ -237,7 +290,15 @@ export const BulkChatTab = ({
             };
             setMessages((prev) => ({
               ...prev,
-              [userId]: [...(prev[userId] ?? []), msg],
+              [userId]: [...(prev[userId] ?? []), baseMsg],
+            }));
+            // Translate in background and patch
+            const t = await translateOne(baseMsg.message, baseMsg.senderId, partnerLang);
+            setMessages((prev) => ({
+              ...prev,
+              [userId]: (prev[userId] ?? []).map((m) =>
+                m.id === baseMsg.id ? { ...m, ...t } : m
+              ),
             }));
           }
         )
@@ -245,27 +306,49 @@ export const BulkChatTab = ({
 
       realtimeChannelsRef.current.set(userId, ch);
     },
-    []
+    [translateOne]
   );
 
   // ── Load existing messages for a chatId ─────
-  const loadMessages = useCallback(async (userId: string, chatId: string) => {
-    const { data } = await supabase
-      .from("chat_messages")
-      .select("id, sender_id, message, created_at, is_read")
-      .eq("chat_id", chatId)
-      .order("created_at", { ascending: true })
-      .limit(100);
-    if (!data) return;
-    const msgs: ChatMessage[] = (data as any[]).map((r) => ({
-      id: r.id,
-      senderId: r.sender_id,
-      message: r.message || "",
-      createdAt: r.created_at,
-      isRead: Boolean(r.is_read),
-    }));
-    setMessages((prev) => ({ ...prev, [userId]: msgs }));
-  }, []);
+  const loadMessages = useCallback(
+    async (userId: string, chatId: string, partnerLang: string) => {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("id, sender_id, message, created_at, is_read")
+        .eq("chat_id", chatId)
+        .order("created_at", { ascending: true })
+        .limit(100);
+      if (!data) return;
+      const msgs: ChatMessage[] = (data as any[]).map((r) => ({
+        id: r.id,
+        senderId: r.sender_id,
+        message: r.message || "",
+        createdAt: r.created_at,
+        isRead: Boolean(r.is_read),
+      }));
+      setMessages((prev) => ({ ...prev, [userId]: msgs }));
+      // Translate history in background
+      const translated = await Promise.all(
+        msgs.map(async (m) => ({
+          id: m.id,
+          ...(await translateOne(m.message, m.senderId, partnerLang)),
+        }))
+      );
+      setMessages((prev) => {
+        const list = prev[userId] ?? [];
+        const tMap = new Map(translated.map((t) => [t.id, t]));
+        return {
+          ...prev,
+          [userId]: list.map((m) => {
+            const t = tMap.get(m.id);
+            return t ? { ...m, translatedMessage: t.translatedMessage, englishText: t.englishText } : m;
+          }),
+        };
+      });
+    },
+    [translateOne]
+  );
+
 
   // ── Add man to queue ────────────────────────
   const handleAddMan = async (man: OnlineMan) => {
@@ -323,15 +406,18 @@ export const BulkChatTab = ({
         billingActive: true,
         elapsedSeconds: 0,
         earnedSoFar: 0,
+        senderLanguage: man.motherTongue || "English",
       };
 
       setQueue((prev) => [...prev, queued]);
       if (!activeManId) setActiveManId(man.userId);
 
       if (chatId) {
-        await loadMessages(man.userId, chatId);
-        subscribeToChat(man.userId, chatId);
+        const partnerLang = man.motherTongue || "English";
+        await loadMessages(man.userId, chatId, partnerLang);
+        subscribeToChat(man.userId, chatId, partnerLang);
       }
+
 
       toast({ title: `${man.fullName} added to Bulk Chat` });
     } catch {
@@ -768,7 +854,21 @@ export const BulkChatTab = ({
                         : "bg-muted text-foreground rounded-bl-sm"
                     )}
                   >
-                    <p>{msg.message}</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      {msg.translatedMessage || msg.message}
+                    </p>
+                    {msg.englishText &&
+                      msg.englishText.toLowerCase() !==
+                        (msg.translatedMessage || msg.message).toLowerCase() && (
+                        <p
+                          className={cn(
+                            "text-[10px] italic mt-0.5 opacity-70",
+                            isMine ? "text-primary-foreground/80" : "text-muted-foreground"
+                          )}
+                        >
+                          {msg.englishText}
+                        </p>
+                      )}
                     <div
                       className={cn(
                         "flex items-center gap-1 mt-0.5",
@@ -808,8 +908,8 @@ export const BulkChatTab = ({
               }}
               placeholder={
                 activeManId
-                  ? `Message ${queue.find((m) => m.userId === activeManId)?.fullName.split(" ")[0] ?? ""}…`
-                  : "Select a man above…"
+                  ? `${translatedPlaceholder} (${queue.find((m) => m.userId === activeManId)?.fullName.split(" ")[0] ?? ""})`
+                  : translatedPlaceholder
               }
               disabled={!activeManId || isSending}
               className="flex-1 h-9 text-xs"
