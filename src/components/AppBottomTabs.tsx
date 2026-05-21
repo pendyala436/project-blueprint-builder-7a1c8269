@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { MessageCircle, Users, Heart, User, Wallet, Video, Clock, FileText } from "lucide-react";
+import { MessageCircle, Users, Heart, User, Wallet, Video, Clock, FileText, Layers } from "lucide-react";
 
 export interface TabItem {
   id: string;
@@ -91,6 +91,7 @@ export const getWomenTabs = (
     { id: "online", label: "Online", icon: <Users className="w-5 h-5" />, badge: onlineBadge },
   ];
   if (showChat) tabs.push({ id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge });
+  if (showChat) tabs.push({ id: "bulk", label: "Bulk", icon: <Layers className="w-5 h-5" /> });
   tabs.push({ id: "history", label: "History", icon: <Clock className="w-5 h-5" /> });
   tabs.push({ id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchesBadge });
   tabs.push({ id: "community", label: "Community", icon: <Users className="w-5 h-5" /> });
