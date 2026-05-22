@@ -8,10 +8,13 @@
  *   chat               → chat_man_rate / chat_woman_rate
  *   audio_call         → audio_man_rate / audio_woman_rate
  *   video_call         → video_man_rate / video_woman_rate
- *   private_group_call → group_man_rate / group_woman_rate  (per man)
+ *   private_group_call → group_man_rate / group_woman_rate
+ *                        (each active man pays group_man_rate; host earns
+ *                         group_woman_rate per active man — spec ₹1/man/min)
  *   gift               → full price charged; gift_woman_pct% credited
  *   tip                → full amount charged; tip_woman_pct% credited
  */
+
 
 import { supabase } from '@/integrations/supabase/client';
 
