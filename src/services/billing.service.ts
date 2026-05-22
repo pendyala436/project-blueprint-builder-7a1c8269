@@ -176,6 +176,8 @@ export const billGroupCallMinute = (s: string, m: number, mid: string, wid: stri
  * Returns null only when elapsed lands exactly on a minute boundary
  * (leftover < 1s) so nothing extra needs charging.
  */
+export const MIN_BILLABLE_SECONDS = 30;
+
 export async function billFinalPartialMinute(
   sessionId: string,
   sessionType: SessionType,
@@ -187,16 +189,16 @@ export async function billFinalPartialMinute(
   if (elapsedSeconds < 1) return null;
   const fullMinutesAlreadyBilled = Math.floor(elapsedSeconds / 60);
   const leftoverSec = elapsedSeconds - fullMinutesAlreadyBilled * 60;
-  // If we're exactly on a minute boundary AND at least one heartbeat ran, nothing to add.
   if (leftoverSec < 1 && fullMinutesAlreadyBilled >= 1) return null;
-  // Round UP: any leftover (or sub-1-minute session) becomes one full minute.
-  // Use minute_index = fullMinutesAlreadyBilled so it doesn't collide with heartbeat rows
-  // (heartbeats use indices 0..fullMinutesAlreadyBilled-1).
+  // Grace: sub-30s sessions with zero full minutes billed are not charged
+  // (covers network drops / accidental joins — audit Issue #14).
+  if (fullMinutesAlreadyBilled === 0 && elapsedSeconds < MIN_BILLABLE_SECONDS) return null;
   return billMinute(
     sessionId, sessionType, 1.0,
     manId, womanId, manCount, fullMinutesAlreadyBilled,
   );
 }
+
 
 // ─── Gifts & Tips ──────────────────────────────────────────────────────
 
