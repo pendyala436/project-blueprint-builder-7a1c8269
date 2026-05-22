@@ -1009,8 +1009,9 @@ serve(async (req) => {
             .eq("is_active", true)
             .maybeSingle();
           
-          const ratePerMin = pricingData?.rate_per_minute || 5.00;
+          const ratePerMin = pricingData?.rate_per_minute || 4.00;
           const minRequiredBalance = ratePerMin * 2; // Need at least 2 minutes worth
+
 
           if (!wallet || wallet.balance < minRequiredBalance) {
             return new Response(
