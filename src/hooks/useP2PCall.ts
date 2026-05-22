@@ -210,11 +210,13 @@ export const useP2PCall = ({
         });
       }, 1000);
 
-      // 60s billing heartbeat — minute 0 is already billed by the DB INSERT trigger
-      // on video_call_sessions; subsequent minutes (1, 2, ...) are billed here.
+      // 60s billing heartbeat — minute 0 is billed by the DB trigger that fires
+      // when video_call_sessions.status transitions to active/answered (audit Issue #2).
+      // Subsequent minutes (1, 2, …) are billed here using callDuration-derived index.
       billingTimerRef.current = setInterval(() => {
         processBilling();
       }, 60000);
+
 
       return () => {
         if (callTimerRef.current) clearInterval(callTimerRef.current);

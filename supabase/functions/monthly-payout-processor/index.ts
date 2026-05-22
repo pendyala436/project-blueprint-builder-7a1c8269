@@ -28,6 +28,32 @@ Deno.serve(async (req) => {
       url.searchParams.get("force") === "true" ||
       (req.headers.get("x-force-run") === "true");
 
+    // Audit Issue #15: force=true must be admin-authenticated to prevent
+    // anyone from prematurely closing the month.
+    if (force) {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      if (!authHeader.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user } } = await userClient.auth.getUser();
+      if (!user) {
+        return new Response(JSON.stringify({ success: false, error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: role } = await supabase.from("user_roles")
+        .select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      if (!role) {
+        return new Response(JSON.stringify({ success: false, error: "Admin only" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     // Compute today's date in IST
     const istNow = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
@@ -47,6 +73,7 @@ Deno.serve(async (req) => {
         },
       );
     }
+
 
     // Run the canonical monthly payout RPC
     const { data, error } = await supabase.rpc("process_monthly_payout");

@@ -110,12 +110,13 @@ export function useMiniChatBilling({
         .from('active_chat_sessions')
         .select('started_at')
         .eq('chat_id', cId)
-        .in('status', ['active', 'billing_paused', 'pending'])
+        .in('status', ['active', 'billing_paused'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       sessionStartedAt = data?.started_at ? new Date(data.started_at).getTime() : sessionStartedAt;
     }
+
 
     minuteOffsetRef.current = Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 60_000));
     billedThisPeriodRef.current = 0;

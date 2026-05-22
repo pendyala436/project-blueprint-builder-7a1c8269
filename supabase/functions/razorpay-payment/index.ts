@@ -90,9 +90,11 @@ Deno.serve(async (req) => {
     if (order.status !== "paid") {
       return json({ credited: false, status: order.status, error: "Order not paid" }, 400);
     }
-    if (order.notes?.user_id && order.notes.user_id !== callerId) {
+    // Strict caller match — reject if notes.user_id missing OR mismatched (audit Issue #12).
+    if (!order.notes?.user_id || order.notes.user_id !== callerId) {
       return json({ credited: false, error: "User mismatch" }, 403);
     }
+
 
     // Wallet credit = net amount stored in notes (NOT the gross order amount).
     const grossINR = Number(order.amount) / 100;
