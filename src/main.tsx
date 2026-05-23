@@ -156,7 +156,7 @@ async function bootstrap() {
   purgeStaleSupabaseSessionIfBroken();
 
   const root = createRoot(rootElement);
-  const { default: App } = await import("./App");
+  const { default: App } = await import("./page");
   root.render(<App />);
   requestAnimationFrame(() => {
     markAppMounted();
