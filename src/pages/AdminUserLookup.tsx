@@ -154,13 +154,34 @@ const AdminUserLookup = () => {
   const loadAllUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      setAllUsers((data || []) as UserProfile[]);
-      setFilteredUsers((data || []) as UserProfile[]);
+      // Aggregate from isolated profile tables (male_profiles + female_profiles)
+      // and fall back to the legacy unified `profiles` for any rows not yet split.
+      const [maleRes, femaleRes, profilesRes] = await Promise.allSettled([
+        supabase.from("male_profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("female_profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+      ]);
+
+      const male = (maleRes.status === "fulfilled" ? maleRes.value.data || [] : []) as any[];
+      const female = (femaleRes.status === "fulfilled" ? femaleRes.value.data || [] : []) as any[];
+      const legacy = (profilesRes.status === "fulfilled" ? profilesRes.value.data || [] : []) as any[];
+
+      const byUserId = new Map<string, UserProfile>();
+      legacy.forEach((p) => byUserId.set(p.user_id, p as UserProfile));
+      male.forEach((p) => {
+        const prev = byUserId.get(p.user_id) || ({} as UserProfile);
+        byUserId.set(p.user_id, { ...prev, ...p, gender: "male" } as UserProfile);
+      });
+      female.forEach((p) => {
+        const prev = byUserId.get(p.user_id) || ({} as UserProfile);
+        byUserId.set(p.user_id, { ...prev, ...p, gender: "female" } as UserProfile);
+      });
+
+      const merged = Array.from(byUserId.values()).sort((a, b) =>
+        (b.created_at || "").localeCompare(a.created_at || "")
+      );
+      setAllUsers(merged);
+      setFilteredUsers(merged);
     } catch (err: any) {
       toast.error("Failed to load users");
     } finally {
