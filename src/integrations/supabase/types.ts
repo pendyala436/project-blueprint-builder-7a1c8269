@@ -4138,6 +4138,7 @@ export type Database = {
           type: string
         }[]
       }
+      get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_woman_active_chats: {
         Args: { p_user_id: string }
         Returns: {
