@@ -296,31 +296,29 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
           <RadioGroup
             value={selectedParallelChats}
             onValueChange={setSelectedParallelChats}
-            className="grid grid-cols-3 gap-3"
+            className="grid grid-cols-5 gap-2"
             disabled={parallelSettingsLoading}
           >
             {[
-              { value: "1", label: "1 Chat", desc: "Focus mode" },
-              { value: "2", label: "2 Chats", desc: "Moderate" },
-              { value: "3", label: "3 Chats", desc: "Maximum" }
+              { value: "1", label: "1", desc: "Focus" },
+              { value: "2", label: "2", desc: "Light" },
+              { value: "3", label: "3", desc: "Normal" },
+              { value: "4", label: "4", desc: "Busy" },
+              { value: "5", label: "5", desc: "Max" }
             ].map((option) => (
               <div key={option.value} className="relative">
                 <RadioGroupItem value={option.value} id={`pc-${option.value}`} className="peer sr-only" />
                 <Label
                   htmlFor={`pc-${option.value}`}
                   className={cn(
-                    "flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer transition-all text-center",
+                    "flex flex-col items-center p-2 rounded-lg border-2 cursor-pointer transition-all text-center",
                     "hover:border-primary/50",
                     selectedParallelChats === option.value ? "border-primary bg-primary/10" : "border-border"
                   )}
                 >
-                  <div className="flex gap-0.5 mb-1">
-                    {Array.from({ length: Number(option.value) }).map((_, i) => (
-                      <MessageSquare key={i} className={cn("h-4 w-4", selectedParallelChats === option.value ? "text-primary" : "text-muted-foreground")} />
-                    ))}
-                  </div>
+                  <MessageSquare className={cn("h-4 w-4 mb-1", selectedParallelChats === option.value ? "text-primary" : "text-muted-foreground")} />
                   <span className="font-semibold text-sm">{option.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{option.desc}</span>
+                  <span className="text-[9px] text-muted-foreground">{option.desc}</span>
                   {selectedParallelChats === option.value && (
                     <Check className="absolute top-1 right-1 h-3 w-3 text-primary" />
                   )}
@@ -328,6 +326,7 @@ export const SettingsPanel = ({ compact = false }: SettingsPanelProps) => {
               </div>
             ))}
           </RadioGroup>
+
           <p className="text-[10px] text-muted-foreground text-center mt-3">
             Old windows auto-close when new chats arrive at max capacity
           </p>
