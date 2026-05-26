@@ -1213,6 +1213,7 @@ const WomenDashboardScreen = () => {
                 {filteredSame.map((user) => (
                   <UserContactCard
                     key={user.userId}
+            userId={user.userId}
                     name={user.fullName}
                     subtitle={userCodeMap[user.userId] || undefined}
                     photoUrl={user.photoUrl}
@@ -1245,6 +1246,7 @@ const WomenDashboardScreen = () => {
                 {filteredOther.map((user) => (
                   <UserContactCard
                     key={user.userId}
+            userId={user.userId}
                     name={user.fullName}
                     photoUrl={user.photoUrl}
                     age={user.age}
@@ -1293,6 +1295,7 @@ const WomenDashboardScreen = () => {
         return filteredFree.map((user) => (
           <UserContactCard
             key={user.userId}
+            userId={user.userId}
             name={user.fullName}
             subtitle={userCodeMap[user.userId] || undefined}
             photoUrl={user.photoUrl}
@@ -1479,6 +1482,7 @@ const WomenDashboardScreen = () => {
         return filteredMatches.map((man) => (
           <UserContactCard
             key={man.matchId}
+            userId={man.userId}
             name={man.fullName || "User"}
             subtitle={userCodeMap[man.userId] || undefined}
             photoUrl={man.photoUrl}

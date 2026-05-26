@@ -1453,6 +1453,7 @@ const DashboardScreen = () => {
                     {filteredSame.map((woman) => (
                       <UserContactCard
                         key={woman.id}
+            userId={woman.user_id}
                         name={woman.full_name || "Anonymous"}
                         subtitle={userCodeMap[woman.user_id] || undefined}
                         photoUrl={woman.photo_url}
@@ -1492,6 +1493,7 @@ const DashboardScreen = () => {
                     {filteredOther.map((woman) => (
                       <UserContactCard
                         key={woman.id}
+            userId={woman.user_id}
                         name={woman.full_name || "Anonymous"}
                         photoUrl={woman.photo_url}
                         age={woman.age}
@@ -1696,6 +1698,7 @@ const DashboardScreen = () => {
         return filteredMatches.map((woman) => (
           <UserContactCard
             key={woman.matchId}
+            userId={woman.userId}
             name={woman.fullName || "User"}
             subtitle={userCodeMap[woman.userId] || undefined}
             photoUrl={woman.photoUrl}
