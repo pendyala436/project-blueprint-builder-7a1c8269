@@ -39,7 +39,7 @@ export const useParallelChatSettings = (userId?: string): UseParallelChatSetting
           const value = typeof appSettings.setting_value === 'number' 
             ? appSettings.setting_value 
             : Number(appSettings.setting_value);
-          if (value >= 1 && value <= 3) {
+          if (value >= 1 && value <= 5) {
             setMaxChats(value);
           }
         } else {
@@ -47,7 +47,7 @@ export const useParallelChatSettings = (userId?: string): UseParallelChatSetting
           const storedSettings = localStorage.getItem(`${STORAGE_KEY}_${userId}`);
           if (storedSettings) {
             const parsed: ParallelChatSettings = JSON.parse(storedSettings);
-            if (parsed.maxParallelChats >= 1 && parsed.maxParallelChats <= 3) {
+            if (parsed.maxParallelChats >= 1 && parsed.maxParallelChats <= 5) {
               setMaxChats(parsed.maxParallelChats);
             }
           }
@@ -60,7 +60,7 @@ export const useParallelChatSettings = (userId?: string): UseParallelChatSetting
           const storedSettings = localStorage.getItem(`${STORAGE_KEY}_${userId}`);
           if (storedSettings) {
             const parsed: ParallelChatSettings = JSON.parse(storedSettings);
-            if (parsed.maxParallelChats >= 1 && parsed.maxParallelChats <= 3) {
+            if (parsed.maxParallelChats >= 1 && parsed.maxParallelChats <= 5) {
               setMaxChats(parsed.maxParallelChats);
             }
           }
@@ -76,9 +76,9 @@ export const useParallelChatSettings = (userId?: string): UseParallelChatSetting
   }, [userId]);
 
   const setMaxParallelChats = useCallback(async (count: number) => {
-    if (count < 1 || count > 3) {
-      console.error("Max parallel chats must be between 1 and 3");
-      toast.error("Invalid setting", { description: "Parallel chats must be set between 1 and 3." });
+    if (count < 1 || count > 5) {
+      console.error("Max parallel chats must be between 1 and 5");
+      toast.error("Invalid setting", { description: "Parallel chats must be set between 1 and 5." });
       return;
     }
 
