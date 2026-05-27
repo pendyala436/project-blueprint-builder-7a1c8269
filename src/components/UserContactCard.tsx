@@ -87,6 +87,7 @@ export const UserContactCard: React.FC<UserContactCardProps> = ({
   ];
   if (age) segments.push(<span key="age">{age}</span>);
   if (language) segments.push(<span key="lang">{language}</span>);
+  if (state) segments.push(<span key="loc">{state}</span>);
   if (countryLabel) segments.push(<span key="ctry">{countryLabel}</span>);
   segments.push(
     <span key="status" className={cn("font-medium inline-flex items-center gap-1", PRESENCE_TEXT_CLASS[status])}>

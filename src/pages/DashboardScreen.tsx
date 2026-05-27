@@ -103,6 +103,7 @@ interface OnlineWoman {
   photo_url: string | null;
   age: number | null;
   country: string | null;
+  state: string | null;
   primary_language: string | null;
   active_chat_count?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
   is_available?: boolean;
@@ -118,6 +119,7 @@ interface MatchedWoman {
   photoUrl: string | null;
   age: number | null;
   country: string | null;
+  state: string | null;
   primaryLanguage: string | null;
   isOnline: boolean;
   matchedAt: string;
@@ -430,7 +432,7 @@ const DashboardScreen = () => {
       // Fetch ONLY online women from safe public view (excludes sensitive bank/PAN/phone/DOB fields)
       const { data: femaleProfiles } = await supabase
         .from("public_female_profiles" as any)
-        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
+        .select("id, user_id, full_name, photo_url, age, country, state, primary_language, is_earning_eligible")
         .in("user_id", onlineUserIds)
         .limit(50);
 
@@ -654,6 +656,7 @@ const DashboardScreen = () => {
             photoUrl: profile.photo_url,
             age: profile.age,
             country: profile.country,
+            state: profile.state,
             primaryLanguage: profile.primary_language,
             isOnline: statusMap.get(otherId) || false,
             matchedAt: m.matched_at,
@@ -1459,6 +1462,7 @@ const DashboardScreen = () => {
                         photoUrl={woman.photo_url}
                         age={woman.age}
                         language={woman.primary_language}
+                        state={woman.state}
                         country={woman.country}
                         activeChatCount={woman.active_chat_count}
                         onClick={() => handleStartChatWithWoman(woman.user_id, woman.full_name || "User")}
@@ -1498,6 +1502,7 @@ const DashboardScreen = () => {
                         photoUrl={woman.photo_url}
                         age={woman.age}
                         language={woman.primary_language}
+                        state={woman.state}
                         country={woman.country}
                         activeChatCount={woman.active_chat_count}
                         subtitle={userCodeMap[woman.user_id] ? `${userCodeMap[woman.user_id]} • ${woman.primary_language} → ${userLanguage}` : `${woman.primary_language} → ${userLanguage}`}
@@ -1704,6 +1709,7 @@ const DashboardScreen = () => {
             photoUrl={woman.photoUrl}
             age={woman.age}
             language={woman.primaryLanguage}
+            state={woman.state}
             country={woman.country}
             isOnline={woman.isOnline}
             onClick={() => handleStartChatWithWoman(woman.userId, woman.fullName || "User")}

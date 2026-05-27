@@ -97,6 +97,7 @@ interface MatchedMan {
   photoUrl: string | null;
   age: number | null;
   country: string | null;
+  state: string | null;
   primaryLanguage: string | null;
   isOnline: boolean;
   matchedAt: string;
@@ -898,6 +899,7 @@ const WomenDashboardScreen = () => {
             photoUrl: profile.photo_url,
             age: profile.age,
             country: profile.country,
+            state: profile.state,
             primaryLanguage: profile.primary_language,
             isOnline: statusMap.get(otherId) || false,
             matchedAt: m.matched_at,
@@ -1488,6 +1490,7 @@ const WomenDashboardScreen = () => {
             photoUrl={man.photoUrl}
             age={man.age}
             language={man.primaryLanguage}
+            state={man.state}
             country={man.country}
             isOnline={man.isOnline}
             onClick={() => handleStartChatWithUser(man.userId)}

@@ -29,6 +29,7 @@ interface HistoryItem {
   partnerAvatar: string;
   partnerAge?: number | null;
   partnerLanguage?: string | null;
+  partnerState?: string | null;
   partnerCountry?: string | null;
   status: string;
   startedAt: string;
@@ -114,7 +115,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
       // (Group call partners are not direct 1:1; no extra partner IDs to fetch)
 
       // Batch fetch profiles
-      const profileMap = new Map<string, { full_name: string; photo_url: string; age: number | null; language: string | null; country: string | null }>();
+      const profileMap = new Map<string, { full_name: string; photo_url: string; age: number | null; language: string | null; state: string | null; country: string | null }>();
       if (partnerIds.size > 0) {
         const publicProfiles = await fetchPublicProfiles(Array.from(partnerIds));
         publicProfiles.forEach((p) =>
@@ -123,6 +124,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
             photo_url: p.photo_url || "",
             age: p.age ?? null,
             language: p.primary_language || p.preferred_language || p.language || null,
+            state: p.state || p.city || null,
             country: p.country || null,
           })
         );
@@ -143,6 +145,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           partnerAvatar: profile?.photo_url || "",
           partnerAge: profile?.age ?? null,
           partnerLanguage: profile?.language ?? null,
+          partnerState: profile?.state ?? null,
           partnerCountry: profile?.country ?? null,
           status: s.status,
           startedAt: s.started_at || s.created_at,
@@ -173,6 +176,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           partnerAvatar: profile?.photo_url || "",
           partnerAge: profile?.age ?? null,
           partnerLanguage: profile?.language ?? null,
+          partnerState: profile?.state ?? null,
           partnerCountry: profile?.country ?? null,
           status: s.status,
           startedAt: s.started_at || s.created_at,
@@ -381,6 +385,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                 photoUrl={item.partnerAvatar}
                 age={item.partnerAge ?? undefined}
                 language={item.partnerLanguage ?? undefined}
+                state={item.partnerState ?? undefined}
                 country={item.partnerCountry ?? undefined}
                 subtitle={subtitle}
                 actions={rightMeta}
