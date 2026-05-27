@@ -97,6 +97,7 @@ interface MatchedMan {
   photoUrl: string | null;
   age: number | null;
   country: string | null;
+  state: string | null;
   primaryLanguage: string | null;
   isOnline: boolean;
   matchedAt: string;
