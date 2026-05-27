@@ -1707,6 +1707,7 @@ const DashboardScreen = () => {
             photoUrl={woman.photoUrl}
             age={woman.age}
             language={woman.primaryLanguage}
+            state={woman.state}
             country={woman.country}
             isOnline={woman.isOnline}
             onClick={() => handleStartChatWithWoman(woman.userId, woman.fullName || "User")}
