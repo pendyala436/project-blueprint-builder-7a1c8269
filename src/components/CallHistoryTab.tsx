@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { UserContactCard } from "@/components/UserContactCard";
 import {
   MessageCircle,
   Video,
@@ -26,6 +27,9 @@ interface HistoryItem {
   partnerId: string;
   partnerName: string;
   partnerAvatar: string;
+  partnerAge?: number | null;
+  partnerLanguage?: string | null;
+  partnerCountry?: string | null;
   status: string;
   startedAt: string;
   endedAt?: string;
@@ -110,11 +114,17 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
       // (Group call partners are not direct 1:1; no extra partner IDs to fetch)
 
       // Batch fetch profiles
-      const profileMap = new Map<string, { full_name: string; photo_url: string }>();
+      const profileMap = new Map<string, { full_name: string; photo_url: string; age: number | null; language: string | null; country: string | null }>();
       if (partnerIds.size > 0) {
         const publicProfiles = await fetchPublicProfiles(Array.from(partnerIds));
         publicProfiles.forEach((p) =>
-          profileMap.set(p.user_id, { full_name: p.full_name || "User", photo_url: p.photo_url || "" })
+          profileMap.set(p.user_id, {
+            full_name: p.full_name || "User",
+            photo_url: p.photo_url || "",
+            age: p.age ?? null,
+            language: p.primary_language || p.preferred_language || p.language || null,
+            country: p.country || null,
+          })
         );
       }
 
@@ -131,6 +141,9 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           partnerId: pid,
           partnerName: profile?.full_name || "User",
           partnerAvatar: profile?.photo_url || "",
+          partnerAge: profile?.age ?? null,
+          partnerLanguage: profile?.language ?? null,
+          partnerCountry: profile?.country ?? null,
           status: s.status,
           startedAt: s.started_at || s.created_at,
           endedAt: s.ended_at || undefined,
@@ -158,6 +171,9 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           partnerId: pid,
           partnerName: profile?.full_name || "User",
           partnerAvatar: profile?.photo_url || "",
+          partnerAge: profile?.age ?? null,
+          partnerLanguage: profile?.language ?? null,
+          partnerCountry: profile?.country ?? null,
           status: s.status,
           startedAt: s.started_at || s.created_at,
           endedAt: s.ended_at || undefined,
@@ -304,84 +320,77 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
       {/* History list */}
       {!loading && filtered.length > 0 && (
         <div className="divide-y divide-border/30">
-          {filtered.map((item) => (
-            <button
-              key={`${item.type}-${item.id}`}
-              onClick={() => {
-                if (item.type === "chat") void openChat(item.partnerId);
-                else navigate(`/profile/${item.partnerId}`);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
-            >
-              {/* Avatar */}
-              <div className="relative">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={item.partnerAvatar} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                    {item.partnerName.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className={cn("absolute -bottom-0.5 -right-0.5 p-1 rounded-full border-2 border-background", getTypeBadgeColor(item.type))}>
-                  {getTypeIcon(item.type)}
-                </div>
-              </div>
+          {filtered.map((item) => {
+            const subtitleParts: string[] = [];
+            if (item.status === "active") subtitleParts.push("Ongoing");
+            else subtitleParts.push(item.endReason || "Ended");
+            if (item.totalMinutes > 0) subtitleParts.push(formatDuration(item.totalMinutes));
+            if (item.ratePerMinute > 0) subtitleParts.push(`₹${item.ratePerMinute}/min`);
+            if (item.totalAmount > 0) subtitleParts.push(`${isMale ? "-" : "+"}₹${item.totalAmount.toFixed(2)}`);
+            const subtitle = subtitleParts.join(" · ");
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold truncate">
-                    {item.type === "group" ? item.groupName : item.partnerName}
-                  </span>
-                  {item.status === "active" && (
-                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-primary/10 text-primary border-primary/30">
-                      LIVE
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                  {item.isIncoming !== undefined && (
-                    item.isIncoming
-                      ? <ArrowDownLeft className="w-3 h-3 text-primary" />
-                      : <ArrowUpRight className="w-3 h-3 text-accent-foreground" />
-                  )}
-                  <span className={getStatusColor(item.status)}>
-                    {item.status === "active" ? "Ongoing" : item.endReason || "Ended"}
-                  </span>
-                  {item.totalMinutes > 0 && (
-                    <>
-                      <span>·</span>
-                      <span>{formatDuration(item.totalMinutes)}</span>
-                    </>
-                  )}
-                  {item.ratePerMinute > 0 && (
-                    <>
-                      <span>·</span>
-                      <span className="text-muted-foreground">₹{item.ratePerMinute}/min</span>
-                    </>
-                  )}
-                  {item.totalAmount > 0 && (
-                    <>
-                      <span>·</span>
-                      <span className="flex items-center gap-0.5">
-                        <IndianRupee className="w-3 h-3" />
-                        {isMale ? `-${item.totalAmount.toFixed(2)}` : `+${item.totalAmount.toFixed(2)}`}
-                      </span>
-                    </>
-                  )}
-                </div>
-                {item.type === "group" && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                    Host: {item.partnerName}
-                  </p>
+            const rightMeta = (
+              <div className="flex flex-col items-end gap-1 text-[10px] text-muted-foreground">
+                <span className={cn("p-1 rounded-full", getTypeBadgeColor(item.type))}>
+                  {getTypeIcon(item.type)}
+                </span>
+                <span>{formatDistanceToNow(new Date(item.startedAt), { addSuffix: true })}</span>
+                {item.status === "active" && (
+                  <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-primary/10 text-primary border-primary/30">
+                    LIVE
+                  </Badge>
                 )}
               </div>
+            );
 
-              {/* Timestamp */}
-              <div className="text-[10px] text-muted-foreground text-right flex-shrink-0">
-                {formatDistanceToNow(new Date(item.startedAt), { addSuffix: true })}
-              </div>
-            </button>
-          ))}
+            // Group calls: no individual partner — keep simple row
+            if (item.type === "group") {
+              return (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  onClick={() => navigate("/private-groups")}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarFallback className="bg-secondary/30 text-secondary-foreground text-sm font-semibold">
+                        <Users className="w-5 h-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className={cn("absolute -bottom-0.5 -right-0.5 p-1 rounded-full border-2 border-background", getTypeBadgeColor(item.type))}>
+                      {getTypeIcon(item.type)}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{item.groupName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground flex-shrink-0">
+                    {formatDistanceToNow(new Date(item.startedAt), { addSuffix: true })}
+                  </div>
+                </button>
+              );
+            }
+
+            // 1:1 chat / video — unified Name • Age • Language • Country • Status format
+            return (
+              <UserContactCard
+                key={`${item.type}-${item.id}`}
+                userId={item.partnerId}
+                name={item.partnerName}
+                photoUrl={item.partnerAvatar}
+                age={item.partnerAge ?? undefined}
+                language={item.partnerLanguage ?? undefined}
+                country={item.partnerCountry ?? undefined}
+                subtitle={subtitle}
+                actions={rightMeta}
+                onClick={() => {
+                  if (item.type === "chat") void openChat(item.partnerId);
+                  else navigate(`/profile/${item.partnerId}`);
+                }}
+              />
+            );
+          })}
         </div>
       )}
     </div>
