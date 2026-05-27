@@ -430,7 +430,7 @@ const DashboardScreen = () => {
       // Fetch ONLY online women from safe public view (excludes sensitive bank/PAN/phone/DOB fields)
       const { data: femaleProfiles } = await supabase
         .from("public_female_profiles" as any)
-        .select("id, user_id, full_name, photo_url, age, country, primary_language, is_earning_eligible")
+        .select("id, user_id, full_name, photo_url, age, country, state, primary_language, is_earning_eligible")
         .in("user_id", onlineUserIds)
         .limit(50);
 
