@@ -103,6 +103,7 @@ interface OnlineWoman {
   photo_url: string | null;
   age: number | null;
   country: string | null;
+  state: string | null;
   primary_language: string | null;
   active_chat_count?: number; // 0=Free (green), 1-2=Busy (yellow), 3=Full (red)
   is_available?: boolean;
@@ -118,6 +119,7 @@ interface MatchedWoman {
   photoUrl: string | null;
   age: number | null;
   country: string | null;
+  state: string | null;
   primaryLanguage: string | null;
   isOnline: boolean;
   matchedAt: string;
