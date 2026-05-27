@@ -29,6 +29,7 @@ interface HistoryItem {
   partnerAvatar: string;
   partnerAge?: number | null;
   partnerLanguage?: string | null;
+  partnerState?: string | null;
   partnerCountry?: string | null;
   status: string;
   startedAt: string;
