@@ -899,6 +899,7 @@ const WomenDashboardScreen = () => {
             photoUrl: profile.photo_url,
             age: profile.age,
             country: profile.country,
+            state: profile.state,
             primaryLanguage: profile.primary_language,
             isOnline: statusMap.get(otherId) || false,
             matchedAt: m.matched_at,
