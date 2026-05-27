@@ -1490,6 +1490,7 @@ const WomenDashboardScreen = () => {
             photoUrl={man.photoUrl}
             age={man.age}
             language={man.primaryLanguage}
+            state={man.state}
             country={man.country}
             isOnline={man.isOnline}
             onClick={() => handleStartChatWithUser(man.userId)}
