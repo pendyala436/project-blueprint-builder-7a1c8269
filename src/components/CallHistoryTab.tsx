@@ -115,7 +115,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
       // (Group call partners are not direct 1:1; no extra partner IDs to fetch)
 
       // Batch fetch profiles
-      const profileMap = new Map<string, { full_name: string; photo_url: string; age: number | null; language: string | null; country: string | null }>();
+      const profileMap = new Map<string, { full_name: string; photo_url: string; age: number | null; language: string | null; state: string | null; country: string | null }>();
       if (partnerIds.size > 0) {
         const publicProfiles = await fetchPublicProfiles(Array.from(partnerIds));
         publicProfiles.forEach((p) =>
@@ -124,6 +124,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
             photo_url: p.photo_url || "",
             age: p.age ?? null,
             language: p.primary_language || p.preferred_language || p.language || null,
+            state: p.state || p.city || null,
             country: p.country || null,
           })
         );
