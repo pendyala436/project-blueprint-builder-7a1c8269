@@ -393,7 +393,6 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
           })}
         </div>
       )}
-      )}
     </div>
   );
 };
