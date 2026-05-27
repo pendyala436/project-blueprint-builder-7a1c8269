@@ -27,6 +27,9 @@ interface HistoryItem {
   partnerId: string;
   partnerName: string;
   partnerAvatar: string;
+  partnerAge?: number | null;
+  partnerLanguage?: string | null;
+  partnerCountry?: string | null;
   status: string;
   startedAt: string;
   endedAt?: string;
