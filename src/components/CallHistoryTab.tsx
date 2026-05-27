@@ -385,6 +385,7 @@ export const CallHistoryTab: React.FC<CallHistoryTabProps> = ({
                 photoUrl={item.partnerAvatar}
                 age={item.partnerAge ?? undefined}
                 language={item.partnerLanguage ?? undefined}
+                state={item.partnerState ?? undefined}
                 country={item.partnerCountry ?? undefined}
                 subtitle={subtitle}
                 actions={rightMeta}
