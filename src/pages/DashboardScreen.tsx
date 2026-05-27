@@ -1502,6 +1502,7 @@ const DashboardScreen = () => {
                         photoUrl={woman.photo_url}
                         age={woman.age}
                         language={woman.primary_language}
+                        state={woman.state}
                         country={woman.country}
                         activeChatCount={woman.active_chat_count}
                         subtitle={userCodeMap[woman.user_id] ? `${userCodeMap[woman.user_id]} • ${woman.primary_language} → ${userLanguage}` : `${woman.primary_language} → ${userLanguage}`}
