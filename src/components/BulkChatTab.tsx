@@ -42,6 +42,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useChatPricing } from "@/hooks/useChatPricing";
+import { useParallelChatSettings } from "@/hooks/useParallelChatSettings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,6 +134,7 @@ export const BulkChatTab = ({
 }: BulkChatTabProps) => {
   const { toast } = useToast();
   const { pricing } = useChatPricing();
+  const { maxParallelChats, setMaxParallelChats } = useParallelChatSettings(currentUserId);
 
   // ── State ──────────────────────────────────
   const [queue, setQueue] = useState<QueuedMan[]>([]);
@@ -147,7 +149,7 @@ export const BulkChatTab = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingMen, setLoadingMen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [maxSlots, setMaxSlots] = useState(3); // woman's preference, 1-5
+  const maxSlots = maxParallelChats;
   const [viewerLanguage, setViewerLanguage] = useState<string>("English");
   const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
 
@@ -241,8 +243,14 @@ export const BulkChatTab = ({
     try {
       const { data, error } = await supabase.rpc("get_online_men_dashboard");
       if (error) throw error;
+      const freshCutoff = Date.now() - 5 * 60 * 1000;
       const men: OnlineMan[] = ((data as any[]) || [])
         .filter((m: any) => Number(m.wallet_balance) > 0)
+        .filter((m: any) => {
+          // Ghost-user guard: must have a recent heartbeat
+          const ts = m.last_seen ? new Date(m.last_seen).getTime() : 0;
+          return Number.isFinite(ts) && ts >= freshCutoff;
+        })
         .map((m: any) => ({
           userId: m.user_id,
           fullName: m.full_name || "Anonymous",
@@ -576,14 +584,14 @@ export const BulkChatTab = ({
                 variant="outline"
                 size="sm"
                 className="h-6 w-6 p-0"
-                onClick={() => setMaxSlots((v) => Math.max(1, v - 1))}
+                onClick={() => setMaxParallelChats(Math.max(1, maxSlots - 1))}
               >−</Button>
               <span className="text-sm font-semibold w-4 text-center">{maxSlots}</span>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-6 w-6 p-0"
-                onClick={() => setMaxSlots((v) => Math.min(MAX_QUEUE, v + 1))}
+                onClick={() => setMaxParallelChats(Math.min(MAX_QUEUE, maxSlots + 1))}
               >+</Button>
             </div>
           </div>

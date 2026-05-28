@@ -728,7 +728,15 @@ const WomenDashboardScreen = () => {
         return;
       }
 
-      if (!onlineMenData || onlineMenData.length === 0) {
+      // Ghost-user guard: drop rows whose last_seen is older than 5 minutes
+      const freshCutoff = Date.now() - 5 * 60 * 1000;
+      const freshOnlineMen = (onlineMenData || []).filter((m: any) => {
+        if (!m?.last_seen) return false;
+        const ts = new Date(m.last_seen).getTime();
+        return Number.isFinite(ts) && ts >= freshCutoff;
+      });
+
+      if (freshOnlineMen.length === 0) {
         setRechargedMen([]);
         setNonRechargedMen([]);
         setStats(prev => ({ ...prev, totalOnlineMen: 0, rechargedMen: 0, nonRechargedMen: 0 }));
@@ -736,7 +744,7 @@ const WomenDashboardScreen = () => {
       }
 
       // Process the RPC results
-      const onlineMen: OnlineMan[] = onlineMenData.map((man: {
+      const onlineMen: OnlineMan[] = freshOnlineMen.map((man: {
         user_id: string;
         full_name: string;
         photo_url: string | null;

@@ -411,15 +411,18 @@ const DashboardScreen = () => {
       // Self-heal stuck "busy" flags from prior sessions before reading
       try { await supabase.rpc('reconcile_user_busy_status' as any, { _user_id: null }); } catch {}
 
-      // Get ONLY online & not-busy user IDs
-      // Busy = currently in audio/video/private-group call (mutual exclusion)
+      // Get ONLY truly-online & not-busy user IDs.
+      // Ghost-user guard: require last_seen within the last 5 minutes so
+      // stale is_online=true rows from crashed sessions are excluded.
+      const freshCutoffIso = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const { data: onlineUsers } = await supabase
         .from("user_status")
-        .select("user_id, status_text")
+        .select("user_id, status_text, last_seen")
         .eq("is_online", true)
-        .neq("status_text", "busy");
+        .neq("status_text", "busy")
+        .gte("last_seen", freshCutoffIso);
 
-      const onlineUserIds = onlineUsers?.map(u => u.user_id) || [];
+      const onlineUserIds = (onlineUsers || []).map(u => u.user_id);
       
       // If no users online, show empty lists
       if (onlineUserIds.length === 0) {
