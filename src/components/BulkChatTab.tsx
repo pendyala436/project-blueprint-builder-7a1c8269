@@ -149,7 +149,7 @@ export const BulkChatTab = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingMen, setLoadingMen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [maxSlots, setMaxSlots] = useState(3); // woman's preference, 1-5
+  const maxSlots = maxParallelChats;
   const [viewerLanguage, setViewerLanguage] = useState<string>("English");
   const [translatedPlaceholder, setTranslatedPlaceholder] = useState("Type a message...");
 
