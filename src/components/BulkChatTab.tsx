@@ -243,8 +243,14 @@ export const BulkChatTab = ({
     try {
       const { data, error } = await supabase.rpc("get_online_men_dashboard");
       if (error) throw error;
+      const freshCutoff = Date.now() - 5 * 60 * 1000;
       const men: OnlineMan[] = ((data as any[]) || [])
         .filter((m: any) => Number(m.wallet_balance) > 0)
+        .filter((m: any) => {
+          // Ghost-user guard: must have a recent heartbeat
+          const ts = m.last_seen ? new Date(m.last_seen).getTime() : 0;
+          return Number.isFinite(ts) && ts >= freshCutoff;
+        })
         .map((m: any) => ({
           userId: m.user_id,
           fullName: m.full_name || "Anonymous",
