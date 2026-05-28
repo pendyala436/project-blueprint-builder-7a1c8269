@@ -578,14 +578,14 @@ export const BulkChatTab = ({
                 variant="outline"
                 size="sm"
                 className="h-6 w-6 p-0"
-                onClick={() => setMaxSlots((v) => Math.max(1, v - 1))}
+                onClick={() => setMaxParallelChats(Math.max(1, maxSlots - 1))}
               >−</Button>
               <span className="text-sm font-semibold w-4 text-center">{maxSlots}</span>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-6 w-6 p-0"
-                onClick={() => setMaxSlots((v) => Math.min(MAX_QUEUE, v + 1))}
+                onClick={() => setMaxParallelChats(Math.min(MAX_QUEUE, maxSlots + 1))}
               >+</Button>
             </div>
           </div>
