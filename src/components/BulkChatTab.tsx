@@ -134,6 +134,7 @@ export const BulkChatTab = ({
 }: BulkChatTabProps) => {
   const { toast } = useToast();
   const { pricing } = useChatPricing();
+  const { maxParallelChats, setMaxParallelChats } = useParallelChatSettings(currentUserId);
 
   // ── State ──────────────────────────────────
   const [queue, setQueue] = useState<QueuedMan[]>([]);
