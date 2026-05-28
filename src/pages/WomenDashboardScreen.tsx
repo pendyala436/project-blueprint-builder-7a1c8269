@@ -744,7 +744,7 @@ const WomenDashboardScreen = () => {
       }
 
       // Process the RPC results
-      const onlineMen: OnlineMan[] = onlineMenData.map((man: {
+      const onlineMen: OnlineMan[] = freshOnlineMen.map((man: {
         user_id: string;
         full_name: string;
         photo_url: string | null;
