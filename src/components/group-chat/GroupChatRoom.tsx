@@ -41,13 +41,14 @@ export const GroupChatRoom: React.FC<Props> = ({
       if (!m.body || m.sender_id === currentUserId) return;
       if (translations[m.id]) return;
       try {
-        const out = await translateText(m.body, viewerLanguage, "auto");
-        if (out?.translatedText && out.translatedText !== m.body) {
-          setTranslations((t) => ({ ...t, [m.id]: out.translatedText }));
+        const out = await translateText(m.body, "auto", viewerLanguage);
+        if (out && out !== m.body) {
+          setTranslations((t) => ({ ...t, [m.id]: out }));
         }
       } catch { /* noop */ }
     });
   }, [messages, viewerLanguage, currentUserId, translations]);
+
 
   useGroupChatBilling({
     sessionId,
