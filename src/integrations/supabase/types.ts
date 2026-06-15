@@ -1028,6 +1028,250 @@ export type Database = {
           },
         ]
       }
+      group_chat_messages: {
+        Row: {
+          body: string | null
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          media_type: string | null
+          media_url: string | null
+          pinned: boolean
+          reply_to: string | null
+          room_id: string
+          sender_gender: string | null
+          sender_id: string
+          sender_name: string | null
+          session_id: string
+          translated_cache: Json
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          pinned?: boolean
+          reply_to?: string | null
+          room_id: string
+          sender_gender?: string | null
+          sender_id: string
+          sender_name?: string | null
+          session_id: string
+          translated_cache?: Json
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          pinned?: boolean
+          reply_to?: string | null
+          room_id?: string
+          sender_gender?: string | null
+          sender_id?: string
+          sender_name?: string | null
+          session_id?: string
+          translated_cache?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "group_chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "group_chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_chat_moderation: {
+        Row: {
+          action: string
+          by_host_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          session_id: string
+          target_user_id: string
+          until: string | null
+        }
+        Insert: {
+          action: string
+          by_host_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          session_id: string
+          target_user_id: string
+          until?: string | null
+        }
+        Update: {
+          action?: string
+          by_host_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          session_id?: string
+          target_user_id?: string
+          until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_moderation_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_chat_participants: {
+        Row: {
+          id: string
+          joined_at: string
+          last_billed_minute: number
+          left_at: string | null
+          session_id: string
+          total_billed: number
+          total_seconds: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          last_billed_minute?: number
+          left_at?: string | null
+          session_id: string
+          total_billed?: number
+          total_seconds?: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          last_billed_minute?: number
+          left_at?: string | null
+          session_id?: string
+          total_billed?: number
+          total_seconds?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_chat_rooms: {
+        Row: {
+          created_at: string
+          current_host_id: string | null
+          current_participant_count: number
+          current_session_id: string | null
+          id: string
+          max_users: number
+          name: string
+          status: string
+          tree_type: string
+          updated_at: string
+          variant_number: number
+        }
+        Insert: {
+          created_at?: string
+          current_host_id?: string | null
+          current_participant_count?: number
+          current_session_id?: string | null
+          id?: string
+          max_users?: number
+          name: string
+          status?: string
+          tree_type: string
+          updated_at?: string
+          variant_number: number
+        }
+        Update: {
+          created_at?: string
+          current_host_id?: string | null
+          current_participant_count?: number
+          current_session_id?: string | null
+          id?: string
+          max_users?: number
+          name?: string
+          status?: string
+          tree_type?: string
+          updated_at?: string
+          variant_number?: number
+        }
+        Relationships: []
+      }
+      group_chat_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          host_id: string
+          id: string
+          room_id: string
+          started_at: string
+          total_host_earning: number
+          total_men_minutes: number
+          total_platform_revenue: number
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          host_id: string
+          id?: string
+          room_id: string
+          started_at?: string
+          total_host_earning?: number
+          total_men_minutes?: number
+          total_platform_revenue?: number
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          host_id?: string
+          id?: string
+          room_id?: string
+          started_at?: string
+          total_host_earning?: number
+          total_men_minutes?: number
+          total_platform_revenue?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_chat_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "group_chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_memberships: {
         Row: {
           created_at: string
@@ -3855,6 +4099,10 @@ export type Database = {
         }
         Returns: Json
       }
+      bill_group_chat_minute: {
+        Args: { p_man_id: string; p_session_id: string }
+        Returns: Json
+      }
       bill_group_gift_or_tip: {
         Args: {
           p_amount: number
@@ -4162,6 +4410,10 @@ export type Database = {
         Returns: Json
       }
       get_women_wallet_balance: { Args: { p_user_id: string }; Returns: Json }
+      group_chat_end_live: { Args: { p_session_id: string }; Returns: Json }
+      group_chat_go_live: { Args: { p_room_id: string }; Returns: Json }
+      group_chat_join: { Args: { p_room_id: string }; Returns: Json }
+      group_chat_leave: { Args: { p_session_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
