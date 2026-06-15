@@ -82,6 +82,8 @@ import { useMessageSound } from "@/hooks/useMessageSound";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { AppHeader } from "@/components/AppHeader";
 import { AppBottomTabs, getMenTabs } from "@/components/AppBottomTabs";
+import GroupChatTab from "@/components/GroupChatTab";
+
 import { UserContactCard } from "@/components/UserContactCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";

@@ -55,6 +55,8 @@ import { LanguageGroupChat } from "@/components/LanguageGroupChat";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { AppHeader } from "@/components/AppHeader";
 import { AppBottomTabs, getWomenTabs } from "@/components/AppBottomTabs";
+import GroupChatTab from "@/components/GroupChatTab";
+
 import { UserContactCard } from "@/components/UserContactCard";
 // WhatsAppFAB removed — unused in current layout
 import { WomenKYCForm } from "@/components/WomenKYCForm";
