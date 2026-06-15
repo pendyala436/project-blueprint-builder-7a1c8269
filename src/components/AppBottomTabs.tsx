@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { MessageCircle, Users, Heart, User, Wallet, Video, Clock, FileText, Layers } from "lucide-react";
+import { MessageCircle, Users, Heart, User, Wallet, Video, Clock, FileText, Layers, Radio } from "lucide-react";
 
 export interface TabItem {
   id: string;
@@ -72,7 +72,9 @@ export const getMenTabs = (
   if (showChat) tabs.push({ id: "chats", label: "Chats", icon: <MessageCircle className="w-5 h-5" />, badge: chatBadge });
   tabs.push({ id: "history", label: "History", icon: <Clock className="w-5 h-5" /> });
   if (showGroups) tabs.push({ id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> });
+  tabs.push({ id: "groupchat", label: "Group Chat", icon: <Radio className="w-5 h-5" /> });
   tabs.push({ id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchBadge });
+
   tabs.push({ id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> });
   if (showStatement) tabs.push({ id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> });
   tabs.push({ id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> });
@@ -96,7 +98,9 @@ export const getWomenTabs = (
   tabs.push({ id: "matches", label: "Matches", icon: <Heart className="w-5 h-5" />, badge: matchesBadge });
   tabs.push({ id: "community", label: "Community", icon: <Users className="w-5 h-5" /> });
   if (showGroups) tabs.push({ id: "groups", label: "Groups", icon: <Video className="w-5 h-5" /> });
+  tabs.push({ id: "groupchat", label: "Group Chat", icon: <Radio className="w-5 h-5" /> });
   tabs.push({ id: "wallet", label: "Wallet", icon: <Wallet className="w-5 h-5" /> });
+
   if (showStatement) tabs.push({ id: "statement", label: "Statement", icon: <FileText className="w-5 h-5" /> });
   tabs.push({ id: "profile", label: "Profile", icon: <User className="w-5 h-5" /> });
   return tabs;

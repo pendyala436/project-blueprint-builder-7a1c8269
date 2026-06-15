@@ -82,6 +82,8 @@ import { useMessageSound } from "@/hooks/useMessageSound";
 import { MatchFiltersPanel, MatchFilters } from "@/components/MatchFiltersPanel";
 import { AppHeader } from "@/components/AppHeader";
 import { AppBottomTabs, getMenTabs } from "@/components/AppBottomTabs";
+import GroupChatTab from "@/components/GroupChatTab";
+
 import { UserContactCard } from "@/components/UserContactCard";
 // WhatsAppFAB removed — unused in current layout
 import { CallHistoryTab } from "@/components/CallHistoryTab";
@@ -1874,6 +1876,12 @@ const DashboardScreen = () => {
         {activeTab === "chats" && renderChatsTab()}
         {activeTab === "history" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><CallHistoryTab currentUserId={currentUserId} userGender="male" /></div>}
         {activeTab === "groups" && renderGroupsTab()}
+        {activeTab === "groupchat" && (
+          <div className="min-h-0 h-full">
+            <GroupChatTab currentUserId={currentUserId} viewerGender="male" viewerName={userName} viewerLanguage={userLanguage} />
+          </div>
+        )}
+
         {activeTab === "matches" && renderMatchesTab()}
         {activeTab === "wallet" && renderWalletTab()}
         {activeTab === "statement" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><StatementTab userId={currentUserId} gender="male" /></div>}
