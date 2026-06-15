@@ -1707,6 +1707,12 @@ const WomenDashboardScreen = () => {
         {activeTab === "matches" && renderMatchesTab()}
         {activeTab === "community" && renderCommunityTab()}
         {activeTab === "groups" && renderGroupsTab()}
+        {activeTab === "groupchat" && (
+          <div className="min-h-0 h-full">
+            <GroupChatTab currentUserId={currentUserId} viewerGender="female" viewerName={userName} />
+          </div>
+        )}
+
         {activeTab === "wallet" && renderWalletTab()}
         {activeTab === "statement" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><StatementTab userId={currentUserId} gender="female" /></div>}
         {activeTab === "profile" && renderProfileTab()}

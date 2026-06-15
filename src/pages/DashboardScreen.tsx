@@ -1874,6 +1874,12 @@ const DashboardScreen = () => {
         {activeTab === "chats" && renderChatsTab()}
         {activeTab === "history" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><CallHistoryTab currentUserId={currentUserId} userGender="male" /></div>}
         {activeTab === "groups" && renderGroupsTab()}
+        {activeTab === "groupchat" && (
+          <div className="min-h-0 h-full">
+            <GroupChatTab currentUserId={currentUserId} viewerGender="male" viewerName={userName} viewerLanguage={userLanguage} />
+          </div>
+        )}
+
         {activeTab === "matches" && renderMatchesTab()}
         {activeTab === "wallet" && renderWalletTab()}
         {activeTab === "statement" && <div className="min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"><StatementTab userId={currentUserId} gender="male" /></div>}
