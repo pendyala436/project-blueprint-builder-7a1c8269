@@ -27,12 +27,27 @@ export interface GroupChatMessage {
   body: string | null;
   media_url: string | null;
   media_type: string | null;
+  media_thumbnail?: string | null;
+  voice_duration_seconds?: number | null;
   reply_to: string | null;
   pinned: boolean;
   edited_at: string | null;
   deleted_at: string | null;
+  original_lang?: string | null;
+  transliteration?: string | null;
+  english_translation?: string | null;
   created_at: string;
 }
+
+export interface GroupChatParticipantInfo {
+  user_id: string;
+  joined_at: string;
+  full_name?: string | null;
+  photo_url?: string | null;
+  gender?: string | null;
+  is_host?: boolean;
+}
+
 
 export function useGroupChatRooms(opts?: { onlyLive?: boolean }) {
   const [rooms, setRooms] = useState<GroupChatRoom[]>([]);
@@ -64,9 +79,30 @@ export function useGroupChatRooms(opts?: { onlyLive?: boolean }) {
   return { rooms, loading, reload: load };
 }
 
-export function useGroupChatRoom(sessionId: string | null) {
+export function useGroupChatRoom(sessionId: string | null, hostId?: string | null) {
   const [messages, setMessages] = useState<GroupChatMessage[]>([]);
-  const [participants, setParticipants] = useState<{ user_id: string; joined_at: string }[]>([]);
+  const [participants, setParticipants] = useState<GroupChatParticipantInfo[]>([]);
+
+  const enrich = useCallback(async (rows: { user_id: string; joined_at: string }[]) => {
+    if (!rows.length) return [] as GroupChatParticipantInfo[];
+    const ids = Array.from(new Set(rows.map(r => r.user_id)));
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, photo_url, gender")
+      .in("user_id", ids);
+    const byId = new Map((profs ?? []).map((p: any) => [p.user_id, p]));
+    return rows.map(r => {
+      const p = byId.get(r.user_id) || {};
+      return {
+        user_id: r.user_id,
+        joined_at: r.joined_at,
+        full_name: (p as any).full_name ?? null,
+        photo_url: (p as any).photo_url ?? null,
+        gender: (p as any).gender ?? null,
+        is_host: hostId ? r.user_id === hostId : false,
+      } as GroupChatParticipantInfo;
+    });
+  }, [hostId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -86,7 +122,7 @@ export function useGroupChatRoom(sessionId: string | null) {
         .select("user_id, joined_at")
         .eq("session_id", sessionId)
         .is("left_at", null);
-      if (alive) setParticipants(parts ?? []);
+      if (alive) setParticipants(await enrich(parts ?? []));
     })();
 
     const ch = supabase
@@ -108,15 +144,16 @@ export function useGroupChatRoom(sessionId: string | null) {
             .select("user_id, joined_at")
             .eq("session_id", sessionId)
             .is("left_at", null);
-          setParticipants(data ?? []);
+          setParticipants(await enrich(data ?? []));
         })
       .subscribe();
 
     return () => { alive = false; supabase.removeChannel(ch); };
-  }, [sessionId]);
+  }, [sessionId, enrich]);
 
   return { messages, participants };
 }
+
 
 /** Per-minute billing tick for men in a group chat room. */
 export function useGroupChatBilling(params: {
