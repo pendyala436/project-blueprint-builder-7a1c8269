@@ -1034,9 +1034,12 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           edited_at: string | null
+          english_translation: string | null
           id: string
+          media_thumbnail: string | null
           media_type: string | null
           media_url: string | null
+          original_lang: string | null
           pinned: boolean
           reply_to: string | null
           room_id: string
@@ -1045,15 +1048,20 @@ export type Database = {
           sender_name: string | null
           session_id: string
           translated_cache: Json
+          transliteration: string | null
+          voice_duration_seconds: number | null
         }
         Insert: {
           body?: string | null
           created_at?: string
           deleted_at?: string | null
           edited_at?: string | null
+          english_translation?: string | null
           id?: string
+          media_thumbnail?: string | null
           media_type?: string | null
           media_url?: string | null
+          original_lang?: string | null
           pinned?: boolean
           reply_to?: string | null
           room_id: string
@@ -1062,15 +1070,20 @@ export type Database = {
           sender_name?: string | null
           session_id: string
           translated_cache?: Json
+          transliteration?: string | null
+          voice_duration_seconds?: number | null
         }
         Update: {
           body?: string | null
           created_at?: string
           deleted_at?: string | null
           edited_at?: string | null
+          english_translation?: string | null
           id?: string
+          media_thumbnail?: string | null
           media_type?: string | null
           media_url?: string | null
+          original_lang?: string | null
           pinned?: boolean
           reply_to?: string | null
           room_id?: string
@@ -1079,6 +1092,8 @@ export type Database = {
           sender_name?: string | null
           session_id?: string
           translated_cache?: Json
+          transliteration?: string | null
+          voice_duration_seconds?: number | null
         }
         Relationships: [
           {
