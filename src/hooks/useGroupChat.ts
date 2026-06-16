@@ -27,12 +27,27 @@ export interface GroupChatMessage {
   body: string | null;
   media_url: string | null;
   media_type: string | null;
+  media_thumbnail?: string | null;
+  voice_duration_seconds?: number | null;
   reply_to: string | null;
   pinned: boolean;
   edited_at: string | null;
   deleted_at: string | null;
+  original_lang?: string | null;
+  transliteration?: string | null;
+  english_translation?: string | null;
   created_at: string;
 }
+
+export interface GroupChatParticipantInfo {
+  user_id: string;
+  joined_at: string;
+  full_name?: string | null;
+  photo_url?: string | null;
+  gender?: string | null;
+  is_host?: boolean;
+}
+
 
 export function useGroupChatRooms(opts?: { onlyLive?: boolean }) {
   const [rooms, setRooms] = useState<GroupChatRoom[]>([]);
