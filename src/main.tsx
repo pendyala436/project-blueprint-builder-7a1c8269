@@ -17,7 +17,10 @@ function isStaleBundleError(message: string): boolean {
     m.includes("error loading dynamically imported module") ||
     m.includes("expected a javascript") ||
     m.includes("application/octet-stream") ||
-    m.includes("'text/html' is not a valid javascript")
+    m.includes("'text/html' is not a valid javascript") ||
+    // Mixed old/new deployed chunks can throw runtime ReferenceErrors instead
+    // of ChunkLoadError. Recover once by clearing SW/cache and reloading.
+    m.includes("useauthready is not defined")
   );
 }
 async function recoverFromStaleBundle() {
