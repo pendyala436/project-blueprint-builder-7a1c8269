@@ -129,9 +129,10 @@ function purgeStaleSupabaseSessionIfBroken() {
         }
         const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
         // Missing `sub` => malformed/legacy token => will 403 forever. Drop it.
-        // Also drop tokens whose issuer doesn't match current Supabase URL.
-        const expectedIss = "https://tvneohngeracipjajzos.supabase.co/auth/v1";
-        if (!payload?.sub || (payload?.iss && payload.iss !== expectedIss)) {
+        // NOTE: Do NOT compare `iss` against a hardcoded URL — that wipes valid
+        // sessions whenever the app points at a different Supabase (self-hosted,
+        // staging, etc.). The Supabase client will reject mismatched tokens itself.
+        if (!payload?.sub) {
           localStorage.removeItem(k);
         }
       } catch {
