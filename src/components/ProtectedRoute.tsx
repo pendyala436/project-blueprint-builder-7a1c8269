@@ -38,16 +38,36 @@ function clearRoleCache() {
   roleCache = null;
 }
 
+// Captcha verification persistence — keyed per user in localStorage so a page
+// refresh (or transient SIGNED_OUT flap during session restore) never forces
+// the user back through CAPTCHA. Expires after 24h.
+const CAPTCHA_TTL_MS = 24 * 60 * 60 * 1000;
+function isCaptchaVerified(userId: string | undefined): boolean {
+  if (!userId) return false;
+  try {
+    // Back-compat: legacy session flag still counts.
+    if (sessionStorage.getItem('captchaVerifiedAt')) return true;
+    const raw = localStorage.getItem(`captchaVerifiedFor:${userId}`);
+    if (!raw) return false;
+    const ts = parseInt(raw, 10);
+    return Number.isFinite(ts) && Date.now() - ts < CAPTCHA_TTL_MS;
+  } catch { return false; }
+}
+
 // Listen for sign-out to invalidate cache (module-level, runs once)
 supabase.auth.onAuthStateChange((event) => {
   if (event === 'SIGNED_OUT') {
     clearRoleCache();
+    // NOTE: do NOT clear captchaVerifiedFor:* here. SIGNED_OUT can fire on
+    // transient token-refresh failures; clearing would log the user out of
+    // their CAPTCHA grant on every refresh. The TTL handles staleness.
     try {
       sessionStorage.removeItem('captchaVerifiedAt');
       sessionStorage.removeItem('postCaptchaRedirect');
     } catch {}
   }
 });
+
 
 const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => {
   const navigate = useNavigate();
@@ -134,8 +154,9 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       return;
     }
 
-    // CAPTCHA gate — block dashboards until math CAPTCHA has been solved this session
-    const captchaOk = !!sessionStorage.getItem('captchaVerifiedAt');
+    // CAPTCHA gate — block dashboards until math CAPTCHA has been solved
+    // (per user, 24h, persisted in localStorage so refresh doesn't kick them).
+    const captchaOk = isCaptchaVerified(user.id);
     if (!captchaOk) {
       const target =
         requiredRole === 'admin' ? '/admin' :
@@ -146,6 +167,7 @@ const ProtectedRoute = ({ children, requiredRole = 'authenticated' }: Props) => 
       navigate('/captcha', { replace: true });
       return;
     }
+
 
 
     if (checkedForUser.current === user.id) return;

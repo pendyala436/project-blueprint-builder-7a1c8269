@@ -35,7 +35,24 @@ function boot() {
   initialized = true;
 
   // 1) Restore session from storage FIRST — with timeout to prevent hanging
-  const sessionPromise = supabase.auth.getSession().then(({ data: { session } }) => {
+  const sessionPromise = supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Validate restored token. If the server rejects it (e.g. bad_jwt /
+    // "missing sub claim" after a key rotation or stale cloud token on a
+    // self-hosted backend), sign out LOCALLY so the user sees a clean login
+    // instead of being bounced from protected routes on every refresh.
+    if (session?.access_token) {
+      try {
+        const { error } = await supabase.auth.getUser();
+        if (error) {
+          console.warn('[Auth] Restored session rejected by server, clearing locally:', error.message);
+          try { await supabase.auth.signOut({ scope: 'local' } as any); } catch {}
+          broadcast({ user: null, session: null, isReady: true });
+          return;
+        }
+      } catch {
+        // Network hiccup — keep the session optimistically; autoRefresh will retry.
+      }
+    }
     broadcast({ user: session?.user ?? null, session, isReady: true });
   }).catch(() => {
     broadcast({ user: null, session: null, isReady: true });
@@ -46,11 +63,6 @@ function boot() {
     if (!globalState.isReady) {
       console.warn('[Auth] Session restore timed out after 12s, proceeding without session');
       broadcast({ user: null, session: null, isReady: true });
-
-      // Continue listening — if getSession resolves late, update state
-      sessionPromise.then(() => {
-        // Already handled by the .then() above — this is a no-op safety net
-      });
     }
   }, 12000);
 
@@ -68,6 +80,7 @@ function boot() {
     broadcast({ user: session?.user ?? null, session, isReady: true });
   });
 }
+
 
 // ── Hook ────────────────────────────────────────────────────────────
 export function useAuthReady() {
