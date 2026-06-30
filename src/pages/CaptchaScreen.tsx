@@ -68,8 +68,16 @@ const CaptchaScreen = () => {
       const dest = sessionStorage.getItem("postCaptchaRedirect") || "/dashboard";
       sessionStorage.removeItem("postCaptchaRedirect");
       sessionStorage.setItem("captchaVerifiedAt", String(Date.now()));
+      // Persist per-user so a page refresh / transient auth flap doesn't
+      // re-prompt. 24h TTL is enforced by ProtectedRoute.
+      try {
+        const { data } = await supabase.auth.getUser();
+        const uid = data?.user?.id;
+        if (uid) localStorage.setItem(`captchaVerifiedFor:${uid}`, String(Date.now()));
+      } catch {}
       toast({ title: "Verified", description: "Redirecting to your dashboard..." });
       navigate(dest, { replace: true });
+
     } else {
       const next = attempts + 1;
       setAttempts(next);
