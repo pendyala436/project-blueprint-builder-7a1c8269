@@ -10,6 +10,8 @@ import AuroraBackground from "@/components/AuroraBackground";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { supabase } from "@/integrations/supabase/client";
+
 
 type Op = "+" | "-";
 
@@ -51,7 +53,7 @@ const CaptchaScreen = () => {
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
-  const handleVerify = useCallback(() => {
+  const handleVerify = useCallback(async () => {
     if (isVerifying) return;
     const trimmed = value.trim();
     if (!trimmed) {
