@@ -99,22 +99,20 @@ export const VoiceRecorder = ({
       }
 
       const fileName = `voice_${Date.now()}.webm`;
-      // RLS requires first folder = auth user_id
-      const filePath = `${currentUserId}/${chatId}/${fileName}`;
+      // Physical path on self-hosted disk: /meowmeow/app/attachment/<userId>/<chatId>/voice_*.webm
+      const filePath = `meowmeow/app/attachment/${currentUserId}/${chatId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('chat-attachments')
+        .from('meowmeow-app-attachment')
         .upload(filePath, blob, { contentType: 'audio/webm' });
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        // BUG-VM-03 FIX: Show error to user
         onError?.(`Voice upload failed: ${uploadError.message}`);
         setIsSending(false);
         return;
       }
 
-      // Use [VOICE:chat-attachment://path] format — parsed by both ChatScreen and MiniChatWindow renderers
       const voiceMarker = `[VOICE:chat-attachment://${filePath}]`;
       await supabase.from('chat_messages').insert({
         chat_id: chatId,
