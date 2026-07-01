@@ -1894,9 +1894,10 @@ const ChatScreen = () => {
     try {
       const fileExt = file.name.split(".").pop();
       const randomSuffix = crypto.randomUUID().slice(0, 8);
-      const storagePath = `${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
-      
-      // Determine content type — use file.type if available, otherwise infer from extension
+      // Physical host path when self-hosted Storage is bind-mounted:
+      //   /meowmeow/app/attachment/<userId>/<chatId>/<file>
+      const storagePath = `meowmeow/app/attachment/${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
+
       const mimeMap: Record<string, string> = {
         jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
         webp: "image/webp", heic: "image/heic", heif: "image/heif", bmp: "image/bmp",
@@ -1916,12 +1917,11 @@ const ChatScreen = () => {
       const contentType = file.type || mimeMap[extLower] || "application/octet-stream";
 
       const { data, error } = await supabase.storage
-        .from("chat-attachments")
+        .from("meowmeow-app-attachment")
         .upload(storagePath, file, { cacheControl: "3600", upsert: false, contentType });
-      
+
       if (error) throw error;
-      
-      // Store the raw path — signed URLs are generated at display time
+
       return `chat-attachment://${storagePath}`;
     } catch (error) {
       console.error("Upload error:", error);
