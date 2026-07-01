@@ -1894,9 +1894,10 @@ const ChatScreen = () => {
     try {
       const fileExt = file.name.split(".").pop();
       const randomSuffix = crypto.randomUUID().slice(0, 8);
-      const storagePath = `${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
-      
-      // Determine content type — use file.type if available, otherwise infer from extension
+      // Physical host path when self-hosted Storage is bind-mounted:
+      //   /meowmeow/app/attachment/<userId>/<chatId>/<file>
+      const storagePath = `meowmeow/app/attachment/${currentUserId}/${chatId.current}/${Date.now()}-${randomSuffix}.${fileExt}`;
+
       const mimeMap: Record<string, string> = {
         jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif",
         webp: "image/webp", heic: "image/heic", heif: "image/heif", bmp: "image/bmp",
@@ -1916,12 +1917,11 @@ const ChatScreen = () => {
       const contentType = file.type || mimeMap[extLower] || "application/octet-stream";
 
       const { data, error } = await supabase.storage
-        .from("chat-attachments")
+        .from("meowmeow-app-attachment")
         .upload(storagePath, file, { cacheControl: "3600", upsert: false, contentType });
-      
+
       if (error) throw error;
-      
-      // Store the raw path — signed URLs are generated at display time
+
       return `chat-attachment://${storagePath}`;
     } catch (error) {
       console.error("Upload error:", error);
@@ -2015,15 +2015,19 @@ const ChatScreen = () => {
     if (cached) return cached;
 
     const storagePath = url.replace('chat-attachment://', '');
-    const { data, error } = await supabase.storage
-      .from('chat-attachments')
-      .createSignedUrl(storagePath, 3600); // 1 hour
-
+    // New uploads live in meowmeow-app-attachment under meowmeow/app/attachment/…;
+    // legacy uploads live in chat-attachments. Try new bucket first, fall back to legacy.
+    const primaryBucket = storagePath.startsWith('meowmeow/app/attachment/')
+      ? 'meowmeow-app-attachment'
+      : 'chat-attachments';
+    let { data, error } = await supabase.storage.from(primaryBucket).createSignedUrl(storagePath, 3600);
+    if ((error || !data?.signedUrl) && primaryBucket === 'meowmeow-app-attachment') {
+      ({ data, error } = await supabase.storage.from('chat-attachments').createSignedUrl(storagePath, 3600));
+    }
     if (error || !data?.signedUrl) {
       console.error('[Chat] Failed to generate signed URL:', error?.message);
-      return '';  // BUG-IMG-01 FIX: return empty so ChatAttachment shows error UI
+      return '';
     }
-
     signedUrlCache.current.set(url, data.signedUrl);
     return data.signedUrl;
   }, []);

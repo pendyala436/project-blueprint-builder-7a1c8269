@@ -38,7 +38,9 @@ interface Props {
   onClose: () => void;
 }
 
-const BUCKET = "chat-attachments";
+const BUCKET = "meowmeow-app-attachment";
+const LEGACY_BUCKET = "chat-attachments";
+const FOLDER_PREFIX = "meowmeow/app/attachment";
 
 function initials(name?: string | null) {
   if (!name) return "U";
@@ -49,8 +51,12 @@ async function signedUrl(path: string): Promise<string | null> {
   if (!path) return null;
   if (path.startsWith("http")) return path;
   const clean = path.replace(/^chat-attachment:\/\//, "");
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(clean, 3600);
-  return data?.signedUrl ?? null;
+  const primary = clean.startsWith(`${FOLDER_PREFIX}/`) ? BUCKET : LEGACY_BUCKET;
+  let res = await supabase.storage.from(primary).createSignedUrl(clean, 3600);
+  if (!res.data?.signedUrl && primary === BUCKET) {
+    res = await supabase.storage.from(LEGACY_BUCKET).createSignedUrl(clean, 3600);
+  }
+  return res.data?.signedUrl ?? null;
 }
 
 const AttachmentView: React.FC<{ url: string; type?: string | null; duration?: number | null }> = ({ url, type, duration }) => {
@@ -104,21 +110,28 @@ export const GroupChatRoom: React.FC<Props> = ({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages.length]);
 
+  // Safe translate — falls back to English/original on failure.
+  const safeTranslate = async (text: string, target: string): Promise<string> => {
+    try { return await translateText(text, "auto", target); }
+    catch {
+      if (target.toLowerCase() === "english") return text;
+      try { return await translateText(text, "auto", "English"); } catch { return text; }
+    }
+  };
+
   // Compute viewer-side translation for each new message
   useEffect(() => {
     messages.forEach(async (m) => {
       if (!m.body || vt[m.id]) return;
-      try {
-        const englishCache = m.english_translation || (await translateText(m.body, "auto", "English"));
-        const isMine = m.sender_id === currentUserId;
-        const targetName = viewerLang.name;
-        const native = isMine
-          ? (m.transliteration || m.body)
-          : (targetName.toLowerCase() === "english"
-              ? englishCache
-              : await translateText(m.body, "auto", targetName));
-        setVt((s) => ({ ...s, [m.id]: { native, english: englishCache } }));
-      } catch { /* noop */ }
+      const englishCache = m.english_translation || (await safeTranslate(m.body, "English"));
+      const isMine = m.sender_id === currentUserId;
+      const targetName = viewerLang.name;
+      const native = isMine
+        ? (m.transliteration || m.body)
+        : (targetName.toLowerCase() === "english"
+            ? englishCache
+            : await safeTranslate(m.body, targetName));
+      setVt((s) => ({ ...s, [m.id]: { native, english: englishCache } }));
     });
   }, [messages, viewerLang.name, currentUserId, vt]);
 
@@ -127,16 +140,33 @@ export const GroupChatRoom: React.FC<Props> = ({
     const t = draft.trim();
     if (!t) { setLivePreview(null); return; }
     const id = setTimeout(async () => {
-      try {
-        const [native, english] = await Promise.all([
-          viewerLang.name.toLowerCase() === "english" ? Promise.resolve(t) : translateText(t, "auto", viewerLang.name),
-          translateText(t, "auto", "English"),
-        ]);
-        setLivePreview({ native, english });
-      } catch { setLivePreview(null); }
+      const [native, english] = await Promise.all([
+        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(t) : safeTranslate(t, viewerLang.name),
+        safeTranslate(t, "English"),
+      ]);
+      setLivePreview({ native, english });
     }, 350);
     return () => clearTimeout(id);
   }, [draft, viewerLang.name]);
+
+  // Auto-close for participants when host ends live (session.ended_at set,
+  // or their participant row gets left_at set by the RPC).
+  useEffect(() => {
+    if (!sessionId) return;
+    const ch = supabase
+      .channel(`gc_session_end_${sessionId}`)
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "group_chat_sessions", filter: `id=eq.${sessionId}` },
+        (p) => {
+          const row = p.new as { ended_at: string | null };
+          if (row.ended_at) {
+            toast({ title: "Room closed", description: "Host ended the live session." });
+            onClose();
+          }
+        })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [sessionId, onClose]);
 
   useGroupChatBilling({
     sessionId, manId: isMan ? currentUserId : null, enabled: isMan,
@@ -169,8 +199,8 @@ export const GroupChatRoom: React.FC<Props> = ({
     setSending(true);
     try {
       const [native, english] = await Promise.all([
-        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(text) : translateText(text, "auto", viewerLang.name),
-        translateText(text, "auto", "English"),
+        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(text) : safeTranslate(text, viewerLang.name),
+        safeTranslate(text, "English"),
       ]);
       await insertMessage({ body: text, transliteration: native, english_translation: english });
       setDraft(""); setLivePreview(null);
@@ -181,7 +211,7 @@ export const GroupChatRoom: React.FC<Props> = ({
     setUploading(true);
     try {
       const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-      const path = `group/${sessionId}/${currentUserId}/${Date.now()}.${ext}`;
+      const path = `${FOLDER_PREFIX}/group/${sessionId}/${currentUserId}/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: file.type || undefined });
       if (error) { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); return; }
       await insertMessage({
