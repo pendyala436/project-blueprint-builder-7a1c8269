@@ -38,7 +38,9 @@ interface Props {
   onClose: () => void;
 }
 
-const BUCKET = "chat-attachments";
+const BUCKET = "meowmeow-app-attachment";
+const LEGACY_BUCKET = "chat-attachments";
+const FOLDER_PREFIX = "meowmeow/app/attachment";
 
 function initials(name?: string | null) {
   if (!name) return "U";
@@ -49,8 +51,12 @@ async function signedUrl(path: string): Promise<string | null> {
   if (!path) return null;
   if (path.startsWith("http")) return path;
   const clean = path.replace(/^chat-attachment:\/\//, "");
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(clean, 3600);
-  return data?.signedUrl ?? null;
+  const primary = clean.startsWith(`${FOLDER_PREFIX}/`) ? BUCKET : LEGACY_BUCKET;
+  let res = await supabase.storage.from(primary).createSignedUrl(clean, 3600);
+  if (!res.data?.signedUrl && primary === BUCKET) {
+    res = await supabase.storage.from(LEGACY_BUCKET).createSignedUrl(clean, 3600);
+  }
+  return res.data?.signedUrl ?? null;
 }
 
 const AttachmentView: React.FC<{ url: string; type?: string | null; duration?: number | null }> = ({ url, type, duration }) => {
