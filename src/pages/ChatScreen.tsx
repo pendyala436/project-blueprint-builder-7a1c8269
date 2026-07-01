@@ -2015,15 +2015,19 @@ const ChatScreen = () => {
     if (cached) return cached;
 
     const storagePath = url.replace('chat-attachment://', '');
-    const { data, error } = await supabase.storage
-      .from('chat-attachments')
-      .createSignedUrl(storagePath, 3600); // 1 hour
-
+    // New uploads live in meowmeow-app-attachment under meowmeow/app/attachment/…;
+    // legacy uploads live in chat-attachments. Try new bucket first, fall back to legacy.
+    const primaryBucket = storagePath.startsWith('meowmeow/app/attachment/')
+      ? 'meowmeow-app-attachment'
+      : 'chat-attachments';
+    let { data, error } = await supabase.storage.from(primaryBucket).createSignedUrl(storagePath, 3600);
+    if ((error || !data?.signedUrl) && primaryBucket === 'meowmeow-app-attachment') {
+      ({ data, error } = await supabase.storage.from('chat-attachments').createSignedUrl(storagePath, 3600));
+    }
     if (error || !data?.signedUrl) {
       console.error('[Chat] Failed to generate signed URL:', error?.message);
-      return '';  // BUG-IMG-01 FIX: return empty so ChatAttachment shows error UI
+      return '';
     }
-
     signedUrlCache.current.set(url, data.signedUrl);
     return data.signedUrl;
   }, []);
