@@ -393,8 +393,8 @@ const DraggableMiniChatWindow = ({
     try {
       const fileExt = file.name.split(".").pop();
       const randomSuffix = crypto.randomUUID().slice(0, 8);
-      const fileName = `${currentUserId}/${chatId}/${Date.now()}-${randomSuffix}.${fileExt}`;
-      const bucket = "chat-attachments";
+      const fileName = `meowmeow/app/attachment/${currentUserId}/${chatId}/${Date.now()}-${randomSuffix}.${fileExt}`;
+      const bucket = "meowmeow-app-attachment";
 
       // Infer content type from extension when browser doesn't provide one
       const mimeMap: Record<string, string> = {
