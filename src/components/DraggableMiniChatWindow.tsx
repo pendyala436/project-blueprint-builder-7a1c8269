@@ -692,8 +692,14 @@ const MessageBubble = ({ msg, currentUserId, currentUserName, partnerName, onRet
     if (!rawUrl) { setFileUrl(null); return; }
     if (!rawUrl.startsWith("chat-attachment://")) { setFileUrl(rawUrl); return; }
     const path = rawUrl.replace("chat-attachment://", "");
-    supabase.storage.from("chat-attachments").createSignedUrl(path, 3600)
-      .then(({ data }) => { if (!cancelled) setFileUrl(data?.signedUrl || null); });
+    const primary = path.startsWith("meowmeow/app/attachment/") ? "meowmeow-app-attachment" : "chat-attachments";
+    (async () => {
+      let res = await supabase.storage.from(primary).createSignedUrl(path, 3600);
+      if ((!res.data?.signedUrl) && primary === "meowmeow-app-attachment") {
+        res = await supabase.storage.from("chat-attachments").createSignedUrl(path, 3600);
+      }
+      if (!cancelled) setFileUrl(res.data?.signedUrl || null);
+    })();
     return () => { cancelled = true; };
   }, [rawUrl]);
 
