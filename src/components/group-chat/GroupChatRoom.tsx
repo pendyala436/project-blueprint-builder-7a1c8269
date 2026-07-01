@@ -199,8 +199,8 @@ export const GroupChatRoom: React.FC<Props> = ({
     setSending(true);
     try {
       const [native, english] = await Promise.all([
-        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(text) : translateText(text, "auto", viewerLang.name),
-        translateText(text, "auto", "English"),
+        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(text) : safeTranslate(text, viewerLang.name),
+        safeTranslate(text, "English"),
       ]);
       await insertMessage({ body: text, transliteration: native, english_translation: english });
       setDraft(""); setLivePreview(null);
