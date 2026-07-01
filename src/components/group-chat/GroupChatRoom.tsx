@@ -187,7 +187,7 @@ export const GroupChatRoom: React.FC<Props> = ({
     setUploading(true);
     try {
       const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-      const path = `group/${sessionId}/${currentUserId}/${Date.now()}.${ext}`;
+      const path = `${FOLDER_PREFIX}/group/${sessionId}/${currentUserId}/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: file.type || undefined });
       if (error) { toast({ title: "Upload failed", description: error.message, variant: "destructive" }); return; }
       await insertMessage({
