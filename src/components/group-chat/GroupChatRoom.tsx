@@ -23,7 +23,7 @@ import {
 } from "@/hooks/useGroupChat";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { translateText } from "@/lib/translation-service";
+import { translateText, translateForViewer, getEnglishTranslation } from "@/lib/translation-service";
 import { resolveIndianLanguage, isAllowedGroupChatLanguage } from "@/data/indianOfficialLanguages";
 
 interface Props {
@@ -119,32 +119,51 @@ export const GroupChatRoom: React.FC<Props> = ({
     }
   };
 
-  // Compute viewer-side translation for each new message
+  // Compute viewer-side translation for each new message using the SAME
+  // pipeline as 1-to-1 chat (handles transliteration, mixed script, pivot,
+  // English subtitle fallback).
   useEffect(() => {
     messages.forEach(async (m) => {
       if (!m.body || vt[m.id]) return;
-      const englishCache = m.english_translation || (await safeTranslate(m.body, "English"));
-      const isMine = m.sender_id === currentUserId;
-      const targetName = viewerLang.name;
-      const native = isMine
-        ? (m.transliteration || m.body)
-        : (targetName.toLowerCase() === "english"
-            ? englishCache
-            : await safeTranslate(m.body, targetName));
-      setVt((s) => ({ ...s, [m.id]: { native, english: englishCache } }));
+      const senderLang = m.original_lang || viewerLang.name;
+      try {
+        const { nativeText, englishText } = await translateForViewer(
+          m.body,
+          viewerLang.name,
+          senderLang,
+        );
+        setVt((s) => ({
+          ...s,
+          [m.id]: {
+            native: nativeText || m.transliteration || m.body,
+            english: englishText || m.english_translation || m.body,
+          },
+        }));
+      } catch {
+        // Fallback chain: cached english → raw english translate → original
+        const english = m.english_translation || (await getEnglishTranslation(m.body, senderLang)) || m.body;
+        setVt((s) => ({ ...s, [m.id]: { native: english, english } }));
+      }
     });
   }, [messages, viewerLang.name, currentUserId, vt]);
 
-  // Live preview while typing
+  // Live typing preview — self-translate through the same viewer pipeline
+  // so mixed / transliterated / native input all render correctly.
   useEffect(() => {
     const t = draft.trim();
     if (!t) { setLivePreview(null); return; }
     const id = setTimeout(async () => {
-      const [native, english] = await Promise.all([
-        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(t) : safeTranslate(t, viewerLang.name),
-        safeTranslate(t, "English"),
-      ]);
-      setLivePreview({ native, english });
+      try {
+        const { nativeText, englishText } = await translateForViewer(
+          t,
+          viewerLang.name,
+          viewerLang.name,
+        );
+        setLivePreview({ native: nativeText || t, english: englishText || t });
+      } catch {
+        const english = await safeTranslate(t, "English");
+        setLivePreview({ native: t, english });
+      }
     }, 350);
     return () => clearTimeout(id);
   }, [draft, viewerLang.name]);
@@ -198,10 +217,17 @@ export const GroupChatRoom: React.FC<Props> = ({
     }
     setSending(true);
     try {
-      const [native, english] = await Promise.all([
-        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(text) : safeTranslate(text, viewerLang.name),
-        safeTranslate(text, "English"),
-      ]);
+      // Sender-side self-translation → native script in sender's language,
+      // plus English subtitle. Same pipeline as 1-to-1 chat.
+      let native = text;
+      let english = text;
+      try {
+        const r = await translateForViewer(text, viewerLang.name, viewerLang.name);
+        native = r.nativeText || text;
+        english = r.englishText || text;
+      } catch {
+        english = await safeTranslate(text, "English");
+      }
       await insertMessage({ body: text, transliteration: native, english_translation: english });
       setDraft(""); setLivePreview(null);
     } finally { setSending(false); }
