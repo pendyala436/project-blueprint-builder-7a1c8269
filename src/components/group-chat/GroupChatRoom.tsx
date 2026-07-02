@@ -23,7 +23,7 @@ import {
 } from "@/hooks/useGroupChat";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { translateText } from "@/lib/translation-service";
+import { translateText, translateForViewer, getEnglishTranslation } from "@/lib/translation-service";
 import { resolveIndianLanguage, isAllowedGroupChatLanguage } from "@/data/indianOfficialLanguages";
 
 interface Props {
