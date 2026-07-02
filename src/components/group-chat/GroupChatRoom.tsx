@@ -217,10 +217,17 @@ export const GroupChatRoom: React.FC<Props> = ({
     }
     setSending(true);
     try {
-      const [native, english] = await Promise.all([
-        viewerLang.name.toLowerCase() === "english" ? Promise.resolve(text) : safeTranslate(text, viewerLang.name),
-        safeTranslate(text, "English"),
-      ]);
+      // Sender-side self-translation → native script in sender's language,
+      // plus English subtitle. Same pipeline as 1-to-1 chat.
+      let native = text;
+      let english = text;
+      try {
+        const r = await translateForViewer(text, viewerLang.name, viewerLang.name);
+        native = r.nativeText || text;
+        english = r.englishText || text;
+      } catch {
+        english = await safeTranslate(text, "English");
+      }
       await insertMessage({ body: text, transliteration: native, english_translation: english });
       setDraft(""); setLivePreview(null);
     } finally { setSending(false); }
